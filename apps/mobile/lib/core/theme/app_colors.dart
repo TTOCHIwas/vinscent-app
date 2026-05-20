@@ -16,6 +16,10 @@ abstract final class AppColors {
   static const actionDisabledContent = Color(0xFF8D8D8D);
   static const success = Color(0xFF1BBF73);
   static const divider = Color(0xFF111111);
+  static const wireframeBorder = Color(0xFFB1B1B1);
+  static const wireframeIcon = Color(0xFF6C6C6C);
+  static const wireframePlaceholder = Color(0xFFBFBFBF);
+  static const shellBottomBarBackground = Color(0xFF989898);
 
   static const kakaoContainer = Color(0xFFFEE500);
   static const kakaoContent = Color(0xD9000000);
