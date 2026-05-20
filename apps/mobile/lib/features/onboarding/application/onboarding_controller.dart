@@ -4,7 +4,7 @@ import '../../profile/application/profile_controller.dart';
 import 'onboarding_state.dart';
 
 final onboardingControllerProvider =
-    NotifierProvider<OnboardingController, OnboardingState>(
+    NotifierProvider.autoDispose<OnboardingController, OnboardingState>(
       OnboardingController.new,
     );
 
