@@ -1,15 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../application/social_login_controller.dart';
+import '../application/social_login_state.dart';
+import '../data/social_auth_failure.dart';
 import 'widgets/apple_login_button.dart';
 import 'widgets/kakao_login_button.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loginState = ref.watch(socialLoginControllerProvider);
+
+    ref.listen<SocialLoginState>(socialLoginControllerProvider, (
+      previous,
+      next,
+    ) {
+      final failure = next.failure;
+      if (failure == null || failure.isCancelled) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(_messageFor(failure))));
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -25,10 +45,18 @@ class LoginScreen extends StatelessWidget {
                   spacing: 8,
                   children: [
                     KakaoLoginButton(
-                      onPressed: () => _showAuthPending(context, '카카오'),
+                      onPressed: loginState.isSigningIn
+                          ? null
+                          : () => ref
+                                .read(socialLoginControllerProvider.notifier)
+                                .signInWithKakao(),
                     ),
                     AppleLoginButton(
-                      onPressed: () => _showAuthPending(context, 'Apple'),
+                      onPressed: loginState.isSigningIn
+                          ? null
+                          : () => ref
+                                .read(socialLoginControllerProvider.notifier)
+                                .signInWithApple(),
                     ),
                   ],
                 ),
@@ -40,10 +68,15 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  void _showAuthPending(BuildContext context, String provider) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$provider 로그인 연동 준비 중입니다.')));
+  String _messageFor(SocialAuthFailure failure) {
+    return switch (failure.reason) {
+      SocialAuthFailureReason.notConfigured => '로그인 설정이 아직 완료되지 않았습니다.',
+      SocialAuthFailureReason.missingIdToken => '로그인 제공자 설정을 확인해주세요.',
+      SocialAuthFailureReason.providerFailed => '로그인에 실패했습니다.',
+      SocialAuthFailureReason.supabaseSessionFailed => '로그인 세션 생성에 실패했습니다.',
+      SocialAuthFailureReason.unsupportedPlatform => '현재 기기에서는 지원하지 않는 로그인입니다.',
+      SocialAuthFailureReason.cancelled => '',
+    };
   }
 }
 
