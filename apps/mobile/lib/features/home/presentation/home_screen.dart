@@ -8,16 +8,30 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _CoupleStatus(),
-          _QuestionCharacterPreview(),
-          _ExpressionGrid(),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentMinHeight = (constraints.maxHeight - 64).clamp(
+          0.0,
+          double.infinity,
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 32),
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: contentMinHeight),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _CoupleStatus(),
+                  _QuestionCharacterPreview(),
+                  _ExpressionGrid(),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
