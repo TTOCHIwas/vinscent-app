@@ -39,6 +39,16 @@ class SocialLoginController extends Notifier<SocialLoginState> {
       return;
     }
 
+    if (!ref.read(socialSessionRepositoryProvider).canCreateSession) {
+      state = const SocialLoginState.idle(
+        failure: SocialAuthFailure(
+          SocialAuthFailureReason.notConfigured,
+          message: 'Supabase config is missing.',
+        ),
+      );
+      return;
+    }
+
     state = SocialLoginState.signingIn(provider);
 
     try {

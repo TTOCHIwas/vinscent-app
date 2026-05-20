@@ -12,13 +12,12 @@ void main() {
     'signInWithKakao creates a Supabase session through repository',
     () async {
       final repository = _FakeSocialSessionRepository();
+      final kakaoClient = _FakeKakaoAuthClient(
+        tokens: const KakaoLoginTokens(idToken: 'id', accessToken: 'access'),
+      );
       final container = ProviderContainer(
         overrides: [
-          kakaoAuthClientProvider.overrideWithValue(
-            const _FakeKakaoAuthClient(
-              tokens: KakaoLoginTokens(idToken: 'id', accessToken: 'access'),
-            ),
-          ),
+          kakaoAuthClientProvider.overrideWithValue(kakaoClient),
           socialSessionRepositoryProvider.overrideWithValue(repository),
         ],
       );
@@ -36,8 +35,37 @@ void main() {
           .signInWithKakao();
 
       expect(repository.kakaoSignInCount, 1);
+      expect(kakaoClient.signInCount, 1);
       expect(states[1].isSigningInWith(SocialAuthProvider.kakao), isTrue);
       expect(container.read(socialLoginControllerProvider).failure, isNull);
+    },
+  );
+
+  test(
+    'signInWithKakao fails before provider login when Supabase is missing',
+    () async {
+      final kakaoClient = _FakeKakaoAuthClient(
+        tokens: const KakaoLoginTokens(idToken: 'id', accessToken: 'access'),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          kakaoAuthClientProvider.overrideWithValue(kakaoClient),
+          socialSessionRepositoryProvider.overrideWithValue(
+            _FakeSocialSessionRepository(canCreateSession: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(socialLoginControllerProvider.notifier)
+          .signInWithKakao();
+
+      expect(kakaoClient.signInCount, 0);
+      expect(
+        container.read(socialLoginControllerProvider).failure?.reason,
+        SocialAuthFailureReason.notConfigured,
+      );
     },
   );
 
@@ -69,12 +97,14 @@ void main() {
 }
 
 class _FakeKakaoAuthClient implements KakaoAuthClient {
-  const _FakeKakaoAuthClient({required this.tokens});
+  _FakeKakaoAuthClient({required this.tokens});
 
   final KakaoLoginTokens tokens;
+  var signInCount = 0;
 
   @override
   Future<KakaoLoginTokens> signIn() async {
+    signInCount++;
     return tokens;
   }
 }
@@ -91,6 +121,11 @@ class _FakeAppleAuthClient implements AppleAuthClient {
 }
 
 class _FakeSocialSessionRepository implements SocialSessionRepository {
+  _FakeSocialSessionRepository({this.canCreateSession = true});
+
+  @override
+  final bool canCreateSession;
+
   var kakaoSignInCount = 0;
 
   @override

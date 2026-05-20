@@ -11,6 +11,8 @@ final socialSessionRepositoryProvider = Provider<SocialSessionRepository>(
 );
 
 abstract interface class SocialSessionRepository {
+  bool get canCreateSession;
+
   Future<void> signInWithKakao(KakaoLoginTokens tokens);
 
   Future<void> signInWithApple(AppleLoginTokens tokens);
@@ -20,8 +22,11 @@ class SupabaseSocialSessionRepository implements SocialSessionRepository {
   const SupabaseSocialSessionRepository();
 
   @override
+  bool get canCreateSession => AppConfig.isSupabaseConfigured;
+
+  @override
   Future<void> signInWithKakao(KakaoLoginTokens tokens) async {
-    if (!AppConfig.isSupabaseConfigured) {
+    if (!canCreateSession) {
       throw const SocialAuthFailure(
         SocialAuthFailureReason.notConfigured,
         message: 'Supabase config is missing.',
@@ -55,7 +60,7 @@ class SupabaseSocialSessionRepository implements SocialSessionRepository {
 
   @override
   Future<void> signInWithApple(AppleLoginTokens tokens) async {
-    if (!AppConfig.isSupabaseConfigured) {
+    if (!canCreateSession) {
       throw const SocialAuthFailure(
         SocialAuthFailureReason.notConfigured,
         message: 'Supabase config is missing.',
