@@ -1,57 +1,50 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/config/app_config.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _CoupleStatus(),
+          _QuestionCharacterPreview(),
+          _ExpressionGrid(),
+        ],
+      ),
+    );
+  }
+}
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Vinscent')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
+class _CoupleStatus extends StatelessWidget {
+  const _CoupleStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              '오늘의 질문',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
+            const Text('ㅇㅇ ♥ ㅇㅇ', style: AppTextStyles.homeBody),
+            const SizedBox(height: 4),
+            RichText(
+              textAlign: TextAlign.end,
+              text: const TextSpan(
+                children: [
+                  TextSpan(text: '사랑한 지 ', style: AppTextStyles.homeBodyMedium),
+                  TextSpan(text: '00', style: AppTextStyles.homeDayCount),
+                  TextSpan(text: '일 째', style: AppTextStyles.homeBodyMedium),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '두 사람이 모두 답변하면 서로의 마음이 열려요.',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Flutter 전환 후 첫 화면입니다. 다음 단계에서 커플 연결, 질문 카드, 감정 선택을 붙입니다.',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: () {},
-                      child: const Text('답변 작성하기'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            _StatusTile(
-              label: 'Supabase',
-              value: AppConfig.isSupabaseConfigured ? 'configured' : 'pending',
             ),
           ],
         ),
@@ -60,30 +53,101 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _StatusTile extends StatelessWidget {
-  const _StatusTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
+class _QuestionCharacterPreview extends StatelessWidget {
+  const _QuestionCharacterPreview();
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        child: SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('질문', style: AppTextStyles.homeBodyMedium),
+                const SizedBox(height: 36),
+                Container(
+                  width: 140,
+                  height: 140,
+                  color: AppColors.wireframePlaceholder,
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '캐릭터',
+                    style: AppTextStyles.homeCharacterLabel,
+                  ),
+                ),
+              ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpressionGrid extends StatelessWidget {
+  const _ExpressionGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _ExpressionButton()),
+            SizedBox(width: 8),
+            Expanded(child: _ExpressionButton()),
           ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: _ExpressionButton()),
+            SizedBox(width: 8),
+            Expanded(child: _ExpressionButton()),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ExpressionButton extends StatelessWidget {
+  const _ExpressionButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.wireframeBorder),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: AppColors.wireframeIcon),
+                ),
+              ),
+              SizedBox(width: 10),
+              Text('표현', style: AppTextStyles.homeBody),
+            ],
+          ),
         ),
       ),
     );
