@@ -1,0 +1,14 @@
+node_modules/
+.idea/
+.toolchains/
+.expo/
+.expo-shared/
+.expo-logs/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
