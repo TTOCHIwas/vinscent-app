@@ -1,8 +1,33 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+fun dartDefine(key: String, defaultValue: String = ""): String {
+    val directValue = project.findProperty(key) as String?
+    if (!directValue.isNullOrBlank()) {
+        return directValue
+    }
+
+    val dartDefines = project.findProperty("dart-defines") as String?
+    if (dartDefines.isNullOrBlank()) {
+        return defaultValue
+    }
+
+    return dartDefines
+        .split(",")
+        .mapNotNull { encoded ->
+            runCatching {
+                String(Base64.getDecoder().decode(encoded))
+            }.getOrNull()
+        }
+        .firstOrNull { it.startsWith("$key=") }
+        ?.substringAfter("=")
+        ?: defaultValue
 }
 
 android {
@@ -28,6 +53,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["kakaoNativeAppKey"] =
+            dartDefine("KAKAO_NATIVE_APP_KEY")
     }
 
     buildTypes {
