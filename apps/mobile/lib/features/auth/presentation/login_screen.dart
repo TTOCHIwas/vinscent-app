@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'widgets/apple_login_button.dart';
+import 'widgets/kakao_login_button.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -21,9 +23,13 @@ class LoginScreen extends StatelessWidget {
                 width: double.infinity,
                 child: Column(
                   spacing: 8,
-                  children: const [
-                    SizedBox(height: 56, width: double.infinity),
-                    SizedBox(height: 56, width: double.infinity),
+                  children: [
+                    KakaoLoginButton(
+                      onPressed: () => _showAuthPending(context, '카카오'),
+                    ),
+                    AppleLoginButton(
+                      onPressed: () => _showAuthPending(context, 'Apple'),
+                    ),
                   ],
                 ),
               ),
@@ -33,6 +39,12 @@ class LoginScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showAuthPending(BuildContext context, String provider) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$provider 로그인 연동 준비 중입니다.')));
+  }
 }
 
 class _LogoMark extends StatelessWidget {
@@ -40,16 +52,26 @@ class _LogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.logoBackground,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const SizedBox(
-        width: 80,
-        height: 80,
-        child: Center(child: Text('로고', style: AppTextStyles.logoLabel)),
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.logoBackground,
+            borderRadius: BorderRadius.circular(0),
+          ),
+          child: const SizedBox(width: 80, height: 80),
+        ),
+        const SizedBox(height: 12),
+        const SizedBox(
+          width: 80,
+          child: Text(
+            '로고',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.logoLabel,
+          ),
+        ),
+      ],
     );
   }
 }
