@@ -23,12 +23,21 @@ class OnboardingState {
 
   bool get isNicknameValid => nicknameLength >= 2 && nicknameLength <= 8;
 
+  bool get isBirthDateValid {
+    final selected = birthDate;
+    if (selected == null) {
+      return false;
+    }
+
+    return !_dateOnly(selected).isAfter(_dateOnly(DateTime.now()));
+  }
+
   bool get canGoBack => step != OnboardingStep.nickname && !isSubmitting;
 
   bool get canContinue {
     return switch (step) {
       OnboardingStep.nickname => isNicknameValid,
-      OnboardingStep.birthDate => birthDate != null,
+      OnboardingStep.birthDate => isBirthDateValid && !isSubmitting,
     };
   }
 
@@ -50,5 +59,9 @@ class OnboardingState {
           ? null
           : errorMessage ?? this.errorMessage,
     );
+  }
+
+  DateTime _dateOnly(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
   }
 }

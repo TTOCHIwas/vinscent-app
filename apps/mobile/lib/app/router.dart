@@ -26,7 +26,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         AuthStatus.unauthenticated => isLoginRoute ? null : '/login',
         AuthStatus.authenticated => profile.when(
           loading: () => isBootRoute ? null : '/boot',
-          error: (_, __) => isBootRoute ? null : '/boot',
+          error: (error, stackTrace) => isBootRoute ? null : '/boot',
           data: (profile) {
             if (profile == null) {
               return isOnboardingRoute ? null : '/onboarding';

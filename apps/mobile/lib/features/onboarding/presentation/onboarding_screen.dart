@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/onboarding_controller.dart';
 import '../application/onboarding_state.dart';
+import 'widgets/birth_date_picker_sheet.dart';
+import 'widgets/birth_date_step.dart';
 import 'widgets/nickname_step.dart';
 import 'widgets/onboarding_action_button.dart';
 
@@ -47,19 +49,35 @@ class OnboardingScreen extends ConsumerWidget {
                       onChanged: controller.updateNickname,
                       onClear: controller.clearNickname,
                     ),
-                    OnboardingStep.birthDate => const _BirthDatePlaceholder(
-                      key: ValueKey(OnboardingStep.birthDate),
+                    OnboardingStep.birthDate => BirthDateStep(
+                      key: const ValueKey(OnboardingStep.birthDate),
+                      birthDate: state.birthDate,
+                      onTap: () =>
+                          _showBirthDatePicker(context, ref, state.birthDate),
                     ),
                   },
                 ),
               ),
+              if (state.errorMessage != null) ...[
+                Text(
+                  state.errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               OnboardingActionButton(
                 label: '완료',
                 enabled: state.canContinue,
                 isLoading: state.isSubmitting,
-                onPressed: state.step == OnboardingStep.nickname
-                    ? controller.goToBirthDate
-                    : null,
+                onPressed: switch (state.step) {
+                  OnboardingStep.nickname => controller.goToBirthDate,
+                  OnboardingStep.birthDate => controller.completeOnboarding,
+                },
               ),
             ],
           ),
@@ -67,16 +85,28 @@ class OnboardingScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _BirthDatePlaceholder extends StatelessWidget {
-  const _BirthDatePlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Align(
-      alignment: Alignment.topLeft,
-      child: Text('생일을 입력해 주세요.'),
+  Future<void> _showBirthDatePicker(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime? selectedDate,
+  ) async {
+    final controller = ref.read(onboardingControllerProvider.notifier);
+    final today = DateTime.now();
+    final maxDate = DateTime(today.year, today.month, today.day);
+    final initialDate = selectedDate ?? maxDate;
+    final pickedDate = await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return BirthDatePickerSheet(initialDate: initialDate, maxDate: maxDate);
+      },
     );
+
+    if (pickedDate != null) {
+      controller.updateBirthDate(pickedDate);
+    }
   }
 }
