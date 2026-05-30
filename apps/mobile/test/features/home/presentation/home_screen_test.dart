@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
@@ -9,10 +10,14 @@ void main() {
   testWidgets('shows active couple day count and home placeholders', (
     tester,
   ) async {
-    await _pumpHome(tester, couple: _activeCouple);
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: DateTime(2026, 5, 31),
+    );
 
     expect(find.text('우리 둘'), findsOneWidget);
-    expect(find.text('D+1일', findRichText: true), findsOneWidget);
+    expect(find.text('D+2일', findRichText: true), findsOneWidget);
     expect(find.text('오늘의 질문'), findsOneWidget);
     expect(find.text('준비 중'), findsOneWidget);
     expect(find.text('캐릭터 준비 중'), findsOneWidget);
@@ -38,12 +43,19 @@ void main() {
   });
 }
 
-Future<void> _pumpHome(WidgetTester tester, {required Couple? couple}) async {
+Future<void> _pumpHome(
+  WidgetTester tester, {
+  required Couple? couple,
+  DateTime? today,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => couple,
+        ),
+        todayControllerProvider.overrideWithBuild(
+          (ref, notifier) => today ?? DateTime(2026, 5, 31),
         ),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
@@ -80,7 +92,7 @@ final _activeCouple = Couple(
   inviteCode: 'ABC234',
   userAId: 'user-id',
   userBId: 'partner-id',
-  relationshipStartDate: DateTime.now(),
+  relationshipStartDate: DateTime(2026, 5, 30),
   timezone: 'Asia/Seoul',
   status: CoupleStatus.active,
   connectedAt: DateTime(2026),

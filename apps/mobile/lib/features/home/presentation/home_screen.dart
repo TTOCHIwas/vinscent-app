@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/today_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -75,9 +76,10 @@ class _CoupleStatus extends ConsumerWidget {
               return const _CoupleStatusMessage('첫 만남일을 먼저 입력해주세요.');
             }
 
+            final today = ref.watch(todayControllerProvider);
             final dayCount = calculateRelationshipDayCount(
               startDate: relationshipStartDate,
-              today: DateTime.now(),
+              today: today,
             );
 
             return Column(

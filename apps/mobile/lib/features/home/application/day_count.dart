@@ -1,11 +1,11 @@
+import '../../../core/date/app_date_policy.dart';
+
 int calculateRelationshipDayCount({
   required DateTime startDate,
   required DateTime today,
 }) {
-  final days = _dateOnly(today).difference(_dateOnly(startDate)).inDays + 1;
+  final days =
+      calendarDateOnly(today).difference(calendarDateOnly(startDate)).inDays +
+      1;
   return days < 1 ? 1 : days;
-}
-
-DateTime _dateOnly(DateTime value) {
-  return DateTime(value.year, value.month, value.day);
 }
