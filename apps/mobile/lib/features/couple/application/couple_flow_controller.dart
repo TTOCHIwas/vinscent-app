@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/app_date_policy.dart';
+import '../../../core/date/today_controller.dart';
 import '../data/couple_failure.dart';
 import 'couple_controller.dart';
 import 'couple_flow_state.dart';
@@ -20,8 +22,9 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
   }
 
   void updateRelationshipStartDate(DateTime value) {
-    final date = DateTime(value.year, value.month, value.day);
-    if (date.isAfter(_today())) {
+    final date = calendarDateOnly(value);
+    final today = ref.read(todayControllerProvider);
+    if (date.isAfter(today)) {
       return;
     }
 
@@ -151,10 +154,5 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.configMissing => '앱 설정이 아직 완료되지 않았어요.',
       CoupleFailureReason.unknown => '잠시 후 다시 시도해주세요.',
     };
-  }
-
-  DateTime _today() {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day);
   }
 }

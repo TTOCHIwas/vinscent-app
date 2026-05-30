@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/today_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/couple_flow_controller.dart';
@@ -15,6 +16,7 @@ class RelationshipStartDateScreen extends ConsumerWidget {
     final state = ref.watch(coupleFlowControllerProvider);
     final controller = ref.read(coupleFlowControllerProvider.notifier);
     final selectedDate = state.relationshipStartDate;
+    final today = ref.watch(todayControllerProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -38,7 +40,8 @@ class RelationshipStartDateScreen extends ConsumerWidget {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _pickDate(context, controller, selectedDate),
+                  onTap: () =>
+                      _pickDate(context, controller, selectedDate, today),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     width: double.infinity,
@@ -100,14 +103,13 @@ class RelationshipStartDateScreen extends ConsumerWidget {
     BuildContext context,
     CoupleFlowController controller,
     DateTime? selectedDate,
+    DateTime today,
   ) async {
-    final today = DateTime.now();
-    final maxDate = DateTime(today.year, today.month, today.day);
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: selectedDate ?? maxDate,
+      initialDate: selectedDate ?? today,
       firstDate: DateTime(1900),
-      lastDate: maxDate,
+      lastDate: today,
     );
 
     if (pickedDate != null) {

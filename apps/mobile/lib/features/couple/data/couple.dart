@@ -1,3 +1,5 @@
+import '../../../core/date/app_date_policy.dart';
+
 enum CoupleStatus {
   pending,
   active,
@@ -73,7 +75,7 @@ class Couple {
       return null;
     }
 
-    return DateTime.parse(value);
+    return calendarDateOnly(DateTime.parse(value));
   }
 
   static DateTime? _parseOptionalDateTime(String? value) {
