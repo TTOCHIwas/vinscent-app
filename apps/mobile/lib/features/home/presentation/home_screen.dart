@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../couple/application/couple_controller.dart';
+import '../../couple/data/couple.dart';
+import '../application/day_count.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -36,32 +40,92 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _CoupleStatus extends StatelessWidget {
+class _CoupleStatus extends ConsumerWidget {
   const _CoupleStatus();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final couple = ref.watch(coupleControllerProvider);
+
     return SizedBox(
       width: double.infinity,
       child: Padding(
         padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            const Text('ㅇㅇ ♥ ㅇㅇ', style: AppTextStyles.homeBody),
-            const SizedBox(height: 4),
-            RichText(
-              textAlign: TextAlign.end,
-              text: const TextSpan(
-                children: [
-                  TextSpan(text: '사랑한 지 ', style: AppTextStyles.homeBodyMedium),
-                  TextSpan(text: '00', style: AppTextStyles.homeDayCount),
-                  TextSpan(text: '일 째', style: AppTextStyles.homeBodyMedium),
-                ],
-              ),
+        child: couple.when(
+          loading: () => const Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          ],
+          ),
+          error: (error, stackTrace) =>
+              const _CoupleStatusMessage('커플 정보를 불러오지 못했어요.'),
+          data: (couple) {
+            if (couple == null) {
+              return const _CoupleStatusMessage('커플 정보를 찾을 수 없어요.');
+            }
+
+            if (couple.status != CoupleStatus.active) {
+              return const _CoupleStatusMessage('커플 연결을 완료해주세요.');
+            }
+
+            final relationshipStartDate = couple.relationshipStartDate;
+            if (relationshipStartDate == null) {
+              return const _CoupleStatusMessage('첫 만남일을 먼저 입력해주세요.');
+            }
+
+            final dayCount = calculateRelationshipDayCount(
+              startDate: relationshipStartDate,
+              today: DateTime.now(),
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text('우리 둘', style: AppTextStyles.homeBody),
+                const SizedBox(height: 4),
+                RichText(
+                  textAlign: TextAlign.end,
+                  text: TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'D+',
+                        style: AppTextStyles.homeBodyMedium,
+                      ),
+                      TextSpan(
+                        text: '$dayCount',
+                        style: AppTextStyles.homeDayCount,
+                      ),
+                      const TextSpan(
+                        text: '일',
+                        style: AppTextStyles.homeBodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
+      ),
+    );
+  }
+}
+
+class _CoupleStatusMessage extends StatelessWidget {
+  const _CoupleStatusMessage(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Text(
+        message,
+        textAlign: TextAlign.end,
+        style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
       ),
     );
   }
@@ -83,7 +147,9 @@ class _QuestionCharacterPreview extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('질문', style: AppTextStyles.homeBodyMedium),
+                const Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
+                const SizedBox(height: 8),
+                const Text('준비 중', style: AppTextStyles.homeCharacterLabel),
                 const SizedBox(height: 36),
                 Container(
                   width: 140,
@@ -91,7 +157,7 @@ class _QuestionCharacterPreview extends StatelessWidget {
                   color: AppColors.wireframePlaceholder,
                   alignment: Alignment.center,
                   child: const Text(
-                    '캐릭터',
+                    '캐릭터 준비 중',
                     style: AppTextStyles.homeCharacterLabel,
                   ),
                 ),

@@ -33,7 +33,7 @@ void main() {
     expect(find.text('홈'), findsOneWidget);
     expect(find.text('달력'), findsOneWidget);
     expect(find.text('AI'), findsOneWidget);
-    expect(find.text('질문'), findsOneWidget);
+    expect(find.text('오늘의 질문'), findsOneWidget);
   });
 
   testWidgets('moves between shell routes through bottom bar and header', (
