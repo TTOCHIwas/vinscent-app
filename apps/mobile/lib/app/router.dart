@@ -7,6 +7,11 @@ import '../features/auth/application/auth_status.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/boot/presentation/boot_screen.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
+import '../features/couple/application/couple_controller.dart';
+import '../features/couple/data/couple.dart';
+import '../features/couple/presentation/couple_entry_screen.dart';
+import '../features/couple/presentation/couple_waiting_screen.dart';
+import '../features/couple/presentation/relationship_start_date_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_controller.dart';
@@ -16,6 +21,7 @@ import '../features/shell/presentation/app_shell.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authStatus = ref.watch(authControllerProvider);
   final profile = ref.watch(profileControllerProvider);
+  final couple = ref.watch(coupleControllerProvider);
 
   return GoRouter(
     initialLocation: '/home',
@@ -24,6 +30,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isBootRoute = path == '/boot';
       final isLoginRoute = path == '/login';
       final isOnboardingRoute = path == '/onboarding';
+      final isCoupleEntryRoute = path == '/couple';
+      final isCoupleWaitingRoute = path == '/couple/waiting';
+      final isCoupleAnniversaryRoute = path == '/couple/anniversary';
+      final isCoupleRoute =
+          isCoupleEntryRoute ||
+          isCoupleWaitingRoute ||
+          isCoupleAnniversaryRoute;
 
       return switch (authStatus) {
         AuthStatus.checking => isBootRoute ? null : '/boot',
@@ -36,12 +49,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               return isOnboardingRoute ? null : '/onboarding';
             }
 
-            return (isBootRoute ||
-                    isLoginRoute ||
-                    isOnboardingRoute ||
-                    path == '/')
-                ? '/home'
-                : null;
+            return couple.when(
+              loading: () => isBootRoute ? null : '/boot',
+              error: (error, stackTrace) => isBootRoute ? null : '/boot',
+              data: (couple) {
+                if (couple == null) {
+                  return isCoupleEntryRoute ? null : '/couple';
+                }
+
+                return switch (couple.status) {
+                  CoupleStatus.pending =>
+                    isCoupleWaitingRoute ? null : '/couple/waiting',
+                  CoupleStatus.active =>
+                    couple.relationshipStartDate == null
+                        ? isCoupleAnniversaryRoute
+                              ? null
+                              : '/couple/anniversary'
+                        : (isBootRoute ||
+                              isLoginRoute ||
+                              isOnboardingRoute ||
+                              isCoupleRoute ||
+                              path == '/')
+                        ? '/home'
+                        : null,
+                  CoupleStatus.cancelled || CoupleStatus.disconnected =>
+                    isCoupleEntryRoute ? null : '/couple',
+                };
+              },
+            );
           },
         ),
       };
@@ -62,6 +97,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         name: 'onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/couple',
+        name: 'couple',
+        builder: (context, state) => const CoupleEntryScreen(),
+      ),
+      GoRoute(
+        path: '/couple/waiting',
+        name: 'coupleWaiting',
+        builder: (context, state) => const CoupleWaitingScreen(),
+      ),
+      GoRoute(
+        path: '/couple/anniversary',
+        name: 'coupleAnniversary',
+        builder: (context, state) => const RelationshipStartDateScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {
