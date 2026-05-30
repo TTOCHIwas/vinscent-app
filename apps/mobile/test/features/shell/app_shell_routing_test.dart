@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/app/app.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
+import 'package:vinscent/features/couple/application/couple_controller.dart';
+import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 
@@ -16,6 +18,9 @@ void main() {
           ),
           profileControllerProvider.overrideWithBuild(
             (ref, notifier) async => _profile,
+          ),
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _activeCouple,
           ),
         ],
         child: const VinscentApp(),
@@ -43,6 +48,9 @@ void main() {
           profileControllerProvider.overrideWithBuild(
             (ref, notifier) async => _profile,
           ),
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _activeCouple,
+          ),
         ],
         child: const VinscentApp(),
       ),
@@ -69,6 +77,19 @@ final _profile = UserProfile(
   displayName: '연인',
   birthDate: DateTime(2000),
   onboardingCompletedAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+final _activeCouple = Couple(
+  id: 'couple-id',
+  inviteCode: 'ABC234',
+  userAId: 'user-id',
+  userBId: 'partner-id',
+  relationshipStartDate: DateTime(2026),
+  timezone: 'Asia/Seoul',
+  status: CoupleStatus.active,
+  connectedAt: DateTime(2026),
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
