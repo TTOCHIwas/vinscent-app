@@ -21,7 +21,6 @@ class TodayAnswerController extends AsyncNotifier<DailyQuestionAnswerState?> {
   }
 
   Future<void> submit(String answerText) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final question = await ref.read(todayQuestionControllerProvider.future);
       if (question == null) {

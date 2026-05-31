@@ -31,17 +31,17 @@ class AppBottomBar extends StatelessWidget {
         children: [
           ShellTab(
             label: '홈',
-            isSelected: currentLocation == '/home',
+            isSelected: currentLocation.startsWith('/home'),
             onPressed: onHomePressed,
           ),
           ShellTab(
             label: '달력',
-            isSelected: currentLocation == '/calendar',
+            isSelected: currentLocation.startsWith('/calendar'),
             onPressed: onCalendarPressed,
           ),
           ShellTab(
             label: 'AI',
-            isSelected: currentLocation == '/ai',
+            isSelected: currentLocation.startsWith('/ai'),
             onPressed: onAiPressed,
           ),
         ],

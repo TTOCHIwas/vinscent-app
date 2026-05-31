@@ -15,6 +15,7 @@ import '../features/couple/presentation/relationship_start_date_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_controller.dart';
+import '../features/questions/presentation/today_question_answer_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/shell/presentation/app_shell.dart';
 
@@ -122,6 +123,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/home',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/home/question',
+            name: 'todayQuestionAnswer',
+            builder: (context, state) => const TodayQuestionAnswerScreen(),
           ),
           GoRoute(
             path: '/calendar',

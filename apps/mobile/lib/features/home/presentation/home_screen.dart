@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/date/today_controller.dart';
 import '../../../core/theme/app_colors.dart';
@@ -140,11 +141,16 @@ class _QuestionCharacterPreview extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final todayQuestion = ref.watch(todayQuestionControllerProvider);
+    final canOpenQuestion = todayQuestion.when(
+      loading: () => false,
+      error: (error, stackTrace) => false,
+      data: (question) => question != null,
+    );
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: canOpenQuestion ? () => context.go('/home/question') : null,
         child: SizedBox(
           width: double.infinity,
           child: Padding(
