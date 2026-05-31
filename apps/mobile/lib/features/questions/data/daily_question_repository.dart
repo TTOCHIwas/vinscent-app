@@ -76,6 +76,8 @@ class SupabaseDailyQuestionRepository implements DailyQuestionRepository {
       'auth_required' => DailyQuestionFailureReason.authRequired,
       'active_couple_required' =>
         DailyQuestionFailureReason.activeCoupleRequired,
+      'relationship_date_required' =>
+        DailyQuestionFailureReason.relationshipDateRequired,
       'question_pool_empty' => DailyQuestionFailureReason.questionPoolEmpty,
       _ => DailyQuestionFailureReason.unknown,
     };

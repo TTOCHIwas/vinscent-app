@@ -1,6 +1,7 @@
 enum DailyQuestionFailureReason {
   authRequired,
   activeCoupleRequired,
+  relationshipDateRequired,
   questionPoolEmpty,
   configMissing,
   unknown,
