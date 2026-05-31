@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../questions/application/today_question_controller.dart';
 import '../application/day_count.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -133,11 +134,13 @@ class _CoupleStatusMessage extends StatelessWidget {
   }
 }
 
-class _QuestionCharacterPreview extends StatelessWidget {
+class _QuestionCharacterPreview extends ConsumerWidget {
   const _QuestionCharacterPreview();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final todayQuestion = ref.watch(todayQuestionControllerProvider);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -151,7 +154,40 @@ class _QuestionCharacterPreview extends StatelessWidget {
               children: [
                 const Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
                 const SizedBox(height: 8),
-                const Text('준비 중', style: AppTextStyles.homeCharacterLabel),
+                todayQuestion.when(
+                  loading: () => const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (error, stackTrace) => Column(
+                    children: [
+                      Text(
+                        '질문을 불러오지 못했어요',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.homeCharacterLabel.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => ref
+                            .read(todayQuestionControllerProvider.notifier)
+                            .refresh(),
+                        child: const Text('다시 시도'),
+                      ),
+                    ],
+                  ),
+                  data: (question) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      question?.questionText ?? '준비 중',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.homeCharacterLabel,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 36),
                 Container(
                   width: 140,
