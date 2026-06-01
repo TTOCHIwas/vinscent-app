@@ -28,6 +28,22 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     super.initState();
     final today = ref.read(todayControllerProvider);
     _visibleMonth = _monthOnly(today);
+
+    ref.listenManual<DateTime>(todayControllerProvider, (previous, next) {
+      final todayMonth = _monthOnly(next);
+      if (!_visibleMonth.isAfter(todayMonth)) {
+        return;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _visibleMonth = todayMonth;
+        _selectedDate = null;
+      });
+    });
   }
 
   @override
@@ -51,13 +67,25 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           );
         }
 
+        final relationshipStartMonth = _monthOnly(
+          couple.relationshipStartDate!,
+        );
+        final todayMonth = _monthOnly(today);
+        final canGoPrevious = _canGoPrevious(relationshipStartMonth);
+        final canGoNext = _canGoNext(todayMonth);
+
         return Column(
           children: [
             _CalendarMonthHeader(
               visibleMonth: _visibleMonth,
-              canGoNext: _canGoNext(today),
-              onPreviousPressed: _showPreviousMonth,
-              onNextPressed: _canGoNext(today) ? _showNextMonth : null,
+              canGoPrevious: canGoPrevious,
+              canGoNext: canGoNext,
+              onPreviousPressed: canGoPrevious
+                  ? () => _showPreviousMonth(relationshipStartMonth)
+                  : null,
+              onNextPressed: canGoNext
+                  ? () => _showNextMonth(todayMonth)
+                  : null,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -86,21 +114,34 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
-  bool _canGoNext(DateTime today) {
-    final nextMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1);
-    return !nextMonth.isAfter(_monthOnly(today));
+  bool _canGoPrevious(DateTime relationshipStartMonth) {
+    return _visibleMonth.isAfter(relationshipStartMonth);
   }
 
-  void _showPreviousMonth() {
+  bool _canGoNext(DateTime todayMonth) {
+    return _visibleMonth.isBefore(todayMonth);
+  }
+
+  void _showPreviousMonth(DateTime relationshipStartMonth) {
+    final previousMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1);
+    if (previousMonth.isBefore(relationshipStartMonth)) {
+      return;
+    }
+
     setState(() {
-      _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1);
+      _visibleMonth = previousMonth;
       _selectedDate = null;
     });
   }
 
-  void _showNextMonth() {
+  void _showNextMonth(DateTime todayMonth) {
+    final nextMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1);
+    if (nextMonth.isAfter(todayMonth)) {
+      return;
+    }
+
     setState(() {
-      _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1);
+      _visibleMonth = nextMonth;
       _selectedDate = null;
     });
   }
@@ -120,14 +161,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 class _CalendarMonthHeader extends StatelessWidget {
   const _CalendarMonthHeader({
     required this.visibleMonth,
+    required this.canGoPrevious,
     required this.canGoNext,
     required this.onPreviousPressed,
     required this.onNextPressed,
   });
 
   final DateTime visibleMonth;
+  final bool canGoPrevious;
   final bool canGoNext;
-  final VoidCallback onPreviousPressed;
+  final VoidCallback? onPreviousPressed;
   final VoidCallback? onNextPressed;
 
   @override
@@ -145,7 +188,7 @@ class _CalendarMonthHeader extends StatelessWidget {
             child: _MonthIconButton(
               icon: Icons.chevron_left,
               semanticLabel: '이전 달',
-              onPressed: onPreviousPressed,
+              onPressed: canGoPrevious ? onPreviousPressed : null,
             ),
           ),
           Text(

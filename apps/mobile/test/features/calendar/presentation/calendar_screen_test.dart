@@ -25,6 +25,52 @@ void main() {
     expect(repository.requestedDates, isEmpty);
   });
 
+  testWidgets('does not move before relationship start month', (tester) async {
+    final repository = _FakeDailyQuestionHistoryRepository();
+
+    await _pumpCalendar(tester, repository: repository);
+
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026년 05월'), findsOneWidget);
+    expect(find.text('2026년 04월'), findsNothing);
+    expect(repository.requestedDates, isEmpty);
+  });
+
+  testWidgets('moves to previous month after relationship start month', (
+    tester,
+  ) async {
+    final repository = _FakeDailyQuestionHistoryRepository();
+
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      today: DateTime(2026, 6, 2),
+    );
+
+    expect(find.text('2026년 06월'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026년 05월'), findsOneWidget);
+    expect(repository.requestedDates, isEmpty);
+  });
+
+  testWidgets('does not move after today month', (tester) async {
+    final repository = _FakeDailyQuestionHistoryRepository();
+
+    await _pumpCalendar(tester, repository: repository);
+
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026년 05월'), findsOneWidget);
+    expect(find.text('2026년 06월'), findsNothing);
+    expect(repository.requestedDates, isEmpty);
+  });
+
   testWidgets('fetches selected past date and shows history detail', (
     tester,
   ) async {
@@ -96,6 +142,8 @@ void main() {
 Future<void> _pumpCalendar(
   WidgetTester tester, {
   required DailyQuestionHistoryRepository repository,
+  DateTime? today,
+  DateTime? relationshipStartDate,
 }) async {
   final router = GoRouter(
     initialLocation: '/calendar',
@@ -116,10 +164,11 @@ Future<void> _pumpCalendar(
     ProviderScope(
       overrides: [
         todayControllerProvider.overrideWithBuild(
-          (ref, notifier) => DateTime(2026, 5, 10),
+          (ref, notifier) => today ?? DateTime(2026, 5, 10),
         ),
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => _activeCouple,
+          (ref, notifier) async =>
+              _activeCouple(relationshipStartDate: relationshipStartDate),
         ),
         dailyQuestionHistoryRepositoryProvider.overrideWithValue(repository),
       ],
@@ -145,18 +194,20 @@ class _FakeDailyQuestionHistoryRepository
   }
 }
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
-  relationshipStartDate: DateTime(2026, 5, 1),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+Couple _activeCouple({DateTime? relationshipStartDate}) {
+  return Couple(
+    id: 'couple-id',
+    inviteCode: 'ABC234',
+    userAId: 'user-id',
+    userBId: 'partner-id',
+    relationshipStartDate: relationshipStartDate ?? DateTime(2026, 5, 1),
+    timezone: 'Asia/Seoul',
+    status: CoupleStatus.active,
+    connectedAt: DateTime(2026),
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+}
 
 final _historyQuestion = DailyQuestion(
   dailyQuestionId: 'daily-question-id',
