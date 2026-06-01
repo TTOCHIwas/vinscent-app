@@ -9,6 +9,7 @@ import '../application/today_answer_controller.dart';
 import '../application/today_question_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
+import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
 
 class TodayQuestionAnswerScreen extends ConsumerWidget {
@@ -19,27 +20,37 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
     final question = ref.watch(todayQuestionControllerProvider);
     final answerState = ref.watch(todayAnswerControllerProvider);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      child: question.when(
-        loading: () => const _CenteredLoader(),
-        error: (error, stackTrace) => _QuestionLoadError(
+    return question.when(
+      loading: () => _QuestionPageFrame(
+        onBackPressed: () => _goBackToHome(context),
+        child: const _CenteredLoader(),
+      ),
+      error: (error, stackTrace) => _QuestionPageFrame(
+        onBackPressed: () => _goBackToHome(context),
+        child: _QuestionLoadError(
           onRetry: () => ref.invalidate(todayQuestionControllerProvider),
         ),
-        data: (question) {
-          if (question == null) {
-            return const _StateMessage(
+      ),
+      data: (question) {
+        if (question == null) {
+          return _QuestionPageFrame(
+            onBackPressed: () => _goBackToHome(context),
+            child: const _StateMessage(
               title: '오늘 질문이 아직 없어요',
               message: '커플 연결과 첫 만남일 입력을 먼저 완료해 주세요.',
-            );
-          }
+            ),
+          );
+        }
 
-          return answerState.when(
-            loading: () => _QuestionScaffold(
+        return _QuestionPageFrame(
+          question: question,
+          onBackPressed: () => _goBackToHome(context),
+          child: answerState.when(
+            loading: () => _QuestionContent(
               question: question,
               child: const _CenteredLoader(),
             ),
-            error: (error, stackTrace) => _QuestionScaffold(
+            error: (error, stackTrace) => _QuestionContent(
               question: question,
               child: Column(
                 children: [
@@ -58,19 +69,27 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            data: (state) => _QuestionScaffold(
+            data: (state) => _QuestionContent(
               question: question,
-              headerAction: _QuestionHeaderAction(
-                label: state?.hasMyAnswer == true ? '수정' : '답변하기',
-                onPressed: () => context.push('/home/question/edit'),
+              child: QuestionAnswerOverview(
+                answerState: state,
+                onMyAnswerPressed: () => context.push('/home/question/edit'),
               ),
-              child: QuestionAnswerOverview(answerState: state),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
+}
+
+void _goBackToHome(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+    return;
+  }
+
+  context.go('/home');
 }
 
 class TodayQuestionAnswerEditScreen extends ConsumerWidget {
@@ -154,68 +173,69 @@ class _QuestionLoadError extends StatelessWidget {
   }
 }
 
+class _QuestionPageFrame extends StatelessWidget {
+  const _QuestionPageFrame({
+    required this.onBackPressed,
+    required this.child,
+    this.question,
+  });
+
+  final DailyQuestion? question;
+  final VoidCallback onBackPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        QuestionDetailHeader(
+          assignedDate: question?.assignedDate,
+          onBackPressed: onBackPressed,
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
 class _QuestionScaffold extends StatelessWidget {
-  const _QuestionScaffold({
+  const _QuestionScaffold({required this.question, required this.child});
+
+  final DailyQuestion question;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return _QuestionContent(question: question, child: child);
+  }
+}
+
+class _QuestionContent extends StatelessWidget {
+  const _QuestionContent({
     required this.question,
     required this.child,
-    this.headerAction,
   });
 
   final DailyQuestion question;
   final Widget child;
-  final Widget? headerAction;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(32, 32, 32, 40),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
-              ),
-              ?headerAction,
-            ],
-          ),
+          const Text('질문', style: AppTextStyles.homeBodyMedium),
           const SizedBox(height: 12),
           Text(
             question.questionText,
+            textAlign: TextAlign.center,
             style: AppTextStyles.onboardingTitle.copyWith(height: 1.35),
           ),
           const SizedBox(height: 28),
           child,
         ],
-      ),
-    );
-  }
-}
-
-class _QuestionHeaderAction extends StatelessWidget {
-  const _QuestionHeaderAction({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: label,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          child: Text(
-            label,
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
       ),
     );
   }

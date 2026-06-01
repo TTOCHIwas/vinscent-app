@@ -12,11 +12,13 @@ class QuestionAnswerOverview extends StatelessWidget {
     required this.answerState,
     this.displayStyle = QuestionAnswerDisplayStyle.boxed,
     this.partnerHiddenMessage = PartnerQuestionAnswerSection.todayHiddenMessage,
+    this.onMyAnswerPressed,
   });
 
   final DailyQuestionAnswerState? answerState;
   final QuestionAnswerDisplayStyle displayStyle;
   final String partnerHiddenMessage;
+  final VoidCallback? onMyAnswerPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class QuestionAnswerOverview extends StatelessWidget {
         MyQuestionAnswerSection(
           answerState: answerState,
           displayStyle: displayStyle,
+          onPressed: onMyAnswerPressed,
         ),
         const SizedBox(height: 28),
         PartnerQuestionAnswerSection(
@@ -45,12 +48,14 @@ class MyQuestionAnswerSection extends StatelessWidget {
     this.title = '내 답변',
     this.emptyMessage = '아직 답변하지 않았어요',
     this.displayStyle = QuestionAnswerDisplayStyle.boxed,
+    this.onPressed,
   });
 
   final DailyQuestionAnswerState? answerState;
   final String title;
   final String emptyMessage;
   final QuestionAnswerDisplayStyle displayStyle;
+  final VoidCallback? onPressed;
 
   bool get _hasAnswer {
     final state = answerState;
@@ -68,11 +73,29 @@ class MyQuestionAnswerSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return QuestionAnswerDisplaySection(
+    final section = QuestionAnswerDisplaySection(
       title: title,
       body: _body,
       isMuted: !_hasAnswer,
       displayStyle: displayStyle,
+    );
+
+    final onPressed = this.onPressed;
+    if (onPressed == null) {
+      return section;
+    }
+
+    return Semantics(
+      button: true,
+      label: title,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(10),
+          child: section,
+        ),
+      ),
     );
   }
 }
