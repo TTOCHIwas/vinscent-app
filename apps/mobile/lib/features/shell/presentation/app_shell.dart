@@ -20,26 +20,38 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
+    final showHeader = !_usesQuestionDetailHeader;
+    final showBottomBar = !_usesAnswerEditBottomBar;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
           SizedBox(height: math.max(topMinHeight, topInset)),
-          AppHeader(
-            height: headerHeight,
-            onSettingsPressed: () => context.go('/settings'),
-          ),
+          if (showHeader)
+            AppHeader(
+              height: headerHeight,
+              onSettingsPressed: () => context.go('/settings'),
+            ),
           Expanded(child: child),
-          AppBottomBar(
-            height: bottomBarHeight,
-            currentLocation: location,
-            onHomePressed: () => context.go('/home'),
-            onCalendarPressed: () => context.go('/calendar'),
-            onAiPressed: () => context.go('/ai'),
-          ),
+          if (showBottomBar)
+            AppBottomBar(
+              height: bottomBarHeight,
+              currentLocation: location,
+              onHomePressed: () => context.go('/home'),
+              onCalendarPressed: () => context.go('/calendar'),
+              onAiPressed: () => context.go('/ai'),
+            ),
         ],
       ),
     );
+  }
+
+  bool get _usesQuestionDetailHeader {
+    return location == '/home/question' || location == '/home/question/edit';
+  }
+
+  bool get _usesAnswerEditBottomBar {
+    return location == '/home/question/edit';
   }
 }
