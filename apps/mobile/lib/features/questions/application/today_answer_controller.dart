@@ -20,8 +20,10 @@ class TodayAnswerController extends AsyncNotifier<DailyQuestionAnswerState?> {
     state = await AsyncValue.guard(() => _load(watchDependencies: false));
   }
 
-  Future<void> submit(String answerText) async {
-    state = await AsyncValue.guard(() async {
+  Future<DailyQuestionAnswerState?> submit(String answerText) async {
+    final previousState = state;
+
+    try {
       final question = await ref.read(todayQuestionControllerProvider.future);
       if (question == null) {
         return null;
@@ -29,10 +31,14 @@ class TodayAnswerController extends AsyncNotifier<DailyQuestionAnswerState?> {
 
       final repository = ref.read(dailyQuestionAnswerRepositoryProvider);
       final answerState = await repository.submitTodayAnswer(answerText);
+      state = AsyncValue.data(answerState);
       ref.invalidate(todayQuestionControllerProvider);
 
       return answerState;
-    });
+    } catch (error, stackTrace) {
+      state = previousState;
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   Future<DailyQuestionAnswerState?> _load({

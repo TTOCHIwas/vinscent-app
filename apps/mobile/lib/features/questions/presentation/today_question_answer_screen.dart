@@ -108,9 +108,11 @@ class _AnswerForm extends ConsumerStatefulWidget {
 
 class _AnswerFormState extends ConsumerState<_AnswerForm> {
   static const _maxAnswerLength = 500;
+  static const _submitFailureMessage = '답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   late final TextEditingController _controller;
   var _isSubmitting = false;
+  String? _submitErrorMessage;
 
   @override
   void initState() {
@@ -197,6 +199,15 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
             ),
           ),
         ),
+        if (_submitErrorMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _submitErrorMessage!,
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: Colors.redAccent,
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         AppActionButton(
           label: answerState?.hasMyAnswer == true ? '답변 수정' : '답변 저장',
@@ -209,7 +220,9 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
   }
 
   void _onTextChanged() {
-    setState(() {});
+    setState(() {
+      _submitErrorMessage = null;
+    });
   }
 
   Future<void> _submit() async {
@@ -217,16 +230,28 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
-    await ref
-        .read(todayAnswerControllerProvider.notifier)
-        .submit(_controller.text);
+    setState(() {
+      _isSubmitting = true;
+      _submitErrorMessage = null;
+    });
+
+    String? submitErrorMessage;
+    try {
+      await ref
+          .read(todayAnswerControllerProvider.notifier)
+          .submit(_controller.text);
+    } catch (_) {
+      submitErrorMessage = _submitFailureMessage;
+    }
 
     if (!mounted) {
       return;
     }
 
-    setState(() => _isSubmitting = false);
+    setState(() {
+      _isSubmitting = false;
+      _submitErrorMessage = submitErrorMessage;
+    });
   }
 }
 

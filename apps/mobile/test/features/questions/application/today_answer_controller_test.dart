@@ -66,6 +66,35 @@ void main() {
     expect(repository.submittedAnswers, ['answer']);
     expect(state, _submittedState);
   });
+
+  test('keeps previous state when submit fails', () async {
+    final submitError = Exception('submit failed');
+    final repository = _FakeDailyQuestionAnswerRepository(
+      _answerState,
+      submitError: submitError,
+    );
+    final container = _container(
+      question: _dailyQuestion,
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    final initialState = await container.read(
+      todayAnswerControllerProvider.future,
+    );
+
+    await expectLater(
+      container.read(todayAnswerControllerProvider.notifier).submit('answer'),
+      throwsA(same(submitError)),
+    );
+
+    final state = container.read(todayAnswerControllerProvider);
+    expect(initialState, _answerState);
+    expect(repository.submitCallCount, 1);
+    expect(repository.submittedAnswers, ['answer']);
+    expect(state.hasValue, true);
+    expect(state.value, _answerState);
+  });
 }
 
 ProviderContainer _container({
@@ -84,9 +113,10 @@ ProviderContainer _container({
 
 class _FakeDailyQuestionAnswerRepository
     implements DailyQuestionAnswerRepository {
-  _FakeDailyQuestionAnswerRepository(this.state);
+  _FakeDailyQuestionAnswerRepository(this.state, {this.submitError});
 
   final DailyQuestionAnswerState state;
+  final Object? submitError;
   final submittedAnswers = <String>[];
   var fetchCallCount = 0;
   var submitCallCount = 0;
@@ -101,6 +131,11 @@ class _FakeDailyQuestionAnswerRepository
   Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) async {
     submitCallCount += 1;
     submittedAnswers.add(answerText);
+    final submitError = this.submitError;
+    if (submitError != null) {
+      throw submitError;
+    }
+
     return state;
   }
 }

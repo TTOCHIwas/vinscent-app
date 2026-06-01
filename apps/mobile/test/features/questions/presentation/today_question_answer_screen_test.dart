@@ -46,6 +46,40 @@ void main() {
     expect(find.text('내 답변이 저장됐어요. 상대방을 기다리는 중이에요'), findsOneWidget);
   });
 
+  testWidgets('keeps draft and shows inline error when submit fails', (
+    tester,
+  ) async {
+    final repository = _FakeDailyQuestionAnswerRepository(
+      _emptyAnswerState,
+      submittedState: _submittedAnswerState,
+      submitFailuresBeforeSuccess: 1,
+    );
+
+    await _pumpScreen(tester, repository: repository);
+
+    await tester.enterText(find.byType(TextField), 'hello');
+    await tester.pump();
+
+    await tester.tap(find.text('답변 저장'));
+    await tester.pumpAndSettle();
+
+    expect(repository.submitCallCount, 1);
+    expect(repository.submittedAnswers, ['hello']);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'hello',
+    );
+    expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
+
+    await tester.tap(find.text('답변 저장'));
+    await tester.pumpAndSettle();
+
+    expect(repository.submitCallCount, 2);
+    expect(repository.submittedAnswers, ['hello', 'hello']);
+    expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsNothing);
+    expect(find.text('내 답변이 저장됐어요. 상대방을 기다리는 중이에요'), findsOneWidget);
+  });
+
   testWidgets('disables submit when answer is too long', (tester) async {
     final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
 
@@ -100,11 +134,13 @@ class _FakeDailyQuestionAnswerRepository
   _FakeDailyQuestionAnswerRepository(
     this.initialState, {
     DailyQuestionAnswerState? submittedState,
+    this.submitFailuresBeforeSuccess = 0,
   }) : submittedState = submittedState ?? initialState,
        currentState = initialState;
 
   final DailyQuestionAnswerState initialState;
   final DailyQuestionAnswerState submittedState;
+  int submitFailuresBeforeSuccess;
   DailyQuestionAnswerState currentState;
   final submittedAnswers = <String>[];
   var submitCallCount = 0;
@@ -118,6 +154,11 @@ class _FakeDailyQuestionAnswerRepository
   Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) async {
     submitCallCount += 1;
     submittedAnswers.add(answerText);
+    if (submitFailuresBeforeSuccess > 0) {
+      submitFailuresBeforeSuccess -= 1;
+      throw Exception('submit failed');
+    }
+
     currentState = submittedState;
     return submittedState;
   }
