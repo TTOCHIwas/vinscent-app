@@ -10,6 +10,10 @@ class DailyQuestionAnswerState {
     this.myAnswerText,
     this.myAnswerAnsweredAt,
     this.myAnswerUpdatedAt,
+    this.partnerAnswerId,
+    this.partnerAnswerText,
+    this.partnerAnswerAnsweredAt,
+    this.partnerAnswerUpdatedAt,
   });
 
   factory DailyQuestionAnswerState.fromJson(Map<String, dynamic> json) {
@@ -21,6 +25,14 @@ class DailyQuestionAnswerState {
       myAnswerAnsweredAt: _parseOptionalDateTime(json['my_answer_answered_at']),
       myAnswerUpdatedAt: _parseOptionalDateTime(json['my_answer_updated_at']),
       partnerAnswerExists: json['partner_answer_exists'] as bool,
+      partnerAnswerId: json['partner_answer_id'] as String?,
+      partnerAnswerText: json['partner_answer_text'] as String?,
+      partnerAnswerAnsweredAt: _parseOptionalDateTime(
+        json['partner_answer_answered_at'],
+      ),
+      partnerAnswerUpdatedAt: _parseOptionalDateTime(
+        json['partner_answer_updated_at'],
+      ),
       answerCount: (json['answer_count'] as num).toInt(),
     );
   }
@@ -32,9 +44,17 @@ class DailyQuestionAnswerState {
   final DateTime? myAnswerAnsweredAt;
   final DateTime? myAnswerUpdatedAt;
   final bool partnerAnswerExists;
+  final String? partnerAnswerId;
+  final String? partnerAnswerText;
+  final DateTime? partnerAnswerAnsweredAt;
+  final DateTime? partnerAnswerUpdatedAt;
   final int answerCount;
 
   bool get hasMyAnswer => myAnswerId != null;
+
+  bool get hasPartnerAnswer => partnerAnswerId != null;
+
+  bool get canRevealPartnerAnswer => hasMyAnswer && hasPartnerAnswer;
 }
 
 DateTime? _parseOptionalDateTime(Object? value) {
