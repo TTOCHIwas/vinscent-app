@@ -130,6 +130,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TodayQuestionAnswerScreen(),
           ),
           GoRoute(
+            path: '/home/question/edit',
+            name: 'todayQuestionAnswerEdit',
+            builder: (context, state) => const TodayQuestionAnswerEditScreen(),
+          ),
+          GoRoute(
             path: '/calendar',
             name: 'calendar',
             builder: (context, state) => const CalendarScreen(),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/app/app.dart';
+import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -26,6 +27,9 @@ void main() {
           ),
           coupleControllerProvider.overrideWithBuild(
             (ref, notifier) async => _activeCouple,
+          ),
+          todayControllerProvider.overrideWithBuild(
+            (ref, notifier) => DateTime(2026, 5, 31),
           ),
         ],
         child: const VinscentApp(),
@@ -56,6 +60,9 @@ void main() {
           coupleControllerProvider.overrideWithBuild(
             (ref, notifier) async => _activeCouple,
           ),
+          todayControllerProvider.overrideWithBuild(
+            (ref, notifier) => DateTime(2026, 5, 31),
+          ),
         ],
         child: const VinscentApp(),
       ),
@@ -65,7 +72,7 @@ void main() {
 
     await tester.tap(find.text('달력'));
     await tester.pumpAndSettle();
-    expect(find.text('달력'), findsNWidgets(2));
+    expect(find.text('2026년 05월'), findsOneWidget);
 
     await tester.tap(find.text('AI'));
     await tester.pumpAndSettle();
@@ -90,6 +97,9 @@ void main() {
           coupleControllerProvider.overrideWithBuild(
             (ref, notifier) async => _activeCouple,
           ),
+          todayControllerProvider.overrideWithBuild(
+            (ref, notifier) => DateTime(2026, 5, 31),
+          ),
           todayQuestionControllerProvider.overrideWithBuild(
             (ref, notifier) async => _dailyQuestion,
           ),
@@ -105,7 +115,7 @@ void main() {
     await tester.tap(find.text('today question'));
     await tester.pumpAndSettle();
 
-    expect(find.text('답변 저장'), findsOneWidget);
+    expect(find.text('답변하기'), findsOneWidget);
 
     final tabs = tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
     expect(tabs.first.isSelected, isTrue);

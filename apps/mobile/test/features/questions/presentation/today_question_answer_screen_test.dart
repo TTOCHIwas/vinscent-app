@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vinscent/features/questions/application/today_question_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
@@ -8,165 +9,276 @@ import 'package:vinscent/features/questions/data/daily_question_answer_state.dar
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 
 void main() {
-  testWidgets('shows question and disables submit for blank answer', (
-    tester,
-  ) async {
-    final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+  group('TodayQuestionAnswerScreen', () {
+    testWidgets('shows readonly empty answer state', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
 
-    await _pumpScreen(tester, repository: repository);
+      await _pumpRouter(tester, repository: repository);
 
-    expect(find.text('today question'), findsOneWidget);
-    expect(find.text('아직 답변하지 않았어요'), findsOneWidget);
-    expect(find.text('0 / 500'), findsOneWidget);
+      expect(find.text('today question'), findsOneWidget);
+      expect(find.text('답변하기'), findsOneWidget);
+      expect(find.text('내 답변'), findsOneWidget);
+      expect(find.text('아직 답변하지 않았어요'), findsOneWidget);
+      expect(find.text('상대방 답변'), findsOneWidget);
+      expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('답변 저장'), findsNothing);
+    });
 
-    await tester.tap(find.text('답변 저장'));
-    await tester.pump();
+    testWidgets('shows readonly submitted answer state', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _submittedAnswerState,
+      );
 
-    expect(repository.submitCallCount, 0);
+      await _pumpRouter(tester, repository: repository);
+
+      expect(find.text('수정'), findsOneWidget);
+      expect(find.text('hello'), findsOneWidget);
+      expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('답변 수정'), findsNothing);
+    });
+
+    testWidgets('hides partner answer before my answer is saved', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _partnerOnlyAnswerState,
+      );
+
+      await _pumpRouter(tester, repository: repository);
+
+      expect(find.text('답변하기'), findsOneWidget);
+      expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
+      expect(find.text('partner answer'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('shows both answers when completed', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+
+      await _pumpRouter(tester, repository: repository);
+
+      expect(find.text('수정'), findsOneWidget);
+      expect(find.text('내 답변'), findsOneWidget);
+      expect(find.text('상대방 답변'), findsOneWidget);
+      expect(find.text('hello'), findsOneWidget);
+      expect(find.text('partner answer'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('opens edit route from answer action', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+
+      await _pumpRouter(tester, repository: repository);
+
+      await tester.tap(find.text('답변하기'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('답변 저장'), findsOneWidget);
+      expect(find.text('상대방 답변'), findsNothing);
+    });
+
+    testWidgets('opens edit route from edit action', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _submittedAnswerState,
+      );
+
+      await _pumpRouter(tester, repository: repository);
+
+      await tester.tap(find.text('수정'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'hello',
+      );
+      expect(find.text('답변 수정'), findsOneWidget);
+      expect(find.text('상대방 답변'), findsNothing);
+    });
   });
 
-  testWidgets('submits valid answer', (tester) async {
-    final repository = _FakeDailyQuestionAnswerRepository(
-      _emptyAnswerState,
-      submittedState: _submittedAnswerState,
-    );
+  group('TodayQuestionAnswerEditScreen', () {
+    testWidgets('disables submit for blank answer', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
 
-    await _pumpScreen(tester, repository: repository);
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+      );
 
-    await tester.enterText(find.byType(TextField), 'hello');
-    await tester.pump();
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('0 / 500'), findsOneWidget);
 
-    expect(find.text('5 / 500'), findsOneWidget);
+      await tester.tap(find.text('답변 저장'));
+      await tester.pump();
 
-    await tester.tap(find.text('답변 저장'));
-    await tester.pumpAndSettle();
+      expect(repository.submitCallCount, 0);
+    });
 
-    expect(repository.submitCallCount, 1);
-    expect(repository.submittedAnswers, ['hello']);
-    expect(find.text('내 답변이 저장됐어요. 상대방을 기다리는 중이에요'), findsOneWidget);
-  });
+    testWidgets('submits valid answer and returns to readonly screen', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _emptyAnswerState,
+        submittedState: _submittedAnswerState,
+      );
 
-  testWidgets('keeps draft and shows inline error when submit fails', (
-    tester,
-  ) async {
-    final repository = _FakeDailyQuestionAnswerRepository(
-      _emptyAnswerState,
-      submittedState: _submittedAnswerState,
-      submitFailuresBeforeSuccess: 1,
-    );
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+      );
 
-    await _pumpScreen(tester, repository: repository);
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
 
-    await tester.enterText(find.byType(TextField), 'hello');
-    await tester.pump();
+      expect(find.text('5 / 500'), findsOneWidget);
 
-    await tester.tap(find.text('답변 저장'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('답변 저장'));
+      await tester.pumpAndSettle();
 
-    expect(repository.submitCallCount, 1);
-    expect(repository.submittedAnswers, ['hello']);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      'hello',
-    );
-    expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
+      expect(repository.submitCallCount, 1);
+      expect(repository.submittedAnswers, ['hello']);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('수정'), findsOneWidget);
+      expect(find.text('hello'), findsOneWidget);
+      expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
+    });
 
-    await tester.tap(find.text('답변 저장'));
-    await tester.pumpAndSettle();
+    testWidgets('keeps draft and shows inline error when submit fails', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _emptyAnswerState,
+        submittedState: _submittedAnswerState,
+        submitFailuresBeforeSuccess: 1,
+      );
 
-    expect(repository.submitCallCount, 2);
-    expect(repository.submittedAnswers, ['hello', 'hello']);
-    expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsNothing);
-    expect(find.text('내 답변이 저장됐어요. 상대방을 기다리는 중이에요'), findsOneWidget);
-  });
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+      );
 
-  testWidgets('disables submit when answer is too long', (tester) async {
-    final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
 
-    await _pumpScreen(tester, repository: repository);
+      await tester.tap(find.text('답변 저장'));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'a' * 501);
-    await tester.pump();
+      expect(repository.submitCallCount, 1);
+      expect(repository.submittedAnswers, ['hello']);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'hello',
+      );
+      expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
 
-    expect(find.text('501 / 500'), findsOneWidget);
+      await tester.tap(find.text('답변 저장'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('답변 저장'));
-    await tester.pump();
+      expect(repository.submitCallCount, 2);
+      expect(repository.submittedAnswers, ['hello', 'hello']);
+      expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('hello'), findsOneWidget);
+    });
 
-    expect(repository.submitCallCount, 0);
-  });
+    testWidgets('disables submit when answer is too long', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
 
-  testWidgets('shows existing answer as editable', (tester) async {
-    final repository = _FakeDailyQuestionAnswerRepository(
-      _submittedAnswerState,
-    );
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+      );
 
-    await _pumpScreen(tester, repository: repository);
+      await tester.enterText(find.byType(TextField), 'a' * 501);
+      await tester.pump();
 
-    expect(find.text('hello'), findsWidgets);
-    expect(find.text('답변 수정'), findsOneWidget);
-  });
+      expect(find.text('501 / 500'), findsOneWidget);
 
-  testWidgets('hides partner answer before my answer is saved', (tester) async {
-    final repository = _FakeDailyQuestionAnswerRepository(
-      _partnerOnlyAnswerState,
-    );
+      await tester.tap(find.text('답변 저장'));
+      await tester.pump();
 
-    await _pumpScreen(tester, repository: repository);
+      expect(repository.submitCallCount, 0);
+    });
 
-    expect(find.text('상대방이 먼저 답변했어요'), findsOneWidget);
-    expect(find.text('partner answer'), findsNothing);
-    expect(find.text('상대방 답변'), findsNothing);
-    expect(find.text('답변 저장'), findsOneWidget);
-  });
+    testWidgets('shows existing answer as editable', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _submittedAnswerState,
+      );
 
-  testWidgets('shows both answers when completed', (tester) async {
-    final repository = _FakeDailyQuestionAnswerRepository(
-      _completedAnswerState,
-    );
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+      );
 
-    await _pumpScreen(tester, repository: repository);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'hello',
+      );
+      expect(find.text('답변 수정'), findsOneWidget);
+      expect(find.text('상대방 답변'), findsNothing);
+    });
 
-    expect(find.text('둘 다 답변을 완료했어요'), findsOneWidget);
-    expect(find.text('내 답변'), findsOneWidget);
-    expect(find.text('상대방 답변'), findsOneWidget);
-    expect(find.text('hello'), findsWidgets);
-    expect(find.text('partner answer'), findsOneWidget);
-    expect(find.text('답변 수정'), findsOneWidget);
-  });
+    testWidgets('updates answer and returns with partner answer visible', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+        submittedState: _editedCompletedAnswerState,
+      );
 
-  testWidgets('keeps partner answer visible after editing completed answer', (
-    tester,
-  ) async {
-    final repository = _FakeDailyQuestionAnswerRepository(
-      _completedAnswerState,
-      submittedState: _editedCompletedAnswerState,
-    );
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+      );
 
-    await _pumpScreen(tester, repository: repository);
+      await tester.enterText(find.byType(TextField), 'edited answer');
+      await tester.pump();
 
-    await tester.enterText(find.byType(TextField), 'edited answer');
-    await tester.pump();
+      await tester.tap(find.text('답변 수정'));
+      await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('답변 수정'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('답변 수정'));
-    await tester.pumpAndSettle();
-
-    expect(repository.submitCallCount, 1);
-    expect(repository.submittedAnswers, ['edited answer']);
-    expect(find.text('내 답변'), findsOneWidget);
-    expect(find.text('상대방 답변'), findsOneWidget);
-    expect(find.text('edited answer'), findsWidgets);
-    expect(find.text('partner answer'), findsOneWidget);
+      expect(repository.submitCallCount, 1);
+      expect(repository.submittedAnswers, ['edited answer']);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('edited answer'), findsOneWidget);
+      expect(find.text('partner answer'), findsOneWidget);
+    });
   });
 }
 
-Future<void> _pumpScreen(
+Future<GoRouter> _pumpRouter(
   WidgetTester tester, {
   required DailyQuestionAnswerRepository repository,
+  String initialLocation = '/home/question',
 }) async {
+  final router = GoRouter(
+    initialLocation: initialLocation,
+    routes: [
+      GoRoute(
+        path: '/home/question',
+        builder: (context, state) =>
+            const Scaffold(body: TodayQuestionAnswerScreen()),
+      ),
+      GoRoute(
+        path: '/home/question/edit',
+        builder: (context, state) =>
+            const Scaffold(body: TodayQuestionAnswerEditScreen()),
+      ),
+    ],
+  );
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -175,13 +287,12 @@ Future<void> _pumpScreen(
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: TodayQuestionAnswerScreen()),
-      ),
+      child: MaterialApp.router(routerConfig: router),
     ),
   );
 
   await tester.pumpAndSettle();
+  return router;
 }
 
 class _FakeDailyQuestionAnswerRepository

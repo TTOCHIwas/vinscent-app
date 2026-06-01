@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
@@ -8,9 +9,73 @@ import '../application/today_answer_controller.dart';
 import '../application/today_question_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
+import 'widgets/question_answer_sections.dart';
 
 class TodayQuestionAnswerScreen extends ConsumerWidget {
   const TodayQuestionAnswerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final question = ref.watch(todayQuestionControllerProvider);
+    final answerState = ref.watch(todayAnswerControllerProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      child: question.when(
+        loading: () => const _CenteredLoader(),
+        error: (error, stackTrace) => const _StateMessage(
+          title: '질문을 불러오지 못했어요',
+          message: '잠시 후 다시 시도해 주세요.',
+        ),
+        data: (question) {
+          if (question == null) {
+            return const _StateMessage(
+              title: '오늘 질문이 아직 없어요',
+              message: '커플 연결과 첫 만남일 입력을 먼저 완료해 주세요.',
+            );
+          }
+
+          return answerState.when(
+            loading: () => _QuestionScaffold(
+              question: question,
+              child: const _CenteredLoader(),
+            ),
+            error: (error, stackTrace) => _QuestionScaffold(
+              question: question,
+              child: Column(
+                children: [
+                  const _StateMessage(
+                    title: '답변 정보를 불러오지 못했어요',
+                    message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+                  ),
+                  const SizedBox(height: 16),
+                  AppActionButton(
+                    label: '다시 시도',
+                    enabled: true,
+                    onPressed: () => ref
+                        .read(todayAnswerControllerProvider.notifier)
+                        .refresh(),
+                  ),
+                ],
+              ),
+            ),
+            data: (state) => _QuestionScaffold(
+              question: question,
+              headerAction: _QuestionHeaderAction(
+                label: state?.hasMyAnswer == true ? '수정' : '답변하기',
+                onPressed: () => context.push('/home/question/edit'),
+              ),
+              child: QuestionAnswerOverview(answerState: state),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class TodayQuestionAnswerEditScreen extends ConsumerWidget {
+  const TodayQuestionAnswerEditScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,10 +137,15 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
 }
 
 class _QuestionScaffold extends StatelessWidget {
-  const _QuestionScaffold({required this.question, required this.child});
+  const _QuestionScaffold({
+    required this.question,
+    required this.child,
+    this.headerAction,
+  });
 
   final DailyQuestion question;
   final Widget child;
+  final Widget? headerAction;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +153,14 @@ class _QuestionScaffold extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
+              ),
+              ?headerAction,
+            ],
+          ),
           const SizedBox(height: 12),
           Text(
             question.questionText,
@@ -92,6 +169,35 @@ class _QuestionScaffold extends StatelessWidget {
           const SizedBox(height: 28),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _QuestionHeaderAction extends StatelessWidget {
+  const _QuestionHeaderAction({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Text(
+            label,
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -160,12 +266,8 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _AnswerStatus(answerState: answerState),
-        const SizedBox(height: 18),
-        if (answerState?.canRevealPartnerAnswer == true) ...[
-          _RevealedAnswerCards(answerState: answerState!),
-          const SizedBox(height: 18),
-        ],
+        const Text('내 답변', style: AppTextStyles.homeBodyMedium),
+        const SizedBox(height: 10),
         TextField(
           controller: _controller,
           minLines: 7,
@@ -244,6 +346,12 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       await ref
           .read(todayAnswerControllerProvider.notifier)
           .submit(_controller.text);
+      if (!mounted) {
+        return;
+      }
+
+      context.go('/home/question');
+      return;
     } catch (_) {
       submitErrorMessage = _submitFailureMessage;
     }
@@ -256,102 +364,6 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       _isSubmitting = false;
       _submitErrorMessage = submitErrorMessage;
     });
-  }
-}
-
-class _RevealedAnswerCards extends StatelessWidget {
-  const _RevealedAnswerCards({required this.answerState});
-
-  final DailyQuestionAnswerState answerState;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _AnswerCard(title: '내 답변', body: answerState.myAnswerText ?? ''),
-        const SizedBox(height: 10),
-        _AnswerCard(title: '상대방 답변', body: answerState.partnerAnswerText ?? ''),
-      ],
-    );
-  }
-}
-
-class _AnswerCard extends StatelessWidget {
-  const _AnswerCard({required this.title, required this.body});
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.wireframeBorder),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: AppColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(body, style: AppTextStyles.homeBody.copyWith(height: 1.45)),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnswerStatus extends StatelessWidget {
-  const _AnswerStatus({required this.answerState});
-
-  final DailyQuestionAnswerState? answerState;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = _label;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.wireframeBorder),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.homeCharacterLabel.copyWith(
-          color: AppColors.textMuted,
-        ),
-      ),
-    );
-  }
-
-  String get _label {
-    final state = answerState;
-    if (state == null || !state.hasMyAnswer) {
-      if (state?.partnerAnswerExists == true) {
-        return '상대방이 먼저 답변했어요';
-      }
-
-      return '아직 답변하지 않았어요';
-    }
-
-    if (state.status == DailyQuestionStatus.completed) {
-      return '둘 다 답변을 완료했어요';
-    }
-
-    if (state.partnerAnswerExists) {
-      return '상대방도 답변했어요';
-    }
-
-    return '내 답변이 저장됐어요. 상대방을 기다리는 중이에요';
   }
 }
 
