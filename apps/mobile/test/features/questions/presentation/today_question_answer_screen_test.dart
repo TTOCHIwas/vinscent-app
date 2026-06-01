@@ -99,6 +99,32 @@ void main() {
       expect(find.text('답변 수정'), findsOneWidget);
       expect(find.text('상대방 답변'), findsNothing);
     });
+
+    testWidgets('retries when question load fails', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      var shouldFail = true;
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        questionBuilder: (ref, notifier) async {
+          if (shouldFail) {
+            shouldFail = false;
+            throw Exception('question unavailable');
+          }
+
+          return _dailyQuestion;
+        },
+      );
+
+      expect(find.text('질문을 불러오지 못했어요'), findsOneWidget);
+
+      await tester.tap(find.text('다시 시도'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('today question'), findsOneWidget);
+      expect(find.text('질문을 불러오지 못했어요'), findsNothing);
+    });
   });
 
   group('TodayQuestionAnswerEditScreen', () {
@@ -262,6 +288,8 @@ Future<GoRouter> _pumpRouter(
   WidgetTester tester, {
   required DailyQuestionAnswerRepository repository,
   String initialLocation = '/home/question',
+  Future<DailyQuestion?> Function(Ref ref, TodayQuestionController notifier)?
+  questionBuilder,
 }) async {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -283,7 +311,7 @@ Future<GoRouter> _pumpRouter(
     ProviderScope(
       overrides: [
         todayQuestionControllerProvider.overrideWithBuild(
-          (ref, notifier) async => _dailyQuestion,
+          questionBuilder ?? (ref, notifier) async => _dailyQuestion,
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
       ],

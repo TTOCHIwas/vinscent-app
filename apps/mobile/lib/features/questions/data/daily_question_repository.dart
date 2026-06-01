@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -27,11 +29,15 @@ class SupabaseDailyQuestionRepository implements DailyQuestionRepository {
     }
 
     try {
-      final data = await Supabase.instance.client.rpc(
-        'get_or_assign_today_question',
-      );
+      final data = await Supabase.instance.client
+          .rpc('get_or_assign_today_question')
+          .timeout(AppConfig.supabaseRpcTimeout);
 
       return DailyQuestion.fromJson(_asRow(data));
+    } on TimeoutException {
+      throw const DailyQuestionRepositoryException(
+        DailyQuestionFailureReason.requestTimeout,
+      );
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }

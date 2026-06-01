@@ -8,4 +8,4 @@ final dailyQuestionHistoryProvider = FutureProvider.autoDispose
     .family<DailyQuestionHistoryEntry?, DateTime>((ref, date) {
       final repository = ref.watch(dailyQuestionHistoryRepositoryProvider);
       return repository.fetchByDate(calendarDateOnly(date));
-    });
+    }, retry: (_, _) => null);

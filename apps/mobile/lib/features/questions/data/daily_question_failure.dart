@@ -4,6 +4,7 @@ enum DailyQuestionFailureReason {
   relationshipDateRequired,
   questionPoolEmpty,
   configMissing,
+  requestTimeout,
   unknown,
 }
 

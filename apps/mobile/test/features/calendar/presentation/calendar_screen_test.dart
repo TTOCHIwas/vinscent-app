@@ -108,6 +108,31 @@ void main() {
     },
   );
 
+  testWidgets('retries selected past date after history load failure', (
+    tester,
+  ) async {
+    final repository = _FlakyDailyQuestionHistoryRepository(
+      entry: _completedEntry,
+    );
+
+    await _pumpCalendar(tester, repository: repository);
+
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDates, [DateTime(2026, 5, 5)]);
+    expect(find.text('기록을 불러오지 못했어요'), findsOneWidget);
+
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDates, [
+      DateTime(2026, 5, 5),
+      DateTime(2026, 5, 5),
+    ]);
+    expect(find.text('history question'), findsOneWidget);
+  });
+
   testWidgets('uses history hidden copy when my answer is missing', (
     tester,
   ) async {
@@ -191,6 +216,28 @@ class _FakeDailyQuestionHistoryRepository
     final normalizedDate = calendarDateOnly(date);
     requestedDates.add(normalizedDate);
     return entries[normalizedDate];
+  }
+}
+
+class _FlakyDailyQuestionHistoryRepository
+    implements DailyQuestionHistoryRepository {
+  _FlakyDailyQuestionHistoryRepository({required this.entry});
+
+  final DailyQuestionHistoryEntry entry;
+  final requestedDates = <DateTime>[];
+  var _shouldFail = true;
+
+  @override
+  Future<DailyQuestionHistoryEntry?> fetchByDate(DateTime date) async {
+    final normalizedDate = calendarDateOnly(date);
+    requestedDates.add(normalizedDate);
+
+    if (_shouldFail) {
+      _shouldFail = false;
+      throw Exception('history unavailable');
+    }
+
+    return entry;
   }
 }
 

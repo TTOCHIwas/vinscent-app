@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -27,13 +29,19 @@ class SupabaseDailyQuestionHistoryRepository
     }
 
     try {
-      final data = await Supabase.instance.client.rpc(
-        'get_daily_question_answer_state_for_date',
-        params: {'target_date': _formatDate(date)},
-      );
+      final data = await Supabase.instance.client
+          .rpc(
+            'get_daily_question_answer_state_for_date',
+            params: {'target_date': _formatDate(date)},
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
       final row = _asOptionalRow(data);
 
       return row == null ? null : DailyQuestionHistoryEntry.fromJson(row);
+    } on TimeoutException {
+      throw const DailyQuestionHistoryRepositoryException(
+        DailyQuestionHistoryFailureReason.requestTimeout,
+      );
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }

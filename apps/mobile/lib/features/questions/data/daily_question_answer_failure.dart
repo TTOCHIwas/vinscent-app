@@ -7,6 +7,7 @@ enum DailyQuestionAnswerFailureReason {
   answerRequired,
   answerTooLong,
   configMissing,
+  requestTimeout,
   unknown,
 }
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/date/today_controller.dart';
+import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -414,9 +415,10 @@ class _CalendarDetail extends ConsumerWidget {
         padding: EdgeInsets.symmetric(vertical: 32),
         child: _CenteredLoader(),
       ),
-      error: (error, stackTrace) => const _CalendarStateMessage(
-        title: '기록을 불러오지 못했어요',
-        message: '잠시 후 다시 시도해 주세요.',
+      error: (error, stackTrace) => _CalendarHistoryErrorDetail(
+        onRetry: () {
+          ref.invalidate(dailyQuestionHistoryProvider(selected));
+        },
       ),
       data: (entry) {
         if (entry == null) {
@@ -425,6 +427,31 @@ class _CalendarDetail extends ConsumerWidget {
 
         return _HistoryDetail(entry: entry);
       },
+    );
+  }
+}
+
+class _CalendarHistoryErrorDetail extends StatelessWidget {
+  const _CalendarHistoryErrorDetail({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const _CalendarStateMessage(
+          title: '기록을 불러오지 못했어요',
+          message: '잠시 후 다시 시도해 주세요.',
+        ),
+        const SizedBox(height: 16),
+        AppActionButton(
+          label: '다시 시도',
+          enabled: true,
+          onPressed: onRetry,
+          isSecondary: true,
+        ),
+      ],
     );
   }
 }

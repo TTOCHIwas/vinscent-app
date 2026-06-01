@@ -7,6 +7,7 @@ import 'today_question_controller.dart';
 final todayAnswerControllerProvider =
     AsyncNotifierProvider<TodayAnswerController, DailyQuestionAnswerState?>(
       TodayAnswerController.new,
+      retry: (_, _) => null,
     );
 
 class TodayAnswerController extends AsyncNotifier<DailyQuestionAnswerState?> {

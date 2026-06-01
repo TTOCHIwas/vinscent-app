@@ -3,6 +3,7 @@ enum DailyQuestionHistoryFailureReason {
   authRequired,
   activeCoupleRequired,
   relationshipDateRequired,
+  requestTimeout,
   unknown,
 }
 

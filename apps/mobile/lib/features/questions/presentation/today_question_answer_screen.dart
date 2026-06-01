@@ -23,9 +23,8 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       child: question.when(
         loading: () => const _CenteredLoader(),
-        error: (error, stackTrace) => const _StateMessage(
-          title: '질문을 불러오지 못했어요',
-          message: '잠시 후 다시 시도해 주세요.',
+        error: (error, stackTrace) => _QuestionLoadError(
+          onRetry: () => ref.invalidate(todayQuestionControllerProvider),
         ),
         data: (question) {
           if (question == null) {
@@ -86,9 +85,8 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       child: question.when(
         loading: () => const _CenteredLoader(),
-        error: (error, stackTrace) => const _StateMessage(
-          title: '질문을 불러오지 못했어요',
-          message: '잠시 후 다시 시도해 주세요.',
+        error: (error, stackTrace) => _QuestionLoadError(
+          onRetry: () => ref.invalidate(todayQuestionControllerProvider),
         ),
         data: (question) {
           if (question == null) {
@@ -132,6 +130,26 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _QuestionLoadError extends StatelessWidget {
+  const _QuestionLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const _StateMessage(
+          title: '질문을 불러오지 못했어요',
+          message: '잠시 후 다시 시도해 주세요.',
+        ),
+        const SizedBox(height: 16),
+        AppActionButton(label: '다시 시도', enabled: true, onPressed: onRetry),
+      ],
     );
   }
 }

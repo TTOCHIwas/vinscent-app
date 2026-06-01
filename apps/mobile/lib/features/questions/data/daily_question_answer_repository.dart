@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -29,11 +31,15 @@ class SupabaseDailyQuestionAnswerRepository
     }
 
     try {
-      final data = await Supabase.instance.client.rpc(
-        'get_today_question_answer_state',
-      );
+      final data = await Supabase.instance.client
+          .rpc('get_today_question_answer_state')
+          .timeout(AppConfig.supabaseRpcTimeout);
 
       return DailyQuestionAnswerState.fromJson(_asRow(data));
+    } on TimeoutException {
+      throw const DailyQuestionAnswerRepositoryException(
+        DailyQuestionAnswerFailureReason.requestTimeout,
+      );
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }
@@ -48,12 +54,18 @@ class SupabaseDailyQuestionAnswerRepository
     }
 
     try {
-      final data = await Supabase.instance.client.rpc(
-        'submit_today_question_answer',
-        params: {'answer_text': answerText},
-      );
+      final data = await Supabase.instance.client
+          .rpc(
+            'submit_today_question_answer',
+            params: {'answer_text': answerText},
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
 
       return DailyQuestionAnswerState.fromJson(_asRow(data));
+    } on TimeoutException {
+      throw const DailyQuestionAnswerRepositoryException(
+        DailyQuestionAnswerFailureReason.requestTimeout,
+      );
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }

@@ -9,6 +9,7 @@ import '../data/daily_question_repository.dart';
 final todayQuestionControllerProvider =
     AsyncNotifierProvider<TodayQuestionController, DailyQuestion?>(
       TodayQuestionController.new,
+      retry: (_, _) => null,
     );
 
 class TodayQuestionController extends AsyncNotifier<DailyQuestion?> {
