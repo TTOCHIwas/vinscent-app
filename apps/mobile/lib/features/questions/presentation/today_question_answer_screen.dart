@@ -162,6 +162,10 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       children: [
         _AnswerStatus(answerState: answerState),
         const SizedBox(height: 18),
+        if (answerState?.canRevealPartnerAnswer == true) ...[
+          _RevealedAnswerCards(answerState: answerState!),
+          const SizedBox(height: 18),
+        ],
         TextField(
           controller: _controller,
           minLines: 7,
@@ -252,6 +256,55 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       _isSubmitting = false;
       _submitErrorMessage = submitErrorMessage;
     });
+  }
+}
+
+class _RevealedAnswerCards extends StatelessWidget {
+  const _RevealedAnswerCards({required this.answerState});
+
+  final DailyQuestionAnswerState answerState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _AnswerCard(title: '내 답변', body: answerState.myAnswerText ?? ''),
+        const SizedBox(height: 10),
+        _AnswerCard(title: '상대방 답변', body: answerState.partnerAnswerText ?? ''),
+      ],
+    );
+  }
+}
+
+class _AnswerCard extends StatelessWidget {
+  const _AnswerCard({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.wireframeBorder),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(body, style: AppTextStyles.homeBody.copyWith(height: 1.45)),
+        ],
+      ),
+    );
   }
 }
 

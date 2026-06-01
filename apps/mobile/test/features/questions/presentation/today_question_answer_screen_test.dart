@@ -103,8 +103,63 @@ void main() {
 
     await _pumpScreen(tester, repository: repository);
 
-    expect(find.text('hello'), findsOneWidget);
+    expect(find.text('hello'), findsWidgets);
     expect(find.text('답변 수정'), findsOneWidget);
+  });
+
+  testWidgets('hides partner answer before my answer is saved', (tester) async {
+    final repository = _FakeDailyQuestionAnswerRepository(
+      _partnerOnlyAnswerState,
+    );
+
+    await _pumpScreen(tester, repository: repository);
+
+    expect(find.text('상대방이 먼저 답변했어요'), findsOneWidget);
+    expect(find.text('partner answer'), findsNothing);
+    expect(find.text('상대방 답변'), findsNothing);
+    expect(find.text('답변 저장'), findsOneWidget);
+  });
+
+  testWidgets('shows both answers when completed', (tester) async {
+    final repository = _FakeDailyQuestionAnswerRepository(
+      _completedAnswerState,
+    );
+
+    await _pumpScreen(tester, repository: repository);
+
+    expect(find.text('둘 다 답변을 완료했어요'), findsOneWidget);
+    expect(find.text('내 답변'), findsOneWidget);
+    expect(find.text('상대방 답변'), findsOneWidget);
+    expect(find.text('hello'), findsWidgets);
+    expect(find.text('partner answer'), findsOneWidget);
+    expect(find.text('답변 수정'), findsOneWidget);
+  });
+
+  testWidgets('keeps partner answer visible after editing completed answer', (
+    tester,
+  ) async {
+    final repository = _FakeDailyQuestionAnswerRepository(
+      _completedAnswerState,
+      submittedState: _editedCompletedAnswerState,
+    );
+
+    await _pumpScreen(tester, repository: repository);
+
+    await tester.enterText(find.byType(TextField), 'edited answer');
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('답변 수정'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('답변 수정'));
+    await tester.pumpAndSettle();
+
+    expect(repository.submitCallCount, 1);
+    expect(repository.submittedAnswers, ['edited answer']);
+    expect(find.text('내 답변'), findsOneWidget);
+    expect(find.text('상대방 답변'), findsOneWidget);
+    expect(find.text('edited answer'), findsWidgets);
+    expect(find.text('partner answer'), findsOneWidget);
   });
 }
 
@@ -190,4 +245,35 @@ const _submittedAnswerState = DailyQuestionAnswerState(
   myAnswerText: 'hello',
   partnerAnswerExists: false,
   answerCount: 1,
+);
+
+const _partnerOnlyAnswerState = DailyQuestionAnswerState(
+  dailyQuestionId: 'daily-question-id',
+  status: DailyQuestionStatus.answeredByOne,
+  partnerAnswerExists: true,
+  partnerAnswerId: 'partner-answer-id',
+  partnerAnswerText: 'partner answer',
+  answerCount: 1,
+);
+
+const _completedAnswerState = DailyQuestionAnswerState(
+  dailyQuestionId: 'daily-question-id',
+  status: DailyQuestionStatus.completed,
+  myAnswerId: 'answer-id',
+  myAnswerText: 'hello',
+  partnerAnswerExists: true,
+  partnerAnswerId: 'partner-answer-id',
+  partnerAnswerText: 'partner answer',
+  answerCount: 2,
+);
+
+const _editedCompletedAnswerState = DailyQuestionAnswerState(
+  dailyQuestionId: 'daily-question-id',
+  status: DailyQuestionStatus.completed,
+  myAnswerId: 'answer-id',
+  myAnswerText: 'edited answer',
+  partnerAnswerExists: true,
+  partnerAnswerId: 'partner-answer-id',
+  partnerAnswerText: 'partner answer',
+  answerCount: 2,
 );
