@@ -15,14 +15,15 @@ void main() {
 
       await _pumpRouter(tester, repository: repository);
 
+      expect(find.text('05월 31일'), findsOneWidget);
       expect(find.text('today question'), findsOneWidget);
-      expect(find.text('답변하기'), findsOneWidget);
+      expect(find.text('답변하기'), findsNothing);
       expect(find.text('내 답변'), findsOneWidget);
       expect(find.text('아직 답변하지 않았어요'), findsOneWidget);
       expect(find.text('상대방 답변'), findsOneWidget);
       expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
-      expect(find.text('답변 저장'), findsNothing);
+      expect(find.text('저장'), findsNothing);
     });
 
     testWidgets('shows readonly submitted answer state', (tester) async {
@@ -32,11 +33,11 @@ void main() {
 
       await _pumpRouter(tester, repository: repository);
 
-      expect(find.text('수정'), findsOneWidget);
+      expect(find.text('수정'), findsNothing);
       expect(find.text('hello'), findsOneWidget);
       expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
-      expect(find.text('답변 수정'), findsNothing);
+      expect(find.text('저장'), findsNothing);
     });
 
     testWidgets('hides partner answer before my answer is saved', (
@@ -48,7 +49,7 @@ void main() {
 
       await _pumpRouter(tester, repository: repository);
 
-      expect(find.text('답변하기'), findsOneWidget);
+      expect(find.text('답변하기'), findsNothing);
       expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
       expect(find.text('partner answer'), findsNothing);
       expect(find.byType(TextField), findsNothing);
@@ -61,7 +62,7 @@ void main() {
 
       await _pumpRouter(tester, repository: repository);
 
-      expect(find.text('수정'), findsOneWidget);
+      expect(find.text('수정'), findsNothing);
       expect(find.text('내 답변'), findsOneWidget);
       expect(find.text('상대방 답변'), findsOneWidget);
       expect(find.text('hello'), findsOneWidget);
@@ -74,11 +75,11 @@ void main() {
 
       await _pumpRouter(tester, repository: repository);
 
-      await tester.tap(find.text('답변하기'));
+      await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('답변 저장'), findsOneWidget);
+      expect(find.text('저장'), findsOneWidget);
       expect(find.text('상대방 답변'), findsNothing);
     });
 
@@ -89,14 +90,14 @@ void main() {
 
       await _pumpRouter(tester, repository: repository);
 
-      await tester.tap(find.text('수정'));
+      await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
         'hello',
       );
-      expect(find.text('답변 수정'), findsOneWidget);
+      expect(find.text('저장'), findsOneWidget);
       expect(find.text('상대방 답변'), findsNothing);
     });
 
@@ -137,10 +138,11 @@ void main() {
         initialLocation: '/home/question/edit',
       );
 
+      expect(find.text('05월 31일'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('0 / 500'), findsOneWidget);
 
-      await tester.tap(find.text('답변 저장'));
+      await tester.tap(find.text('저장'));
       await tester.pump();
 
       expect(repository.submitCallCount, 0);
@@ -165,13 +167,13 @@ void main() {
 
       expect(find.text('5 / 500'), findsOneWidget);
 
-      await tester.tap(find.text('답변 저장'));
+      await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 1);
       expect(repository.submittedAnswers, ['hello']);
       expect(find.byType(TextField), findsNothing);
-      expect(find.text('수정'), findsOneWidget);
+      expect(find.text('수정'), findsNothing);
       expect(find.text('hello'), findsOneWidget);
       expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
     });
@@ -194,7 +196,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
 
-      await tester.tap(find.text('답변 저장'));
+      await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 1);
@@ -206,7 +208,7 @@ void main() {
       expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
 
-      await tester.tap(find.text('답변 저장'));
+      await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 2);
@@ -230,7 +232,7 @@ void main() {
 
       expect(find.text('501 / 500'), findsOneWidget);
 
-      await tester.tap(find.text('답변 저장'));
+      await tester.tap(find.text('저장'));
       await tester.pump();
 
       expect(repository.submitCallCount, 0);
@@ -251,7 +253,7 @@ void main() {
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
         'hello',
       );
-      expect(find.text('답변 수정'), findsOneWidget);
+      expect(find.text('저장'), findsOneWidget);
       expect(find.text('상대방 답변'), findsNothing);
     });
 
@@ -272,7 +274,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'edited answer');
       await tester.pump();
 
-      await tester.tap(find.text('답변 수정'));
+      await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 1);

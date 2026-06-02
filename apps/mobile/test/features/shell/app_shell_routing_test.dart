@@ -115,7 +115,9 @@ void main() {
     await tester.tap(find.text('today question'));
     await tester.pumpAndSettle();
 
-    expect(find.text('답변하기'), findsOneWidget);
+    expect(find.text('앱 이름'), findsNothing);
+    expect(find.text('05월 31일'), findsOneWidget);
+    expect(find.text('내 답변'), findsOneWidget);
 
     final tabs = tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
     expect(tabs.first.isSelected, isTrue);
