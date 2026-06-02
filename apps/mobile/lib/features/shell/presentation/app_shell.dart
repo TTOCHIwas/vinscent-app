@@ -20,7 +20,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
-    final showHeader = !_usesQuestionDetailHeader;
+    final showHeader = !_hidesMainHeader;
     final showBottomBar = !_usesAnswerEditBottomBar;
 
     return Scaffold(
@@ -47,8 +47,10 @@ class AppShell extends StatelessWidget {
     );
   }
 
-  bool get _usesQuestionDetailHeader {
-    return location == '/home/question' || location == '/home/question/edit';
+  bool get _hidesMainHeader {
+    return location == '/calendar' ||
+        location == '/home/question' ||
+        location == '/home/question/edit';
   }
 
   bool get _usesAnswerEditBottomBar {

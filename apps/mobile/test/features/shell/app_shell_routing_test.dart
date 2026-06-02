@@ -72,10 +72,16 @@ void main() {
 
     await tester.tap(find.text('달력'));
     await tester.pumpAndSettle();
+    expect(find.text('앱 이름'), findsNothing);
     expect(find.text('2026년 05월'), findsOneWidget);
+    expect(
+      tester.widgetList<ShellTab>(find.byType(ShellTab)).elementAt(1).isSelected,
+      isTrue,
+    );
 
     await tester.tap(find.text('AI'));
     await tester.pumpAndSettle();
+    expect(find.text('앱 이름'), findsOneWidget);
     expect(find.text('AI'), findsNWidgets(2));
 
     await tester.tap(find.text('설정'));
