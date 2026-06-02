@@ -100,27 +100,37 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
     final question = ref.watch(todayQuestionControllerProvider);
     final answerState = ref.watch(todayAnswerControllerProvider);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      child: question.when(
-        loading: () => const _CenteredLoader(),
-        error: (error, stackTrace) => _QuestionLoadError(
+    return question.when(
+      loading: () => _QuestionPageFrame(
+        onBackPressed: () => _goBackToQuestion(context),
+        child: const _CenteredLoader(),
+      ),
+      error: (error, stackTrace) => _QuestionPageFrame(
+        onBackPressed: () => _goBackToQuestion(context),
+        child: _QuestionLoadError(
           onRetry: () => ref.invalidate(todayQuestionControllerProvider),
         ),
-        data: (question) {
-          if (question == null) {
-            return const _StateMessage(
+      ),
+      data: (question) {
+        if (question == null) {
+          return _QuestionPageFrame(
+            onBackPressed: () => _goBackToQuestion(context),
+            child: const _StateMessage(
               title: '오늘 질문이 아직 없어요',
               message: '커플 연결과 첫 만남일 입력을 먼저 완료해 주세요.',
-            );
-          }
+            ),
+          );
+        }
 
-          return answerState.when(
-            loading: () => _QuestionScaffold(
+        return _QuestionPageFrame(
+          question: question,
+          onBackPressed: () => _goBackToQuestion(context),
+          child: answerState.when(
+            loading: () => _QuestionContent(
               question: question,
               child: const _CenteredLoader(),
             ),
-            error: (error, stackTrace) => _QuestionScaffold(
+            error: (error, stackTrace) => _QuestionContent(
               question: question,
               child: Column(
                 children: [
@@ -139,18 +149,25 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            data: (state) => _QuestionScaffold(
+            data: (state) => _AnswerForm(
+              key: ValueKey(state?.myAnswerId ?? 'empty-answer'),
               question: question,
-              child: _AnswerForm(
-                key: ValueKey(state?.myAnswerId ?? 'empty-answer'),
-                answerState: state,
-              ),
+              answerState: state,
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
+}
+
+void _goBackToQuestion(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+    return;
+  }
+
+  context.go('/home/question');
 }
 
 class _QuestionLoadError extends StatelessWidget {
@@ -198,18 +215,6 @@ class _QuestionPageFrame extends StatelessWidget {
   }
 }
 
-class _QuestionScaffold extends StatelessWidget {
-  const _QuestionScaffold({required this.question, required this.child});
-
-  final DailyQuestion question;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return _QuestionContent(question: question, child: child);
-  }
-}
-
 class _QuestionContent extends StatelessWidget {
   const _QuestionContent({
     required this.question,
@@ -242,8 +247,13 @@ class _QuestionContent extends StatelessWidget {
 }
 
 class _AnswerForm extends ConsumerStatefulWidget {
-  const _AnswerForm({super.key, required this.answerState});
+  const _AnswerForm({
+    super.key,
+    required this.question,
+    required this.answerState,
+  });
 
+  final DailyQuestion question;
   final DailyQuestionAnswerState? answerState;
 
   @override
@@ -299,65 +309,62 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
 
   @override
   Widget build(BuildContext context) {
-    final answerState = widget.answerState;
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('내 답변', style: AppTextStyles.homeBodyMedium),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _controller,
-          minLines: 7,
-          maxLines: 10,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          style: AppTextStyles.homeBody.copyWith(height: 1.5),
-          decoration: InputDecoration(
-            hintText: '답변을 적어주세요',
-            hintStyle: AppTextStyles.homeBody.copyWith(
-              color: AppColors.textPlaceholder,
-            ),
-            filled: true,
-            fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.all(16),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.wireframeBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.textPrimary),
+        Expanded(
+          child: _QuestionContent(
+            question: widget.question,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _controller,
+                  minLines: 10,
+                  maxLines: 14,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  style: AppTextStyles.homeBody.copyWith(height: 1.5),
+                  decoration: InputDecoration(
+                    hintText: '답변 입력',
+                    hintStyle: AppTextStyles.homeBody.copyWith(
+                      color: AppColors.textPlaceholder,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.all(24),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: AppColors.textPlaceholder,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_submitErrorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _submitErrorMessage!,
+                    style: AppTextStyles.homeCharacterLabel.copyWith(
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            '$_characterCount / $_maxAnswerLength',
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: _characterCount > _maxAnswerLength
-                  ? Colors.redAccent
-                  : AppColors.textMuted,
-            ),
-          ),
-        ),
-        if (_submitErrorMessage != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            _submitErrorMessage!,
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: Colors.redAccent,
-            ),
-          ),
-        ],
-        const SizedBox(height: 24),
-        AppActionButton(
-          label: answerState?.hasMyAnswer == true ? '답변 수정' : '답변 저장',
-          enabled: _canSubmit,
+        _AnswerSaveBar(
+          characterCount: _characterCount,
+          maxAnswerLength: _maxAnswerLength,
+          canSave: _canSubmit,
           isLoading: _isSubmitting,
-          onPressed: _submit,
+          onSave: _submit,
         ),
       ],
     );
@@ -402,6 +409,65 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       _isSubmitting = false;
       _submitErrorMessage = submitErrorMessage;
     });
+  }
+}
+
+class _AnswerSaveBar extends StatelessWidget {
+  const _AnswerSaveBar({
+    required this.characterCount,
+    required this.maxAnswerLength,
+    required this.canSave,
+    required this.isLoading,
+    required this.onSave,
+  });
+
+  final int characterCount;
+  final int maxAnswerLength;
+  final bool canSave;
+  final bool isLoading;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final countColor = characterCount > maxAnswerLength
+        ? Colors.redAccent
+        : AppColors.textMuted;
+    final saveColor = canSave ? AppColors.textPrimary : AppColors.textMuted;
+
+    return Container(
+      height: 82,
+      width: double.infinity,
+      color: AppColors.actionDisabled,
+      padding: const EdgeInsets.fromLTRB(32, 10, 32, 34),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Semantics(
+            button: true,
+            label: '저장',
+            child: InkWell(
+              onTap: canSave ? onSave : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(
+                  isLoading ? '저장 중' : '저장',
+                  style: AppTextStyles.homeCharacterLabel.copyWith(
+                    color: saveColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Text(
+            '$characterCount / $maxAnswerLength',
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: countColor,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
