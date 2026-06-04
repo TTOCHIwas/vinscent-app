@@ -9,6 +9,8 @@ import 'package:vinscent/features/questions/application/today_question_controlle
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 
 void main() {
@@ -128,6 +130,46 @@ void main() {
 
       expect(find.text('today question'), findsOneWidget);
       expect(find.text('질문을 불러오지 못했어요'), findsNothing);
+    });
+
+    testWidgets('shows dated question as readonly history', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      final historyRepository = _FakeDailyQuestionHistoryRepository(
+        entry: _historyEntry,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        historyRepository: historyRepository,
+        initialLocation: '/calendar/question?date=2026-05-30',
+      );
+
+      expect(find.text('05월 30일'), findsOneWidget);
+      expect(find.text('history question'), findsOneWidget);
+      expect(find.text('history answer'), findsOneWidget);
+      expect(find.text('partner answer'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+
+      await tester.tap(find.text('내 답변'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('shows invalid date state for malformed route date', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/calendar/question?date=not-a-date',
+      );
+
+      expect(find.text('날짜를 확인할 수 없어요'), findsOneWidget);
+      expect(find.text('달력에서 다시 날짜를 선택해주세요.'), findsOneWidget);
     });
   });
 
@@ -293,6 +335,7 @@ Future<GoRouter> _pumpRouter(
   WidgetTester tester, {
   required DailyQuestionAnswerRepository repository,
   String initialLocation = '/home/question',
+  DailyQuestionHistoryRepository? historyRepository,
   Future<DailyQuestion?> Function(Ref ref, TodayQuestionController notifier)?
   questionBuilder,
 }) async {
@@ -308,6 +351,20 @@ Future<GoRouter> _pumpRouter(
         path: '/home/question/edit',
         builder: (context, state) =>
             const Scaffold(body: TodayQuestionAnswerEditScreen()),
+      ),
+      GoRoute(
+        path: '/calendar/question',
+        builder: (context, state) {
+          final dateQuery = state.uri.queryParameters['date'];
+          final targetDate = DateTime.tryParse(dateQuery ?? '');
+          return Scaffold(
+            body: TodayQuestionAnswerScreen(
+              targetDate: targetDate,
+              hasInvalidTargetDate: dateQuery != null && targetDate == null,
+              backLocation: '/calendar',
+            ),
+          );
+        },
       ),
     ],
   );
@@ -325,6 +382,9 @@ Future<GoRouter> _pumpRouter(
           questionBuilder ?? (ref, notifier) async => _dailyQuestion,
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
+        dailyQuestionHistoryRepositoryProvider.overrideWithValue(
+          historyRepository ?? _FakeDailyQuestionHistoryRepository(),
+        ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -332,6 +392,18 @@ Future<GoRouter> _pumpRouter(
 
   await tester.pumpAndSettle();
   return router;
+}
+
+class _FakeDailyQuestionHistoryRepository
+    implements DailyQuestionHistoryRepository {
+  const _FakeDailyQuestionHistoryRepository({this.entry});
+
+  final DailyQuestionHistoryEntry? entry;
+
+  @override
+  Future<DailyQuestionHistoryEntry?> fetchByDate(DateTime date) async {
+    return entry;
+  }
 }
 
 class _FakeDailyQuestionAnswerRepository
@@ -379,6 +451,32 @@ final _dailyQuestion = DailyQuestion(
   questionMood: 'warm',
   assignedDate: DateTime(2026, 5, 31),
   status: DailyQuestionStatus.pending,
+);
+
+final _historyQuestion = DailyQuestion(
+  dailyQuestionId: 'history-daily-question-id',
+  coupleId: 'couple-id',
+  questionId: 'history-question-id',
+  questionText: 'history question',
+  questionSource: QuestionSource.curated,
+  questionCategory: 'daily',
+  questionMood: 'warm',
+  assignedDate: DateTime(2026, 5, 30),
+  status: DailyQuestionStatus.completed,
+);
+
+final _historyEntry = DailyQuestionHistoryEntry(
+  question: _historyQuestion,
+  answerState: const DailyQuestionAnswerState(
+    dailyQuestionId: 'history-daily-question-id',
+    status: DailyQuestionStatus.completed,
+    myAnswerId: 'history-answer-id',
+    myAnswerText: 'history answer',
+    partnerAnswerExists: true,
+    partnerAnswerId: 'partner-answer-id',
+    partnerAnswerText: 'partner answer',
+    answerCount: 2,
+  ),
 );
 
 final _activeCouple = Couple(
