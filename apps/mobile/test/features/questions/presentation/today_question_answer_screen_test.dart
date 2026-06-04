@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/features/couple/application/couple_controller.dart';
+import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/questions/application/today_question_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
@@ -312,6 +315,12 @@ Future<GoRouter> _pumpRouter(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        todayControllerProvider.overrideWithBuild(
+          (ref, notifier) => DateTime(2026, 5, 31),
+        ),
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _activeCouple,
+        ),
         todayQuestionControllerProvider.overrideWithBuild(
           questionBuilder ?? (ref, notifier) async => _dailyQuestion,
         ),
@@ -370,6 +379,19 @@ final _dailyQuestion = DailyQuestion(
   questionMood: 'warm',
   assignedDate: DateTime(2026, 5, 31),
   status: DailyQuestionStatus.pending,
+);
+
+final _activeCouple = Couple(
+  id: 'couple-id',
+  inviteCode: 'ABC123',
+  userAId: 'user-a-id',
+  userBId: 'user-b-id',
+  relationshipStartDate: DateTime(2026, 5, 1),
+  timezone: 'Asia/Seoul',
+  status: CoupleStatus.active,
+  connectedAt: DateTime(2026, 5, 1),
+  createdAt: DateTime(2026, 5, 1),
+  updatedAt: DateTime(2026, 5, 1),
 );
 
 const _emptyAnswerState = DailyQuestionAnswerState(

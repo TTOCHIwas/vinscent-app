@@ -32,5 +32,5 @@ class UnavailableQuestionDetailState extends QuestionDetailState {
   });
 
   final QuestionDetailUnavailableReason reason;
-  final DateTime targetDate;
+  final DateTime? targetDate;
 }

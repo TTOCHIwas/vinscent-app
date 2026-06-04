@@ -5,92 +5,138 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../application/daily_question_history_provider.dart';
+import '../application/question_detail_provider.dart';
 import '../application/today_answer_controller.dart';
 import '../application/today_question_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
+import '../data/question_detail_state.dart';
 import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
 
 class TodayQuestionAnswerScreen extends ConsumerWidget {
-  const TodayQuestionAnswerScreen({super.key});
+  const TodayQuestionAnswerScreen({
+    super.key,
+    this.targetDate,
+    this.hasInvalidTargetDate = false,
+    this.backLocation = '/home',
+  });
+
+  final DateTime? targetDate;
+  final bool hasInvalidTargetDate;
+  final String backLocation;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final question = ref.watch(todayQuestionControllerProvider);
-    final answerState = ref.watch(todayAnswerControllerProvider);
+    if (hasInvalidTargetDate) {
+      return _QuestionPageFrame(
+        onBackPressed: () => _goBack(context, backLocation),
+        child: const _QuestionUnavailableMessage(
+          reason: QuestionDetailUnavailableReason.invalidDate,
+        ),
+      );
+    }
 
-    return question.when(
+    final detail = ref.watch(questionDetailProvider(targetDate));
+
+    return detail.when(
       loading: () => _QuestionPageFrame(
-        onBackPressed: () => _goBackToHome(context),
+        onBackPressed: () => _goBack(context, backLocation),
         child: const _CenteredLoader(),
       ),
       error: (error, stackTrace) => _QuestionPageFrame(
-        onBackPressed: () => _goBackToHome(context),
+        onBackPressed: () => _goBack(context, backLocation),
         child: _QuestionLoadError(
-          onRetry: () => ref.invalidate(todayQuestionControllerProvider),
+          onRetry: () => _retry(ref),
         ),
       ),
-      data: (question) {
-        if (question == null) {
-          return _QuestionPageFrame(
-            onBackPressed: () => _goBackToHome(context),
-            child: const _StateMessage(
-              title: '오늘 질문이 아직 없어요',
-              message: '커플 연결과 첫 만남일 입력을 먼저 완료해 주세요.',
-            ),
-          );
-        }
-
-        return _QuestionPageFrame(
-          question: question,
-          onBackPressed: () => _goBackToHome(context),
-          child: answerState.when(
-            loading: () => _QuestionContent(
-              question: question,
-              child: const _CenteredLoader(),
-            ),
-            error: (error, stackTrace) => _QuestionContent(
-              question: question,
-              child: Column(
-                children: [
-                  const _StateMessage(
-                    title: '답변 정보를 불러오지 못했어요',
-                    message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
-                  ),
-                  const SizedBox(height: 16),
-                  AppActionButton(
-                    label: '다시 시도',
-                    enabled: true,
-                    onPressed: () => ref
-                        .read(todayAnswerControllerProvider.notifier)
-                        .refresh(),
-                  ),
-                ],
-              ),
-            ),
-            data: (state) => _QuestionContent(
-              question: question,
+      data: (state) {
+        return switch (state) {
+          LoadedQuestionDetailState() => _QuestionPageFrame(
+            question: state.question,
+            onBackPressed: () => _goBack(context, backLocation),
+            child: _QuestionContent(
+              question: state.question,
               child: QuestionAnswerOverview(
-                answerState: state,
-                myEmptyMessage: '이곳을 눌러서 답변을 입력해주세요',
-                onMyAnswerPressed: () => context.push('/home/question/edit'),
+                answerState: state.answerState,
+                myEmptyMessage: state.canEdit
+                    ? '이곳을 눌러서 답변을 입력해주세요'
+                    : '이 날에는 답변하지 않았어요',
+                partnerHiddenMessage: state.canEdit
+                    ? PartnerQuestionAnswerSection.todayHiddenMessage
+                    : PartnerQuestionAnswerSection.historyHiddenMessage,
+                onMyAnswerPressed: state.canEdit
+                    ? () => context.push('/home/question/edit')
+                    : null,
               ),
             ),
           ),
-        );
+          UnavailableQuestionDetailState() => _QuestionPageFrame(
+            onBackPressed: () => _goBack(context, backLocation),
+            child: _QuestionUnavailableMessage(reason: state.reason),
+          ),
+        };
       },
     );
   }
+
+  void _retry(WidgetRef ref) {
+    final retryTargetDate = targetDate;
+    ref.invalidate(questionDetailProvider(retryTargetDate));
+    ref.invalidate(todayQuestionControllerProvider);
+    ref.invalidate(todayAnswerControllerProvider);
+
+    if (retryTargetDate != null) {
+      ref.invalidate(dailyQuestionHistoryProvider(retryTargetDate));
+    }
+  }
 }
 
-void _goBackToHome(BuildContext context) {
+void _goBack(BuildContext context, String fallbackLocation) {
   if (context.canPop()) {
     context.pop();
     return;
   }
 
-  context.go('/home');
+  context.go(fallbackLocation);
+}
+
+class _QuestionUnavailableMessage extends StatelessWidget {
+  const _QuestionUnavailableMessage({required this.reason});
+
+  final QuestionDetailUnavailableReason reason;
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateMessage(title: _title, message: _message);
+  }
+
+  String get _title {
+    return switch (reason) {
+      QuestionDetailUnavailableReason.invalidDate => '날짜를 확인할 수 없어요',
+      QuestionDetailUnavailableReason.unavailable => '질문을 확인할 수 없어요',
+      QuestionDetailUnavailableReason.beforeRelationshipStartDate =>
+        '아직 기록이 없어요',
+      QuestionDetailUnavailableReason.futureDate => '아직 열리지 않은 질문이에요',
+      QuestionDetailUnavailableReason.noQuestion => '이 날의 질문이 없어요',
+    };
+  }
+
+  String get _message {
+    return switch (reason) {
+      QuestionDetailUnavailableReason.invalidDate =>
+        '달력에서 다시 날짜를 선택해주세요.',
+      QuestionDetailUnavailableReason.unavailable =>
+        '커플 연결과 첫 만남 날짜를 먼저 완료해주세요.',
+      QuestionDetailUnavailableReason.beforeRelationshipStartDate =>
+        '연애 시작일 이후의 질문만 확인할 수 있어요.',
+      QuestionDetailUnavailableReason.futureDate =>
+        '오늘 이후의 질문은 해당 날짜가 되면 확인할 수 있어요.',
+      QuestionDetailUnavailableReason.noQuestion =>
+        '질문이 생성된 날짜를 달력에서 선택해주세요.',
+    };
+  }
 }
 
 class TodayQuestionAnswerEditScreen extends ConsumerWidget {
