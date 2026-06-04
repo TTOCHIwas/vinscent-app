@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vinscent/app/app.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
@@ -12,6 +13,8 @@ import 'package:vinscent/features/questions/application/today_question_controlle
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
 
 void main() {
@@ -128,6 +131,46 @@ void main() {
     final tabs = tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
     expect(tabs.first.isSelected, isTrue);
   });
+
+  testWidgets('opens dated question answer route under calendar tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWithBuild(
+            (ref, notifier) => AuthStatus.authenticated,
+          ),
+          profileControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _profile,
+          ),
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _activeCouple,
+          ),
+          todayControllerProvider.overrideWithBuild(
+            (ref, notifier) => DateTime(2026, 5, 31),
+          ),
+          dailyQuestionHistoryRepositoryProvider.overrideWithValue(
+            const _FakeDailyQuestionHistoryRepository(),
+          ),
+        ],
+        child: const VinscentApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    GoRouter.of(
+      tester.element(find.text('오늘의 질문')),
+    ).go('/calendar/question?date=2026-05-30');
+    await tester.pumpAndSettle();
+
+    expect(find.text('앱이름'), findsNothing);
+    expect(find.text('05월 30일'), findsOneWidget);
+    expect(find.text('history question'), findsOneWidget);
+
+    final tabs = tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
+    expect(tabs.elementAt(1).isSelected, isTrue);
+  });
 }
 
 final _profile = UserProfile(
@@ -192,3 +235,39 @@ class _FakeDailyQuestionAnswerRepository
     return currentState;
   }
 }
+
+class _FakeDailyQuestionHistoryRepository
+    implements DailyQuestionHistoryRepository {
+  const _FakeDailyQuestionHistoryRepository();
+
+  @override
+  Future<DailyQuestionHistoryEntry?> fetchByDate(DateTime date) async {
+    return DailyQuestionHistoryEntry(
+      question: _historyQuestion,
+      answerState: _historyAnswerState,
+    );
+  }
+}
+
+final _historyQuestion = DailyQuestion(
+  dailyQuestionId: 'history-daily-question-id',
+  coupleId: 'couple-id',
+  questionId: 'history-question-id',
+  questionText: 'history question',
+  questionSource: QuestionSource.curated,
+  questionCategory: 'daily',
+  questionMood: 'warm',
+  assignedDate: DateTime(2026, 5, 30),
+  status: DailyQuestionStatus.completed,
+);
+
+const _historyAnswerState = DailyQuestionAnswerState(
+  dailyQuestionId: 'history-daily-question-id',
+  status: DailyQuestionStatus.completed,
+  myAnswerId: 'answer-id',
+  myAnswerText: 'history answer',
+  partnerAnswerExists: true,
+  partnerAnswerId: 'partner-answer-id',
+  partnerAnswerText: 'partner answer',
+  answerCount: 2,
+);

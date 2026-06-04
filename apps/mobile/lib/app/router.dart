@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/date/app_date_policy.dart';
 import '../features/ai/presentation/ai_screen.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_status.dart';
@@ -127,7 +128,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/question',
             name: 'todayQuestionAnswer',
-            builder: (context, state) => const TodayQuestionAnswerScreen(),
+            builder: (context, state) {
+              final dateQuery = state.uri.queryParameters['date'];
+              final targetDate = _parseRouteDate(dateQuery);
+              return TodayQuestionAnswerScreen(
+                targetDate: targetDate,
+                hasInvalidTargetDate: _hasInvalidRouteDate(dateQuery),
+              );
+            },
           ),
           GoRoute(
             path: '/home/question/edit',
@@ -138,6 +146,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/calendar',
             name: 'calendar',
             builder: (context, state) => const CalendarScreen(),
+          ),
+          GoRoute(
+            path: '/calendar/question',
+            name: 'calendarQuestionAnswer',
+            builder: (context, state) {
+              final dateQuery = state.uri.queryParameters['date'];
+              final targetDate = _parseRouteDate(dateQuery);
+              return TodayQuestionAnswerScreen(
+                targetDate: targetDate,
+                hasInvalidTargetDate: _hasInvalidRouteDate(dateQuery),
+                backLocation: '/calendar',
+              );
+            },
           ),
           GoRoute(
             path: '/ai',
@@ -154,3 +175,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+final _routeDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
+DateTime? _parseRouteDate(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (!_routeDatePattern.hasMatch(value)) {
+    return null;
+  }
+
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) {
+    return null;
+  }
+
+  return calendarDateOnly(parsed);
+}
+
+bool _hasInvalidRouteDate(String? value) {
+  return value != null && _parseRouteDate(value) == null;
+}
