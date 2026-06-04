@@ -19,7 +19,7 @@ void main() {
       expect(find.text('today question'), findsOneWidget);
       expect(find.text('답변하기'), findsNothing);
       expect(find.text('내 답변'), findsOneWidget);
-      expect(find.text('아직 답변하지 않았어요'), findsOneWidget);
+      expect(find.text('이곳을 눌러서 답변을 입력해주세요'), findsOneWidget);
       expect(find.text('상대방 답변'), findsOneWidget);
       expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);

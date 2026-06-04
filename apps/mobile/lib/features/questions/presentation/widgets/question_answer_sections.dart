@@ -11,12 +11,14 @@ class QuestionAnswerOverview extends StatelessWidget {
     super.key,
     required this.answerState,
     this.displayStyle = QuestionAnswerDisplayStyle.boxed,
+    this.myEmptyMessage = '아직 답변하지 않았어요',
     this.partnerHiddenMessage = PartnerQuestionAnswerSection.todayHiddenMessage,
     this.onMyAnswerPressed,
   });
 
   final DailyQuestionAnswerState? answerState;
   final QuestionAnswerDisplayStyle displayStyle;
+  final String myEmptyMessage;
   final String partnerHiddenMessage;
   final VoidCallback? onMyAnswerPressed;
 
@@ -28,6 +30,7 @@ class QuestionAnswerOverview extends StatelessWidget {
         MyQuestionAnswerSection(
           answerState: answerState,
           displayStyle: displayStyle,
+          emptyMessage: myEmptyMessage,
           onPressed: onMyAnswerPressed,
         ),
         const SizedBox(height: 28),

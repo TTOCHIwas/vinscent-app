@@ -73,6 +73,7 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
               question: question,
               child: QuestionAnswerOverview(
                 answerState: state,
+                myEmptyMessage: '이곳을 눌러서 답변을 입력해주세요',
                 onMyAnswerPressed: () => context.push('/home/question/edit'),
               ),
             ),
