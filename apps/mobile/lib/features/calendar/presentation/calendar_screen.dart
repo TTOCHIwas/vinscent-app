@@ -4,14 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/date/today_controller.dart';
-import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
-import '../../questions/application/daily_question_history_provider.dart';
-import '../../questions/data/daily_question_history_entry.dart';
-import '../../questions/presentation/widgets/question_answer_sections.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -22,7 +18,6 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   late DateTime _visibleMonth;
-  DateTime? _selectedDate;
 
   @override
   void initState() {
@@ -42,7 +37,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
       setState(() {
         _visibleMonth = todayMonth;
-        _selectedDate = null;
       });
     });
   }
@@ -98,12 +92,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         visibleMonth: _visibleMonth,
                         today: today,
                         relationshipStartDate: couple.relationshipStartDate!,
-                        selectedDate: _selectedDate,
                         onDatePressed: (date) =>
                             _handleDatePressed(context, date, today),
                       ),
                       const SizedBox(height: 48),
-                      _CalendarDetail(selectedDate: _selectedDate),
+                      const _CalendarStateMessage(
+                        title: '날짜를 선택해 주세요',
+                        message: '지난 질문과 답변 기록을 확인할 수 있어요.',
+                      ),
                     ],
                   ),
                 ),
@@ -131,7 +127,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     setState(() {
       _visibleMonth = previousMonth;
-      _selectedDate = null;
     });
   }
 
@@ -143,7 +138,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     setState(() {
       _visibleMonth = nextMonth;
-      _selectedDate = null;
     });
   }
 
@@ -153,9 +147,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       return;
     }
 
-    setState(() {
-      _selectedDate = calendarDateOnly(date);
-    });
+    context.go('/calendar/question?date=${_formatRouteDate(date)}');
   }
 }
 
@@ -255,7 +247,6 @@ class _CalendarGrid extends StatelessWidget {
     required this.visibleMonth,
     required this.today,
     required this.relationshipStartDate,
-    required this.selectedDate,
     required this.onDatePressed,
   });
 
@@ -266,7 +257,6 @@ class _CalendarGrid extends StatelessWidget {
   final DateTime visibleMonth;
   final DateTime today;
   final DateTime relationshipStartDate;
-  final DateTime? selectedDate;
   final ValueChanged<DateTime> onDatePressed;
 
   @override
@@ -279,7 +269,7 @@ class _CalendarGrid extends StatelessWidget {
           date: date,
           isCurrentMonth: _isSameMonth(date, visibleMonth),
           isEnabled: _isEnabled(date),
-          isSelected: selectedDate != null && _isSameDate(date, selectedDate!),
+          isSelected: false,
           onPressed: () => onDatePressed(date),
         ),
     ];
@@ -393,262 +383,6 @@ class _DateCell extends StatelessWidget {
   }
 }
 
-class _CalendarDetail extends ConsumerWidget {
-  const _CalendarDetail({required this.selectedDate});
-
-  final DateTime? selectedDate;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selected = selectedDate;
-    if (selected == null) {
-      return const _CalendarStateMessage(
-        title: '날짜를 선택해 주세요',
-        message: '지난 질문과 답변 기록을 확인할 수 있어요.',
-      );
-    }
-
-    final history = ref.watch(dailyQuestionHistoryProvider(selected));
-
-    return history.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: _CenteredLoader(),
-      ),
-      error: (error, stackTrace) => _CalendarHistoryErrorDetail(
-        onRetry: () {
-          ref.invalidate(dailyQuestionHistoryProvider(selected));
-        },
-      ),
-      data: (entry) {
-        if (entry == null) {
-          return _HistoryEmptyDetail(selectedDate: selected);
-        }
-
-        return _HistoryDetail(entry: entry);
-      },
-    );
-  }
-}
-
-class _CalendarHistoryErrorDetail extends StatelessWidget {
-  const _CalendarHistoryErrorDetail({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _CalendarStateMessage(
-          title: '기록을 불러오지 못했어요',
-          message: '잠시 후 다시 시도해 주세요.',
-        ),
-        const SizedBox(height: 16),
-        AppActionButton(
-          label: '다시 시도',
-          enabled: true,
-          onPressed: onRetry,
-          isSecondary: true,
-        ),
-      ],
-    );
-  }
-}
-
-class _HistoryEmptyDetail extends StatelessWidget {
-  const _HistoryEmptyDetail({required this.selectedDate});
-
-  final DateTime selectedDate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(_formatFullDate(selectedDate), style: _dateTitleStyle),
-        const SizedBox(height: 32),
-        const _CalendarStateMessage(
-          title: '이 날의 질문 기록이 없어요',
-          message: '질문이 생성된 날짜를 선택하면 기록을 볼 수 있어요.',
-        ),
-      ],
-    );
-  }
-}
-
-class _HistoryDetail extends StatelessWidget {
-  const _HistoryDetail({required this.entry});
-
-  final DailyQuestionHistoryEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final question = entry.question;
-    final answerState = entry.answerState;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(_formatFullDate(question.assignedDate), style: _dateTitleStyle),
-        const SizedBox(height: 10),
-        _QuestionHistorySection(questionText: question.questionText),
-        MyQuestionAnswerSection(
-          answerState: answerState,
-          displayStyle: QuestionAnswerDisplayStyle.plain,
-        ),
-        PartnerQuestionAnswerSection(
-          answerState: answerState,
-          hiddenMessage: PartnerQuestionAnswerSection.historyHiddenMessage,
-          displayStyle: QuestionAnswerDisplayStyle.plain,
-        ),
-        const _SummaryPlaceholder(),
-        const _AiCommentPlaceholder(),
-        const _ExpressionCountPlaceholder(),
-      ],
-    );
-  }
-}
-
-class _QuestionHistorySection extends StatelessWidget {
-  const _QuestionHistorySection({required this.questionText});
-
-  final String questionText;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(width: double.infinity),
-          Text(
-            '이 날의 질문',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeBody.copyWith(fontSize: 18, height: 1.4),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            questionText,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeBody.copyWith(height: 1.45),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryPlaceholder extends StatelessWidget {
-  const _SummaryPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('종합', style: AppTextStyles.homeBodyMedium),
-          SizedBox(height: 4),
-          Text(
-            '아직 종합 기록이 없어요',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AiCommentPlaceholder extends StatelessWidget {
-  const _AiCommentPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 36),
-      child: Column(
-        children: [
-          const Text('AI 한 줄 평', style: AppTextStyles.homeCharacterLabel),
-          const SizedBox(height: 24),
-          Container(
-            width: 140,
-            height: 140,
-            color: AppColors.wireframePlaceholder,
-            alignment: Alignment.center,
-            child: const Text('캐릭터', style: AppTextStyles.homeCharacterLabel),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExpressionCountPlaceholder extends StatelessWidget {
-  const _ExpressionCountPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('이 날의 표현 횟수', style: AppTextStyles.homeCharacterLabel),
-          const SizedBox(height: 12),
-          Row(
-            children: const [
-              Expanded(child: _ExpressionCountPill()),
-              SizedBox(width: 8),
-              Expanded(child: _ExpressionCountPill()),
-              SizedBox(width: 8),
-              Expanded(child: _ExpressionCountPill()),
-              SizedBox(width: 8),
-              Expanded(child: _ExpressionCountPill()),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExpressionCountPill extends StatelessWidget {
-  const _ExpressionCountPill();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF838384)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(width: 24, height: 24, color: const Color(0xFFD9D9D9)),
-          const SizedBox(width: 4),
-          const Text(
-            '00',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CenteredLoader extends StatelessWidget {
   const _CenteredLoader();
 
@@ -723,15 +457,10 @@ String _formatMonth(DateTime date) {
   return '${date.year}년 ${_twoDigits(date.month)}월';
 }
 
-String _formatFullDate(DateTime date) {
-  return '${date.year}년 ${_twoDigits(date.month)}월 ${_twoDigits(date.day)}일';
+String _formatRouteDate(DateTime date) {
+  return '${date.year}-${_twoDigits(date.month)}-${_twoDigits(date.day)}';
 }
 
 String _twoDigits(int value) {
   return value.toString().padLeft(2, '0');
 }
-
-final _dateTitleStyle = AppTextStyles.homeBody.copyWith(
-  fontSize: 16,
-  height: 1.4,
-);
