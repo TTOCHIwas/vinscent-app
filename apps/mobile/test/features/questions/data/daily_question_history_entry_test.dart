@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vinscent/features/calendar/data/daily_question_history_entry.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
 
 void main() {
   test('parses question and answer state from one RPC row', () {

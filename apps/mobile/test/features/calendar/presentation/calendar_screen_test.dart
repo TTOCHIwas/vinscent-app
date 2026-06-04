@@ -4,13 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
-import 'package:vinscent/features/calendar/data/daily_question_history_entry.dart';
-import 'package:vinscent/features/calendar/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
+import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 
 void main() {
   testWidgets('shows current month without fetching history before selection', (

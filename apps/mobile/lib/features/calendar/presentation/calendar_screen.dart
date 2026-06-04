@@ -9,9 +9,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../questions/application/daily_question_history_provider.dart';
+import '../../questions/data/daily_question_history_entry.dart';
 import '../../questions/presentation/widgets/question_answer_sections.dart';
-import '../application/daily_question_history_provider.dart';
-import '../data/daily_question_history_entry.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});

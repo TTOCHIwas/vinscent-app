@@ -1,5 +1,5 @@
-import '../../questions/data/daily_question.dart';
-import '../../questions/data/daily_question_answer_state.dart';
+import 'daily_question.dart';
+import 'daily_question_answer_state.dart';
 
 class DailyQuestionHistoryEntry {
   const DailyQuestionHistoryEntry({
