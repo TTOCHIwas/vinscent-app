@@ -6,6 +6,7 @@ import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/daily_question_history_provider.dart';
+import '../application/question_detail_navigation_provider.dart';
 import '../application/question_detail_provider.dart';
 import '../application/today_answer_controller.dart';
 import '../application/today_question_controller.dart';
@@ -38,9 +39,16 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
       );
     }
 
+    final navigation = ref
+        .watch(questionDetailNavigationProvider(targetDate))
+        .when(
+          loading: () => null,
+          error: (error, stackTrace) => null,
+          data: (state) => state,
+        );
     final detail = ref.watch(questionDetailProvider(targetDate));
 
-    return detail.when(
+    final page = detail.when(
       loading: () => _QuestionPageFrame(
         onBackPressed: () => _goBack(context, backLocation),
         child: const _CenteredLoader(),
@@ -79,6 +87,18 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
         };
       },
     );
+
+    final previousDate = navigation?.previousDate;
+    final nextDate = navigation?.nextDate;
+    return _QuestionSwipeNavigationRegion(
+      onPreviousDate: previousDate == null
+          ? null
+          : () => context.go(_questionDetailLocation(previousDate)),
+      onNextDate: nextDate == null
+          ? null
+          : () => context.go(_questionDetailLocation(nextDate)),
+      child: page,
+    );
   }
 
   void _retry(WidgetRef ref) {
@@ -90,6 +110,50 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
     if (retryTargetDate != null) {
       ref.invalidate(dailyQuestionHistoryProvider(retryTargetDate));
     }
+  }
+
+  String _questionDetailLocation(DateTime date) {
+    final route = backLocation == '/calendar'
+        ? '/calendar/question'
+        : '/home/question';
+    return '$route?date=${_formatRouteDate(date)}';
+  }
+}
+
+class _QuestionSwipeNavigationRegion extends StatelessWidget {
+  const _QuestionSwipeNavigationRegion({
+    required this.child,
+    required this.onPreviousDate,
+    required this.onNextDate,
+  });
+
+  static const _minimumSwipeVelocity = 350.0;
+
+  final Widget child;
+  final VoidCallback? onPreviousDate;
+  final VoidCallback? onNextDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: _handleHorizontalDragEnd,
+      child: child,
+    );
+  }
+
+  void _handleHorizontalDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < _minimumSwipeVelocity) {
+      return;
+    }
+
+    if (velocity > 0) {
+      onPreviousDate?.call();
+      return;
+    }
+
+    onNextDate?.call();
   }
 }
 
@@ -206,6 +270,13 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+String _formatRouteDate(DateTime date) {
+  final year = date.year.toString().padLeft(4, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
 }
 
 void _goBackToQuestion(BuildContext context) {
