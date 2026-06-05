@@ -8,6 +8,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../expressions/application/couple_expression_summary_provider.dart';
+import '../../expressions/data/couple_expression.dart';
+import '../../expressions/data/couple_expression_summary.dart';
 import '../../questions/application/daily_question_history_provider.dart';
 import '../../questions/data/daily_question.dart';
 import '../../questions/data/daily_question_history_entry.dart';
@@ -404,6 +407,9 @@ class _CalendarDetail extends ConsumerWidget {
     }
 
     final history = ref.watch(dailyQuestionHistoryProvider(selected));
+    final expressionSummary = ref.watch(
+      coupleExpressionSummaryProvider(selected),
+    );
 
     return history.when(
       loading: () => const Padding(
@@ -413,14 +419,32 @@ class _CalendarDetail extends ConsumerWidget {
       error: (error, stackTrace) => _CalendarHistoryErrorDetail(
         onRetry: () {
           ref.invalidate(dailyQuestionHistoryProvider(selected));
+          ref.invalidate(coupleExpressionSummaryProvider(selected));
         },
       ),
       data: (entry) {
-        if (entry == null) {
-          return _HistoryEmptyDetail(selectedDate: selected);
-        }
+        return expressionSummary.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: _CenteredLoader(),
+          ),
+          error: (error, stackTrace) => _CalendarHistoryErrorDetail(
+            onRetry: () {
+              ref.invalidate(dailyQuestionHistoryProvider(selected));
+              ref.invalidate(coupleExpressionSummaryProvider(selected));
+            },
+          ),
+          data: (summaries) {
+            if (entry == null) {
+              return _HistoryEmptyDetail(
+                selectedDate: selected,
+                expressionSummaries: summaries,
+              );
+            }
 
-        return _HistoryDetail(entry: entry);
+            return _HistoryDetail(entry: entry, expressionSummaries: summaries);
+          },
+        );
       },
     );
   }
@@ -452,9 +476,13 @@ class _CalendarHistoryErrorDetail extends StatelessWidget {
 }
 
 class _HistoryEmptyDetail extends StatelessWidget {
-  const _HistoryEmptyDetail({required this.selectedDate});
+  const _HistoryEmptyDetail({
+    required this.selectedDate,
+    required this.expressionSummaries,
+  });
 
   final DateTime selectedDate;
+  final List<CoupleExpressionSummary> expressionSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -467,15 +495,21 @@ class _HistoryEmptyDetail extends StatelessWidget {
           title: '이 날의 질문 기록이 없어요',
           message: '질문이 생성된 날짜를 선택하면 기록을 볼 수 있어요.',
         ),
+        const SizedBox(height: 20),
+        _ExpressionSummarySection(summaries: expressionSummaries),
       ],
     );
   }
 }
 
 class _HistoryDetail extends StatelessWidget {
-  const _HistoryDetail({required this.entry});
+  const _HistoryDetail({
+    required this.entry,
+    required this.expressionSummaries,
+  });
 
   final DailyQuestionHistoryEntry entry;
+  final List<CoupleExpressionSummary> expressionSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -500,7 +534,7 @@ class _HistoryDetail extends StatelessWidget {
         const _SummaryPlaceholder(),
         if (answerState.status == DailyQuestionStatus.completed)
           const _AiCommentPlaceholder(),
-        const _ExpressionCountPlaceholder(),
+        _ExpressionSummarySection(summaries: expressionSummaries),
       ],
     );
   }
@@ -577,8 +611,17 @@ class _AiCommentPlaceholder extends StatelessWidget {
   }
 }
 
-class _ExpressionCountPlaceholder extends StatelessWidget {
-  const _ExpressionCountPlaceholder();
+class _ExpressionSummarySection extends StatelessWidget {
+  const _ExpressionSummarySection({required this.summaries});
+
+  static const _types = [
+    CoupleExpressionType.missYou,
+    CoupleExpressionType.thanks,
+    CoupleExpressionType.feelingDown,
+    CoupleExpressionType.cheerUp,
+  ];
+
+  final List<CoupleExpressionSummary> summaries;
 
   @override
   Widget build(BuildContext context) {
@@ -590,29 +633,66 @@ class _ExpressionCountPlaceholder extends StatelessWidget {
           const Text('이 날의 표현 횟수', style: AppTextStyles.homeCharacterLabel),
           const SizedBox(height: 12),
           Row(
-            children: const [
-              Expanded(child: _ExpressionCountPill()),
-              SizedBox(width: 8),
-              Expanded(child: _ExpressionCountPill()),
-              SizedBox(width: 8),
-              Expanded(child: _ExpressionCountPill()),
-              SizedBox(width: 8),
-              Expanded(child: _ExpressionCountPill()),
+            children: [
+              Expanded(
+                child: _ExpressionSummaryPill(
+                  type: _types[0],
+                  sentCount: _sentCountFor(_types[0]),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ExpressionSummaryPill(
+                  type: _types[1],
+                  sentCount: _sentCountFor(_types[1]),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _ExpressionSummaryPill(
+                  type: _types[2],
+                  sentCount: _sentCountFor(_types[2]),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ExpressionSummaryPill(
+                  type: _types[3],
+                  sentCount: _sentCountFor(_types[3]),
+                ),
+              ),
             ],
           ),
         ],
       ),
     );
   }
+
+  int _sentCountFor(CoupleExpressionType type) {
+    for (final summary in summaries) {
+      if (summary.type == type) {
+        return summary.sentCount;
+      }
+    }
+
+    return 0;
+  }
 }
 
-class _ExpressionCountPill extends StatelessWidget {
-  const _ExpressionCountPill();
+class _ExpressionSummaryPill extends StatelessWidget {
+  const _ExpressionSummaryPill({required this.type, required this.sentCount});
+
+  final CoupleExpressionType type;
+  final int sentCount;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
+      height: 42,
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFF838384)),
         borderRadius: BorderRadius.circular(999),
@@ -620,11 +700,27 @@ class _ExpressionCountPill extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(width: 24, height: 24, color: const Color(0xFFD9D9D9)),
+          Icon(
+            _expressionIconFor(type),
+            size: 18,
+            color: AppColors.textPrimary,
+          ),
           const SizedBox(width: 4),
-          const Text(
-            '00',
-            style: TextStyle(
+          Flexible(
+            child: Text(
+              type.label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$sentCount',
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 12,
               height: 1.4,
@@ -634,6 +730,15 @@ class _ExpressionCountPill extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _expressionIconFor(CoupleExpressionType type) {
+  return switch (type) {
+    CoupleExpressionType.missYou => Icons.favorite_border,
+    CoupleExpressionType.thanks => Icons.thumb_up_alt_outlined,
+    CoupleExpressionType.feelingDown => Icons.sentiment_dissatisfied_outlined,
+    CoupleExpressionType.cheerUp => Icons.wb_sunny_outlined,
+  };
 }
 
 class _CenteredLoader extends StatelessWidget {
