@@ -171,6 +171,114 @@ void main() {
       expect(find.text('날짜를 확인할 수 없어요'), findsOneWidget);
       expect(find.text('달력에서 다시 날짜를 선택해주세요.'), findsOneWidget);
     });
+
+    testWidgets('swipes to previous dated question', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      final historyRepository = _FakeDailyQuestionHistoryRepository(
+        entries: {
+          DateTime(2026, 5, 29): _historyEntryFor(
+            date: DateTime(2026, 5, 29),
+            questionText: 'previous history question',
+          ),
+          DateTime(2026, 5, 30): _historyEntry,
+        },
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        historyRepository: historyRepository,
+        initialLocation: '/calendar/question?date=2026-05-30',
+      );
+
+      await tester.fling(
+        find.byType(GestureDetector).first,
+        const Offset(400, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('05월 29일'), findsOneWidget);
+      expect(find.text('previous history question'), findsOneWidget);
+    });
+
+    testWidgets('swipes to next date and keeps today editable', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      final historyRepository = _FakeDailyQuestionHistoryRepository(
+        entry: _historyEntry,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        historyRepository: historyRepository,
+        initialLocation: '/calendar/question?date=2026-05-30',
+      );
+
+      await tester.fling(
+        find.byType(GestureDetector).first,
+        const Offset(-400, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('05월 31일'), findsOneWidget);
+      expect(find.text('today question'), findsOneWidget);
+
+      await tester.tap(find.text('내 답변'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('does not swipe before relationship start date', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      final historyRepository = _FakeDailyQuestionHistoryRepository(
+        entry: _historyEntry,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        historyRepository: historyRepository,
+        initialLocation: '/calendar/question?date=2026-05-30',
+        relationshipStartDate: DateTime(2026, 5, 30),
+      );
+
+      await tester.fling(
+        find.byType(GestureDetector).first,
+        const Offset(400, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('05월 30일'), findsOneWidget);
+      expect(find.text('history question'), findsOneWidget);
+    });
+
+    testWidgets('does not swipe after today', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question?date=2026-05-31',
+      );
+
+      await tester.fling(
+        find.byType(GestureDetector).first,
+        const Offset(-400, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('05월 31일'), findsOneWidget);
+      expect(find.text('today question'), findsOneWidget);
+    });
   });
 
   group('TodayQuestionAnswerEditScreen', () {
@@ -336,6 +444,7 @@ Future<GoRouter> _pumpRouter(
   required DailyQuestionAnswerRepository repository,
   String initialLocation = '/home/question',
   DailyQuestionHistoryRepository? historyRepository,
+  DateTime? relationshipStartDate,
   Future<DailyQuestion?> Function(Ref ref, TodayQuestionController notifier)?
   questionBuilder,
 }) async {
@@ -344,8 +453,16 @@ Future<GoRouter> _pumpRouter(
     routes: [
       GoRoute(
         path: '/home/question',
-        builder: (context, state) =>
-            const Scaffold(body: TodayQuestionAnswerScreen()),
+        builder: (context, state) {
+          final dateQuery = state.uri.queryParameters['date'];
+          final targetDate = DateTime.tryParse(dateQuery ?? '');
+          return Scaffold(
+            body: TodayQuestionAnswerScreen(
+              targetDate: targetDate,
+              hasInvalidTargetDate: dateQuery != null && targetDate == null,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/home/question/edit',
@@ -376,7 +493,9 @@ Future<GoRouter> _pumpRouter(
           (ref, notifier) => DateTime(2026, 5, 31),
         ),
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => _activeCouple,
+          (ref, notifier) async => _activeCoupleFor(
+            relationshipStartDate: relationshipStartDate,
+          ),
         ),
         todayQuestionControllerProvider.overrideWithBuild(
           questionBuilder ?? (ref, notifier) async => _dailyQuestion,
@@ -396,13 +515,17 @@ Future<GoRouter> _pumpRouter(
 
 class _FakeDailyQuestionHistoryRepository
     implements DailyQuestionHistoryRepository {
-  const _FakeDailyQuestionHistoryRepository({this.entry});
+  const _FakeDailyQuestionHistoryRepository({
+    this.entry,
+    this.entries = const {},
+  });
 
   final DailyQuestionHistoryEntry? entry;
+  final Map<DateTime, DailyQuestionHistoryEntry> entries;
 
   @override
   Future<DailyQuestionHistoryEntry?> fetchByDate(DateTime date) async {
-    return entry;
+    return entries[DateTime(date.year, date.month, date.day)] ?? entry;
   }
 }
 
@@ -479,18 +602,49 @@ final _historyEntry = DailyQuestionHistoryEntry(
   ),
 );
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC123',
-  userAId: 'user-a-id',
-  userBId: 'user-b-id',
-  relationshipStartDate: DateTime(2026, 5, 1),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026, 5, 1),
-  createdAt: DateTime(2026, 5, 1),
-  updatedAt: DateTime(2026, 5, 1),
-);
+DailyQuestionHistoryEntry _historyEntryFor({
+  required DateTime date,
+  required String questionText,
+}) {
+  return DailyQuestionHistoryEntry(
+    question: DailyQuestion(
+      dailyQuestionId: 'history-${date.day}-daily-question-id',
+      coupleId: 'couple-id',
+      questionId: 'history-${date.day}-question-id',
+      questionText: questionText,
+      questionSource: QuestionSource.curated,
+      questionCategory: 'daily',
+      questionMood: 'warm',
+      assignedDate: date,
+      status: DailyQuestionStatus.completed,
+    ),
+    answerState: DailyQuestionAnswerState(
+      dailyQuestionId: 'history-${date.day}-daily-question-id',
+      status: DailyQuestionStatus.completed,
+      myAnswerId: 'history-${date.day}-answer-id',
+      myAnswerText: 'history ${date.day} answer',
+      partnerAnswerExists: true,
+      partnerAnswerId: 'partner-answer-id',
+      partnerAnswerText: 'partner answer',
+      answerCount: 2,
+    ),
+  );
+}
+
+Couple _activeCoupleFor({DateTime? relationshipStartDate}) {
+  return Couple(
+    id: 'couple-id',
+    inviteCode: 'ABC123',
+    userAId: 'user-a-id',
+    userBId: 'user-b-id',
+    relationshipStartDate: relationshipStartDate ?? DateTime(2026, 5, 1),
+    timezone: 'Asia/Seoul',
+    status: CoupleStatus.active,
+    connectedAt: DateTime(2026, 5, 1),
+    createdAt: DateTime(2026, 5, 1),
+    updatedAt: DateTime(2026, 5, 1),
+  );
+}
 
 const _emptyAnswerState = DailyQuestionAnswerState(
   dailyQuestionId: 'daily-question-id',
