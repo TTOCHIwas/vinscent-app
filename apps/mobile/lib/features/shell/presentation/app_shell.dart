@@ -21,7 +21,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
     final showHeader = !_hidesMainHeader;
-    final showBottomBar = !_usesAnswerEditBottomBar;
+    final showBottomBar = !_hidesBottomBar;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -50,11 +50,12 @@ class AppShell extends StatelessWidget {
   bool get _hidesMainHeader {
     return location == '/calendar' ||
         location == '/calendar/question' ||
+        location == '/home/character' ||
         location == '/home/question' ||
         location == '/home/question/edit';
   }
 
-  bool get _usesAnswerEditBottomBar {
-    return location == '/home/question/edit';
+  bool get _hidesBottomBar {
+    return location == '/home/character' || location == '/home/question/edit';
   }
 }

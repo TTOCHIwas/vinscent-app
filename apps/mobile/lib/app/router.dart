@@ -8,6 +8,7 @@ import '../features/auth/application/auth_status.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/boot/presentation/boot_screen.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
+import '../features/characters/presentation/character_editor_screen.dart';
 import '../features/couple/application/couple_controller.dart';
 import '../features/couple/data/couple.dart';
 import '../features/couple/presentation/couple_entry_screen.dart';
@@ -124,6 +125,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/home',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/home/character',
+            name: 'characterEditor',
+            builder: (context, state) => const CharacterEditorScreen(),
           ),
           GoRoute(
             path: '/home/question',

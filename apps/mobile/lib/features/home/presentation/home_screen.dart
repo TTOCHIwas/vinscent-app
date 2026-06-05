@@ -148,40 +148,32 @@ class _QuestionCharacterPreview extends ConsumerWidget {
       data: (question) => question != null,
     );
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: canOpenQuestion ? () => context.go('/home/question') : null,
-        child: SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                todayQuestion.when(
-                  loading: () => const _HomeQuestionSpeechPrompt(
-                    speechText: '오늘 질문을 가져오고 있어요',
-                    footer: SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  error: (error, stackTrace) => _HomeQuestionSpeechPrompt(
-                    speechText: '질문을 불러오지 못했어요',
-                    footer: TextButton(
-                      onPressed: () => ref
-                          .read(todayQuestionControllerProvider.notifier)
-                          .refresh(),
-                      child: const Text('다시 시도'),
-                    ),
-                  ),
-                  data: (question) => _HomeQuestionSpeechPrompt(
-                    speechText: question?.questionText ?? '오늘의 질문을 준비 중이에요',
-                  ),
-                ),
-              ],
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: todayQuestion.when(
+          loading: () => const _HomeQuestionSpeechPrompt(
+            speechText: '오늘 질문을 가져오고 있어요',
+            footer: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
+          ),
+          error: (error, stackTrace) => _HomeQuestionSpeechPrompt(
+            speechText: '질문을 불러오지 못했어요',
+            footer: TextButton(
+              onPressed: () =>
+                  ref.read(todayQuestionControllerProvider.notifier).refresh(),
+              child: const Text('다시 시도'),
+            ),
+          ),
+          data: (question) => _HomeQuestionSpeechPrompt(
+            speechText: question?.questionText ?? '오늘의 질문을 준비 중이에요',
+            onSpeechTap: canOpenQuestion
+                ? () => context.go('/home/question')
+                : null,
+            onCharacterTap: () => context.go('/home/character'),
           ),
         ),
       ),
@@ -193,10 +185,14 @@ class _HomeQuestionSpeechPrompt extends StatelessWidget {
   const _HomeQuestionSpeechPrompt({
     required this.speechText,
     this.footer,
+    this.onSpeechTap,
+    this.onCharacterTap,
   });
 
   final String speechText;
   final Widget? footer;
+  final VoidCallback? onSpeechTap;
+  final VoidCallback? onCharacterTap;
 
   @override
   Widget build(BuildContext context) {
@@ -207,11 +203,10 @@ class _HomeQuestionSpeechPrompt extends StatelessWidget {
         CharacterSpeechPrompt(
           labelText: '오늘의 질문',
           speechText: speechText,
+          onSpeechTap: onSpeechTap,
+          onCharacterTap: onCharacterTap,
         ),
-        if (footer != null) ...[
-          const SizedBox(height: 12),
-          footer,
-        ],
+        if (footer != null) ...[const SizedBox(height: 12), footer],
       ],
     );
   }
