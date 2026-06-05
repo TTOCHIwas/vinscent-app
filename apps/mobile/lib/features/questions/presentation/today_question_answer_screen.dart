@@ -444,7 +444,13 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
                     ),
                     filled: true,
                     fillColor: AppColors.background,
-                    contentPadding: const EdgeInsets.all(24),
+                    contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: AppColors.textPlaceholder,
+                      ),
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
                       borderSide: const BorderSide(
