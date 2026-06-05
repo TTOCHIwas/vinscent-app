@@ -149,6 +149,8 @@ void main() {
 
     expect(find.text('내 답변이 없어 상대방 답변을 확인할 수 없어요'), findsOneWidget);
     expect(find.text('partner answer'), findsNothing);
+    expect(find.text('AI 한 줄 평'), findsNothing);
+    expect(find.text('아직 AI 한 줄 평이 없어요'), findsNothing);
   });
 
   testWidgets('selects today without leaving calendar', (
