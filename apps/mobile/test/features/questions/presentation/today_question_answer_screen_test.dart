@@ -22,6 +22,7 @@ void main() {
 
       expect(find.text('05월 31일'), findsOneWidget);
       expect(find.text('today question'), findsOneWidget);
+      expect(find.text('캐릭터'), findsOneWidget);
       expect(find.text('답변하기'), findsNothing);
       expect(find.text('내 답변'), findsOneWidget);
       expect(find.text('이곳을 눌러서 답변을 입력해주세요'), findsOneWidget);
@@ -293,6 +294,8 @@ void main() {
 
       expect(find.text('05월 31일'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('캐릭터'), findsOneWidget);
+      expect(find.text('답변 입력'), findsOneWidget);
       expect(find.text('0 / 500'), findsOneWidget);
 
       await tester.tap(find.text('저장'));
