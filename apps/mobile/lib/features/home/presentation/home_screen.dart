@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../expressions/application/couple_expression_controller.dart';
+import '../../expressions/data/couple_expression.dart';
 import '../../questions/application/today_question_controller.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../application/day_count.dart';
@@ -212,42 +214,133 @@ class _HomeQuestionSpeechPrompt extends StatelessWidget {
   }
 }
 
-class _ExpressionGrid extends StatelessWidget {
+class _ExpressionGrid extends ConsumerWidget {
   const _ExpressionGrid();
 
+  static const _actions = [
+    _ExpressionAction(
+      type: CoupleExpressionType.missYou,
+      icon: Icons.favorite_border,
+    ),
+    _ExpressionAction(
+      type: CoupleExpressionType.thanks,
+      icon: Icons.thumb_up_alt_outlined,
+    ),
+    _ExpressionAction(
+      type: CoupleExpressionType.feelingDown,
+      icon: Icons.sentiment_dissatisfied_outlined,
+    ),
+    _ExpressionAction(
+      type: CoupleExpressionType.cheerUp,
+      icon: Icons.wb_sunny_outlined,
+    ),
+  ];
+
   @override
-  Widget build(BuildContext context) {
-    return const Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final expressionState = ref.watch(coupleExpressionControllerProvider);
+    final isSending = expressionState.isLoading;
+
+    return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _ExpressionButton()),
-            SizedBox(width: 8),
-            Expanded(child: _ExpressionButton()),
+            Expanded(
+              child: _ExpressionButton(
+                action: _actions[0],
+                isEnabled: !isSending,
+                onTap: () => _sendExpression(context, ref, _actions[0].type),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ExpressionButton(
+                action: _actions[1],
+                isEnabled: !isSending,
+                onTap: () => _sendExpression(context, ref, _actions[1].type),
+              ),
+            ),
           ],
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _ExpressionButton()),
-            SizedBox(width: 8),
-            Expanded(child: _ExpressionButton()),
+            Expanded(
+              child: _ExpressionButton(
+                action: _actions[2],
+                isEnabled: !isSending,
+                onTap: () => _sendExpression(context, ref, _actions[2].type),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ExpressionButton(
+                action: _actions[3],
+                isEnabled: !isSending,
+                onTap: () => _sendExpression(context, ref, _actions[3].type),
+              ),
+            ),
           ],
         ),
       ],
     );
   }
+
+  Future<void> _sendExpression(
+    BuildContext context,
+    WidgetRef ref,
+    CoupleExpressionType type,
+  ) async {
+    try {
+      await ref.read(coupleExpressionControllerProvider.notifier).send(type);
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('표현을 보냈어요')));
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('표현을 보내지 못했어요')));
+    }
+  }
+}
+
+class _ExpressionAction {
+  const _ExpressionAction({required this.type, required this.icon});
+
+  final CoupleExpressionType type;
+  final IconData icon;
 }
 
 class _ExpressionButton extends StatelessWidget {
-  const _ExpressionButton();
+  const _ExpressionButton({
+    required this.action,
+    required this.isEnabled,
+    required this.onTap,
+  });
+
+  final _ExpressionAction action;
+  final bool isEnabled;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final foreground = isEnabled
+        ? AppColors.textPrimary
+        : AppColors.actionDisabledContent;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: isEnabled ? onTap : null,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
@@ -255,19 +348,16 @@ class _ExpressionButton extends StatelessWidget {
             border: Border.all(color: AppColors.wireframeBorder),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: AppColors.wireframeIcon),
-                ),
+              Icon(action.icon, size: 24, color: foreground),
+              const SizedBox(width: 10),
+              Text(
+                action.type.label,
+                style: AppTextStyles.homeBody.copyWith(color: foreground),
               ),
-              SizedBox(width: 10),
-              Text('표현', style: AppTextStyles.homeBody),
             ],
           ),
         ),
