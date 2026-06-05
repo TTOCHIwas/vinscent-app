@@ -43,6 +43,9 @@ dependencies:
   sign_in_with_apple: ^8.0.0
   crypto: ^3.0.7
   characters: ^1.4.1
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

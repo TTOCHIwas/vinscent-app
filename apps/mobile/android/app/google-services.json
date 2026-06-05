@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "55189810857",
+    "project_id": "vinscent-b4036",
+    "storage_bucket": "vinscent-b4036.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55189810857:android:f1b09b48f8a76a5a2d03b8",
+        "android_client_info": {
+          "package_name": "com.vinscent.vinscent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfuBTTsWIHn9X2gczg7swf8P1jk_nCkEU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

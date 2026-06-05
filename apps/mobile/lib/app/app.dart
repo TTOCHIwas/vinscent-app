@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/date/today_controller.dart';
 import '../core/theme/app_theme.dart';
+import '../features/notifications/application/push_token_controller.dart';
 import 'router.dart';
 
 class VinscentApp extends ConsumerStatefulWidget {
@@ -36,6 +37,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    ref.watch(pushTokenControllerProvider);
 
     return MaterialApp.router(
       title: 'Vinscent',
