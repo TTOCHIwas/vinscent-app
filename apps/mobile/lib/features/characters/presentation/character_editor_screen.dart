@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/couple_character_controller.dart';
 import '../data/character_drawing.dart';
+import '../data/couple_character_failure.dart';
 import 'widgets/character_canvas.dart';
 import 'widgets/character_toolbar.dart';
 
@@ -139,9 +140,9 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       if (mounted) {
         context.go('/home');
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        _showSnackBar('캐릭터를 저장하지 못했어요');
+        _showSnackBar(_saveFailureMessage(error));
       }
     } finally {
       if (mounted) {
@@ -177,6 +178,23 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _saveFailureMessage(Object error) {
+    if (error is CoupleCharacterRepositoryException) {
+      return switch (error.reason) {
+        CoupleCharacterFailureReason.configMissing =>
+          'Supabase 설정이 없어 저장할 수 없어요',
+        CoupleCharacterFailureReason.authRequired => '로그인이 필요해요',
+        CoupleCharacterFailureReason.activeCoupleRequired => '커플 연결을 확인할 수 없어요',
+        CoupleCharacterFailureReason.invalidPath => '캐릭터 저장 경로가 올바르지 않아요',
+        CoupleCharacterFailureReason.requestTimeout => '저장 시간이 초과됐어요',
+        CoupleCharacterFailureReason.storage => '캐릭터 파일 저장 권한을 확인해주세요',
+        CoupleCharacterFailureReason.unknown => '캐릭터를 저장하지 못했어요',
+      };
+    }
+
+    return '캐릭터를 저장하지 못했어요';
   }
 
   @override
