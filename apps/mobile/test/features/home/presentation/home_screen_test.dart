@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/expressions/data/couple_expression.dart';
+import 'package:vinscent/features/expressions/data/couple_expression_repository.dart';
+import 'package:vinscent/features/expressions/data/couple_expression_summary.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/questions/application/today_question_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
@@ -25,7 +28,10 @@ void main() {
     expect(find.text('오늘의 질문'), findsOneWidget);
     expect(find.text('오늘의 질문을 준비 중이에요'), findsOneWidget);
     expect(find.text('캐릭터'), findsOneWidget);
-    expect(find.text('표현'), findsNWidgets(4));
+    expect(find.text('보고싶어'), findsOneWidget);
+    expect(find.text('고마워'), findsOneWidget);
+    expect(find.text('우울해'), findsOneWidget);
+    expect(find.text('힘내'), findsOneWidget);
   });
 
   testWidgets('shows today question text', (tester) async {
@@ -79,6 +85,44 @@ void main() {
 
     expect(find.text('첫 만남일을 먼저 입력해주세요.'), findsOneWidget);
   });
+
+  testWidgets('sends selected expression and shows success feedback', (
+    tester,
+  ) async {
+    final expressionRepository = _FakeCoupleExpressionRepository();
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      expressionRepository: expressionRepository,
+    );
+
+    await tester.tap(find.text('고마워'));
+    await tester.pumpAndSettle();
+
+    expect(expressionRepository.sentTypes, [CoupleExpressionType.thanks]);
+    expect(find.text('표현을 보냈어요'), findsOneWidget);
+  });
+
+  testWidgets('shows failure feedback when expression send fails', (
+    tester,
+  ) async {
+    final expressionRepository = _FakeCoupleExpressionRepository(
+      shouldFail: true,
+    );
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      expressionRepository: expressionRepository,
+    );
+
+    await tester.tap(find.text('우울해'));
+    await tester.pumpAndSettle();
+
+    expect(expressionRepository.sentTypes, [CoupleExpressionType.feelingDown]);
+    expect(find.text('표현을 보내지 못했어요'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpHome(
@@ -89,6 +133,7 @@ Future<void> _pumpHome(
   Object? questionError,
   bool questionLoading = false,
   bool settle = true,
+  CoupleExpressionRepository? expressionRepository,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -110,6 +155,9 @@ Future<void> _pumpHome(
 
           return question;
         }),
+        coupleExpressionRepositoryProvider.overrideWithValue(
+          expressionRepository ?? _FakeCoupleExpressionRepository(),
+        ),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
     ),
@@ -119,6 +167,38 @@ Future<void> _pumpHome(
     await tester.pumpAndSettle();
   } else {
     await tester.pump();
+  }
+}
+
+class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
+  _FakeCoupleExpressionRepository({this.shouldFail = false});
+
+  final bool shouldFail;
+  final sentTypes = <CoupleExpressionType>[];
+
+  @override
+  Future<CoupleExpression> send(CoupleExpressionType type) async {
+    sentTypes.add(type);
+
+    if (shouldFail) {
+      throw Exception('expression unavailable');
+    }
+
+    return CoupleExpression(
+      id: 'expression-id',
+      coupleId: 'couple-id',
+      senderUserId: 'user-id',
+      receiverUserId: 'partner-id',
+      type: type,
+      sentAt: DateTime(2026, 5, 31, 12),
+    );
+  }
+
+  @override
+  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(
+    DateTime date,
+  ) async {
+    return const [];
   }
 }
 

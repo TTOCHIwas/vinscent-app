@@ -7,6 +7,9 @@ import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/expressions/data/couple_expression.dart';
+import 'package:vinscent/features/expressions/data/couple_expression_repository.dart';
+import 'package:vinscent/features/expressions/data/couple_expression_summary.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
@@ -17,12 +20,18 @@ void main() {
     tester,
   ) async {
     final repository = _FakeDailyQuestionHistoryRepository();
+    final expressionRepository = _FakeCoupleExpressionRepository();
 
-    await _pumpCalendar(tester, repository: repository);
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      expressionRepository: expressionRepository,
+    );
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('날짜를 선택해 주세요'), findsOneWidget);
     expect(repository.requestedDates, isEmpty);
+    expect(expressionRepository.requestedDates, isEmpty);
   });
 
   testWidgets('does not move before relationship start month', (tester) async {
@@ -77,8 +86,22 @@ void main() {
     final repository = _FakeDailyQuestionHistoryRepository(
       entries: {DateTime(2026, 5, 5): _completedEntry},
     );
+    final expressionRepository = _FakeCoupleExpressionRepository(
+      summaries: {
+        DateTime(2026, 5, 5): const [
+          CoupleExpressionSummary(
+            type: CoupleExpressionType.missYou,
+            sentCount: 42,
+          ),
+        ],
+      },
+    );
 
-    await _pumpCalendar(tester, repository: repository);
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      expressionRepository: expressionRepository,
+    );
 
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
@@ -93,20 +116,39 @@ void main() {
     expect(find.text('아직 AI 한 줄 평이 없어요'), findsOneWidget);
     expect(find.text('캐릭터'), findsOneWidget);
     expect(find.text('이 날의 표현 횟수'), findsOneWidget);
+    expect(find.text('보고싶어'), findsOneWidget);
+    expect(find.text('42'), findsOneWidget);
   });
 
   testWidgets(
     'shows empty state when selected date has no generated question',
     (tester) async {
       final repository = _FakeDailyQuestionHistoryRepository();
+      final expressionRepository = _FakeCoupleExpressionRepository(
+        summaries: {
+          DateTime(2026, 5, 5): const [
+            CoupleExpressionSummary(
+              type: CoupleExpressionType.cheerUp,
+              sentCount: 42,
+            ),
+          ],
+        },
+      );
 
-      await _pumpCalendar(tester, repository: repository);
+      await _pumpCalendar(
+        tester,
+        repository: repository,
+        expressionRepository: expressionRepository,
+      );
 
       await tester.tap(find.text('5').first);
       await tester.pumpAndSettle();
 
       expect(repository.requestedDates, [DateTime(2026, 5, 5)]);
       expect(find.text('이 날의 질문 기록이 없어요'), findsOneWidget);
+      expect(find.text('이 날의 표현 횟수'), findsOneWidget);
+      expect(find.text('힘내'), findsOneWidget);
+      expect(find.text('42'), findsOneWidget);
     },
   );
 
@@ -153,9 +195,7 @@ void main() {
     expect(find.text('아직 AI 한 줄 평이 없어요'), findsNothing);
   });
 
-  testWidgets('selects today without leaving calendar', (
-    tester,
-  ) async {
+  testWidgets('selects today without leaving calendar', (tester) async {
     final repository = _FakeDailyQuestionHistoryRepository(
       entries: {DateTime(2026, 5, 10): _todayEntry},
     );
@@ -174,6 +214,7 @@ void main() {
 Future<void> _pumpCalendar(
   WidgetTester tester, {
   required DailyQuestionHistoryRepository repository,
+  CoupleExpressionRepository? expressionRepository,
   DateTime? today,
   DateTime? relationshipStartDate,
 }) async {
@@ -203,6 +244,9 @@ Future<void> _pumpCalendar(
               _activeCouple(relationshipStartDate: relationshipStartDate),
         ),
         dailyQuestionHistoryRepositoryProvider.overrideWithValue(repository),
+        coupleExpressionRepositoryProvider.overrideWithValue(
+          expressionRepository ?? _FakeCoupleExpressionRepository(),
+        ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -210,6 +254,35 @@ Future<void> _pumpCalendar(
 
   await tester.pumpAndSettle();
 }
+
+class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
+  _FakeCoupleExpressionRepository({this.summaries = const {}});
+
+  final Map<DateTime, List<CoupleExpressionSummary>> summaries;
+  final requestedDates = <DateTime>[];
+
+  @override
+  Future<CoupleExpression> send(CoupleExpressionType type) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(
+    DateTime date,
+  ) async {
+    final normalizedDate = calendarDateOnly(date);
+    requestedDates.add(normalizedDate);
+
+    return summaries[normalizedDate] ?? _zeroExpressionSummaries;
+  }
+}
+
+const _zeroExpressionSummaries = [
+  CoupleExpressionSummary(type: CoupleExpressionType.missYou, sentCount: 0),
+  CoupleExpressionSummary(type: CoupleExpressionType.thanks, sentCount: 0),
+  CoupleExpressionSummary(type: CoupleExpressionType.feelingDown, sentCount: 0),
+  CoupleExpressionSummary(type: CoupleExpressionType.cheerUp, sentCount: 0),
+];
 
 class _FakeDailyQuestionHistoryRepository
     implements DailyQuestionHistoryRepository {
