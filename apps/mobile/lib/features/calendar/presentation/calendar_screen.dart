@@ -10,6 +10,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../questions/application/daily_question_history_provider.dart';
 import '../../questions/data/daily_question_history_entry.dart';
+import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../../questions/presentation/widgets/question_answer_sections.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -564,20 +565,11 @@ class _AiCommentPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 36),
-      child: Column(
-        children: [
-          const Text('AI 한 줄 평', style: AppTextStyles.homeCharacterLabel),
-          const SizedBox(height: 24),
-          Container(
-            width: 140,
-            height: 140,
-            color: AppColors.wireframePlaceholder,
-            alignment: Alignment.center,
-            child: const Text('캐릭터', style: AppTextStyles.homeCharacterLabel),
-          ),
-        ],
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 36),
+      child: CharacterSpeechPrompt(
+        labelText: 'AI 한 줄 평',
+        speechText: '아직 AI 한 줄 평이 없어요',
       ),
     );
   }
