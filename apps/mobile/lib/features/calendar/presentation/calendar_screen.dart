@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../questions/application/daily_question_history_provider.dart';
+import '../../questions/data/daily_question.dart';
 import '../../questions/data/daily_question_history_entry.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../../questions/presentation/widgets/question_answer_sections.dart';
@@ -497,7 +498,8 @@ class _HistoryDetail extends StatelessWidget {
           displayStyle: QuestionAnswerDisplayStyle.plain,
         ),
         const _SummaryPlaceholder(),
-        const _AiCommentPlaceholder(),
+        if (answerState.status == DailyQuestionStatus.completed)
+          const _AiCommentPlaceholder(),
         const _ExpressionCountPlaceholder(),
       ],
     );
