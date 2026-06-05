@@ -16,6 +16,20 @@ type PushTokenRow = {
 
 type DeliveryStatus = 'sent' | 'partial_failure' | 'failed' | 'skipped';
 
+type DispatchClaimRow = {
+  claim_result: 'claimed' | 'duplicate';
+  notification_type: string;
+  source_id: string;
+  dispatch_status: string;
+  claimed_at: string;
+};
+
+type FcmSendResult = {
+  ok: boolean;
+  invalidToken: boolean;
+  errorMessage: string | null;
+};
+
 const expressionMessages: Record<string, string> = {
   miss_you: '상대방이 보고싶다고 표현했어요',
   thanks: '상대방이 고마운 마음을 보냈어요',
@@ -50,9 +64,26 @@ Deno.serve(async (request) => {
     );
   }
 
+  let dispatchClaim: DispatchClaimRow;
+  try {
+    dispatchClaim = await claimNotificationDispatch(supabase, expression);
+  } catch (error) {
+    return jsonResponse(
+      { error: 'dispatch_claim_failed', detail: String(error) },
+      500,
+    );
+  }
+
+  if (dispatchClaim.claim_result !== 'claimed') {
+    return jsonResponse({
+      status: 'duplicate',
+      dispatchStatus: dispatchClaim.dispatch_status,
+    });
+  }
+
   const notificationBody = expressionMessages[expression.expression_type];
   if (!notificationBody) {
-    await logDelivery(supabase, {
+    await recordDeliveryAndCompleteDispatch(supabase, {
       expression,
       targetTokenCount: 0,
       successCount: 0,
@@ -71,7 +102,7 @@ Deno.serve(async (request) => {
     .eq('is_active', true);
 
   if (tokenError) {
-    await logDelivery(supabase, {
+    await recordDeliveryAndCompleteDispatch(supabase, {
       expression,
       targetTokenCount: 0,
       successCount: 0,
@@ -86,7 +117,7 @@ Deno.serve(async (request) => {
   const pushTokens = (pushTokenRows ?? []) as PushTokenRow[];
 
   if (pushTokens.length === 0) {
-    await logDelivery(supabase, {
+    await recordDeliveryAndCompleteDispatch(supabase, {
       expression,
       targetTokenCount: 0,
       successCount: 0,
@@ -98,11 +129,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ status: 'skipped', targetTokenCount: 0 });
   }
 
-  let results: Array<{
-    ok: boolean;
-    invalidToken: boolean;
-    errorMessage: string | null;
-  }>;
+  let results: FcmSendResult[];
 
   try {
     const accessToken = await createFcmAccessToken();
@@ -117,7 +144,7 @@ Deno.serve(async (request) => {
       ),
     );
   } catch (error) {
-    await logDelivery(supabase, {
+    await recordDeliveryAndCompleteDispatch(supabase, {
       expression,
       targetTokenCount: pushTokens.length,
       successCount: 0,
@@ -146,7 +173,7 @@ Deno.serve(async (request) => {
   }
 
   const status = resolveDeliveryStatus(successCount, failureCount);
-  await logDelivery(supabase, {
+  await recordDeliveryAndCompleteDispatch(supabase, {
     expression,
     targetTokenCount: pushTokens.length,
     successCount,
@@ -192,6 +219,28 @@ function extractExpressionRecord(payload: unknown): CoupleExpressionRecord {
     sent_at:
       typeof candidate.sent_at === 'string' ? candidate.sent_at : undefined,
   };
+}
+
+async function claimNotificationDispatch(
+  supabase: ReturnType<typeof createClient>,
+  expression: CoupleExpressionRecord,
+): Promise<DispatchClaimRow> {
+  const { data, error } = await supabase
+    .rpc('claim_push_notification_dispatch', {
+      requested_notification_type: 'couple_expression',
+      requested_source_id: expression.id,
+    })
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!isRecord(data) || typeof data.claim_result !== 'string') {
+    throw new Error('dispatch_claim_missing');
+  }
+
+  return data as DispatchClaimRow;
 }
 
 async function sendFcmMessage(
@@ -342,6 +391,45 @@ async function logDelivery(
     status: params.status,
     error_message: params.errorMessage,
   });
+}
+
+async function recordDeliveryAndCompleteDispatch(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    expression: CoupleExpressionRecord;
+    targetTokenCount: number;
+    successCount: number;
+    failureCount: number;
+    status: DeliveryStatus;
+    errorMessage: string | null;
+  },
+) {
+  await logDelivery(supabase, params);
+  await completeNotificationDispatch(supabase, {
+    expression: params.expression,
+    status: params.status,
+    errorMessage: params.errorMessage,
+  });
+}
+
+async function completeNotificationDispatch(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    expression: CoupleExpressionRecord;
+    status: DeliveryStatus;
+    errorMessage: string | null;
+  },
+) {
+  const { error } = await supabase.rpc('complete_push_notification_dispatch', {
+    requested_notification_type: 'couple_expression',
+    requested_source_id: params.expression.id,
+    requested_status: params.status,
+    requested_error_message: params.errorMessage,
+  });
+
+  if (error) {
+    console.error('complete_push_notification_dispatch_failed', error.message);
+  }
 }
 
 function resolveDeliveryStatus(
