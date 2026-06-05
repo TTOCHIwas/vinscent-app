@@ -49,11 +49,18 @@ class FirebasePushTokenRepository implements PushTokenRepository {
 
   @override
   Future<void> configureForegroundNotifications() async {
-    if (_foregroundNotificationsConfigured || !_isPushPlatformSupported) {
+    if (_foregroundNotificationsConfigured) {
+      _debugPushLog('Foreground notifications skipped: already configured');
+      return;
+    }
+
+    if (!_isPushPlatformSupported) {
+      _debugPushLog('Foreground notifications skipped: unsupported platform');
       return;
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
+      _debugPushLog('Android foreground notification channel setup started');
       const androidSettings = AndroidInitializationSettings(
         '@mipmap/ic_launcher',
       );
@@ -69,14 +76,17 @@ class FirebasePushTokenRepository implements PushTokenRepository {
           ?.createNotificationChannel(_androidChannel);
 
       FirebaseMessaging.onMessage.listen(_showForegroundAndroidNotification);
+      _debugPushLog('Android foreground notification channel setup completed');
     }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
+      _debugPushLog('iOS foreground notification presentation setup started');
       await _messaging.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
         sound: true,
       );
+      _debugPushLog('iOS foreground notification presentation setup completed');
     }
 
     _foregroundNotificationsConfigured = true;
@@ -84,52 +94,83 @@ class FirebasePushTokenRepository implements PushTokenRepository {
 
   @override
   Future<void> registerCurrentDeviceToken() async {
+    _debugPushLog('Current device token registration requested');
     _ensureSupabaseConfigured();
 
     if (!_isPushPlatformSupported) {
+      _debugPushLog(
+        'Current device token registration failed: unsupported platform',
+      );
       throw const PushTokenRepositoryException(
         PushTokenFailureReason.unsupportedPlatform,
       );
     }
 
+    _debugPushLog('FCM notification permission request started');
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    _debugPushLog(
+      'FCM notification permission result: ${settings.authorizationStatus}',
+    );
 
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      _debugPushLog(
+        'Current device token registration skipped: permission denied',
+      );
       return;
     }
 
+    _debugPushLog('FCM token request started');
     final token = await _messaging.getToken();
     if (token == null || token.isEmpty) {
+      _debugPushLog(
+        'Current device token registration skipped: FCM token is empty',
+      );
       return;
     }
 
+    _debugPushLog(
+      'FCM token received: prefix=${_tokenPrefix(token)}, '
+      'length=${token.length}',
+    );
     await registerToken(token);
   }
 
   @override
   Future<void> deactivateCurrentDeviceToken() async {
     if (!AppConfig.isSupabaseConfigured || !_isPushPlatformSupported) {
+      _debugPushLog(
+        'Token deactivation skipped: app is not configured for push',
+      );
       return;
     }
 
+    _debugPushLog('Current device token deactivation requested');
     final token = await _messaging.getToken();
     if (token == null || token.isEmpty) {
+      _debugPushLog('Token deactivation skipped: FCM token is empty');
       return;
     }
 
     try {
+      _debugPushLog(
+        'deactivate_user_push_token RPC started: '
+        'prefix=${_tokenPrefix(token)}, length=${token.length}',
+      );
       await Supabase.instance.client
           .rpc('deactivate_user_push_token', params: {'push_token': token})
           .timeout(AppConfig.supabaseRpcTimeout);
+      _debugPushLog('deactivate_user_push_token RPC completed');
     } on TimeoutException {
+      _debugPushLog('deactivate_user_push_token RPC failed: timeout');
       throw const PushTokenRepositoryException(
         PushTokenFailureReason.requestTimeout,
       );
     } on PostgrestException catch (error) {
+      _debugPushLog('deactivate_user_push_token RPC failed: ${error.message}');
       throw _mapPostgrestError(error);
     }
   }
@@ -139,23 +180,34 @@ class FirebasePushTokenRepository implements PushTokenRepository {
     _ensureSupabaseConfigured();
 
     if (!_isPushPlatformSupported) {
+      _debugPushLog('upsert_user_push_token RPC skipped: unsupported platform');
       throw const PushTokenRepositoryException(
         PushTokenFailureReason.unsupportedPlatform,
       );
     }
 
+    final platform = _currentPlatform;
+    _debugPushLog(
+      'upsert_user_push_token RPC requested: '
+      'platform=$platform, prefix=${_tokenPrefix(token)}, '
+      'length=${token.length}',
+    );
+
     try {
       await Supabase.instance.client
           .rpc(
             'upsert_user_push_token',
-            params: {'push_token': token, 'push_platform': _currentPlatform},
+            params: {'push_token': token, 'push_platform': platform},
           )
           .timeout(AppConfig.supabaseRpcTimeout);
+      _debugPushLog('upsert_user_push_token RPC completed');
     } on TimeoutException {
+      _debugPushLog('upsert_user_push_token RPC failed: timeout');
       throw const PushTokenRepositoryException(
         PushTokenFailureReason.requestTimeout,
       );
     } on PostgrestException catch (error) {
+      _debugPushLog('upsert_user_push_token RPC failed: ${error.message}');
       throw _mapPostgrestError(error);
     }
   }
@@ -163,9 +215,13 @@ class FirebasePushTokenRepository implements PushTokenRepository {
   Future<void> _showForegroundAndroidNotification(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) {
+      _debugPushLog('Foreground FCM message received without notification');
       return;
     }
 
+    _debugPushLog(
+      'Foreground FCM notification received: ${notification.title}',
+    );
     await _localNotifications.show(
       notification.hashCode,
       notification.title,
@@ -184,6 +240,7 @@ class FirebasePushTokenRepository implements PushTokenRepository {
 
   void _ensureSupabaseConfigured() {
     if (!AppConfig.isSupabaseConfigured) {
+      _debugPushLog('Supabase configuration missing');
       throw const PushTokenRepositoryException(
         PushTokenFailureReason.configMissing,
       );
@@ -223,5 +280,19 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       'invalid_push_platform' => PushTokenFailureReason.invalidPushPlatform,
       _ => PushTokenFailureReason.unknown,
     };
+  }
+
+  String _tokenPrefix(String token) {
+    if (token.length <= 12) {
+      return token;
+    }
+
+    return token.substring(0, 12);
+  }
+
+  void _debugPushLog(String message) {
+    if (kDebugMode) {
+      debugPrint('[push] $message');
+    }
   }
 }

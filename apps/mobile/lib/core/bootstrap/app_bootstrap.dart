@@ -13,8 +13,14 @@ class AppBootstrap {
       await KakaoSdk.init(nativeAppKey: AppConfig.kakaoNativeAppKey);
     }
 
-    if (_isFirebaseSupported && Firebase.apps.isEmpty) {
+    if (!_isFirebaseSupported) {
+      _debugPushLog('Firebase initialization skipped: unsupported platform');
+    } else if (Firebase.apps.isEmpty) {
+      _debugPushLog('Firebase initialization started');
       await Firebase.initializeApp();
+      _debugPushLog('Firebase initialization completed');
+    } else {
+      _debugPushLog('Firebase initialization skipped: already initialized');
     }
 
     if (AppConfig.isSupabaseConfigured) {
@@ -32,5 +38,11 @@ class AppBootstrap {
 
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
+  static void _debugPushLog(String message) {
+    if (kDebugMode) {
+      debugPrint('[push] $message');
+    }
   }
 }
