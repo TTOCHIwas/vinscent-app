@@ -12,6 +12,7 @@
 # Toolchains and package managers
 .toolchains/
 node_modules/
+supabase/.temp/
 
 # Flutter and Dart
 .dart_tool/
