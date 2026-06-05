@@ -20,19 +20,8 @@ const characterColorPalette = [
 const characterThinStrokeWidth = 0.012;
 const characterNormalStrokeWidth = 0.022;
 const characterThickStrokeWidth = 0.038;
-
-const characterStrokeWidthOptions = [
-  CharacterStrokeWidthOption(label: '얇게', width: characterThinStrokeWidth),
-  CharacterStrokeWidthOption(label: '보통', width: characterNormalStrokeWidth),
-  CharacterStrokeWidthOption(label: '굵게', width: characterThickStrokeWidth),
-];
-
-class CharacterStrokeWidthOption {
-  const CharacterStrokeWidthOption({required this.label, required this.width});
-
-  final String label;
-  final double width;
-}
+const characterMinStrokeWidth = characterThinStrokeWidth;
+const characterMaxStrokeWidth = characterThickStrokeWidth;
 
 class CharacterToolbar extends StatelessWidget {
   const CharacterToolbar({
@@ -40,17 +29,21 @@ class CharacterToolbar extends StatelessWidget {
     required this.selectedTool,
     required this.selectedColor,
     required this.selectedStrokeWidth,
+    required this.canClear,
     required this.onToolChanged,
     required this.onColorChanged,
     required this.onStrokeWidthChanged,
+    required this.onClearPressed,
   });
 
   final CharacterDrawingTool selectedTool;
   final Color selectedColor;
   final double selectedStrokeWidth;
+  final bool canClear;
   final ValueChanged<CharacterDrawingTool> onToolChanged;
   final ValueChanged<Color> onColorChanged;
   final ValueChanged<double> onStrokeWidthChanged;
+  final VoidCallback onClearPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +69,16 @@ class CharacterToolbar extends StatelessWidget {
                 onTap: () => onToolChanged(CharacterDrawingTool.eraser),
               ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ToolButton(
+                icon: Icons.delete_outline,
+                label: '삭제',
+                isSelected: false,
+                isEnabled: canClear,
+                onTap: onClearPressed,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 18),
@@ -94,20 +97,11 @@ class CharacterToolbar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        Row(
-          children: [
-            for (final option in characterStrokeWidthOptions) ...[
-              Expanded(
-                child: _StrokeWidthButton(
-                  option: option,
-                  isSelected: option.width == selectedStrokeWidth,
-                  onTap: () => onStrokeWidthChanged(option.width),
-                ),
-              ),
-              if (option != characterStrokeWidthOptions.last)
-                const SizedBox(width: 8),
-            ],
-          ],
+        _StrokeWidthSlider(
+          selectedStrokeWidth: selectedStrokeWidth,
+          selectedTool: selectedTool,
+          selectedColor: selectedColor,
+          onChanged: onStrokeWidthChanged,
         ),
       ],
     );
@@ -120,24 +114,32 @@ class _ToolButton extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.isEnabled = true,
   });
 
   final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool isEnabled;
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isSelected
+    final foreground = !isEnabled
+        ? AppColors.actionDisabledContent
+        : isSelected
         ? AppColors.textInverse
         : AppColors.textPrimary;
-    final background = isSelected ? AppColors.actionPrimary : AppColors.white;
+    final background = !isEnabled
+        ? AppColors.actionDisabled
+        : isSelected
+        ? AppColors.actionPrimary
+        : AppColors.white;
 
     return Material(
       color: background,
       child: InkWell(
-        onTap: onTap,
+        onTap: isEnabled ? onTap : null,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           height: 44,
@@ -213,37 +215,65 @@ class _ColorSwatch extends StatelessWidget {
   }
 }
 
-class _StrokeWidthButton extends StatelessWidget {
-  const _StrokeWidthButton({
-    required this.option,
-    required this.isSelected,
-    required this.onTap,
+class _StrokeWidthSlider extends StatelessWidget {
+  const _StrokeWidthSlider({
+    required this.selectedStrokeWidth,
+    required this.selectedTool,
+    required this.selectedColor,
+    required this.onChanged,
   });
 
-  final CharacterStrokeWidthOption option;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final double selectedStrokeWidth;
+  final CharacterDrawingTool selectedTool;
+  final Color selectedColor;
+  final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final previewColor = selectedTool == CharacterDrawingTool.pen
+        ? selectedColor
+        : AppColors.textMuted;
+    final previewDiameter = 8 + (selectedStrokeWidth * 360);
+
     return Material(
-      color: isSelected ? AppColors.actionPrimary : AppColors.white,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.wireframeBorder),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            option.label,
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: isSelected ? AppColors.textInverse : AppColors.textPrimary,
+      color: AppColors.white,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.wireframeBorder),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Text('굵기', style: AppTextStyles.homeCharacterLabel),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 42,
+              height: 42,
+              child: Center(
+                child: Container(
+                  width: previewDiameter,
+                  height: previewDiameter,
+                  decoration: BoxDecoration(
+                    color: previewColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.wireframeBorder),
+                  ),
+                ),
+              ),
             ),
-          ),
+            Expanded(
+              child: Slider(
+                min: characterMinStrokeWidth,
+                max: characterMaxStrokeWidth,
+                value: selectedStrokeWidth.clamp(
+                  characterMinStrokeWidth,
+                  characterMaxStrokeWidth,
+                ),
+                onChanged: onChanged,
+              ),
+            ),
+          ],
         ),
       ),
     );

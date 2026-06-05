@@ -43,6 +43,10 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         CharacterDrawingData(strokes: _strokes).hasVisibleContent;
   }
 
+  bool get _canClear {
+    return !_isLoadingDrawing && !_isSaving && _strokes.isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -120,6 +124,42 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
 
     setState(() {
       _strokes = [..._strokes, activeStroke];
+      _activeStroke = null;
+      _isDrawing = false;
+    });
+  }
+
+  Future<void> _confirmClearCanvas() async {
+    if (!_canClear) {
+      return;
+    }
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('그린 내용을 모두 지울까요?'),
+          content: const Text('저장하기 전까지는 현재 화면에서만 지워져요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('삭제'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || shouldClear != true) {
+      return;
+    }
+
+    setState(() {
+      _strokes = [];
       _activeStroke = null;
       _isDrawing = false;
     });
@@ -246,6 +286,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                   selectedTool: _selectedTool,
                   selectedColor: _selectedColor,
                   selectedStrokeWidth: _selectedStrokeWidth,
+                  canClear: _canClear,
                   onToolChanged: (tool) {
                     setState(() {
                       _selectedTool = tool;
@@ -262,6 +303,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                       _selectedStrokeWidth = width;
                     });
                   },
+                  onClearPressed: _confirmClearCanvas,
                 ),
               ],
             ),

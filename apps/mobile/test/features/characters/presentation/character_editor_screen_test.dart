@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_repository.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/characters/presentation/widgets/character_canvas.dart';
+import 'package:vinscent/features/characters/presentation/widgets/character_toolbar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 
@@ -47,6 +49,60 @@ void main() {
     await tester.pump();
 
     expect(_saveButton(tester).onPressed, isNotNull);
+  });
+
+  testWidgets('clears current drawing after confirmation', (tester) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.pump();
+    expect(_saveButton(tester).onPressed, isNotNull);
+
+    await tester.ensureVisible(find.text('삭제'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('삭제'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, '삭제'));
+    await tester.pumpAndSettle();
+
+    expect(_saveButton(tester).onPressed, isNull);
+
+    await tester.ensureVisible(find.byType(CharacterCanvas));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(CharacterCanvas), const Offset(60, 30));
+    await tester.pump();
+
+    expect(_saveButton(tester).onPressed, isNotNull);
+  });
+
+  testWidgets('saves selected slider stroke width', (tester) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(
+      characterThickStrokeWidth,
+    );
+    await tester.pump();
+
+    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      await tester.tap(find.text('저장'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final drawingJson =
+        jsonDecode(repository.savedDrawingDataJson!) as Map<String, dynamic>;
+    final strokes = drawingJson['strokes'] as List<dynamic>;
+    final stroke = Map<String, dynamic>.from(strokes.first as Map);
+
+    expect((stroke['width'] as num).toDouble(), characterThickStrokeWidth);
   });
 }
 
