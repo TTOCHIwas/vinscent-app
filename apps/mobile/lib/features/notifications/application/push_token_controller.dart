@@ -36,13 +36,16 @@ class PushTokenController extends AsyncNotifier<void> {
       _debugPushLog('Foreground notification configuration started');
       await repository.configureForegroundNotifications();
       _debugPushLog('Foreground notification configuration completed');
+    } catch (error) {
+      _debugPushLog('Foreground notification configuration failed: $error');
+    }
 
+    try {
       _debugPushLog('Current device token registration started');
       await repository.registerCurrentDeviceToken();
       _debugPushLog('Current device token registration completed');
-    } catch (error, stackTrace) {
-      _debugPushLog('Token registration failed: $error');
-      Error.throwWithStackTrace(error, stackTrace);
+    } catch (error) {
+      _debugPushLog('Current device token registration failed: $error');
     }
 
     _tokenRefreshSubscription = repository.tokenRefreshes.listen((token) {

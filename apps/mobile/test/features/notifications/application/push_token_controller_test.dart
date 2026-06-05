@@ -54,6 +54,44 @@ void main() {
 
     expect(repository.registeredTokens, ['refreshed-token']);
   });
+
+  test('continues when foreground notification configuration fails', () async {
+    final repository = _FakePushTokenRepository(
+      configureForegroundNotificationsError: Exception('configure failed'),
+    );
+    addTearDown(repository.dispose);
+    final container = _container(
+      authStatus: AuthStatus.authenticated,
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(pushTokenControllerProvider.future);
+
+    expect(repository.calls, [
+      'configureForegroundNotifications',
+      'registerCurrentDeviceToken',
+    ]);
+  });
+
+  test('continues when current device token registration fails', () async {
+    final repository = _FakePushTokenRepository(
+      registerCurrentDeviceTokenError: Exception('registration failed'),
+    );
+    addTearDown(repository.dispose);
+    final container = _container(
+      authStatus: AuthStatus.authenticated,
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(pushTokenControllerProvider.future);
+
+    expect(repository.calls, [
+      'configureForegroundNotifications',
+      'registerCurrentDeviceToken',
+    ]);
+  });
 }
 
 ProviderContainer _container({
@@ -69,6 +107,13 @@ ProviderContainer _container({
 }
 
 class _FakePushTokenRepository implements PushTokenRepository {
+  _FakePushTokenRepository({
+    this.configureForegroundNotificationsError,
+    this.registerCurrentDeviceTokenError,
+  });
+
+  final Object? configureForegroundNotificationsError;
+  final Object? registerCurrentDeviceTokenError;
   final calls = <String>[];
   final registeredTokens = <String>[];
   final _tokenRefreshController = StreamController<String>.broadcast();
@@ -79,11 +124,19 @@ class _FakePushTokenRepository implements PushTokenRepository {
   @override
   Future<void> configureForegroundNotifications() async {
     calls.add('configureForegroundNotifications');
+    final error = configureForegroundNotificationsError;
+    if (error != null) {
+      throw error;
+    }
   }
 
   @override
   Future<void> registerCurrentDeviceToken() async {
     calls.add('registerCurrentDeviceToken');
+    final error = registerCurrentDeviceTokenError;
+    if (error != null) {
+      throw error;
+    }
   }
 
   @override
