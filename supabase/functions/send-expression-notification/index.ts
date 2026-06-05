@@ -30,6 +30,13 @@ type FcmSendResult = {
   errorMessage: string | null;
 };
 
+type FcmErrorSummary = {
+  status: string | null;
+  errorCode: string | null;
+  message: string | null;
+  raw: string;
+};
+
 const expressionMessages: Record<string, string> = {
   miss_you: '상대방이 보고싶다고 표현했어요',
   thanks: '상대방이 고마운 마음을 보냈어요',
@@ -295,10 +302,11 @@ async function sendFcmMessage(
   }
 
   const errorBody = await response.text();
+  const errorSummary = parseFcmErrorSummary(errorBody);
   return {
     ok: false,
-    invalidToken: isInvalidFcmTokenError(errorBody),
-    errorMessage: errorBody,
+    invalidToken: isInvalidFcmTokenError(errorSummary),
+    errorMessage: formatFcmErrorSummary(errorSummary),
   };
 }
 
@@ -461,11 +469,53 @@ function summarizeErrors(
   return messages.slice(0, 3).join('\n');
 }
 
-function isInvalidFcmTokenError(errorBody: string) {
-  return (
-    /"errorCode"\s*:\s*"UNREGISTERED"/.test(errorBody) ||
-    /"errorCode"\s*:\s*"INVALID_ARGUMENT"/.test(errorBody)
-  );
+function parseFcmErrorSummary(errorBody: string): FcmErrorSummary {
+  try {
+    const payload = JSON.parse(errorBody);
+    const error = isRecord(payload) && isRecord(payload.error)
+      ? payload.error
+      : null;
+    const details = error && Array.isArray(error.details) ? error.details : [];
+    const fcmDetail = details.find(
+      (detail) => isRecord(detail) && typeof detail.errorCode === 'string',
+    );
+    const errorCode =
+      isRecord(fcmDetail) && typeof fcmDetail.errorCode === 'string'
+        ? fcmDetail.errorCode
+        : null;
+
+    return {
+      status: typeof error?.status === 'string' ? error.status : null,
+      errorCode,
+      message: typeof error?.message === 'string' ? error.message : null,
+      raw: errorBody,
+    };
+  } catch (_) {
+    return {
+      status: null,
+      errorCode: null,
+      message: null,
+      raw: errorBody,
+    };
+  }
+}
+
+function formatFcmErrorSummary(summary: FcmErrorSummary) {
+  const parts = [
+    summary.status ? `status=${summary.status}` : null,
+    summary.errorCode ? `errorCode=${summary.errorCode}` : null,
+    summary.message ? `message=${summary.message}` : null,
+  ].filter((part): part is string => Boolean(part));
+
+  if (parts.length > 0) {
+    return parts.join('; ');
+  }
+
+  return summary.raw.slice(0, 1000);
+}
+
+function isInvalidFcmTokenError(summary: FcmErrorSummary) {
+  return summary.errorCode === 'UNREGISTERED';
 }
 
 function requiredEnv(name: string) {
