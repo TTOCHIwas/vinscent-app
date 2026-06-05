@@ -15,6 +15,7 @@ import '../data/daily_question_answer_state.dart';
 import '../data/question_detail_state.dart';
 import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
+import 'widgets/question_prompt_character.dart';
 
 class TodayQuestionAnswerScreen extends ConsumerWidget {
   const TodayQuestionAnswerScreen({
@@ -349,13 +350,7 @@ class _QuestionContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text('질문', style: AppTextStyles.homeBodyMedium),
-          const SizedBox(height: 12),
-          Text(
-            question.questionText,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.onboardingTitle.copyWith(height: 1.35),
-          ),
+          QuestionPromptCharacter(questionText: question.questionText),
           const SizedBox(height: 28),
           child,
         ],
