@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../questions/application/today_question_controller.dart';
+import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../application/day_count.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -158,16 +159,25 @@ class _QuestionCharacterPreview extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
-                const SizedBox(height: 8),
                 todayQuestion.when(
-                  loading: () => const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  loading: () => const Column(
+                    children: [
+                      Text('오늘의 질문', style: AppTextStyles.homeBodyMedium),
+                      SizedBox(height: 8),
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ],
                   ),
                   error: (error, stackTrace) => Column(
                     children: [
+                      const Text(
+                        '오늘의 질문',
+                        style: AppTextStyles.homeBodyMedium,
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         '질문을 불러오지 못했어요',
                         textAlign: TextAlign.center,
@@ -183,26 +193,9 @@ class _QuestionCharacterPreview extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  data: (question) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      question?.questionText ?? '준비 중',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.homeCharacterLabel,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 36),
-                Container(
-                  width: 140,
-                  height: 140,
-                  color: AppColors.wireframePlaceholder,
-                  alignment: Alignment.center,
-                  child: const Text(
-                    '캐릭터 준비 중',
-                    style: AppTextStyles.homeCharacterLabel,
+                  data: (question) => CharacterSpeechPrompt(
+                    labelText: '오늘의 질문',
+                    speechText: question?.questionText ?? '준비 중',
                   ),
                 ),
               ],

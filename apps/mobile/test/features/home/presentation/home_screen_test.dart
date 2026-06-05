@@ -24,7 +24,7 @@ void main() {
     expect(find.text('D+2일', findRichText: true), findsOneWidget);
     expect(find.text('오늘의 질문'), findsOneWidget);
     expect(find.text('준비 중'), findsOneWidget);
-    expect(find.text('캐릭터 준비 중'), findsOneWidget);
+    expect(find.text('캐릭터'), findsOneWidget);
     expect(find.text('표현'), findsNWidgets(4));
   });
 
