@@ -21,6 +21,7 @@ void main() {
       await _pumpRouter(tester, repository: repository);
 
       expect(find.text('05월 31일'), findsOneWidget);
+      expect(find.text('질문'), findsOneWidget);
       expect(find.text('today question'), findsOneWidget);
       expect(find.text('캐릭터'), findsOneWidget);
       expect(find.text('답변하기'), findsNothing);

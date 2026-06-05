@@ -31,7 +31,9 @@ void main() {
   testWidgets('shows today question text', (tester) async {
     await _pumpHome(tester, couple: _activeCouple, question: _dailyQuestion);
 
+    expect(find.text('오늘의 질문'), findsOneWidget);
     expect(find.text('오늘 서로에게 가장 고마웠던 순간은 언제였어?'), findsOneWidget);
+    expect(find.text('캐릭터'), findsOneWidget);
   });
 
   testWidgets('shows today question loading state', (tester) async {

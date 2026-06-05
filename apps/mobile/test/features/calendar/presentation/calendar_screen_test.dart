@@ -90,6 +90,8 @@ void main() {
     expect(find.text('partner answer'), findsOneWidget);
     expect(find.text('종합'), findsOneWidget);
     expect(find.text('AI 한 줄 평'), findsOneWidget);
+    expect(find.text('아직 AI 한 줄 평이 없어요'), findsOneWidget);
+    expect(find.text('캐릭터'), findsOneWidget);
     expect(find.text('이 날의 표현 횟수'), findsOneWidget);
   });
 
