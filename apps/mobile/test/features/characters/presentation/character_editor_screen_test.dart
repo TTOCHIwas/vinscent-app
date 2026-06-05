@@ -15,49 +15,14 @@ void main() {
   testWidgets('saves drawn character as PNG and drawing JSON', (tester) async {
     final repository = _FakeCoupleCharacterRepository();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          coupleControllerProvider.overrideWithBuild(
-            (ref, notifier) async => _activeCouple,
-          ),
-          coupleCharacterRepositoryProvider.overrideWithValue(repository),
-        ],
-        child: MaterialApp.router(
-          routerConfig: GoRouter(
-            initialLocation: '/home/character',
-            routes: [
-              GoRoute(
-                path: '/home/character',
-                builder: (context, state) => const CharacterEditorScreen(),
-              ),
-              GoRoute(
-                path: '/home',
-                builder: (context, state) => const Text('home'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpCharacterEditor(tester, repository);
 
-    expect(
-      tester
-          .widget<TextButton>(find.widgetWithText(TextButton, '저장'))
-          .onPressed,
-      isNull,
-    );
+    expect(_saveButton(tester).onPressed, isNull);
 
     await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
     await tester.pump();
 
-    expect(
-      tester
-          .widget<TextButton>(find.widgetWithText(TextButton, '저장'))
-          .onPressed,
-      isNotNull,
-    );
+    expect(_saveButton(tester).onPressed, isNotNull);
 
     await tester.runAsync(() async {
       await tester.tap(find.text('저장'));
@@ -70,6 +35,55 @@ void main() {
     expect(repository.savedDrawingDataJson, contains('"strokes"'));
     expect(repository.savedImageBytes!.take(4), [137, 80, 78, 71]);
   });
+
+  testWidgets('enables save after drawing a dot', (tester) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    expect(_saveButton(tester).onPressed, isNull);
+
+    await tester.tap(find.byType(CharacterCanvas));
+    await tester.pump();
+
+    expect(_saveButton(tester).onPressed, isNotNull);
+  });
+}
+
+Future<void> _pumpCharacterEditor(
+  WidgetTester tester,
+  CoupleCharacterRepository repository,
+) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _activeCouple,
+        ),
+        coupleCharacterRepositoryProvider.overrideWithValue(repository),
+      ],
+      child: MaterialApp.router(
+        routerConfig: GoRouter(
+          initialLocation: '/home/character',
+          routes: [
+            GoRoute(
+              path: '/home/character',
+              builder: (context, state) => const CharacterEditorScreen(),
+            ),
+            GoRoute(
+              path: '/home',
+              builder: (context, state) => const Text('home'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+TextButton _saveButton(WidgetTester tester) {
+  return tester.widget<TextButton>(find.widgetWithText(TextButton, '저장'));
 }
 
 class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {

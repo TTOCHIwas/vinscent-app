@@ -31,6 +31,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   double _selectedStrokeWidth = characterNormalStrokeWidth;
   bool _isLoadingDrawing = true;
   bool _isSaving = false;
+  bool _isDrawing = false;
 
   List<CharacterDrawingStroke> get _visibleStrokes {
     return [..._strokes, ?_activeStroke];
@@ -83,6 +84,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
 
   void _startStroke(CharacterDrawingPoint point) {
     setState(() {
+      _isDrawing = true;
       _activeStroke = CharacterDrawingStroke(
         tool: _selectedTool,
         color: _selectedColor,
@@ -108,12 +110,18 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   void _endStroke() {
     final activeStroke = _activeStroke;
     if (activeStroke == null) {
+      if (_isDrawing) {
+        setState(() {
+          _isDrawing = false;
+        });
+      }
       return;
     }
 
     setState(() {
       _strokes = [..._strokes, activeStroke];
       _activeStroke = null;
+      _isDrawing = false;
     });
   }
 
@@ -209,6 +217,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         ),
         Expanded(
           child: SingleChildScrollView(
+            physics: _isDrawing ? const NeverScrollableScrollPhysics() : null,
             padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
             child: Column(
               children: [

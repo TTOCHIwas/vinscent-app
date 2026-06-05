@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/character_drawing.dart';
 
-class CharacterCanvas extends StatelessWidget {
+class CharacterCanvas extends StatefulWidget {
   const CharacterCanvas({
     super.key,
     required this.strokes,
@@ -17,29 +17,65 @@ class CharacterCanvas extends StatelessWidget {
   final VoidCallback onStrokeEnd;
 
   @override
+  State<CharacterCanvas> createState() => _CharacterCanvasState();
+}
+
+class _CharacterCanvasState extends State<CharacterCanvas> {
+  int? _activePointer;
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest.shortestSide;
 
         return Center(
-          child: GestureDetector(
-            onPanStart: (details) {
-              onStrokeStart(_normalize(details.localPosition, size));
-            },
-            onPanUpdate: (details) {
-              onStrokeUpdate(_normalize(details.localPosition, size));
-            },
-            onPanEnd: (_) => onStrokeEnd(),
-            onPanCancel: onStrokeEnd,
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (event) => _startStroke(event, size),
+            onPointerMove: (event) => _updateStroke(event, size),
+            onPointerUp: _endStroke,
+            onPointerCancel: _endStroke,
             child: CustomPaint(
               size: Size.square(size),
-              painter: CharacterDrawingPainter(strokes: strokes),
+              painter: CharacterDrawingPainter(strokes: widget.strokes),
             ),
           ),
         );
       },
     );
+  }
+
+  void _startStroke(PointerDownEvent event, double size) {
+    if (_activePointer != null) {
+      return;
+    }
+
+    setState(() {
+      _activePointer = event.pointer;
+    });
+    widget.onStrokeStart(_normalize(event.localPosition, size));
+  }
+
+  void _updateStroke(PointerMoveEvent event, double size) {
+    if (_activePointer != event.pointer) {
+      return;
+    }
+
+    widget.onStrokeUpdate(_normalize(event.localPosition, size));
+  }
+
+  void _endStroke(PointerEvent event) {
+    if (_activePointer != event.pointer) {
+      return;
+    }
+
+    widget.onStrokeEnd();
+    if (mounted) {
+      setState(() {
+        _activePointer = null;
+      });
+    }
   }
 
   CharacterDrawingPoint _normalize(Offset position, double size) {
