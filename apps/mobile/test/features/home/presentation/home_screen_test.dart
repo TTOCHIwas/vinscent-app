@@ -23,7 +23,7 @@ void main() {
     expect(find.text('우리 둘'), findsOneWidget);
     expect(find.text('D+2일', findRichText: true), findsOneWidget);
     expect(find.text('오늘의 질문'), findsOneWidget);
-    expect(find.text('준비 중'), findsOneWidget);
+    expect(find.text('오늘의 질문을 준비 중이에요'), findsOneWidget);
     expect(find.text('캐릭터'), findsOneWidget);
     expect(find.text('표현'), findsNWidgets(4));
   });
@@ -45,6 +45,8 @@ void main() {
     );
 
     expect(find.text('오늘의 질문'), findsOneWidget);
+    expect(find.text('오늘 질문을 가져오고 있어요'), findsOneWidget);
+    expect(find.text('캐릭터'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
@@ -56,6 +58,7 @@ void main() {
     );
 
     expect(find.text('질문을 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('캐릭터'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });
 
