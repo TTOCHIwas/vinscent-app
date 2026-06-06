@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/couple_character_controller.dart';
@@ -336,10 +337,7 @@ class _CharacterEditorHeader extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBackPressed,
-              icon: const Icon(Icons.chevron_left, size: 32),
-            ),
+            child: AppBackButton(onPressed: onBackPressed, iconSize: 32),
           ),
           const Text('캐릭터 그리기', style: AppTextStyles.shellTitle),
           Align(

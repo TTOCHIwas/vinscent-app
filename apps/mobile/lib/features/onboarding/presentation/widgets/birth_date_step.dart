@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/assets/app_icons.dart';
+import '../../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
@@ -47,8 +49,8 @@ class BirthDateStep extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.calendar_today_outlined,
+                    const AppSvgIcon(
+                      AppIcons.calendar,
                       color: AppColors.textPrimary,
                       size: 22,
                     ),

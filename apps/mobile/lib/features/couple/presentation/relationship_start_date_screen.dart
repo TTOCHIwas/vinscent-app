@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/assets/app_icons.dart';
 import '../../../core/date/today_controller.dart';
+import '../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/couple_flow_controller.dart';
@@ -55,8 +57,8 @@ class RelationshipStartDateScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.calendar_month_outlined,
+                        const AppSvgIcon(
+                          AppIcons.calendar,
                           color: AppColors.wireframeIcon,
                         ),
                         const SizedBox(width: 12),

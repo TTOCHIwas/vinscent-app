@@ -1,0 +1,17 @@
+abstract final class AppIcons {
+  static const add = 'assets/icons/add_black.svg';
+  static const alarm = 'assets/icons/alarm_black.svg';
+  static const back = 'assets/icons/back_black.svg';
+  static const bookmark = 'assets/icons/bookmark_black.svg';
+  static const calendar = 'assets/icons/calendar_black.svg';
+  static const camera = 'assets/icons/camera_black.svg';
+  static const cart = 'assets/icons/cart_black.svg';
+  static const chat = 'assets/icons/chat_black.svg';
+  static const heart = 'assets/icons/heart_black.svg';
+  static const home = 'assets/icons/home_black.svg';
+  static const locate = 'assets/icons/locate_black.svg';
+  static const search = 'assets/icons/search_black.svg';
+  static const setting = 'assets/icons/setting_black.svg';
+  static const share = 'assets/icons/share_black.svg';
+  static const user = 'assets/icons/user_black.svg';
+}

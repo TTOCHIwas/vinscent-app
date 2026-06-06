@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/onboarding_controller.dart';
 import '../application/onboarding_state.dart';
@@ -29,10 +30,9 @@ class OnboardingScreen extends ConsumerWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: state.canGoBack
-                      ? IconButton(
+                      ? AppBackButton(
                           onPressed: controller.goBack,
-                          icon: const Icon(Icons.arrow_back_ios_new),
-                          color: AppColors.textPrimary,
+                          iconSize: 20,
                           tooltip: '이전',
                         )
                       : const SizedBox.shrink(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/app_back_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
@@ -30,16 +31,9 @@ class QuestionDetailHeader extends StatelessWidget {
             top: 0,
             bottom: 0,
             child: Center(
-              child: IconButton(
+              child: AppBackButton(
                 onPressed: onBackPressed,
-                icon: const Icon(Icons.chevron_left),
                 color: AppColors.textPrimary,
-                iconSize: 28,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 48,
-                  height: 48,
-                ),
                 tooltip: '뒤로가기',
               ),
             ),
