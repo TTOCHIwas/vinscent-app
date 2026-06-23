@@ -144,10 +144,14 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.authRequired => '다시 로그인해주세요.',
       CoupleFailureReason.profileRequired => '프로필 입력을 먼저 완료해주세요.',
       CoupleFailureReason.alreadyExists => '이미 연결 중인 커플이 있어요.',
+      CoupleFailureReason.archivedCoupleExists =>
+        '보관 중인 기존 커플 데이터가 있어요. 설정에서 보관 데이터를 정리한 뒤 새 커플을 연결해주세요.',
+      CoupleFailureReason.archivedCoupleRequired =>
+        '보관 중인 커플 데이터를 먼저 확인해주세요.',
       CoupleFailureReason.inviteNotFound => '초대 코드를 찾을 수 없어요.',
-      CoupleFailureReason.inviteNotPending => '이미 사용된 초대 코드예요.',
-      CoupleFailureReason.ownInvite => '내가 만든 초대 코드는 입력할 수 없어요.',
-      CoupleFailureReason.invalidCode => '초대 코드 6자리를 확인해주세요.',
+      CoupleFailureReason.inviteNotPending => '이미 사용할 수 없는 초대 코드예요.',
+      CoupleFailureReason.ownInvite => '내가 만든 초대 코드는 직접 사용할 수 없어요.',
+      CoupleFailureReason.invalidCode => '초대 코드 6자리를 다시 확인해주세요.',
       CoupleFailureReason.futureDate => '오늘 이후 날짜는 선택할 수 없어요.',
       CoupleFailureReason.activeCoupleRequired => '커플 연결을 먼저 완료해주세요.',
       CoupleFailureReason.codeGenerationFailed => '초대 코드 생성에 실패했어요.',

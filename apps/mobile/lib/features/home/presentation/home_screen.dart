@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/date/today_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../expressions/application/couple_expression_controller.dart';
 import '../../expressions/data/couple_expression.dart';
-import '../../questions/application/today_question_controller.dart';
+import '../../questions/application/question_detail_provider.dart';
+import '../../questions/data/daily_question.dart';
+import '../../questions/data/question_detail_state.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../application/day_count.dart';
 
@@ -72,25 +73,28 @@ class _CoupleStatus extends ConsumerWidget {
               return const _CoupleStatusMessage('커플 정보를 찾을 수 없어요.');
             }
 
-            if (couple.status != CoupleStatus.active) {
-              return const _CoupleStatusMessage('커플 연결을 완료해주세요.');
+            if (!couple.hasRelationshipStartDate) {
+              return Text(
+                couple.isArchivedReadOnly
+                    ? '기록 보관 중이에요'
+                    : '첫 만난 날을 먼저 입력해주세요.',
+                textAlign: TextAlign.end,
+                style: AppTextStyles.homeBody.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              );
             }
 
-            final relationshipStartDate = couple.relationshipStartDate;
-            if (relationshipStartDate == null) {
-              return const _CoupleStatusMessage('첫 만남일을 먼저 입력해주세요.');
-            }
-
-            final today = ref.watch(todayControllerProvider);
             final dayCount = calculateRelationshipDayCount(
-              startDate: relationshipStartDate,
-              today: today,
+              startDate: couple.relationshipStartDate!,
+              today: couple.effectiveCurrentDate,
             );
+            final headline = couple.isArchivedReadOnly ? '기록 보관 중' : '우리';
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text('우리 둘', style: AppTextStyles.homeBody),
+                Text(headline, style: AppTextStyles.homeBody),
                 const SizedBox(height: 4),
                 RichText(
                   textAlign: TextAlign.end,
@@ -104,8 +108,8 @@ class _CoupleStatus extends ConsumerWidget {
                         text: '$dayCount',
                         style: AppTextStyles.homeDayCount,
                       ),
-                      const TextSpan(
-                        text: '일',
+                      TextSpan(
+                        text: couple.isArchivedReadOnly ? ' 보관 중' : '일째',
                         style: AppTextStyles.homeBodyMedium,
                       ),
                     ],
@@ -143,42 +147,107 @@ class _QuestionCharacterPreview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final todayQuestion = ref.watch(todayQuestionControllerProvider);
-    final canOpenQuestion = todayQuestion.when(
-      loading: () => false,
-      error: (error, stackTrace) => false,
-      data: (question) => question != null,
-    );
+    final coupleAsync = ref.watch(coupleControllerProvider);
 
     return SizedBox(
       width: double.infinity,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        child: todayQuestion.when(
+        child: coupleAsync.when(
           loading: () => const _HomeQuestionSpeechPrompt(
-            speechText: '오늘 질문을 가져오고 있어요',
+            speechText: '홈 화면을 준비하고 있어요.',
             footer: SizedBox.square(
               dimension: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           ),
           error: (error, stackTrace) => _HomeQuestionSpeechPrompt(
-            speechText: '질문을 불러오지 못했어요',
+            speechText: '질문 화면을 열지 못했어요.',
             footer: TextButton(
               onPressed: () =>
-                  ref.read(todayQuestionControllerProvider.notifier).refresh(),
+                  ref.read(coupleControllerProvider.notifier).refresh(),
               child: const Text('다시 시도'),
             ),
           ),
-          data: (question) => _HomeQuestionSpeechPrompt(
-            speechText: question?.questionText ?? '오늘의 질문을 준비 중이에요',
-            onSpeechTap: canOpenQuestion
-                ? () => context.go('/home/question')
-                : null,
-            onCharacterTap: () => context.go('/home/character'),
-          ),
+          data: (couple) {
+            if (couple == null) {
+              return const _HomeQuestionSpeechPrompt(
+                speechText: '커플 연결을 먼저 완료해주세요.',
+              );
+            }
+
+            if (couple.isArchivedReadOnly) {
+              return _HomeQuestionSpeechPrompt(
+                speechText: '연결은 해제되었지만 지난 기록은 30일 동안 읽기 전용으로 볼 수 있어요.',
+                onCharacterTap: () => context.go('/home/character'),
+              );
+            }
+
+            final detail = ref.watch(questionDetailProvider(null));
+            return detail.when(
+              loading: () => const _HomeQuestionSpeechPrompt(
+                speechText: '오늘 질문을 불러오고 있어요.',
+                footer: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              error: (error, stackTrace) => _HomeQuestionSpeechPrompt(
+                speechText: '오늘 질문을 불러오지 못했어요.',
+                footer: TextButton(
+                  onPressed: () => ref.invalidate(questionDetailProvider(null)),
+                  child: const Text('다시 시도'),
+                ),
+                onCharacterTap: () => context.go('/home/character'),
+              ),
+              data: (state) {
+                return switch (state) {
+                  LoadedQuestionDetailState() => _ActiveQuestionPreview(
+                    state: state,
+                  ),
+                  UnavailableQuestionDetailState() => _HomeQuestionSpeechPrompt(
+                    speechText: '오늘 질문이 아직 준비되지 않았어요.',
+                    onCharacterTap: () => context.go('/home/character'),
+                  ),
+                };
+              },
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+class _ActiveQuestionPreview extends StatelessWidget {
+  const _ActiveQuestionPreview({required this.state});
+
+  final LoadedQuestionDetailState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final answerState = state.answerState;
+    final hasMyAnswer = answerState?.hasMyAnswer ?? false;
+    final hasPartnerAnswer = answerState?.partnerAnswerExists ?? false;
+    final isCompleted = answerState?.status == DailyQuestionStatus.completed;
+
+    String speechText;
+    if (isCompleted) {
+      speechText = 'AI 한 줄 평이 여기에 표시될 예정이에요.';
+    } else if (!hasMyAnswer && hasPartnerAnswer) {
+      speechText = '상대방은 답변을 남겼어요.';
+    } else if (hasMyAnswer) {
+      speechText = '상대방의 답변을 기다리고 있어요.';
+    } else {
+      speechText = state.question.questionText;
+    }
+
+    final targetLocation = hasMyAnswer ? '/home/question' : '/home/question/edit';
+
+    return _HomeQuestionSpeechPrompt(
+      speechText: speechText,
+      onSpeechTap: () => context.go(targetLocation),
+      onCharacterTap: () => context.go('/home/character'),
     );
   }
 }
@@ -239,16 +308,32 @@ class _ExpressionGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final expressionState = ref.watch(coupleExpressionControllerProvider);
+    final couple = ref.watch(
+      coupleControllerProvider.select(
+        (state) => state.maybeWhen(data: (value) => value, orElse: () => null),
+      ),
+    );
     final isSending = expressionState.isLoading;
+    final canSend = (couple?.canEditSharedData ?? false) && !isSending;
 
     return Column(
       children: [
+        if (couple?.isArchivedReadOnly == true)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              '보관 중에는 표현 보내기가 잠시 닫혀 있어요.',
+              style: AppTextStyles.homeCharacterLabel.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
         Row(
           children: [
             Expanded(
               child: _ExpressionButton(
                 action: _actions[0],
-                isEnabled: !isSending,
+                isEnabled: canSend,
                 onTap: () => _sendExpression(context, ref, _actions[0].type),
               ),
             ),
@@ -256,7 +341,7 @@ class _ExpressionGrid extends ConsumerWidget {
             Expanded(
               child: _ExpressionButton(
                 action: _actions[1],
-                isEnabled: !isSending,
+                isEnabled: canSend,
                 onTap: () => _sendExpression(context, ref, _actions[1].type),
               ),
             ),
@@ -268,7 +353,7 @@ class _ExpressionGrid extends ConsumerWidget {
             Expanded(
               child: _ExpressionButton(
                 action: _actions[2],
-                isEnabled: !isSending,
+                isEnabled: canSend,
                 onTap: () => _sendExpression(context, ref, _actions[2].type),
               ),
             ),
@@ -276,7 +361,7 @@ class _ExpressionGrid extends ConsumerWidget {
             Expanded(
               child: _ExpressionButton(
                 action: _actions[3],
-                isEnabled: !isSending,
+                isEnabled: canSend,
                 onTap: () => _sendExpression(context, ref, _actions[3].type),
               ),
             ),
@@ -300,7 +385,7 @@ class _ExpressionGrid extends ConsumerWidget {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('표현을 보냈어요')));
+      ).showSnackBar(const SnackBar(content: Text('표현을 보냈어요.')));
     } catch (_) {
       if (!context.mounted) {
         return;
@@ -308,7 +393,7 @@ class _ExpressionGrid extends ConsumerWidget {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('표현을 보내지 못했어요')));
+      ).showSnackBar(const SnackBar(content: Text('표현을 보내지 못했어요.')));
     }
   }
 }

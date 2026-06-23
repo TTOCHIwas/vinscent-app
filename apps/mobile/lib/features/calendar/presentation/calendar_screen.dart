@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/date/app_date_policy.dart';
-import '../../../core/date/today_controller.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../couple/application/couple_current_date_provider.dart';
 import '../../couple/application/couple_controller.dart';
-import '../../couple/data/couple.dart';
 import '../../expressions/application/couple_expression_summary_provider.dart';
 import '../../expressions/data/couple_expression.dart';
 import '../../expressions/data/couple_expression_summary.dart';
@@ -31,10 +30,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    final today = ref.read(todayControllerProvider);
+    final today = ref.read(coupleCurrentDateProvider);
     _visibleMonth = _monthOnly(today);
 
-    ref.listenManual<DateTime>(todayControllerProvider, (previous, next) {
+    ref.listenManual<DateTime>(coupleCurrentDateProvider, (previous, next) {
       final todayMonth = _monthOnly(next);
       if (!_visibleMonth.isAfter(todayMonth)) {
         return;
@@ -53,7 +52,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final today = ref.watch(todayControllerProvider);
+    final today = ref.watch(coupleCurrentDateProvider);
     final couple = ref.watch(coupleControllerProvider);
 
     return couple.when(
@@ -64,8 +63,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       ),
       data: (couple) {
         if (couple == null ||
-            couple.status != CoupleStatus.active ||
-            couple.relationshipStartDate == null) {
+            !couple.canReadSharedData ||
+            !couple.hasRelationshipStartDate) {
           return const _CalendarStateMessage(
             title: '달력을 볼 수 없어요',
             message: '커플 연결과 첫 만남일 입력을 먼저 완료해 주세요.',

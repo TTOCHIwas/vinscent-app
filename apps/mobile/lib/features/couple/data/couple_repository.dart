@@ -6,7 +6,7 @@ import 'couple.dart';
 import 'couple_failure.dart';
 
 final coupleRepositoryProvider = Provider<CoupleRepository>((ref) {
-  return SupabaseCoupleRepository();
+  return const SupabaseCoupleRepository();
 });
 
 abstract interface class CoupleRepository {
@@ -16,9 +16,13 @@ abstract interface class CoupleRepository {
 
   Future<Couple> joinByCode(String inviteCode);
 
-  Future<void> cancelInvite();
+  Future<Couple?> cancelInvite();
 
   Future<Couple> updateRelationshipStartDate(DateTime date);
+
+  Future<Couple> disconnectCouple();
+
+  Future<void> deleteDisconnectedArchiveNow();
 }
 
 class SupabaseCoupleRepository implements CoupleRepository {
@@ -31,19 +35,16 @@ class SupabaseCoupleRepository implements CoupleRepository {
     }
 
     try {
-      final data = await Supabase.instance.client
-          .from('couples')
-          .select()
-          .inFilter('status', ['pending', 'active'])
-          .order('created_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
+      final data = await Supabase.instance.client.rpc(
+        'get_current_couple_context',
+      );
+      final row = _asOptionalRow(data);
 
-      if (data == null) {
+      if (row == null) {
         return null;
       }
 
-      return Couple.fromJson(data);
+      return Couple.fromJson(row);
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }
@@ -51,45 +52,30 @@ class SupabaseCoupleRepository implements CoupleRepository {
 
   @override
   Future<Couple> createInvite() async {
-    if (!AppConfig.isSupabaseConfigured) {
-      throw const CoupleRepositoryException(CoupleFailureReason.configMissing);
-    }
-
-    try {
-      final data = await Supabase.instance.client.rpc('create_couple_invite');
-
-      return Couple.fromJson(_asRow(data));
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    }
+    return _runAndRefresh(
+      () => Supabase.instance.client.rpc('create_couple_invite'),
+    );
   }
 
   @override
   Future<Couple> joinByCode(String inviteCode) async {
-    if (!AppConfig.isSupabaseConfigured) {
-      throw const CoupleRepositoryException(CoupleFailureReason.configMissing);
-    }
-
-    try {
-      final data = await Supabase.instance.client.rpc(
+    return _runAndRefresh(
+      () => Supabase.instance.client.rpc(
         'join_couple_by_code',
         params: {'invite_code': inviteCode.trim().toUpperCase()},
-      );
-
-      return Couple.fromJson(_asRow(data));
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    }
+      ),
+    );
   }
 
   @override
-  Future<void> cancelInvite() async {
+  Future<Couple?> cancelInvite() async {
     if (!AppConfig.isSupabaseConfigured) {
       throw const CoupleRepositoryException(CoupleFailureReason.configMissing);
     }
 
     try {
       await Supabase.instance.client.rpc('cancel_couple_invite');
+      return fetchCurrentCouple();
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }
@@ -97,23 +83,57 @@ class SupabaseCoupleRepository implements CoupleRepository {
 
   @override
   Future<Couple> updateRelationshipStartDate(DateTime date) async {
+    return _runAndRefresh(
+      () => Supabase.instance.client.rpc(
+        'update_relationship_start_date',
+        params: {'start_date': _formatDate(date)},
+      ),
+    );
+  }
+
+  @override
+  Future<Couple> disconnectCouple() async {
+    return _runAndRefresh(
+      () => Supabase.instance.client.rpc('disconnect_couple'),
+    );
+  }
+
+  @override
+  Future<void> deleteDisconnectedArchiveNow() async {
     if (!AppConfig.isSupabaseConfigured) {
       throw const CoupleRepositoryException(CoupleFailureReason.configMissing);
     }
 
     try {
-      final data = await Supabase.instance.client.rpc(
-        'update_relationship_start_date',
-        params: {'start_date': _formatDate(date)},
-      );
-
-      return Couple.fromJson(_asRow(data));
+      await Supabase.instance.client.rpc('delete_disconnected_couple_archive_now');
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }
   }
 
-  Map<String, dynamic> _asRow(Object? data) {
+  Future<Couple> _runAndRefresh(Future<Object?> Function() action) async {
+    if (!AppConfig.isSupabaseConfigured) {
+      throw const CoupleRepositoryException(CoupleFailureReason.configMissing);
+    }
+
+    try {
+      await action();
+      final couple = await fetchCurrentCouple();
+      if (couple == null) {
+        throw const CoupleRepositoryException(CoupleFailureReason.unknown);
+      }
+
+      return couple;
+    } on PostgrestException catch (error) {
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  Map<String, dynamic>? _asOptionalRow(Object? data) {
+    if (data == null) {
+      return null;
+    }
+
     if (data is Map<String, dynamic>) {
       return data;
     }
@@ -122,7 +142,11 @@ class SupabaseCoupleRepository implements CoupleRepository {
       return Map<String, dynamic>.from(data);
     }
 
-    if (data is List && data.isNotEmpty) {
+    if (data is List) {
+      if (data.isEmpty) {
+        return null;
+      }
+
       final first = data.first;
       if (first is Map<String, dynamic>) {
         return first;
@@ -148,6 +172,8 @@ class SupabaseCoupleRepository implements CoupleRepository {
       'auth_required' => CoupleFailureReason.authRequired,
       'profile_required' => CoupleFailureReason.profileRequired,
       'couple_already_exists' => CoupleFailureReason.alreadyExists,
+      'archived_couple_exists' => CoupleFailureReason.archivedCoupleExists,
+      'archived_couple_required' => CoupleFailureReason.archivedCoupleRequired,
       'invite_not_found' => CoupleFailureReason.inviteNotFound,
       'invite_not_pending' => CoupleFailureReason.inviteNotPending,
       'cannot_join_own_invite' => CoupleFailureReason.ownInvite,

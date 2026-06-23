@@ -17,6 +17,21 @@ enum CoupleStatus {
   }
 }
 
+enum CoupleAccessMode {
+  pending,
+  active,
+  archivedReadOnly;
+
+  factory CoupleAccessMode.fromJson(String value) {
+    return switch (value) {
+      'pending' => CoupleAccessMode.pending,
+      'active' => CoupleAccessMode.active,
+      'archived_read_only' => CoupleAccessMode.archivedReadOnly,
+      _ => throw FormatException('Unknown couple access mode: $value'),
+    };
+  }
+}
+
 class Couple {
   const Couple({
     required this.id,
@@ -24,15 +39,21 @@ class Couple {
     required this.userAId,
     required this.timezone,
     required this.status,
+    required this.accessMode,
     required this.createdAt,
     required this.updatedAt,
     this.userBId,
     this.relationshipStartDate,
     this.connectedAt,
     this.disconnectedAt,
+    this.disconnectedByUserId,
+    this.archiveExpiresAt,
+    this.currentDate,
   });
 
   factory Couple.fromJson(Map<String, dynamic> json) {
+    final status = CoupleStatus.fromJson(json['status'] as String);
+
     return Couple(
       id: json['id'] as String,
       inviteCode: json['invite_code'] as String,
@@ -42,11 +63,17 @@ class Couple {
         json['relationship_start_date'] as String?,
       ),
       timezone: json['timezone'] as String,
-      status: CoupleStatus.fromJson(json['status'] as String),
+      status: status,
+      accessMode: _parseAccessMode(json['access_mode'] as String?, status),
       connectedAt: _parseOptionalDateTime(json['connected_at'] as String?),
       disconnectedAt: _parseOptionalDateTime(
         json['disconnected_at'] as String?,
       ),
+      disconnectedByUserId: json['disconnected_by_user_id'] as String?,
+      archiveExpiresAt: _parseOptionalDateTime(
+        json['archive_expires_at'] as String?,
+      ),
+      currentDate: _parseOptionalDate(json['current_date'] as String?),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -59,16 +86,45 @@ class Couple {
   final DateTime? relationshipStartDate;
   final String timezone;
   final CoupleStatus status;
+  final CoupleAccessMode accessMode;
   final DateTime? connectedAt;
   final DateTime? disconnectedAt;
+  final String? disconnectedByUserId;
+  final DateTime? archiveExpiresAt;
+  final DateTime? currentDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  bool get isPending => status == CoupleStatus.pending;
+  bool get isPending => accessMode == CoupleAccessMode.pending;
 
-  bool get isActive => status == CoupleStatus.active;
+  bool get isActive => accessMode == CoupleAccessMode.active;
+
+  bool get isArchivedReadOnly =>
+      accessMode == CoupleAccessMode.archivedReadOnly;
+
+  bool get canEditSharedData => isActive;
+
+  bool get canReadSharedData => isActive || isArchivedReadOnly;
 
   bool get hasRelationshipStartDate => relationshipStartDate != null;
+
+  DateTime get effectiveCurrentDate => currentDate ?? currentAppDate();
+
+  static CoupleAccessMode _parseAccessMode(
+    String? value,
+    CoupleStatus status,
+  ) {
+    if (value != null) {
+      return CoupleAccessMode.fromJson(value);
+    }
+
+    return switch (status) {
+      CoupleStatus.pending => CoupleAccessMode.pending,
+      CoupleStatus.active => CoupleAccessMode.active,
+      CoupleStatus.cancelled || CoupleStatus.disconnected =>
+        CoupleAccessMode.archivedReadOnly,
+    };
+  }
 
   static DateTime? _parseOptionalDate(String? value) {
     if (value == null) {

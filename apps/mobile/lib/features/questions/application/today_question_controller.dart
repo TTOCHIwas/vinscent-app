@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/date/today_controller.dart';
 import '../../couple/application/couple_controller.dart';
-import '../../couple/data/couple.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_repository.dart';
 
@@ -24,19 +22,13 @@ class TodayQuestionController extends AsyncNotifier<DailyQuestion?> {
   }
 
   Future<DailyQuestion?> _load({required bool watchDependencies}) async {
-    if (watchDependencies) {
-      ref.watch(todayControllerProvider);
-    } else {
-      ref.read(todayControllerProvider);
-    }
-
     final couple = watchDependencies
         ? await ref.watch(coupleControllerProvider.future)
         : await ref.read(coupleControllerProvider.future);
 
     if (couple == null ||
-        couple.status != CoupleStatus.active ||
-        couple.relationshipStartDate == null) {
+        !couple.canEditSharedData ||
+        !couple.hasRelationshipStartDate) {
       return null;
     }
 

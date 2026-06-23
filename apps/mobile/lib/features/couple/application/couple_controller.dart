@@ -25,6 +25,13 @@ class CoupleController extends AsyncNotifier<Couple?> {
     return ref.watch(coupleRepositoryProvider).fetchCurrentCouple();
   }
 
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(coupleRepositoryProvider).fetchCurrentCouple(),
+    );
+  }
+
   Future<Couple> createInvite() async {
     final couple = await ref.read(coupleRepositoryProvider).createInvite();
     state = AsyncValue.data(couple);
@@ -40,8 +47,8 @@ class CoupleController extends AsyncNotifier<Couple?> {
   }
 
   Future<void> cancelInvite() async {
-    await ref.read(coupleRepositoryProvider).cancelInvite();
-    state = const AsyncValue.data(null);
+    final couple = await ref.read(coupleRepositoryProvider).cancelInvite();
+    state = AsyncValue.data(couple);
   }
 
   Future<Couple> updateRelationshipStartDate(DateTime date) async {
@@ -50,5 +57,16 @@ class CoupleController extends AsyncNotifier<Couple?> {
         .updateRelationshipStartDate(date);
     state = AsyncValue.data(couple);
     return couple;
+  }
+
+  Future<Couple> disconnectCouple() async {
+    final couple = await ref.read(coupleRepositoryProvider).disconnectCouple();
+    state = AsyncValue.data(couple);
+    return couple;
+  }
+
+  Future<void> deleteDisconnectedArchiveNow() async {
+    await ref.read(coupleRepositoryProvider).deleteDisconnectedArchiveNow();
+    state = const AsyncValue.data(null);
   }
 }

@@ -2,6 +2,8 @@ enum CoupleFailureReason {
   authRequired,
   profileRequired,
   alreadyExists,
+  archivedCoupleExists,
+  archivedCoupleRequired,
   inviteNotFound,
   inviteNotPending,
   ownInvite,
