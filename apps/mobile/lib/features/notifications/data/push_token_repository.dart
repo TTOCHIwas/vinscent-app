@@ -35,8 +35,8 @@ class FirebasePushTokenRepository implements PushTokenRepository {
 
   static const _androidChannel = AndroidNotificationChannel(
     'couple_expression_notifications',
-    '표현 알림',
-    description: '상대방이 보낸 표현 알림입니다.',
+    '커플 알림',
+    description: '질문, 표현, 연결 상태 알림을 표시합니다.',
     importance: Importance.high,
   );
 
