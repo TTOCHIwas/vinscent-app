@@ -18,6 +18,8 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/questions/presentation/today_question_answer_screen.dart';
+import '../features/settings/presentation/couple_settings_screen.dart';
+import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/shell/presentation/app_shell.dart';
 
@@ -60,10 +62,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   return isCoupleEntryRoute ? null : '/couple';
                 }
 
-                return switch (couple.status) {
-                  CoupleStatus.pending =>
+                return switch (couple.accessMode) {
+                  CoupleAccessMode.pending =>
                     isCoupleWaitingRoute ? null : '/couple/waiting',
-                  CoupleStatus.active =>
+                  CoupleAccessMode.active =>
                     couple.relationshipStartDate == null
                         ? isCoupleAnniversaryRoute
                               ? null
@@ -75,8 +77,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                               path == '/')
                         ? '/home'
                         : null,
-                  CoupleStatus.cancelled || CoupleStatus.disconnected =>
-                    isCoupleEntryRoute ? null : '/couple',
+                  CoupleAccessMode.archivedReadOnly =>
+                    (isBootRoute ||
+                            isLoginRoute ||
+                            isOnboardingRoute ||
+                            isCoupleAnniversaryRoute ||
+                            path == '/' ||
+                            path == '/home/question/edit')
+                        ? '/home'
+                        : null,
                 };
               },
             );
@@ -175,6 +184,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/settings/notifications',
+            name: 'notificationSettings',
+            builder: (context, state) => const NotificationSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/settings/couple',
+            name: 'coupleSettings',
+            builder: (context, state) => const CoupleSettingsScreen(),
           ),
         ],
       ),

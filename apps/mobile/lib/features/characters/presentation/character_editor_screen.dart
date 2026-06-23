@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../couple/application/couple_controller.dart';
 import '../application/couple_character_controller.dart';
 import '../data/character_drawing.dart';
 import '../data/couple_character_failure.dart';
@@ -35,17 +36,26 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   bool _isDrawing = false;
 
   List<CharacterDrawingStroke> get _visibleStrokes {
-    return [..._strokes, ?_activeStroke];
+    return [..._strokes, if (_activeStroke != null) _activeStroke!];
+  }
+
+  bool get _isReadOnly {
+    final couple = ref.read(coupleControllerProvider).valueOrNull;
+    return couple == null || !couple.canEditSharedData;
   }
 
   bool get _canSave {
-    return !_isLoadingDrawing &&
+    return !_isReadOnly &&
+        !_isLoadingDrawing &&
         !_isSaving &&
         CharacterDrawingData(strokes: _strokes).hasVisibleContent;
   }
 
   bool get _canClear {
-    return !_isLoadingDrawing && !_isSaving && _strokes.isNotEmpty;
+    return !_isReadOnly &&
+        !_isLoadingDrawing &&
+        !_isSaving &&
+        _strokes.isNotEmpty;
   }
 
   @override
@@ -76,7 +86,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       });
     } catch (_) {
       if (mounted) {
-        _showSnackBar('캐릭터를 불러오지 못했어요');
+        _showSnackBar('캐릭터를 불러오지 못했어요.');
       }
     } finally {
       if (mounted) {
@@ -88,6 +98,10 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   void _startStroke(CharacterDrawingPoint point) {
+    if (_isReadOnly) {
+      return;
+    }
+
     setState(() {
       _isDrawing = true;
       _activeStroke = CharacterDrawingStroke(
@@ -100,6 +114,10 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   void _updateStroke(CharacterDrawingPoint point) {
+    if (_isReadOnly) {
+      return;
+    }
+
     final activeStroke = _activeStroke;
     if (activeStroke == null) {
       return;
@@ -113,6 +131,10 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   void _endStroke() {
+    if (_isReadOnly) {
+      return;
+    }
+
     final activeStroke = _activeStroke;
     if (activeStroke == null) {
       if (_isDrawing) {
@@ -139,7 +161,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('그린 내용을 모두 지울까요?'),
+          title: const Text('그림을 모두 지울까요?'),
           content: const Text('저장하기 전까지는 현재 화면에서만 지워져요.'),
           actions: [
             TextButton(
@@ -233,21 +255,28 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     if (error is CoupleCharacterRepositoryException) {
       return switch (error.reason) {
         CoupleCharacterFailureReason.configMissing =>
-          'Supabase 설정이 없어 저장할 수 없어요',
-        CoupleCharacterFailureReason.authRequired => '로그인이 필요해요',
-        CoupleCharacterFailureReason.activeCoupleRequired => '커플 연결을 확인할 수 없어요',
-        CoupleCharacterFailureReason.invalidPath => '캐릭터 저장 경로가 올바르지 않아요',
-        CoupleCharacterFailureReason.requestTimeout => '저장 시간이 초과됐어요',
-        CoupleCharacterFailureReason.storage => '캐릭터 파일 저장 권한을 확인해주세요',
-        CoupleCharacterFailureReason.unknown => '캐릭터를 저장하지 못했어요',
+          'Supabase 설정이 없어 저장할 수 없어요.',
+        CoupleCharacterFailureReason.authRequired => '로그인이 필요해요.',
+        CoupleCharacterFailureReason.activeCoupleRequired =>
+          '커플 연결 상태를 다시 확인해 주세요.',
+        CoupleCharacterFailureReason.invalidPath => '캐릭터 저장 경로가 올바르지 않아요.',
+        CoupleCharacterFailureReason.requestTimeout => '요청 시간이 초과됐어요.',
+        CoupleCharacterFailureReason.storage => '캐릭터 저장 권한을 확인해 주세요.',
+        CoupleCharacterFailureReason.unknown => '캐릭터를 저장하지 못했어요.',
       };
     }
 
-    return '캐릭터를 저장하지 못했어요';
+    return '캐릭터를 저장하지 못했어요.';
   }
 
   @override
   Widget build(BuildContext context) {
+    final couple = ref
+        .watch(coupleControllerProvider)
+        .maybeWhen(data: (couple) => couple, orElse: () => null);
+    final isReadOnly = couple == null || !couple.canEditSharedData;
+    final isArchivedReadOnly = couple?.isArchivedReadOnly ?? false;
+
     return Column(
       children: [
         _CharacterEditorHeader(
@@ -262,6 +291,24 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
             padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
             child: Column(
               children: [
+                if (isArchivedReadOnly) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      border: Border.all(color: AppColors.wireframeBorder),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
+                      style: AppTextStyles.homeCharacterLabel.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 AspectRatio(
                   aspectRatio: 1,
                   child: Container(
@@ -276,6 +323,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                           )
                         : CharacterCanvas(
                             strokes: _visibleStrokes,
+                            isReadOnly: isReadOnly,
                             onStrokeStart: _startStroke,
                             onStrokeUpdate: _updateStroke,
                             onStrokeEnd: _endStroke,
@@ -287,6 +335,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                   selectedTool: _selectedTool,
                   selectedColor: _selectedColor,
                   selectedStrokeWidth: _selectedStrokeWidth,
+                  isReadOnly: isReadOnly,
                   canClear: _canClear,
                   onToolChanged: (tool) {
                     setState(() {

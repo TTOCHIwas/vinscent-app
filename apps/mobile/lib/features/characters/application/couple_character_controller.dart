@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../couple/application/couple_controller.dart';
-import '../../couple/data/couple.dart';
 import '../data/couple_character.dart';
 import '../data/couple_character_failure.dart';
 import '../data/couple_character_repository.dart';
@@ -17,7 +16,7 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
   @override
   Future<CoupleCharacter?> build() async {
     final couple = await ref.watch(coupleControllerProvider.future);
-    if (couple == null || couple.status != CoupleStatus.active) {
+    if (couple == null || !couple.canReadSharedData) {
       return null;
     }
 
@@ -29,7 +28,7 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
     required String drawingDataJson,
   }) async {
     final couple = await ref.read(coupleControllerProvider.future);
-    if (couple == null || couple.status != CoupleStatus.active) {
+    if (couple == null || !couple.canEditSharedData) {
       throw const CoupleCharacterRepositoryException(
         CoupleCharacterFailureReason.activeCoupleRequired,
       );

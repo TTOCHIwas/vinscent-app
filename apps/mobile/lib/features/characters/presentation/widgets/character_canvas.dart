@@ -6,12 +6,14 @@ class CharacterCanvas extends StatefulWidget {
   const CharacterCanvas({
     super.key,
     required this.strokes,
+    required this.isReadOnly,
     required this.onStrokeStart,
     required this.onStrokeUpdate,
     required this.onStrokeEnd,
   });
 
   final List<CharacterDrawingStroke> strokes;
+  final bool isReadOnly;
   final ValueChanged<CharacterDrawingPoint> onStrokeStart;
   final ValueChanged<CharacterDrawingPoint> onStrokeUpdate;
   final VoidCallback onStrokeEnd;
@@ -32,10 +34,14 @@ class _CharacterCanvasState extends State<CharacterCanvas> {
         return Center(
           child: Listener(
             behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) => _startStroke(event, size),
-            onPointerMove: (event) => _updateStroke(event, size),
-            onPointerUp: _endStroke,
-            onPointerCancel: _endStroke,
+            onPointerDown: widget.isReadOnly
+                ? null
+                : (event) => _startStroke(event, size),
+            onPointerMove: widget.isReadOnly
+                ? null
+                : (event) => _updateStroke(event, size),
+            onPointerUp: widget.isReadOnly ? null : _endStroke,
+            onPointerCancel: widget.isReadOnly ? null : _endStroke,
             child: CustomPaint(
               size: Size.square(size),
               painter: CharacterDrawingPainter(strokes: widget.strokes),

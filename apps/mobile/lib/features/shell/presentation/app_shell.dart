@@ -52,10 +52,13 @@ class AppShell extends StatelessWidget {
         location == '/calendar/question' ||
         location == '/home/character' ||
         location == '/home/question' ||
-        location == '/home/question/edit';
+        location == '/home/question/edit' ||
+        location.startsWith('/settings');
   }
 
   bool get _hidesBottomBar {
-    return location == '/home/character' || location == '/home/question/edit';
+    return location == '/home/character' ||
+        location == '/home/question/edit' ||
+        location.startsWith('/settings');
   }
 }

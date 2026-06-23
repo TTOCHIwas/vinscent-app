@@ -29,6 +29,7 @@ class CharacterToolbar extends StatelessWidget {
     required this.selectedTool,
     required this.selectedColor,
     required this.selectedStrokeWidth,
+    required this.isReadOnly,
     required this.canClear,
     required this.onToolChanged,
     required this.onColorChanged,
@@ -39,6 +40,7 @@ class CharacterToolbar extends StatelessWidget {
   final CharacterDrawingTool selectedTool;
   final Color selectedColor;
   final double selectedStrokeWidth;
+  final bool isReadOnly;
   final bool canClear;
   final ValueChanged<CharacterDrawingTool> onToolChanged;
   final ValueChanged<Color> onColorChanged;
@@ -57,6 +59,7 @@ class CharacterToolbar extends StatelessWidget {
                 icon: Icons.edit,
                 label: '펜',
                 isSelected: selectedTool == CharacterDrawingTool.pen,
+                isEnabled: !isReadOnly,
                 onTap: () => onToolChanged(CharacterDrawingTool.pen),
               ),
             ),
@@ -66,6 +69,7 @@ class CharacterToolbar extends StatelessWidget {
                 icon: Icons.cleaning_services_outlined,
                 label: '지우개',
                 isSelected: selectedTool == CharacterDrawingTool.eraser,
+                isEnabled: !isReadOnly,
                 onTap: () => onToolChanged(CharacterDrawingTool.eraser),
               ),
             ),
@@ -73,9 +77,9 @@ class CharacterToolbar extends StatelessWidget {
             Expanded(
               child: _ToolButton(
                 icon: Icons.delete_outline,
-                label: '삭제',
+                label: '전체 삭제',
                 isSelected: false,
-                isEnabled: canClear,
+                isEnabled: !isReadOnly && canClear,
                 onTap: onClearPressed,
               ),
             ),
@@ -89,6 +93,7 @@ class CharacterToolbar extends StatelessWidget {
             for (final color in characterColorPalette)
               _ColorSwatch(
                 color: color,
+                isEnabled: !isReadOnly,
                 isSelected:
                     selectedTool == CharacterDrawingTool.pen &&
                     color == selectedColor,
@@ -101,7 +106,7 @@ class CharacterToolbar extends StatelessWidget {
           selectedStrokeWidth: selectedStrokeWidth,
           selectedTool: selectedTool,
           selectedColor: selectedColor,
-          onChanged: onStrokeWidthChanged,
+          onChanged: isReadOnly ? null : onStrokeWidthChanged,
         ),
       ],
     );
@@ -169,11 +174,13 @@ class _ToolButton extends StatelessWidget {
 class _ColorSwatch extends StatelessWidget {
   const _ColorSwatch({
     required this.color,
+    required this.isEnabled,
     required this.isSelected,
     required this.onTap,
   });
 
   final Color color;
+  final bool isEnabled;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -183,7 +190,7 @@ class _ColorSwatch extends StatelessWidget {
       color: Colors.transparent,
       shape: const CircleBorder(),
       child: InkWell(
-        onTap: onTap,
+        onTap: isEnabled ? onTap : null,
         customBorder: const CircleBorder(),
         child: Container(
           width: 34,
@@ -226,7 +233,7 @@ class _StrokeWidthSlider extends StatelessWidget {
   final double selectedStrokeWidth;
   final CharacterDrawingTool selectedTool;
   final Color selectedColor;
-  final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChanged;
 
   @override
   Widget build(BuildContext context) {
