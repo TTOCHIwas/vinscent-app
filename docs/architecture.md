@@ -362,7 +362,7 @@ AI 질문 생성 기록이다.
 - 안전 필터 검토
 - 운영자 디버깅
 
-### 6.11 device_tokens
+### 6.11 user_push_tokens
 
 푸시 알림 발송을 위한 기기 토큰이다.
 
@@ -370,28 +370,46 @@ AI 질문 생성 기록이다.
 
 - id
 - user_id
+- token
 - platform
-- fcm_token
-- apns_token
-- device_id
-- enabled
+- is_active
+- last_seen_at
+- created_at
 - updated_at
 
-### 6.12 notifications
+현재 구현에서는 `user_push_tokens` 테이블로 관리하며, 한 사용자가 여러 기기 토큰을 가질 수 있다.
 
-앱 내 알림 및 푸시 발송 로그다.
+### 6.12 push_notification_deliveries
+
+푸시 발송 결과 로그다.
 
 주요 필드:
 
 - id
-- user_id
-- couple_id
-- type
-- title
-- body
-- delivery_status
+- notification_type
+- source_id
+- receiver_user_id
+- target_token_count
+- success_count
+- failure_count
+- status
+- error_message
 - created_at
-- sent_at
+
+### 6.13 push_notification_dispatches
+
+동일 알림의 중복 발송을 막기 위한 dispatch 상태 테이블이다.
+
+주요 필드:
+
+- notification_type
+- source_id
+- status
+- claimed_at
+- completed_at
+- error_message
+- created_at
+- updated_at
 
 ## 7. 핵심 플로우
 
@@ -400,7 +418,7 @@ AI 질문 생성 기록이다.
 1. 사용자가 소셜 로그인한다.
 2. Supabase Auth에 사용자가 생성된다.
 3. `profiles` 레코드가 생성된다.
-4. 사용자가 닉네임, 생일, 연애 시작일을 입력한다.
+4. 사용자가 닉네임과 생일을 입력한다.
 5. 프로필 저장 후 커플 연결 화면으로 이동한다.
 
 ### 7.2 커플 연결
@@ -411,6 +429,7 @@ AI 질문 생성 기록이다.
 4. 서버는 초대 코드 유효성, 중복 연결 여부를 검사한다.
 5. `user_b_id`를 채우고 커플 상태를 active로 변경한다.
 6. 두 사용자에게 연결 완료 알림을 보낸다.
+7. 연결 완료 후 두 사용자 중 한 명이 첫 만남일을 입력한다.
 
 권장 구현:
 
@@ -492,6 +511,8 @@ MVP에서는 앱 진입 시 lazy assignment 방식을 우선 사용한다.
 
 초기에는 Firebase Cloud Messaging을 사용한다.
 
+현재 구현 범위에는 표현 알림, 오늘의 질문 도착, 상대 답변 완료, 미답변 리마인드, 커플 연결 해제 알림이 포함된다.
+
 Android:
 
 - FCM token 기반 발송
@@ -503,16 +524,17 @@ iOS:
 
 주요 알림:
 
+- 표현 알림
 - 오늘의 질문 도착
 - 상대 답변 완료
 - 미답변 리마인드
-- 메모 도착
+- 커플 연결 해제
 - 댓글 도착
 
 발송 방식:
 
-- 즉시 알림은 클라이언트 이벤트 후 서버 함수 또는 AI API 서버에서 발송한다.
-- 예약 알림은 Supabase scheduled job 또는 별도 cron worker에서 발송한다.
+- 즉시 알림은 데이터베이스 웹훅과 Supabase Edge Function 조합으로 발송한다.
+- 예약 알림은 Supabase scheduled job 또는 외부 스케줄러가 Edge Function을 호출해 발송한다.
 
 ## 10. 배포 및 개발 환경
 
