@@ -36,11 +36,13 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   bool _isDrawing = false;
 
   List<CharacterDrawingStroke> get _visibleStrokes {
-    return [..._strokes, if (_activeStroke != null) _activeStroke!];
+    return [..._strokes, ?_activeStroke];
   }
 
   bool get _isReadOnly {
-    final couple = ref.read(coupleControllerProvider).valueOrNull;
+    final couple = ref
+        .read(coupleControllerProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
     return couple == null || !couple.canEditSharedData;
   }
 
