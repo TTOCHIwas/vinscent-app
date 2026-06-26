@@ -61,10 +61,13 @@ void main() {
     await tester.pump();
     expect(_saveButton(tester).onPressed, isNotNull);
 
-    await tester.ensureVisible(find.text('삭제'));
+    await tester.ensureVisible(find.text('전체 삭제'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('삭제'));
+    await tester.tap(find.text('전체 삭제'));
     await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextButton, '삭제'), findsOneWidget);
+
     await tester.tap(find.widgetWithText(TextButton, '삭제'));
     await tester.pumpAndSettle();
 
