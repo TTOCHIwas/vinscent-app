@@ -5,12 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
-import '../../couple/data/couple.dart';
 import '../../expressions/application/couple_expression_controller.dart';
 import '../../expressions/data/couple_expression.dart';
 import '../../questions/application/question_detail_provider.dart';
 import '../../questions/data/daily_question.dart';
 import '../../questions/data/question_detail_state.dart';
+import '../../recordings/presentation/widgets/home_recording_panel.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../application/day_count.dart';
 
@@ -36,6 +36,7 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   _CoupleStatus(),
                   _QuestionCharacterPreview(),
+                  HomeRecordingPanel(),
                   _ExpressionGrid(),
                 ],
               ),

@@ -18,6 +18,7 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/questions/presentation/today_question_answer_screen.dart';
+import '../features/recordings/presentation/recording_library_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -156,6 +157,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/home/question/edit',
             name: 'todayQuestionAnswerEdit',
             builder: (context, state) => const TodayQuestionAnswerEditScreen(),
+          ),
+          GoRoute(
+            path: '/home/recordings',
+            name: 'recordingLibrary',
+            builder: (context, state) => const RecordingLibraryScreen(),
           ),
           GoRoute(
             path: '/calendar',
