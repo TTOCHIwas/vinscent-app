@@ -6,7 +6,6 @@ import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
-import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/application/today_question_controller.dart';
@@ -16,6 +15,8 @@ import 'package:vinscent/features/questions/data/daily_question_answer_state.dar
 import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
 import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
+
+import '../../support/couple_fixtures.dart';
 
 void main() {
   testWidgets('shows shell around authenticated home route', (tester) async {
@@ -182,17 +183,8 @@ final _profile = UserProfile(
   updatedAt: DateTime(2026),
 );
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
+final _activeCouple = activeCouple(
   relationshipStartDate: DateTime(2026),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
 );
 
 final _dailyQuestion = DailyQuestion(

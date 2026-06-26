@@ -13,6 +13,8 @@ import 'package:vinscent/features/questions/data/daily_question_history_entry.da
 import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 
+import '../../../support/couple_fixtures.dart';
+
 void main() {
   group('TodayQuestionAnswerScreen', () {
     testWidgets('shows readonly empty answer state', (tester) async {
@@ -636,14 +638,11 @@ DailyQuestionHistoryEntry _historyEntryFor({
 }
 
 Couple _activeCoupleFor({DateTime? relationshipStartDate}) {
-  return Couple(
-    id: 'couple-id',
+  return activeCouple(
     inviteCode: 'ABC123',
     userAId: 'user-a-id',
     userBId: 'user-b-id',
     relationshipStartDate: relationshipStartDate ?? DateTime(2026, 5, 1),
-    timezone: 'Asia/Seoul',
-    status: CoupleStatus.active,
     connectedAt: DateTime(2026, 5, 1),
     createdAt: DateTime(2026, 5, 1),
     updatedAt: DateTime(2026, 5, 1),

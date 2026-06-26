@@ -12,6 +12,8 @@ import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 
+import '../../support/couple_fixtures.dart';
+
 void main() {
   testWidgets('sends profiled users without a couple to couple entry', (
     tester,
@@ -72,37 +74,10 @@ final _profile = UserProfile(
   updatedAt: DateTime(2026),
 );
 
-final _pendingCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.pending,
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _pendingCouple = pendingCouple();
 
-final _activeCoupleWithoutDate = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _activeCoupleWithoutDate = activeCoupleWithoutDate();
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
+final _activeCouple = activeCouple(
   relationshipStartDate: DateTime(2026),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
 );

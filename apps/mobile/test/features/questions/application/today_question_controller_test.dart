@@ -7,6 +7,8 @@ import 'package:vinscent/features/questions/application/today_question_controlle
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_repository.dart';
 
+import '../../../support/couple_fixtures.dart';
+
 void main() {
   test('does not fetch question before active couple is ready', () async {
     final repository = _FakeDailyQuestionRepository(_dailyQuestion);
@@ -106,28 +108,9 @@ class _FakeDailyQuestionRepository implements DailyQuestionRepository {
   }
 }
 
-final _pendingCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.pending,
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _pendingCouple = pendingCouple();
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
-  relationshipStartDate: DateTime(2026, 5, 30),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _activeCouple = activeCouple();
 
 final _dailyQuestion = DailyQuestion(
   dailyQuestionId: 'daily-question-id',

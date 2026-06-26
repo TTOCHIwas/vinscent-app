@@ -13,6 +13,8 @@ import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/questions/application/today_question_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 
+import '../../../support/couple_fixtures.dart';
+
 void main() {
   testWidgets('shows active couple day count and home placeholders', (
     tester,
@@ -202,40 +204,11 @@ class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
   }
 }
 
-final _pendingCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.pending,
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _pendingCouple = pendingCouple();
 
-final _activeCoupleWithoutDate = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _activeCoupleWithoutDate = activeCoupleWithoutDate();
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
-  relationshipStartDate: DateTime(2026, 5, 30),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _activeCouple = activeCouple();
 
 final _dailyQuestion = DailyQuestion(
   dailyQuestionId: 'daily-question-id',

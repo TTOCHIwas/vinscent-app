@@ -15,6 +15,8 @@ import 'package:vinscent/features/questions/data/daily_question_answer_state.dar
 import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
 import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 
+import '../../../support/couple_fixtures.dart';
+
 void main() {
   testWidgets('shows current month without fetching history before selection', (
     tester,
@@ -322,17 +324,8 @@ class _FlakyDailyQuestionHistoryRepository
 }
 
 Couple _activeCouple({DateTime? relationshipStartDate}) {
-  return Couple(
-    id: 'couple-id',
-    inviteCode: 'ABC234',
-    userAId: 'user-id',
-    userBId: 'partner-id',
+  return activeCouple(
     relationshipStartDate: relationshipStartDate ?? DateTime(2026, 5, 1),
-    timezone: 'Asia/Seoul',
-    status: CoupleStatus.active,
-    connectedAt: DateTime(2026),
-    createdAt: DateTime(2026),
-    updatedAt: DateTime(2026),
   );
 }
 

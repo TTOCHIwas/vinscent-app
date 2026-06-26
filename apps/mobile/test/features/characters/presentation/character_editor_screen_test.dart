@@ -11,7 +11,8 @@ import 'package:vinscent/features/characters/presentation/character_editor_scree
 import 'package:vinscent/features/characters/presentation/widgets/character_canvas.dart';
 import 'package:vinscent/features/characters/presentation/widgets/character_toolbar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
-import 'package:vinscent/features/couple/data/couple.dart';
+
+import '../../../support/couple_fixtures.dart';
 
 void main() {
   testWidgets('saves drawn character as PNG and drawing JSON', (tester) async {
@@ -177,15 +178,4 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   }
 }
 
-final _activeCouple = Couple(
-  id: 'couple-id',
-  inviteCode: 'ABC234',
-  userAId: 'user-id',
-  userBId: 'partner-id',
-  relationshipStartDate: DateTime(2026, 5, 30),
-  timezone: 'Asia/Seoul',
-  status: CoupleStatus.active,
-  connectedAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-);
+final _activeCouple = activeCouple();
