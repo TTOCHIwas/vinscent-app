@@ -134,6 +134,16 @@ class _NotificationSettingsContent extends ConsumerWidget {
             ),
           ),
         ),
+        _PreferenceToggleTile(
+          title: '녹음 알림',
+          value: preferences.recordingEnabled,
+          onChanged: (value) => _updatePreferences(
+            context: context,
+            update: controller.updatePreferences(
+              preferences.copyWith(recordingEnabled: value),
+            ),
+          ),
+        ),
       ],
     );
   }

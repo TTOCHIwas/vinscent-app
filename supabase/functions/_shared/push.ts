@@ -5,7 +5,8 @@ export type NotificationType =
   | 'partner_answer_completed'
   | 'daily_question_delivery'
   | 'unanswered_reminder'
-  | 'couple_disconnect';
+  | 'couple_disconnect'
+  | 'recording_activity';
 
 export type DeliveryStatus =
   | 'sent'
@@ -18,7 +19,8 @@ export type PreferenceColumn =
   | 'partner_answer_enabled'
   | 'daily_question_enabled'
   | 'reminder_enabled'
-  | 'couple_disconnect_enabled';
+  | 'couple_disconnect_enabled'
+  | 'recording_enabled';
 
 type PushTokenRow = {
   id: string;

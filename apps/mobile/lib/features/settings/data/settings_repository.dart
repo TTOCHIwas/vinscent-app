@@ -59,6 +59,7 @@ class SupabaseSettingsRepository implements SettingsRepository {
           'requested_reminder_enabled': preferences.reminderEnabled,
           'requested_couple_disconnect_enabled':
               preferences.coupleDisconnectEnabled,
+          'requested_recording_enabled': preferences.recordingEnabled,
           'requested_daily_question_delivery_time': _formatTimeOfDay(
             preferences.dailyQuestionDeliveryTime,
           ),

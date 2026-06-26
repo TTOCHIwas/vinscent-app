@@ -8,6 +8,7 @@ class NotificationPreferences {
     required this.dailyQuestionEnabled,
     required this.reminderEnabled,
     required this.coupleDisconnectEnabled,
+    required this.recordingEnabled,
     required this.dailyQuestionDeliveryTime,
     required this.createdAt,
     required this.updatedAt,
@@ -21,6 +22,7 @@ class NotificationPreferences {
       dailyQuestionEnabled: json['daily_question_enabled'] as bool,
       reminderEnabled: json['reminder_enabled'] as bool,
       coupleDisconnectEnabled: json['couple_disconnect_enabled'] as bool,
+      recordingEnabled: json['recording_enabled'] as bool,
       dailyQuestionDeliveryTime: _parseTimeOfDay(
         json['daily_question_delivery_time'] as String,
       ),
@@ -35,6 +37,7 @@ class NotificationPreferences {
   final bool dailyQuestionEnabled;
   final bool reminderEnabled;
   final bool coupleDisconnectEnabled;
+  final bool recordingEnabled;
   final TimeOfDay dailyQuestionDeliveryTime;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -58,6 +61,7 @@ class NotificationPreferences {
     bool? dailyQuestionEnabled,
     bool? reminderEnabled,
     bool? coupleDisconnectEnabled,
+    bool? recordingEnabled,
     TimeOfDay? dailyQuestionDeliveryTime,
   }) {
     return NotificationPreferences(
@@ -69,6 +73,7 @@ class NotificationPreferences {
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       coupleDisconnectEnabled:
           coupleDisconnectEnabled ?? this.coupleDisconnectEnabled,
+      recordingEnabled: recordingEnabled ?? this.recordingEnabled,
       dailyQuestionDeliveryTime:
           dailyQuestionDeliveryTime ?? this.dailyQuestionDeliveryTime,
       createdAt: createdAt,

@@ -105,6 +105,7 @@ class NotificationPreferencesController
         next.dailyQuestionEnabled == current.dailyQuestionEnabled &&
         next.reminderEnabled == current.reminderEnabled &&
         next.coupleDisconnectEnabled == current.coupleDisconnectEnabled &&
+        next.recordingEnabled == current.recordingEnabled &&
         next.dailyQuestionDeliveryTime.hour ==
             current.dailyQuestionDeliveryTime.hour &&
         next.dailyQuestionDeliveryTime.minute ==
