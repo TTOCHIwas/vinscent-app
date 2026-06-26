@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/questions/application/today_question_controller.dart';
@@ -45,24 +44,36 @@ void main() {
     },
   );
 
-  test('refetches when app date changes', () async {
-    var today = DateTime(2026, 5, 31);
+  test('does not fetch question without relationship start date', () async {
     final repository = _FakeDailyQuestionRepository(_dailyQuestion);
     final container = _container(
-      couple: _activeCouple,
+      couple: _activeCoupleWithoutDate,
       repository: repository,
-      todayProvider: (ref, notifier) => today,
     );
     addTearDown(container.dispose);
 
-    await container.read(todayQuestionControllerProvider.future);
-    expect(repository.callCount, 1);
+    final question = await container.read(
+      todayQuestionControllerProvider.future,
+    );
 
-    today = DateTime(2026, 6, 1);
-    container.invalidate(todayControllerProvider);
+    expect(question, isNull);
+    expect(repository.callCount, 0);
+  });
 
-    await container.read(todayQuestionControllerProvider.future);
-    expect(repository.callCount, 2);
+  test('does not fetch question for archived read only couple', () async {
+    final repository = _FakeDailyQuestionRepository(_dailyQuestion);
+    final container = _container(
+      couple: _archivedReadOnlyCouple,
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    final question = await container.read(
+      todayQuestionControllerProvider.future,
+    );
+
+    expect(question, isNull);
+    expect(repository.callCount, 0);
   });
 
   test('refresh reloads today question', () async {
@@ -80,15 +91,11 @@ void main() {
 ProviderContainer _container({
   required Couple? couple,
   required DailyQuestionRepository repository,
-  DateTime Function(Ref ref, TodayController notifier)? todayProvider,
 }) {
   return ProviderContainer(
     overrides: [
       coupleControllerProvider.overrideWithBuild(
         (ref, notifier) async => couple,
-      ),
-      todayControllerProvider.overrideWithBuild(
-        todayProvider ?? (ref, notifier) => DateTime(2026, 5, 31),
       ),
       dailyQuestionRepositoryProvider.overrideWithValue(repository),
     ],
@@ -111,6 +118,10 @@ class _FakeDailyQuestionRepository implements DailyQuestionRepository {
 final _pendingCouple = pendingCouple();
 
 final _activeCouple = activeCouple();
+
+final _activeCoupleWithoutDate = activeCoupleWithoutDate();
+
+final _archivedReadOnlyCouple = archivedReadOnlyCouple();
 
 final _dailyQuestion = DailyQuestion(
   dailyQuestionId: 'daily-question-id',
