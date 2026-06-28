@@ -73,7 +73,9 @@ class Couple {
       archiveExpiresAt: _parseOptionalDateTime(
         json['archive_expires_at'] as String?,
       ),
-      currentDate: _parseOptionalDate(json['current_date'] as String?),
+      currentDate: _parseOptionalDate(
+        json['current_couple_date'] as String?,
+      ),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );

@@ -216,7 +216,7 @@ returns table (
   created_at timestamptz,
   updated_at timestamptz,
   access_mode text,
-  current_date date
+  current_couple_date date
 )
 language plpgsql
 security definer
@@ -232,15 +232,15 @@ begin
     perform private.raise_app_error('auth_required');
   end if;
 
-  select *
+  select c.*
   into open_couple
-  from public.couples
-  where status in ('pending', 'active')
+  from public.couples as c
+  where c.status in ('pending', 'active')
     and (
-      user_a_id = current_user_id
-      or user_b_id = current_user_id
+      c.user_a_id = current_user_id
+      or c.user_b_id = current_user_id
     )
-  order by created_at desc
+  order by c.created_at desc
   limit 1;
 
   if found then
@@ -263,22 +263,22 @@ begin
           when open_couple.status = 'pending' then 'pending'::text
           else 'active'::text
         end,
-        private.current_date_in_timezone(open_couple.timezone);
+        private.current_date_in_timezone(open_couple.timezone) as current_couple_date;
 
     return;
   end if;
 
-  select *
+  select c.*
   into archived_couple
-  from public.couples
-  where status = 'disconnected'
-    and archive_expires_at is not null
-    and archive_expires_at > now()
+  from public.couples as c
+  where c.status = 'disconnected'
+    and c.archive_expires_at is not null
+    and c.archive_expires_at > now()
     and (
-      user_a_id = current_user_id
-      or user_b_id = current_user_id
+      c.user_a_id = current_user_id
+      or c.user_b_id = current_user_id
     )
-  order by created_at desc
+  order by c.created_at desc
   limit 1;
 
   if not found then
@@ -310,7 +310,7 @@ begin
         when reconnect_invite.couple_id is not null then 'pending'::text
         else 'archived_read_only'::text
       end,
-      private.current_date_in_timezone(archived_couple.timezone);
+      private.current_date_in_timezone(archived_couple.timezone) as current_couple_date;
 end;
 $$;
 
@@ -650,7 +650,7 @@ returns table (
   created_at timestamptz,
   updated_at timestamptz,
   access_mode text,
-  current_date date
+  current_couple_date date
 )
 language sql
 security definer
