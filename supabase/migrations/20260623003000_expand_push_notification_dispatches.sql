@@ -173,6 +173,8 @@ begin
 end;
 $$;
 
+drop function if exists public.claim_push_notification_dispatch(text, uuid);
+
 create or replace function public.claim_push_notification_dispatch(
   requested_notification_type text,
   requested_source_id uuid
