@@ -52,7 +52,10 @@ Deno.serve(async (request) => {
     const supabase = createServiceRoleClient();
     const event = await loadNotificationEvent(supabase, eventRecord.id);
     if (!event) {
-      return jsonResponse({ status: 'skipped', error: 'recording_event_missing' });
+      return jsonResponse({
+        status: 'skipped',
+        error: 'recording_event_missing',
+      });
     }
 
     const result = await sendPushNotification({
@@ -112,13 +115,18 @@ async function loadNotificationEvent(
 }
 
 function notificationBodyFor(event: RecordingNotificationEvent) {
-  return switch (event.event_type) {
-    'current_recording_updated' => '새 녹음을 남겼어요.',
-    'slot_saved' => '녹음을 보관함에 저장했어요.',
-    'slot_replaced' => '보관함 녹음을 새로 바꿨어요.',
-    'slot_deleted' => '보관함 녹음을 삭제했어요.',
-    _ => '녹음 보관함이 업데이트됐어요.',
-  };
+  switch (event.event_type) {
+    case 'current_recording_updated':
+      return '새 녹음을 남겼어요.';
+    case 'slot_saved':
+      return '녹음을 보관함에 저장했어요.';
+    case 'slot_replaced':
+      return '보관함의 녹음을 새로 바꿨어요.';
+    case 'slot_deleted':
+      return '보관함의 녹음을 삭제했어요.';
+    default:
+      return '녹음 보관함이 업데이트됐어요.';
+  }
 }
 
 function notificationDataFor(event: RecordingNotificationEvent) {
@@ -128,8 +136,8 @@ function notificationDataFor(event: RecordingNotificationEvent) {
     event_type: event.event_type,
     ...(event.recording_id ? { recording_id: event.recording_id } : {}),
     ...(event.slot_index !== null
-        ? { slot_index: String(event.slot_index) }
-        : {}),
+      ? { slot_index: String(event.slot_index) }
+      : {}),
     ...(event.slot_title ? { slot_title: event.slot_title } : {}),
   };
 }
