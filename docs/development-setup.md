@@ -21,6 +21,18 @@ scripts\flutter.cmd --version
 - Flutter 3.41.9
 - Dart 3.11.5
 
+모바일 의존성을 추가하거나 버전을 올릴 때는 위 기준선 안에서 해석 가능한지 먼저 확인한다.
+
+- `apps/mobile/pubspec.yaml`의 `environment.sdk`를 먼저 본다.
+- 새 패키지의 Dart/Flutter 최소 요구 버전이 기준선을 넘으면 바로 추가하지 않는다.
+- `apps/mobile`에서 아래 순서로 검증한 뒤에만 변경을 커밋한다.
+
+```bash
+cd apps/mobile
+..\..\scripts\flutter.cmd pub get
+..\..\scripts\flutter.cmd analyze
+```
+
 ## 2. 사용자가 직접 해야 하는 일
 
 ### 2.1 Flutter SDK
@@ -133,6 +145,7 @@ scripts\flutter.cmd pub add --dev build_runner freezed json_serializable
 ```bash
 scripts\flutter.cmd --version
 scripts\flutter.cmd doctor -v
+scripts\flutter.cmd pub get
 scripts\flutter.cmd analyze
 ```
 
