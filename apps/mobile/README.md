@@ -1,17 +1,27 @@
-# vinscent
+# vinscent mobile
 
-A new Flutter project.
+Flutter 모바일 앱 프로젝트다.
 
-## Getting Started
+## 로컬 실행 규칙
 
-This project is a starting point for a Flutter application.
+- `apps/mobile` 안에서는 항상 `.\flutterw.cmd`를 사용한다.
+- `D:\vinscent\.toolchains\flutter\bin\flutter.bat`를 직접 호출하지 않는다.
+- Pub cache 경로가 섞였는지 확인할 때는 루트 검증 스크립트를 실행한다.
 
-A few resources to get you started if this is your first Flutter project:
+## 기본 명령어
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+cd apps/mobile
+.\flutterw.cmd pub get
+.\flutterw.cmd analyze
+..\..\scripts\verify_flutter_cache.cmd
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+앱 실행 예시:
+
+```bash
+cd apps/mobile
+.\flutterw.cmd run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+```
+
+상세 개발 환경 설명은 [docs/development-setup.md](../../docs/development-setup.md)를 따른다.

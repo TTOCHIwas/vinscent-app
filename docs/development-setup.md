@@ -16,6 +16,15 @@ Flutter 명령은 PowerShell에서 직접 실행할 때 lock/snapshot 문제가 
 scripts\flutter.cmd --version
 ```
 
+`apps/mobile` 디렉터리 안에서는 아래 로컬 래퍼를 사용한다.
+
+```bash
+cd apps/mobile
+.\flutterw.cmd --version
+```
+
+`.toolchains\flutter\bin\flutter.bat`를 직접 호출하지 않는다. 직접 호출하면 프로젝트가 의도한 `PUB_CACHE=D:\vinscent\.toolchains\pub-cache`를 우회하게 되고, 생성 파일이 전역 Pub cache를 가리켜 Android 빌드가 불안정해질 수 있다.
+
 확인된 버전:
 
 - Flutter 3.41.9
@@ -29,8 +38,9 @@ scripts\flutter.cmd --version
 
 ```bash
 cd apps/mobile
-..\..\scripts\flutter.cmd pub get
-..\..\scripts\flutter.cmd analyze
+.\flutterw.cmd pub get
+.\flutterw.cmd analyze
+..\..\scripts\verify_flutter_cache.cmd
 ```
 
 ## 2. 사용자가 직접 해야 하는 일
@@ -46,6 +56,7 @@ cd apps/mobile
 ```bash
 scripts\flutter.cmd --version
 scripts\flutter.cmd doctor -v
+scripts\verify_flutter_cache.cmd
 ```
 
 ### 2.2 Android 개발 환경
@@ -84,7 +95,8 @@ Supabase에서 새 프로젝트를 만든 뒤 다음 값을 앱 환경 변수로
 현재 앱은 `--dart-define` 값을 우선 사용한다.
 
 ```bash
-scripts\flutter.cmd run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+cd apps/mobile
+.\flutterw.cmd run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
 ```
 
 예시 값은 `apps/mobile/.env.example`에 둔다. 실제 값은 Git에 커밋하지 않는다.
@@ -132,10 +144,11 @@ scripts\flutter.cmd create --org com.vinscent --project-name vinscent apps/mobil
 추후 기능이 들어가는 시점에 추가할 후보:
 
 ```bash
-scripts\flutter.cmd pub add firebase_messaging flutter_local_notifications
-scripts\flutter.cmd pub add lottie rive
-scripts\flutter.cmd pub add freezed_annotation json_annotation
-scripts\flutter.cmd pub add --dev build_runner freezed json_serializable
+cd apps/mobile
+.\flutterw.cmd pub add firebase_messaging flutter_local_notifications
+.\flutterw.cmd pub add lottie rive
+.\flutterw.cmd pub add freezed_annotation json_annotation
+.\flutterw.cmd pub add --dev build_runner freezed json_serializable
 ```
 
 ## 4. 현재 검증 상태
@@ -143,10 +156,11 @@ scripts\flutter.cmd pub add --dev build_runner freezed json_serializable
 통과:
 
 ```bash
-scripts\flutter.cmd --version
-scripts\flutter.cmd doctor -v
-scripts\flutter.cmd pub get
-scripts\flutter.cmd analyze
+cd apps/mobile
+.\flutterw.cmd --version
+.\flutterw.cmd pub get
+.\flutterw.cmd analyze
+..\..\scripts\verify_flutter_cache.cmd
 ```
 
 `analyze`는 `apps/mobile`에서 통과했다.
