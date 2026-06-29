@@ -8,6 +8,7 @@ import '../../../core/config/app_config.dart';
 import 'couple_recording.dart';
 import 'couple_recording_failure.dart';
 import 'recording_id_generator.dart';
+import 'recording_upload_failure_policy.dart';
 
 final coupleRecordingRepositoryProvider = Provider<CoupleRecordingRepository>((
   ref,
@@ -96,6 +97,12 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     final recordingId = generateRecordingId();
     final storagePath = '$coupleId/recordings/$recordingId.m4a';
 
+    debugRecordingLog(
+      'Current recording upload started: '
+      'coupleId=$coupleId, recordingId=$recordingId, '
+      'bytes=${audioBytes.length}, durationMs=$durationMs',
+    );
+
     try {
       await _bucket
           .uploadBinary(
@@ -108,7 +115,27 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
             ),
           )
           .timeout(AppConfig.supabaseRpcTimeout);
+      debugRecordingLog(
+        'Storage upload completed: '
+        'recordingId=$recordingId, path=$storagePath',
+      );
+    } on TimeoutException {
+      debugRecordingLog(
+        'Storage upload timed out: recordingId=$recordingId, path=$storagePath',
+      );
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.requestTimeout,
+      );
+    } on StorageException catch (error) {
+      final mappedError = _mapStorageError(error);
+      debugRecordingLog(
+        'Storage upload failed: recordingId=$recordingId, error=$mappedError',
+      );
+      throw mappedError;
+    }
 
+    try {
+      debugRecordingLog('Finalize RPC started: recordingId=$recordingId');
       await Supabase.instance.client
           .rpc(
             'replace_current_couple_recording',
@@ -119,14 +146,29 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
+      debugRecordingLog('Finalize RPC completed: recordingId=$recordingId');
     } on TimeoutException {
+      debugRecordingLog('Finalize RPC timed out: recordingId=$recordingId');
       throw const CoupleRecordingRepositoryException(
         CoupleRecordingFailureReason.requestTimeout,
       );
     } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    } on StorageException catch (error) {
-      throw _mapStorageError(error);
+      final mappedError = _mapPostgrestError(error);
+      debugRecordingLog(
+        'Finalize RPC failed: recordingId=$recordingId, error=$mappedError',
+      );
+      await _discardUploadedRecordingIfNeeded(
+        recordingId: recordingId,
+        storagePath: storagePath,
+        error: mappedError,
+      );
+      throw mappedError;
+    } catch (error) {
+      debugRecordingLog(
+        'Finalize RPC failed with unexpected error: '
+        'recordingId=$recordingId, error=$error',
+      );
+      rethrow;
     }
   }
 
@@ -330,6 +372,49 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
       CoupleRecordingFailureReason.storage,
       error.message,
     );
+  }
+
+  Future<void> _discardUploadedRecordingIfNeeded({
+    required String recordingId,
+    required String storagePath,
+    required CoupleRecordingRepositoryException error,
+  }) async {
+    if (!shouldDiscardUploadedRecording(error)) {
+      debugRecordingLog(
+        'Cleanup skipped: recordingId=$recordingId, reason=${error.reason}',
+      );
+      return;
+    }
+
+    debugRecordingLog(
+      'Cleanup RPC started: '
+      'recordingId=$recordingId, path=$storagePath, reason=${error.reason}',
+    );
+
+    try {
+      await Supabase.instance.client
+          .rpc(
+            'discard_uploaded_couple_recording',
+            params: {
+              'requested_recording_id': recordingId,
+              'requested_storage_path': storagePath,
+            },
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+      debugRecordingLog('Cleanup RPC completed: recordingId=$recordingId');
+    } on TimeoutException {
+      debugRecordingLog('Cleanup RPC timed out: recordingId=$recordingId');
+    } on PostgrestException catch (cleanupError) {
+      debugRecordingLog(
+        'Cleanup RPC failed: '
+        'recordingId=$recordingId, error=${cleanupError.message}',
+      );
+    } catch (cleanupError) {
+      debugRecordingLog(
+        'Cleanup RPC failed with unexpected error: '
+        'recordingId=$recordingId, error=$cleanupError',
+      );
+    }
   }
 
   CoupleRecordingFailureReason _reasonFromMessage(String message) {
