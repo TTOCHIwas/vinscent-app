@@ -13,6 +13,7 @@ import '../../couple/data/couple.dart';
 import '../../settings/presentation/widgets/settings_page_header.dart';
 import '../application/couple_recording_overview_controller.dart';
 import '../application/recording_playback_controller.dart';
+import '../recording_debug_log.dart';
 import '../data/couple_recording.dart';
 import '../data/couple_recording_failure.dart';
 
@@ -256,6 +257,16 @@ class _RecordingLibraryScreenState
   }
 
   Future<void> _openNextSlot() async {
+    final couple = _readAsyncValue(ref.read(coupleControllerProvider));
+    final overview = _readAsyncValue(
+      ref.read(coupleRecordingOverviewControllerProvider),
+    );
+    debugRecordingLog(
+      'Open slot button pressed: '
+      'coupleId=${couple?.id}, canEdit=${couple?.canEditSharedData}, '
+      'accessMode=${couple?.accessMode.name}, currentSlotLimit=${overview?.slotLimit}',
+    );
+
     setState(() {
       _isProcessing = true;
     });
@@ -268,10 +279,22 @@ class _RecordingLibraryScreenState
         return;
       }
 
+      final updatedOverview = _readAsyncValue(
+        ref.read(coupleRecordingOverviewControllerProvider),
+      );
+      debugRecordingLog(
+        'Open slot flow completed in screen: '
+        'updatedSlotLimit=${updatedOverview?.slotLimit}, '
+        'savedSlotCount=${updatedOverview?.savedSlots.length}',
+      );
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('새 슬롯을 열었어요.')));
     } catch (error) {
+      debugRecordingLog(
+        'Open slot flow failed in screen: '
+        'errorType=${error.runtimeType}, error=$error',
+      );
       _showError(error);
     } finally {
       if (mounted) {
@@ -440,14 +463,34 @@ class _RecordingLibraryScreenState
       return;
     }
 
+    debugRecordingLog(
+      'Recording library error surfaced to user: '
+      'errorType=${error.runtimeType}, error=$error, '
+      'message=${_messageForError(error)}',
+    );
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(_messageForError(error))));
   }
 
+  T? _readAsyncValue<T>(AsyncValue<T> value) {
+    return switch (value) {
+      AsyncData<T> data => data.value,
+      _ => null,
+    };
+  }
+
   String _messageForError(Object error) {
     if (error is CoupleRecordingRepositoryException) {
       return switch (error.reason) {
+        CoupleRecordingFailureReason.configMissing =>
+          '앱 설정을 불러오지 못했어요. 다시 실행해 주세요.',
+        CoupleRecordingFailureReason.authRequired =>
+          '로그인 상태를 확인한 뒤 다시 시도해 주세요.',
+        CoupleRecordingFailureReason.activeCoupleRequired =>
+          '현재 연결된 커플만 보관함을 수정할 수 있어요.',
+        CoupleRecordingFailureReason.readableCoupleRequired =>
+          '보관함 정보를 불러온 뒤 다시 시도해 주세요.',
         CoupleRecordingFailureReason.recordingSlotConflict =>
           '보관함이 다른 기기에서 변경됐어요. 화면을 새로고침한 뒤 다시 시도해 주세요.',
         CoupleRecordingFailureReason.recordingSlotLocked =>

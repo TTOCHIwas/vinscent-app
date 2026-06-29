@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import '../recording_debug_log.dart';
 import 'couple_recording.dart';
 import 'couple_recording_failure.dart';
 import 'recording_id_generator.dart';
@@ -231,15 +232,27 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     _ensureSupabaseConfigured();
 
     try {
-      await Supabase.instance.client
+      debugRecordingLog('Open slot RPC started');
+      final response = await Supabase.instance.client
           .rpc('open_next_couple_recording_slot')
           .timeout(AppConfig.supabaseRpcTimeout);
+      debugRecordingLog('Open slot RPC completed: response=$response');
     } on TimeoutException {
+      debugRecordingLog('Open slot RPC timed out');
       throw const CoupleRecordingRepositoryException(
         CoupleRecordingFailureReason.requestTimeout,
       );
     } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
+      final mappedError = _mapPostgrestError(error);
+      debugRecordingLog(
+        'Open slot RPC failed: '
+        'code=${error.code}, message=${error.message}, details=${error.details}, '
+        'hint=${error.hint}, mappedError=$mappedError',
+      );
+      throw mappedError;
+    } catch (error) {
+      debugRecordingLog('Open slot RPC failed with unexpected error: $error');
+      rethrow;
     }
   }
 

@@ -6,6 +6,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../auth/application/auth_status.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../recording_debug_log.dart';
 import '../data/couple_recording.dart';
 import '../data/couple_recording_repository.dart';
 
@@ -34,13 +35,29 @@ class CoupleRecordingOverviewController
   Future<void> refresh() async {
     final couple = await ref.read(coupleControllerProvider.future);
     if (couple == null || !couple.canReadSharedData) {
+      debugRecordingLog('Overview refresh skipped: no readable couple');
       state = const AsyncValue.data(null);
       return;
     }
 
+    debugRecordingLog(
+      'Overview refresh started: '
+      'coupleId=${couple.id}, canEdit=${couple.canEditSharedData}, '
+      'accessMode=${couple.accessMode.name}',
+    );
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
       () => ref.read(coupleRecordingRepositoryProvider).fetchOverview(),
+    );
+    final overview = switch (state) {
+      AsyncData<CoupleRecordingOverview?> value => value.value,
+      _ => null,
+    };
+    debugRecordingLog(
+      'Overview refresh completed: '
+      'hasError=${state.hasError}, slotLimit=${overview?.slotLimit}, '
+      'savedSlotCount=${overview?.savedSlots.length}, '
+      'hasCurrentRecording=${overview?.currentRecording != null}',
     );
   }
 
@@ -60,6 +77,12 @@ class CoupleRecordingOverviewController
   }
 
   Future<void> openNextSlot() async {
+    final couple = await ref.read(coupleControllerProvider.future);
+    debugRecordingLog(
+      'Open slot requested from controller: '
+      'coupleId=${couple?.id}, canEdit=${couple?.canEditSharedData}, '
+      'accessMode=${couple?.accessMode.name}',
+    );
     await ref.read(coupleRecordingRepositoryProvider).openNextSlot();
     await refresh();
   }
