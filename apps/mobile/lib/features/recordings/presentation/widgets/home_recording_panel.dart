@@ -89,6 +89,7 @@ class HomeRecordingPanel extends ConsumerWidget {
           ),
           data: (couple) => _buildContent(
             context: context,
+            ref: ref,
             couple: couple,
             overviewAsync: overviewAsync,
             captureState: captureState,
@@ -102,6 +103,7 @@ class HomeRecordingPanel extends ConsumerWidget {
 
   Widget _buildContent({
     required BuildContext context,
+    required WidgetRef ref,
     required Couple? couple,
     required AsyncValue<CoupleRecordingOverview?> overviewAsync,
     required RecordingCaptureState captureState,

@@ -136,11 +136,9 @@ class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
       await _player.play();
     } finally {
       _isHandlingToggle = false;
-      if (!ref.mounted) {
-        return;
+      if (ref.mounted) {
+        state = state.copyWith(isBusy: false);
       }
-
-      state = state.copyWith(isBusy: false);
     }
   }
 
