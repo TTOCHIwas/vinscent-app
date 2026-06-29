@@ -454,7 +454,9 @@ class _RecordingLibraryScreenState
       },
     );
 
-    controller.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
     return result;
   }
 
