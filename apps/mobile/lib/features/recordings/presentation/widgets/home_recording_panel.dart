@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -11,53 +10,15 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
+import '../../application/recording_playback_controller.dart';
 import '../../application/recording_capture_controller.dart';
 import '../../data/couple_recording.dart';
 
-class HomeRecordingPanel extends ConsumerStatefulWidget {
+class HomeRecordingPanel extends ConsumerWidget {
   const HomeRecordingPanel({super.key});
 
   @override
-  ConsumerState<HomeRecordingPanel> createState() => _HomeRecordingPanelState();
-}
-
-class _HomeRecordingPanelState extends ConsumerState<HomeRecordingPanel> {
-  late final AudioPlayer _player;
-  StreamSubscription<PlayerState>? _playerStateSubscription;
-  String? _loadedRecordingId;
-  bool _isPlaying = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _player = AudioPlayer();
-    _playerStateSubscription = _player.playerStateStream.listen((playerState) {
-      if (!mounted) {
-        return;
-      }
-
-      final shouldPlay =
-          playerState.playing &&
-          playerState.processingState != ProcessingState.completed;
-      if (_isPlaying == shouldPlay) {
-        return;
-      }
-
-      setState(() {
-        _isPlaying = shouldPlay;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _playerStateSubscription?.cancel();
-    _player.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     ref.listen<RecordingCaptureState>(recordingCaptureControllerProvider, (
       previous,
       next,
@@ -75,20 +36,40 @@ class _HomeRecordingPanelState extends ConsumerState<HomeRecordingPanel> {
 
     ref.listen<AsyncValue<CoupleRecordingOverview?>>(
       coupleRecordingOverviewControllerProvider,
-      (previous, next) {
-        final previousId = previous?.asData?.value?.currentRecording?.recordingId;
-        final nextId = next.asData?.value?.currentRecording?.recordingId;
-        if (previousId == nextId) {
+      (_, next) {
+        if (next is! AsyncData<CoupleRecordingOverview?>) {
           return;
         }
 
-        unawaited(_resetPlayback());
+        final currentRecording = next.value?.currentRecording;
+        final availableTargetKeys = <String>{
+          if (currentRecording != null)
+            RecordingPlaybackTarget.homeCurrent(currentRecording).key,
+        };
+
+        unawaited(
+          ref
+              .read(
+                recordingPlaybackControllerProvider(
+                  RecordingPlaybackSurface.home,
+                ).notifier,
+              )
+              .syncAvailableTargetKeys(availableTargetKeys),
+        );
       },
     );
 
     final coupleAsync = ref.watch(coupleControllerProvider);
     final overviewAsync = ref.watch(coupleRecordingOverviewControllerProvider);
     final captureState = ref.watch(recordingCaptureControllerProvider);
+    final playbackState = ref.watch(
+      recordingPlaybackControllerProvider(RecordingPlaybackSurface.home),
+    );
+    final playbackController = ref.read(
+      recordingPlaybackControllerProvider(
+        RecordingPlaybackSurface.home,
+      ).notifier,
+    );
 
     return SizedBox(
       width: double.infinity,
@@ -111,6 +92,8 @@ class _HomeRecordingPanelState extends ConsumerState<HomeRecordingPanel> {
             couple: couple,
             overviewAsync: overviewAsync,
             captureState: captureState,
+            playbackState: playbackState,
+            playbackController: playbackController,
           ),
         ),
       ),
@@ -122,6 +105,8 @@ class _HomeRecordingPanelState extends ConsumerState<HomeRecordingPanel> {
     required Couple? couple,
     required AsyncValue<CoupleRecordingOverview?> overviewAsync,
     required RecordingCaptureState captureState,
+    required RecordingPlaybackState playbackState,
+    required RecordingPlaybackController playbackController,
   }) {
     final canRead = couple?.canReadSharedData ?? false;
     final canEdit = couple?.canEditSharedData ?? false;
@@ -169,13 +154,18 @@ class _HomeRecordingPanelState extends ConsumerState<HomeRecordingPanel> {
               );
             }
 
+            final playbackTarget = RecordingPlaybackTarget.homeCurrent(
+              currentRecording,
+            );
             return _CurrentRecordingCard(
               recording: currentRecording,
               isMine: currentRecording.senderUserId ==
                   Supabase.instance.client.auth.currentUser?.id,
               isPlaying:
-                  _isPlaying && _loadedRecordingId == currentRecording.recordingId,
-              onPlayPressed: () => _togglePlayback(currentRecording),
+                  playbackState.isPlaying &&
+                  playbackState.activeTargetKey == playbackTarget.key,
+              onPlayPressed: () =>
+                  unawaited(playbackController.toggle(playbackTarget)),
             );
           },
         ),
@@ -214,36 +204,6 @@ class _HomeRecordingPanelState extends ConsumerState<HomeRecordingPanel> {
         ),
       ],
     );
-  }
-
-  Future<void> _togglePlayback(CurrentCoupleRecording recording) async {
-    if (_loadedRecordingId != recording.recordingId) {
-      await _player.stop();
-      await _player.setUrl(recording.audioUrl);
-      _loadedRecordingId = recording.recordingId;
-    }
-
-    if (_player.playing) {
-      await _player.pause();
-      return;
-    }
-
-    await _player.play();
-  }
-
-  Future<void> _resetPlayback() async {
-    _loadedRecordingId = null;
-    if (_player.playing) {
-      await _player.stop();
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isPlaying = false;
-    });
   }
 }
 
