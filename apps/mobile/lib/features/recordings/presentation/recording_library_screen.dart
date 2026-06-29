@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
@@ -13,6 +12,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../settings/presentation/widgets/settings_page_header.dart';
 import '../application/couple_recording_overview_controller.dart';
+import '../application/recording_playback_controller.dart';
 import '../data/couple_recording.dart';
 import '../data/couple_recording_failure.dart';
 
@@ -26,45 +26,50 @@ class RecordingLibraryScreen extends ConsumerStatefulWidget {
 
 class _RecordingLibraryScreenState
     extends ConsumerState<RecordingLibraryScreen> {
-  late final AudioPlayer _player;
-  StreamSubscription<PlayerState>? _playerStateSubscription;
-  String? _activePlaybackKey;
-  bool _isPlaying = false;
   bool _isProcessing = false;
 
   @override
-  void initState() {
-    super.initState();
-    _player = AudioPlayer();
-    _playerStateSubscription = _player.playerStateStream.listen((playerState) {
-      if (!mounted) {
-        return;
-      }
-
-      final shouldPlay =
-          playerState.playing &&
-          playerState.processingState != ProcessingState.completed;
-      if (_isPlaying == shouldPlay) {
-        return;
-      }
-
-      setState(() {
-        _isPlaying = shouldPlay;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _playerStateSubscription?.cancel();
-    _player.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<CoupleRecordingOverview?>>(
+      coupleRecordingOverviewControllerProvider,
+      (_, next) {
+        if (next is! AsyncData<CoupleRecordingOverview?>) {
+          return;
+        }
+
+        final overview = next.value;
+        final currentRecording = overview?.currentRecording;
+        final slotTargets =
+            overview?.savedSlots.map(RecordingPlaybackTarget.librarySlot) ??
+            const <RecordingPlaybackTarget>[];
+        final availableTargetKeys = <String>{
+          if (currentRecording != null)
+            RecordingPlaybackTarget.libraryCurrent(currentRecording).key,
+          ...slotTargets.map((target) => target.key),
+        };
+
+        unawaited(
+          ref
+              .read(
+                recordingPlaybackControllerProvider(
+                  RecordingPlaybackSurface.library,
+                ).notifier,
+              )
+              .syncAvailableTargetKeys(availableTargetKeys),
+        );
+      },
+    );
+
     final coupleAsync = ref.watch(coupleControllerProvider);
     final overviewAsync = ref.watch(coupleRecordingOverviewControllerProvider);
+    final playbackState = ref.watch(
+      recordingPlaybackControllerProvider(RecordingPlaybackSurface.library),
+    );
+    final playbackController = ref.read(
+      recordingPlaybackControllerProvider(
+        RecordingPlaybackSurface.library,
+      ).notifier,
+    );
 
     return SafeArea(
       child: Padding(
@@ -100,6 +105,8 @@ class _RecordingLibraryScreenState
                     context: context,
                     couple: couple,
                     overview: overview,
+                    playbackState: playbackState,
+                    playbackController: playbackController,
                   ),
                 ),
               ),
@@ -114,6 +121,8 @@ class _RecordingLibraryScreenState
     required BuildContext context,
     required Couple? couple,
     required CoupleRecordingOverview? overview,
+    required RecordingPlaybackState playbackState,
+    required RecordingPlaybackController playbackController,
   }) {
     if (couple == null || overview == null) {
       return const _LibraryMessage(title: '보관함을 확인할 수 없어요.');
@@ -121,6 +130,9 @@ class _RecordingLibraryScreenState
 
     final canEdit = couple.canEditSharedData;
     final currentRecording = overview.currentRecording;
+    final currentPlaybackTarget = currentRecording == null
+        ? null
+        : RecordingPlaybackTarget.libraryCurrent(currentRecording);
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final slotsByIndex = {
       for (final slot in overview.savedSlots) slot.slotIndex: slot,
@@ -146,10 +158,10 @@ class _RecordingLibraryScreenState
                   recording: currentRecording,
                   isMine: currentRecording.senderUserId == currentUserId,
                   isPlaying:
-                      _isPlaying && _activePlaybackKey == 'current-recording',
-                  onPlayPressed: () => _togglePlayback(
-                    key: 'current-recording',
-                    url: currentRecording.audioUrl,
+                      playbackState.isPlaying &&
+                      playbackState.activeTargetKey == currentPlaybackTarget!.key,
+                  onPlayPressed: () => unawaited(
+                    playbackController.toggle(currentPlaybackTarget!),
                   ),
                 ),
             ],
@@ -191,14 +203,14 @@ class _RecordingLibraryScreenState
                   slot: slotsByIndex[index],
                   currentRecording: currentRecording,
                   canEdit: canEdit,
-                  isPlaying:
-                      _isPlaying && _activePlaybackKey == 'slot-$index',
-                  onPlayPressed: slotsByIndex[index] == null
-                      ? null
-                      : () => _togglePlayback(
-                          key: 'slot-$index',
-                          url: slotsByIndex[index]!.audioUrl,
-                        ),
+                  isPlaying: _isSlotPlaying(
+                    slot: slotsByIndex[index],
+                    playbackState: playbackState,
+                  ),
+                  onPlayPressed: _buildSlotPlayCallback(
+                    slot: slotsByIndex[index],
+                    playbackController: playbackController,
+                  ),
                   onSavePressed: currentRecording == null || _isProcessing
                       ? null
                       : () => _saveSlot(
@@ -218,22 +230,29 @@ class _RecordingLibraryScreenState
     );
   }
 
-  Future<void> _togglePlayback({
-    required String key,
-    required String url,
-  }) async {
-    if (_activePlaybackKey != key) {
-      await _player.stop();
-      await _player.setUrl(url);
-      _activePlaybackKey = key;
+  bool _isSlotPlaying({
+    required CoupleRecordingSlot? slot,
+    required RecordingPlaybackState playbackState,
+  }) {
+    if (slot == null) {
+      return false;
     }
 
-    if (_player.playing) {
-      await _player.pause();
-      return;
+    final playbackTarget = RecordingPlaybackTarget.librarySlot(slot);
+    return playbackState.isPlaying &&
+        playbackState.activeTargetKey == playbackTarget.key;
+  }
+
+  VoidCallback? _buildSlotPlayCallback({
+    required CoupleRecordingSlot? slot,
+    required RecordingPlaybackController playbackController,
+  }) {
+    if (slot == null) {
+      return null;
     }
 
-    await _player.play();
+    final playbackTarget = RecordingPlaybackTarget.librarySlot(slot);
+    return () => unawaited(playbackController.toggle(playbackTarget));
   }
 
   Future<void> _openNextSlot() async {
