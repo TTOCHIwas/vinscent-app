@@ -13,6 +13,7 @@
 .toolchains/
 node_modules/
 supabase/.temp/
+**/supabase/.temp/
 
 # Flutter and Dart
 .dart_tool/
