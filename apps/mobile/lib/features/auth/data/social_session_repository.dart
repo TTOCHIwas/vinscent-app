@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import '../auth_debug_log.dart';
 import 'apple_auth_client.dart';
 import 'kakao_auth_client.dart';
 import 'social_auth_failure.dart';
@@ -27,6 +28,7 @@ class SupabaseSocialSessionRepository implements SocialSessionRepository {
   @override
   Future<void> signInWithKakao(KakaoLoginTokens tokens) async {
     if (!canCreateSession) {
+      debugAuthLog('supabase kakao exchange aborted: config missing');
       throw const SocialAuthFailure(
         SocialAuthFailureReason.notConfigured,
         message: 'Supabase config is missing.',
@@ -34,21 +36,39 @@ class SupabaseSocialSessionRepository implements SocialSessionRepository {
     }
 
     try {
+      debugAuthLog(
+        'supabase kakao exchange requested '
+        'idToken=${summarizeAuthValue(tokens.idToken)} '
+        'accessToken=${summarizeAuthValue(tokens.accessToken)}',
+      );
       final response = await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.kakao,
         idToken: tokens.idToken,
         accessToken: tokens.accessToken,
       );
 
+      debugAuthLog(
+        'supabase kakao exchange completed '
+        'sessionUserId=${summarizeAuthValue(response.session?.user.id)}',
+      );
+
       if (response.session == null) {
+        debugAuthLog('supabase kakao exchange failed: session missing');
         throw const SocialAuthFailure(
           SocialAuthFailureReason.supabaseSessionFailed,
           message: 'Supabase session was not created.',
         );
       }
-    } on SocialAuthFailure {
+    } on SocialAuthFailure catch (failure) {
+      debugAuthLog(
+        'supabase kakao exchange failed reason=${failure.reason} '
+        'message=${failure.message ?? '-'} cause=${failure.cause.runtimeType}',
+      );
       rethrow;
     } catch (error, stackTrace) {
+      debugAuthLog(
+        'supabase kakao exchange threw error=${error.runtimeType} message=$error',
+      );
       throw SocialAuthFailure(
         SocialAuthFailureReason.supabaseSessionFailed,
         message: 'Kakao token exchange failed.',

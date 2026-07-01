@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth_debug_log.dart';
 import '../data/apple_auth_client.dart';
 import '../data/kakao_auth_client.dart';
 import '../data/social_auth_failure.dart';
@@ -36,10 +37,16 @@ class SocialLoginController extends Notifier<SocialLoginState> {
     Future<void> Function() action,
   ) async {
     if (state.isSigningIn) {
+      debugAuthLog(
+        'social login skipped: already signing in provider=$provider',
+      );
       return;
     }
 
     if (!ref.read(socialSessionRepositoryProvider).canCreateSession) {
+      debugAuthLog(
+        'social login aborted: supabase not configured provider=$provider',
+      );
       state = const SocialLoginState.idle(
         failure: SocialAuthFailure(
           SocialAuthFailureReason.notConfigured,
@@ -49,14 +56,24 @@ class SocialLoginController extends Notifier<SocialLoginState> {
       return;
     }
 
+    debugAuthLog('social login started provider=$provider');
     state = SocialLoginState.signingIn(provider);
 
     try {
       await action();
+      debugAuthLog('social login completed provider=$provider');
       state = const SocialLoginState.idle();
     } on SocialAuthFailure catch (failure) {
+      debugAuthLog(
+        'social login failed provider=$provider reason=${failure.reason} '
+        'message=${failure.message ?? '-'} cause=${failure.cause.runtimeType}',
+      );
       state = SocialLoginState.idle(failure: failure);
     } catch (error, stackTrace) {
+      debugAuthLog(
+        'social login failed provider=$provider '
+        'error=${error.runtimeType} message=$error',
+      );
       state = SocialLoginState.idle(
         failure: SocialAuthFailure(
           SocialAuthFailureReason.providerFailed,
