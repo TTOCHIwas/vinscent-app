@@ -168,6 +168,13 @@ apps/mobile/lib/features/story_loops/
 - `todayStoryLoopSummaryProvider`
   - 홈 전용
   - RPC `get_today_story_loop_summary()`
+  - 최소 상태
+    - 오늘 카드 없음
+    - 내가 먼저 올림 + 상대 대기
+    - 상대가 먼저 올림 + 내 작성 대기
+    - 양쪽 카드 완료 + 질문 생성 중
+    - 질문 생성 완료
+    - archived 읽기 전용
 - `storyLoopDetailProvider(date)`
   - 질문 상세와 캘린더 일간 상세 공용
   - RPC `get_story_loop_detail(target_date)`
@@ -193,19 +200,28 @@ apps/mobile/lib/features/story_loops/
 
 전환 방향:
 
-- `_QuestionCharacterPreview`를 스토리 루프 기준 caller로 교체한다.
-- 역할상 이름도 `HomeStoryLoopPreview`로 정리하는 편이 맞다.
-- 홈 preview는 `todayStoryLoopSummaryProvider`만 읽는다.
+- 현재 `_QuestionCharacterPreview`가 맡고 있는 단일 중앙 caller를 그대로 이름만 바꾸면 안 된다.
+- 홈은 `캐릭터 오브젝트`와 `스토리 카드 오브젝트`를 서로 다른 sibling으로 유지해야 한다.
+- 따라서 홈 caller 전환은 `질문 미리보기 위젯 치환`이 아니라 `캐릭터 영역 유지 + 스토리 카드 영역 분리`로 설계해야 한다.
+- 스토리 카드 영역을 맡는 caller는 역할상 `HomeStoryLoopPreview`로 두는 편이 맞다.
+- 이 스토리 카드 영역은 `todayStoryLoopSummaryProvider`만 읽는다.
 
 CTA 판단 규칙:
 
-1. `canEditStory = true`
-   - 오늘 스토리 카드 작성 또는 수정 진입
-2. `dailyQuestionId != null && myAnswerExists = false`
+1. 오늘 카드 없음
+   - 빈 슬롯 + 오늘 카드 작성 진입
+2. 내가 먼저 올림
+   - 내 카드 preview + 상대 대기 상태
+   - 필요 시 내 카드 수정 진입
+3. 상대가 먼저 올림
+   - 상대 카드 preview + 내 작성 진입
+4. 양쪽 카드 완료, 질문 생성 전
+   - `질문 생성 중` 상태 노출
+5. `dailyQuestionId != null && myAnswerExists = false`
    - 질문 답변 작성 진입
-3. `dailyQuestionId != null && myAnswerExists = true`
+6. `dailyQuestionId != null && myAnswerExists = true`
    - 질문 상세 진입
-4. `archivedReadOnly = true`
+7. `archivedReadOnly = true`
    - 읽기 전용 preview만 제공
 
 유지되는 것:
@@ -214,7 +230,7 @@ CTA 판단 규칙:
 - 표현 버튼
 - 메인 화면의 녹음 버튼과 목록 진입 구조
 
-즉 홈은 정보 구조만 스토리 루프 중심으로 바뀌고, 나머지 메인 액션 배치는 유지한다.
+즉 홈은 정보 구조만 스토리 루프 중심으로 바뀌는 것이 아니라, 현재 질문 preview 슬롯을 `캐릭터`와 `스토리 카드`의 분리된 구조로 다시 쪼개야 한다. 다만 캐릭터 진입, 표현 버튼, 녹음 메인 버튼과 보관함 진입 구조는 유지한다.
 
 ### 4.2 질문 상세 화면
 
@@ -255,11 +271,34 @@ CTA 판단 규칙:
 - 초기 read는 `storyLoopDetailProvider(today)`에서 가져온다.
 - submit write는 당장은 기존 `submit_today_question_answer()`를 유지할 수 있다.
 - 다만 submit 전 검증을 위해 read를 다시 `todayQuestionControllerProvider`에 의존하는 구조는 제거한다.
+- 홈과 캘린더 양쪽에서 오늘 질문 수정이 가능하므로, 질문 수정 route는 `진입 출처`를 보존해야 한다.
+- 즉 수정 화면에서 저장 또는 뒤로 가기 시 원래 진입한 출처로 복귀해야 한다.
+
+진입 출처 보존 계약:
+
+1. 질문 상세 화면은 edit 진입 시 `source` query parameter를 함께 넘긴다.
+   - 홈 상세에서 진입: `source=home`
+   - 캘린더 상세에서 진입: `source=calendar`
+2. 캘린더에서 진입한 경우에는 현재 열고 있던 날짜를 `date=yyyy-mm-dd`로 함께 넘긴다.
+3. edit 화면은 `source`와 `date`를 route builder에서 파싱해 복귀 경로 계산에 사용한다.
+4. 저장 성공 후 복귀 규칙
+   - `source=home` -> `/home/question`
+   - `source=calendar` -> `/calendar/question?date=...`
+5. 뒤로 가기 복귀 규칙
+   - navigation stack 에 pop 대상이 있으면 우선 `pop`
+   - 직접 진입 등으로 pop 대상이 없으면 위 복귀 경로로 `go`
+
+이 계약을 쓰는 이유:
+
+- 현재 상세 화면은 `backLocation`으로 홈과 캘린더를 구분하고 있다.
+- 반면 edit 화면은 여전히 `/home/question/edit` 단일 route와 `/home/question` 고정 복귀에 묶여 있다.
+- 따라서 edit route에 `source`와 `date`를 싣는 것이 현재 구조를 가장 적게 흔들면서도 caller 전환 이후의 복귀 일관성을 보장하는 최소 변경이다.
 
 이유:
 
 - read caller를 이미 `storyLoopDetailProvider(today)`로 통일했는데, submit 직전에 다시 question today provider를 읽으면 구조가 다시 분리된다.
 - 수정 화면도 상위 기준 aggregate는 story loop여야 한다.
+- 현재처럼 홈 전용 edit route에 고정하면 캘린더 진입 수정 플로우가 다시 홈으로 튀는 결합이 남는다.
 
 ### 4.4 캘린더 grid
 
@@ -271,6 +310,7 @@ CTA 판단 규칙:
 
 - `_CalendarGrid`는 `storyLoopMonthSummaryProvider(_visibleMonth)`를 읽는다.
 - 각 날짜 셀은 month summary에 포함된 카드 수와 정렬 정보만 사용한다.
+- 월간 셀 탭의 기본 동작은 `_selectedDate`를 갱신하고, 같은 화면 안의 상세 패널 caller를 바꾸는 것이다.
 
 표현 규칙:
 
@@ -282,6 +322,7 @@ CTA 판단 규칙:
 
 - grid는 질문 본문이나 답변 본문을 읽지 않는다.
 - grid는 월간 요약만 소비한다.
+- 따라서 현재 `CalendarScreen` 내부의 `selectedDate -> inline detail panel` 구조는 유지하되, 상세 패널의 read caller만 `storyLoopDetailProvider(selectedDate)`로 전환한다.
 
 ### 4.5 캘린더 일간 상세
 
@@ -291,13 +332,15 @@ CTA 판단 규칙:
 
 전환 방향:
 
-- `dailyQuestionHistoryProvider(selectedDate)`를 `storyLoopDetailProvider(selectedDate)`로 교체한다.
+- 캘린더 일간 상세의 1차 진입점은 계속 월간 셀 탭 이후의 인라인 상세 패널이다.
+- 그 상세 패널의 read caller는 `storyLoopDetailProvider(selectedDate)`다.
 - `coupleExpressionSummaryProvider(selectedDate)`는 이번 단계에서는 유지한다.
 
 이유:
 
 - story loop detail RPC는 카드, 질문, 답변 aggregate를 책임진다.
 - 표현 요약은 아직 별도 계약이므로 현재는 병렬 조합으로 둔다.
+- 사용자가 선택한 요구사항에 따라 캘린더는 별도 날짜 상세 route를 도입하지 않고, 현재 화면 안의 인라인 상세 패널 구조를 유지한다.
 
 ## 5. route 경계 재정의
 
@@ -316,7 +359,15 @@ CTA 판단 규칙:
 
 1. 오늘 홈에서의 질문 진입은 `todayStoryLoopSummary`를 기준으로 결정된다.
 2. 캘린더 질문 진입은 `storyLoopDetail(date)`를 기준으로 결정된다.
-3. 추후 스토리 편집 route가 추가되더라도 질문 route는 하위 leaf 경로로 유지한다.
+3. 캘린더 월간 셀 탭은 현재 화면 안에서 `selectedDate`와 상세 패널 상태를 갱신해야 한다.
+4. 오늘 질문 수정 route는 홈과 캘린더 양쪽에서 진입 가능해야 하며, 저장 및 뒤로 가기 시 진입 출처를 유지해야 한다.
+5. 추후 스토리 편집 route가 추가되더라도 질문 route는 하위 leaf 경로로 유지한다.
+
+질문 edit route의 이번 단계 고정안:
+
+- route literal은 우선 `/home/question/edit`를 유지한다.
+- 대신 route query에 `source`와 필요 시 `date`를 포함시켜 홈/캘린더 출처를 구분한다.
+- 즉 이번 단계에서 바꾸는 것은 path 자체가 아니라, edit route가 복귀 맥락을 보존하는 방식이다.
 
 ## 6. 정리 대상 provider
 
