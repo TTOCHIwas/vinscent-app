@@ -140,19 +140,23 @@ apps/mobile/lib/features/story_loops/
     story_loop_detail_navigation_provider.dart
     story_loop_month_summary_provider.dart
   data/
+    story_loop_status.dart
+    story_loop_card_preview.dart
+    story_loop_card_detail.dart
+    story_loop_question_summary.dart
+    story_loop_question_detail.dart
     story_loop_read_repository.dart
     today_story_loop_summary.dart
     story_loop_detail.dart
-    story_loop_month_summary.dart
-    story_loop_card_preview.dart
-    story_loop_question_state.dart
+    story_loop_month_summary_day.dart
 ```
 
 이 구조를 쓰는 이유:
 
 - 7단계에서 만든 read RPC 3개가 모두 같은 도메인 묶음이다.
 - repository를 하나로 묶어 RPC 응답 변환과 예외 매핑을 공통화할 수 있다.
-- 기존 `questions` feature는 질문 leaf UI를 보관하는 범위로 축소할 수 있다.
+- 기존 `questions` feature는 질문 leaf UI와 `DailyQuestion`, `DailyQuestionAnswerState` 같은 질문 leaf 모델을 보관하는 범위로 축소할 수 있다.
+- 반대로 카드와 루프 aggregate 모델은 `story_loops/data`가 소유해야 홈, 상세, 캘린더가 같은 상위 계약을 공유할 수 있다.
 
 ## 3.2 provider 계약
 

@@ -1,412 +1,573 @@
-# 스토리 카드 일일 루프 계약 설계
+# 스토리 카드 루프 read 모델 계약 설계
 
 작성일: 2026-07-06
 
-이 문서는 `스토리 카드 작성 -> 질문 생성 -> 각자 답변` 구조로 전환하기 위한 1차 계약 설계를 정리한다.  
-기준은 다음 두 문서다.
+이 문서는 2단계 caller 전환에 앞서 `features/story_loops` read 계층의 Dart 타입 계약을 실제 코드와 실제 RPC 시그니처 기준으로 잠그기 위한 문서다.
+
+기준 파일:
 
 - `docs/story-card-daily-loop-requirements.md`
-- `docs/story-card-daily-loop-current-structure-analysis.md`
+- `docs/story-card-daily-loop-caller-transition-design.md`
+- `supabase/migrations/20260706000000_create_daily_story_loops.sql`
+- `supabase/migrations/20260706006000_create_story_loop_read_rpcs.sql`
+- `apps/mobile/lib/features/questions/data/daily_question.dart`
+- `apps/mobile/lib/features/questions/data/daily_question_answer_state.dart`
+- `apps/mobile/lib/features/questions/data/question_detail_state.dart`
+- `apps/mobile/lib/features/questions/data/daily_question_history_entry.dart`
+- `apps/mobile/lib/features/questions/data/daily_question_repository.dart`
+- `apps/mobile/lib/features/questions/data/daily_question_answer_repository.dart`
+- `apps/mobile/lib/features/questions/data/daily_question_history_repository.dart`
+- `apps/mobile/lib/features/questions/application/question_detail_provider.dart`
+- `apps/mobile/lib/features/couple/data/couple.dart`
 
-본 문서는 구현 직전 계약 잠금 문서이며, 읽기 계약 3개와 write 경계 1개를 다룬다.
+## 1. 이번 문서의 범위
 
-## 1. 전제
+이번 문서에서 잠그는 것은 다음 네 가지다.
 
-현재 코드베이스는 질문-first 구조다. 실제 호출 흐름은 다음 특징을 가진다.
+1. `features/story_loops/data`에 들어갈 read 모델 타입
+2. 기존 질문 모델 중 재사용할 것과 새로 만들 것을 구분하는 기준
+3. RPC row를 Dart 모델로 변환하는 repository 경계
+4. provider가 `empty`와 `unavailable`을 어떻게 나누는지에 대한 해석 규칙
 
-- 질문 조회 read가 질문 assign write를 유발한다.
-- 답변 상태 조회 read도 질문 assign write를 유발한다.
-- 캘린더 월간 grid는 현재 기록 데이터를 읽지 않는다.
-- 날짜 상세는 질문 history와 표현 summary를 화면단에서 fan-out 조합한다.
+이번 문서에서 아직 잠그지 않는 것은 다음과 같다.
 
-새 구조에서는 위 특성을 그대로 재사용하지 않는다.
+- story card write RPC
+- story card 편집 payload 저장 구조
+- 홈/캘린더 위젯 구현 코드
+- 질문 답변 write 교체
 
-핵심 전환 원칙:
+## 2. 현재 질문 read 구조 추적
 
-1. 읽기 계약은 pure read여야 한다.
-2. 질문 생성은 두 번째 카드 저장 write의 후행 결과여야 한다.
-3. 홈 / 월간 / 상세는 서로 다른 읽기 모델로 분리한다.
-4. 카드 / 질문 / 답변 상태 전이는 서버 write 경계 안에서 원자적으로 끝나야 한다.
+현재 질문 read 흐름은 세 갈래다.
 
-## 2. `todayStoryLoopSummary` 계약
+### 2.1 오늘 질문
 
-### 2.1 목적
+caller:
 
-`todayStoryLoopSummary`는 홈 화면 전용 읽기 모델이다.  
-책임은 "오늘 하루 공용 루프를 홈에서 렌더링하고, 사용자의 다음 행동을 결정할 최소 정보 제공"까지다.
+1. `questionDetailProvider(null)`
+2. `todayQuestionControllerProvider`
+3. `DailyQuestionRepository.fetchTodayQuestion()`
+4. RPC `get_or_assign_today_question()`
 
-### 2.2 포함 범위
+실제 반환 모델:
 
-- 오늘 커플 날짜
-- 오늘 루프 존재 여부
-- 오늘 카드 `0..2장`
-- 질문 생성 여부
-- 질문 생성 후 최소 질문 요약
-- 답변 진행 요약
-- 홈 1차 액션 결정 정보
-- active / archived read-only 구분
+- `DailyQuestion`
 
-### 2.3 제외 범위
+### 2.2 오늘 답변 상태
 
-- 질문 상세 본문
-- 답변 본문 텍스트
-- 캘린더 월간 집계
-- 위젯 fallback 미리보기
-- 표현 / 녹음 상태
-- 편집기 원본 scene / layer payload
+caller:
 
-### 2.4 상태 모델
+1. `questionDetailProvider(null)`
+2. `todayAnswerControllerProvider`
+3. `DailyQuestionAnswerRepository.fetchTodayAnswerState()`
+4. RPC `get_today_question_answer_state()`
+
+실제 반환 모델:
+
+- `DailyQuestionAnswerState`
+
+### 2.3 과거 날짜 상세
+
+caller:
+
+1. `questionDetailProvider(targetDate)`
+2. `dailyQuestionHistoryProvider(targetDate)`
+3. `DailyQuestionHistoryRepository.fetchByDate(date)`
+4. RPC `get_daily_question_answer_state_for_date(target_date)`
+
+실제 반환 모델:
+
+- `DailyQuestionHistoryEntry`
+  - `DailyQuestion`
+  - `DailyQuestionAnswerState`
+
+근원 문제는 질문 leaf 모델과 상위 날짜 aggregate가 뒤섞여 있다는 점이다. 현재 `QuestionDetailState`는 질문이 화면의 루트였기 때문에 성립했지만, 새 구조에서는 날짜 루트 안에 카드와 질문이 함께 있어야 하므로 그대로 재사용할 수 없다.
+
+## 3. 재사용 자산과 폐기 대상
+
+### 3.1 그대로 재사용하는 타입
+
+아래 타입은 새 read 계층에서도 그대로 재사용한다.
+
+#### `CoupleAccessMode`
+
+출처:
+
+- `apps/mobile/lib/features/couple/data/couple.dart`
+
+재사용 이유:
+
+- 새 RPC들도 `access_mode`를 그대로 반환한다.
+- archived read-only 판단은 이미 이 enum이 권위를 가지고 있다.
+
+#### `QuestionSource`
+#### `DailyQuestionStatus`
+#### `DailyQuestion`
+
+출처:
+
+- `apps/mobile/lib/features/questions/data/daily_question.dart`
+
+재사용 이유:
+
+- 새 상세 RPC도 결국 질문 leaf는 기존 질문 개념을 그대로 사용한다.
+- `question_source`, `question_category`, `question_mood`, `question_status`는 기존 질문 UI가 그대로 소비하는 값이다.
+
+주의:
+
+- story loop RPC row는 `assigned_date` 대신 `couple_date`, `status` 대신 `question_status`를 준다.
+- 따라서 repository가 row adapter를 통해 `DailyQuestion.fromJson` 입력 형식으로 먼저 정규화해야 한다.
+
+#### `DailyQuestionAnswerState`
+
+출처:
+
+- `apps/mobile/lib/features/questions/data/daily_question_answer_state.dart`
+
+재사용 이유:
+
+- 상세 RPC는 `my_answer_*`, `partner_answer_*`, `answer_count`를 모두 내려준다.
+- 기존 질문 상세 UI가 이미 이 타입에 맞춰져 있다.
+
+주의:
+
+- story loop 상세 RPC도 `status` 컬럼명이 아니라 `question_status`를 반환한다.
+- repository에서 `question_status -> status`로 정규화한 뒤 `DailyQuestionAnswerState.fromJson`에 넘겨야 한다.
+
+### 3.2 재사용하지 않는 타입
+
+#### `QuestionDetailState`
+
+재사용하지 않는 이유:
+
+- 새 상세 루트는 질문이 아니라 날짜 aggregate다.
+- 카드 `0..2장`, 카드 수정 가능 여부, 루프 상태를 담을 수 없다.
+
+#### `DailyQuestionHistoryEntry`
+
+재사용하지 않는 이유:
+
+- 이 타입은 질문-first aggregate다.
+- 새 상세 aggregate는 질문이 없고 카드만 있는 날짜도 정상 상태로 다뤄야 한다.
+
+## 4. 새 read 타입 계약
+
+## 4.1 루프 상태 enum
+
+`daily_story_loops.status`는 migration `20260706000000_create_daily_story_loops.sql` 기준으로 아래 네 값만 허용된다.
 
 ```dart
-sealed class TodayStoryLoopSummaryState {
-  const TodayStoryLoopSummaryState({
-    required this.coupleDate,
-  });
+enum StoryLoopStatus {
+  waitingPartnerCard,
+  questionGenerated,
+  answeredByOne,
+  completed;
 
-  final DateTime coupleDate;
-}
-
-final class EmptyTodayStoryLoopSummaryState
-    extends TodayStoryLoopSummaryState {
-  const EmptyTodayStoryLoopSummaryState({
-    required super.coupleDate,
-  });
-}
-
-final class LoadedTodayStoryLoopSummaryState
-    extends TodayStoryLoopSummaryState {
-  const LoadedTodayStoryLoopSummaryState({
-    required super.coupleDate,
-    required this.loopId,
-    required this.loopStatus,
-    required this.storyEditLocked,
-    required this.cards,
-    required this.primaryAction,
-    this.question,
-  });
-
-  final String loopId;
-  final StoryLoopStatus loopStatus;
-  final bool storyEditLocked;
-  final List<StoryCardHomePreview> cards;
-  final TodayStoryLoopPrimaryAction primaryAction;
-  final StoryLoopQuestionHomePreview? question;
+  factory StoryLoopStatus.fromJson(String value) {
+    return switch (value) {
+      'waiting_partner_card' => StoryLoopStatus.waitingPartnerCard,
+      'question_generated' => StoryLoopStatus.questionGenerated,
+      'answered_by_one' => StoryLoopStatus.answeredByOne,
+      'completed' => StoryLoopStatus.completed,
+      _ => throw FormatException('Unknown story loop status: $value'),
+    };
+  }
 }
 ```
 
-### 2.5 핵심 규칙
+중요 규칙:
 
-- 오늘 아무도 카드를 올리지 않은 상태는 오류가 아니라 정상 `empty` 상태다.
-- read는 루프, 카드, 질문을 생성하지 않는다.
-- 홈은 `questionDetailProvider`를 직접 보지 않고 이 summary만 소비한다.
-- 라우트 문자열은 summary 계약에 넣지 않고, presentation에서 action enum을 route로 변환한다.
+- `empty`는 persisted status가 아니다.
+- `empty`는 루프 row 부재 또는 카드/질문 부재를 provider가 해석한 화면 상태다.
 
-## 3. `storyLoopDetail` 계약
+## 4.2 카드 preview 모델
 
-### 3.1 목적
-
-`storyLoopDetail`은 특정 날짜의 하루 공용 루프 상세 aggregate다.  
-기존 질문 상세와 캘린더 상세의 fan-out 구조를 날짜 단위 aggregate 하나로 수렴시킨다.
-
-### 3.2 포함 범위
-
-- 대상 날짜
-- 해당 날짜 카드 `0..2장`
-- 생성된 질문 `0..1개`
-- 답변 상태
-- 카드 수정/삭제 가능 여부
-- 질문 답변 가능 여부
-- active / archived read-only 구분
-
-### 3.3 제외 범위
-
-- 월간 grid 데이터
-- 홈 CTA 상태
-- 위젯 fallback 데이터
-- 표현 요약
-- 녹음 상태
-- 편집기 원본 전체 payload
-
-### 3.4 상태 모델
+홈 summary와 월간 summary는 카드의 미리보기 정보만 필요하다.
 
 ```dart
-enum StoryLoopDetailUnavailableReason {
-  invalidDate,
-  unavailable,
-  beforeRelationshipStartDate,
-  futureDate,
-}
-
-sealed class StoryLoopDetailState {
-  const StoryLoopDetailState({
-    required this.targetDate,
+class StoryLoopCardPreview {
+  const StoryLoopCardPreview({
+    required this.id,
+    required this.authorUserId,
+    required this.previewPath,
+    required this.submittedAt,
   });
 
-  final DateTime targetDate;
+  final String id;
+  final String authorUserId;
+  final String previewPath;
+  final DateTime submittedAt;
 }
+```
 
-final class UnavailableStoryLoopDetailState extends StoryLoopDetailState {
-  const UnavailableStoryLoopDetailState({
-    required super.targetDate,
-    required this.reason,
+이 타입이 담당하는 RPC:
+
+- `get_today_story_loop_summary()`
+- `get_story_loop_month_summary(target_month)`
+
+## 4.3 카드 detail 모델
+
+상세 화면은 preview 외에 scene path와 content flag를 함께 알아야 한다.
+
+```dart
+class StoryLoopCardDetail {
+  const StoryLoopCardDetail({
+    required this.id,
+    required this.authorUserId,
+    required this.previewPath,
+    required this.sceneDataPath,
+    required this.hasPhoto,
+    required this.hasDrawing,
+    required this.hasText,
+    required this.submittedAt,
+    required this.revision,
   });
 
-  final StoryLoopDetailUnavailableReason reason;
+  final String id;
+  final String authorUserId;
+  final String previewPath;
+  final String sceneDataPath;
+  final bool hasPhoto;
+  final bool hasDrawing;
+  final bool hasText;
+  final DateTime submittedAt;
+  final int revision;
 }
+```
 
-final class EmptyStoryLoopDetailState extends StoryLoopDetailState {
-  const EmptyStoryLoopDetailState({
-    required super.targetDate,
+이 타입이 담당하는 RPC:
+
+- `get_story_loop_detail(target_date)`
+
+## 4.4 질문 summary 모델
+
+오늘 홈 summary는 질문 leaf 전체가 아니라 홈 CTA 판단에 필요한 최소 질문 정보만 가진다.
+
+```dart
+class StoryLoopQuestionSummary {
+  const StoryLoopQuestionSummary({
+    required this.question,
+    required this.myAnswerExists,
+    required this.partnerAnswerExists,
+    required this.answerCount,
+  });
+
+  final DailyQuestion question;
+  final bool myAnswerExists;
+  final bool partnerAnswerExists;
+  final int answerCount;
+}
+```
+
+분리 이유:
+
+- `get_today_story_loop_summary()`는 `my_answer_id`, `my_answer_text`를 주지 않는다.
+- 따라서 홈 summary에 `DailyQuestionAnswerState`를 바로 재사용하면 가짜 nullable 필드가 늘어난다.
+
+## 4.5 질문 detail 모델
+
+상세 날짜는 질문 leaf와 답변 상태를 모두 가져야 한다.
+
+```dart
+class StoryLoopQuestionDetail {
+  const StoryLoopQuestionDetail({
+    required this.question,
+    required this.answerState,
+  });
+
+  final DailyQuestion question;
+  final DailyQuestionAnswerState answerState;
+}
+```
+
+이 타입이 담당하는 RPC:
+
+- `get_story_loop_detail(target_date)`
+
+## 4.6 오늘 summary aggregate
+
+```dart
+class TodayStoryLoopSummary {
+  const TodayStoryLoopSummary({
+    required this.coupleId,
+    required this.coupleDate,
     required this.accessMode,
-    required this.canCreateOrEditStory,
-  });
-
-  final StoryLoopDetailAccessMode accessMode;
-  final bool canCreateOrEditStory;
-}
-
-final class LoadedStoryLoopDetailState extends StoryLoopDetailState {
-  const LoadedStoryLoopDetailState({
-    required super.targetDate,
-    required this.loopId,
-    required this.accessMode,
-    required this.loopStatus,
     required this.storyEditLocked,
+    required this.canEditStory,
+    required this.canAnswerQuestion,
+    required this.cardCount,
     required this.cards,
+    this.loopId,
+    this.loopStatus,
     this.question,
   });
 
-  final String loopId;
-  final StoryLoopDetailAccessMode accessMode;
-  final StoryLoopStatus loopStatus;
+  final String coupleId;
+  final DateTime coupleDate;
+  final CoupleAccessMode accessMode;
+  final String? loopId;
+  final StoryLoopStatus? loopStatus;
   final bool storyEditLocked;
-  final List<StoryCardDetailItem> cards;
+  final bool canEditStory;
+  final bool canAnswerQuestion;
+  final int cardCount;
+  final List<StoryLoopCardPreview> cards;
+  final StoryLoopQuestionSummary? question;
+}
+```
+
+중요 규칙:
+
+- `loopId == null`은 오늘 날짜에 아직 루프 row가 생성되지 않은 정상 상태다.
+- `cards.length`는 항상 `0..2`
+- `question != null`이면 질문 leaf가 생성된 상태다.
+
+## 4.7 날짜 detail aggregate
+
+```dart
+class StoryLoopDetail {
+  const StoryLoopDetail({
+    required this.coupleId,
+    required this.coupleDate,
+    required this.accessMode,
+    required this.storyEditLocked,
+    required this.canEditStory,
+    required this.canAnswerQuestion,
+    required this.cardCount,
+    required this.cards,
+    this.loopId,
+    this.loopStatus,
+    this.question,
+  });
+
+  final String coupleId;
+  final DateTime coupleDate;
+  final CoupleAccessMode accessMode;
+  final String? loopId;
+  final StoryLoopStatus? loopStatus;
+  final bool storyEditLocked;
+  final bool canEditStory;
+  final bool canAnswerQuestion;
+  final int cardCount;
+  final List<StoryLoopCardDetail> cards;
   final StoryLoopQuestionDetail? question;
 }
 ```
 
-### 3.5 핵심 규칙
+중요 규칙:
 
-- 날짜 자체가 유효하지 않으면 `unavailable`
-- 날짜는 유효하지만 루프 콘텐츠가 없으면 `empty`
-- 카드 또는 질문 중 하나라도 있으면 `loaded`
-- 오늘/과거 분기를 위해 여러 provider를 조합하지 않고, 항상 날짜 aggregate 하나만 읽는다.
+- 카드만 있고 질문이 없는 날짜를 표현해야 하므로 `question`은 nullable이다.
+- 질문이 존재하면 `answerState`는 항상 함께 붙는다.
 
-## 4. `storyLoopMonthSummary` RPC 계약
+## 4.8 월간 summary row 모델
 
-### 4.1 목적
+```dart
+class StoryLoopMonthSummaryDay {
+  const StoryLoopMonthSummaryDay({
+    required this.coupleDate,
+    required this.loopStatus,
+    required this.cardCount,
+    required this.cards,
+  });
 
-월간 캘린더 grid는 날짜 셀에 무엇을 그릴지 결정하기 위한 month summary만 소비한다.  
-단건 상세 RPC를 월별로 반복 호출하는 구조는 사용하지 않는다.
-
-### 4.2 도메인 해석
-
-- 날짜별 정렬된 카드 목록 `0..2장`
-- 정렬 기준은 `submitted_at ASC`
-- 1장이면 단독 카드
-- 2장이면 뒤 카드 + 앞 카드 겹침
-
-### 4.3 transport 원칙
-
-- RPC는 1일 1행 flat row 형식을 사용한다.
-- `first_card_*`, `second_card_*` 형태로 반환한다.
-- Flutter repository 계층에서 ordered cards list로 복원한다.
-
-### 4.4 RPC 시그니처 초안
-
-```sql
-create or replace function public.get_story_loop_month_summary(
-  target_month date
-)
-returns table (
-  couple_date date,
-  loop_status text,
-  card_count integer,
-
-  first_card_id uuid,
-  first_card_author_user_id uuid,
-  first_card_preview_path text,
-  first_card_submitted_at timestamptz,
-
-  second_card_id uuid,
-  second_card_author_user_id uuid,
-  second_card_preview_path text,
-  second_card_submitted_at timestamptz
-)
+  final DateTime coupleDate;
+  final StoryLoopStatus loopStatus;
+  final int cardCount;
+  final List<StoryLoopCardPreview> cards;
+}
 ```
 
-### 4.5 필드 의미
+중요 규칙:
 
-- `couple_date`
-  - 커플 timezone 기준 날짜
-- `loop_status`
-  - UI 압축 상태가 아니라 서버 canonical 상태
-- `card_count`
-  - 해당 날짜 카드 수
-- `first_card_*`
-  - 업로드 시간상 먼저 올라온 카드
-- `second_card_*`
-  - 업로드 시간상 나중 카드
+- month summary RPC는 카드가 1장 이상 있는 날짜만 반환한다.
+- 따라서 이 모델은 `empty` 날짜를 표현하지 않는다.
 
-### 4.6 추가 규칙
+## 5. repository 계약
 
-- 월간 grid는 카드가 1장 이상 존재하는 날짜만 응답 row로 받는다.
-- `card_count = 0`인 날짜는 응답에서 제외한다.
-- 질문 본문, 답변 본문, 편집기 원본 payload는 월간 RPC에 포함하지 않는다.
-- `preview_path`는 홈 / 캘린더 / 위젯 공통 미리보기 결과물의 참조값이다.
+권장 위치:
 
-## 5. 루프 / 카드 / 질문 생성 write 경계
+- `apps/mobile/lib/features/story_loops/data/story_loop_read_repository.dart`
 
-### 5.1 최상위 원칙
+권장 인터페이스:
 
-1. 읽기 RPC는 pure read여야 한다.
-2. 질문 생성은 카드 write의 후행 결과여야 한다.
-3. 클라이언트는 `카드 저장 -> 재조회 -> 질문 생성 요청` orchestration을 수행하지 않는다.
-4. 상태 전이는 서버 write 경계 안에서 원자적으로 끝나야 한다.
+```dart
+abstract interface class StoryLoopReadRepository {
+  Future<TodayStoryLoopSummary?> fetchTodaySummary();
 
-### 5.2 읽기 RPC 원칙
+  Future<StoryLoopDetail?> fetchDetail(DateTime date);
 
-아래 read 계열은 모두 pure read로 고정한다.
-
-- `get_today_story_loop_summary`
-- `get_story_loop_detail`
-- `get_story_loop_month_summary`
-
-금지 사항:
-
-- read에서 루프 생성
-- read에서 카드 생성
-- read에서 질문 생성
-
-### 5.3 advisory lock 기준
-
-루프 단위 핵심 lock key:
-
-- `couple_id + couple_date`
-
-예시:
-
-```sql
-perform pg_advisory_xact_lock(
-  hashtext('story_loop'),
-  hashtext(target_couple.id::text || ':' || target_date::text)
-);
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month);
+}
 ```
 
-질문 답변 write는 질문 단위 lock을 별도로 사용할 수 있지만, 질문 생성 자체는 루프 lock 내부에서 끝나야 한다.
+반환 규칙:
 
-### 5.4 persisted canonical status
+- `fetchTodaySummary()`
+  - RPC 응답이 empty set이면 `null`
+  - row가 있으면 `TodayStoryLoopSummary`
+- `fetchDetail(date)`
+  - RPC 응답이 empty set이면 `null`
+  - row가 있으면 `StoryLoopDetail`
+- `fetchMonthSummary(month)`
+  - empty list 허용
 
-persisted canonical status는 아래 수준으로 고정한다.
+이 계약을 택하는 이유:
 
-- `waiting_partner_card`
-- `question_generated`
-- `answered_by_one`
-- `completed`
+- phase 7 RPC는 invalid range일 때 empty set을 반환한다.
+- provider가 couple/date 유효성 검사를 먼저 하고, repository는 transport 결과만 보존하는 편이 현재 구조와 잘 맞는다.
 
-추가 해석:
+## 6. RPC row 정규화 규칙
 
-- `empty`는 persisted status가 아니라 row 부재를 read model이 해석한 상태다.
-- `cards_completed`는 두 번째 카드 저장과 질문 생성이 같은 트랜잭션에서 끝나므로 별도 persisted 상태로 유지하지 않는다.
+story loop RPC는 기존 질문 모델과 컬럼명이 다르다. 따라서 repository 안에서 row adapter를 먼저 거쳐야 한다.
 
-### 5.5 public write 경계
+## 6.1 `DailyQuestion` adapter
 
-1차 구현에서 public write 경계는 아래처럼 잡는다.
+입력 source:
 
-- `upsert_today_story_card`
-- `delete_today_story_card`
-- 질문 생성 없는 답변 제출 버전의 `submit_today_question_answer`
+- `get_today_story_loop_summary()`
+- `get_story_loop_detail(target_date)`
 
-#### `upsert_today_story_card`
+정규화 규칙:
 
-책임:
+```dart
+Map<String, dynamic> _toDailyQuestionJson(
+  Map<String, dynamic> row,
+) {
+  return {
+    'daily_question_id': row['daily_question_id'],
+    'couple_id': row['couple_id'],
+    'question_id': row['question_id'],
+    'question_text': row['question_text'],
+    'question_source': row['question_source'],
+    'question_category': row['question_category'],
+    'question_mood': row['question_mood'],
+    'assigned_date': row['couple_date'],
+    'status': row['question_status'],
+  };
+}
+```
 
-1. 인증
-2. active couple 조회
-3. 서버 기준 `current_couple_date` 결정
-4. `(couple_id, couple_date)` advisory lock 획득
-5. 루프 조회, 없으면 생성
-6. 내 카드 생성 또는 수정
-7. 카드 수 재계산
-8. 카드 수가 1장이면 `waiting_partner_card`
-9. 카드 수가 2장이고 질문이 없으면 내부 질문 생성
-10. 루프 상태를 `question_generated`로 전이
-11. 카드 잠금 반영
-12. 알림 이벤트 적재
-13. 최신 read model 반환
+이유:
 
-#### `delete_today_story_card`
+- `DailyQuestion.fromJson`이 기대하는 key와 story loop RPC key가 다르다.
 
-책임:
+## 6.2 `DailyQuestionAnswerState` adapter
 
-1. 인증
-2. active couple 조회
-3. 서버 기준 `current_couple_date` 결정
-4. `(couple_id, couple_date)` advisory lock 획득
-5. 내 카드 revision 검증
-6. 질문 생성 이후면 삭제 차단
-7. 카드 삭제
-8. 남은 카드 수 재계산
-9. 남은 카드가 1장이면 `waiting_partner_card`
-10. 남은 카드가 0장이면 루프 row 제거
+입력 source:
 
-### 5.6 내부 질문 생성 helper
+- `get_story_loop_detail(target_date)`
 
-질문 pool 선택 로직은 기존 `daily_questions` 축의 helper를 재사용할 수 있다.  
-다만 역할은 "read 시 assign"이 아니라 "두 번째 카드 저장 시 내부 assign"으로 바뀐다.
+정규화 규칙:
 
-허용되는 재사용:
+```dart
+Map<String, dynamic> _toAnswerStateJson(
+  Map<String, dynamic> row,
+) {
+  return {
+    'daily_question_id': row['daily_question_id'],
+    'status': row['question_status'],
+    'my_answer_id': row['my_answer_id'],
+    'my_answer_text': row['my_answer_text'],
+    'my_answer_answered_at': row['my_answer_answered_at'],
+    'my_answer_updated_at': row['my_answer_updated_at'],
+    'partner_answer_exists': row['partner_answer_exists'],
+    'partner_answer_id': row['partner_answer_id'],
+    'partner_answer_text': row['partner_answer_text'],
+    'partner_answer_answered_at': row['partner_answer_answered_at'],
+    'partner_answer_updated_at': row['partner_answer_updated_at'],
+    'answer_count': row['answer_count'],
+  };
+}
+```
 
-- curated 질문 선택 순서
-- 질문 pool 순환 규칙
-- couple/date unique insert 패턴
+## 6.3 카드 순서 복원 규칙
 
-허용되지 않는 재사용:
+오늘 summary, detail, month summary는 모두 `first_card_*`, `second_card_*` flat row를 쓴다.
 
-- `get_or_assign_*` 계열 read 진입 assign 구조를 새 루프 read에 그대로 노출하는 것
+repository 규칙:
 
-### 5.7 답변 write 경계 수정
+1. `first_card_id != null`이면 첫 번째 카드를 리스트에 넣는다.
+2. `second_card_id != null`이면 두 번째 카드를 이어서 넣는다.
+3. 리스트 순서는 항상 RPC 순서를 유지한다.
 
-답변 write는 더 이상 질문 생성을 유발하면 안 된다.
+즉 presentation은 `cards[0]`, `cards[1]`의 순서를 그대로 믿고 사용하면 된다.
 
-새 답변 write 원칙:
+## 7. provider 해석 규칙
 
-1. 인증
-2. active couple 조회
-3. 서버 기준 `current_couple_date` 결정
-4. 해당 날짜 루프 조회
-5. 루프 상태가 `question_generated` 이상인지 검증
-6. 연결된 질문이 없으면 실패
-7. 질문 단위 lock 획득
-8. 답변 upsert
-9. 답변 수 재계산
-10. `daily_questions.status` 갱신
-11. 루프 상태를 `answered_by_one` / `completed`로 동기화
+## 7.1 `storyLoopDetailProvider(date)`
 
-즉 답변 write는 루프 또는 질문을 생성하지 않는다.
+현재 `questionDetailProvider`가 하던 날짜 유효성 검사는 유지한다.
 
-### 5.8 알림 이벤트 적재
+검사 순서:
 
-스토리 루프 write는 push 직접 발송이 아니라 이벤트 적재까지만 책임진다.
+1. `coupleControllerProvider.future`
+2. `canReadSharedData`
+3. `relationshipStartDate`
+4. `targetDate < relationshipStartDate`
+5. `targetDate > currentDate`
+6. 그 다음에만 `StoryLoopReadRepository.fetchDetail(date)`
 
-1차 범위의 새 이벤트:
+이 규칙을 유지하는 이유:
 
-- 상대 스토리 카드 업로드
-- 질문 생성 완료
+- `get_story_loop_detail(target_date)`는 유효하지 않은 날짜에서 empty set을 반환한다.
+- 하지만 화면은 `future`, `beforeRelationshipStartDate`, `unavailable`을 서로 다른 이유로 구분해야 한다.
+- 이 구분은 현재도 provider가 하고 있으며, 새 구조에서도 caller에서 유지해야 한다.
 
-기존 답변 완료 알림은 `daily_question_answers` 축의 패턴을 이어서 사용한다.
+## 7.2 `empty`와 `loaded` 구분
 
-핵심 규칙:
+`StoryLoopDetail` row가 존재하더라도 아래 조건이면 화면 상태는 `empty`로 해석한다.
 
-- write 함수 안에서 이벤트 row 적재
-- Edge Function 직접 호출 금지
-- 클라이언트에서 알림 발송 orchestration 금지
+- `loopId == null`
+- `cardCount == 0`
+- `question == null`
 
-## 6. 최종 정리
+그 외에는 `loaded`다.
 
-현재 저장소는 질문-first 구조라서 read가 write를 유발한다.  
-새 스토리 카드 루프 구조는 이를 허용하지 않고, 녹음 기능처럼 write 함수 하나가 상태 전이와 이벤트 적재를 끝내는 방향으로 재구성해야 한다.
+즉 `empty`는 에러가 아니라 유효한 날짜의 정상 상태다.
 
-1차 구현 방향은 아래 한 줄로 정리된다.
+## 7.3 `todayStoryLoopSummaryProvider`
 
-- 읽기는 루프를 해석만 하고, 쓰기는 루프 상태를 원자적으로 전이시킨다.
+홈 summary도 couple access 검사를 먼저 수행한다.
+
+해석 규칙:
+
+- 커플 자체가 없거나 읽기 불가면 summary 호출 이전에 상위 unavailable 상태
+- repository row가 있고 `loopId == null && cardCount == 0 && question == null`이면 오늘 빈 상태
+- 카드가 1장 이상이거나 질문이 존재하면 loaded 상태
+
+## 8. 파일 배치 확정안
+
+이번 계약 기준 `features/story_loops/data` 확정안은 아래다.
+
+```text
+apps/mobile/lib/features/story_loops/data/
+  story_loop_status.dart
+  story_loop_card_preview.dart
+  story_loop_card_detail.dart
+  story_loop_question_summary.dart
+  story_loop_question_detail.dart
+  today_story_loop_summary.dart
+  story_loop_detail.dart
+  story_loop_month_summary_day.dart
+  story_loop_read_repository.dart
+```
+
+중요한 구조 원칙:
+
+- 질문 leaf는 기존 `questions/data` 모델을 재사용한다.
+- 날짜 aggregate는 `story_loops/data`가 소유한다.
+- month summary는 질문 leaf를 직접 참조하지 않는다.
+
+## 9. 최종 정리
+
+이번 계약의 핵심은 새 타입을 많이 만드는 것이 아니라, 질문 leaf와 날짜 aggregate의 경계를 명확히 나누는 것이다.
+
+정리하면 다음과 같다.
+
+1. 질문 자체는 `DailyQuestion`, `DailyQuestionAnswerState`를 계속 쓴다.
+2. 카드와 루프 상태는 `story_loops` 새 모델이 소유한다.
+3. story loop RPC row는 repository에서 먼저 정규화한 뒤 기존 질문 leaf로 변환한다.
+4. provider는 couple/date 유효성 검사를 계속 담당하고, repository는 transport 변환만 담당한다.
+5. `empty`는 persisted status가 아니라 상위 aggregate 해석 결과다.
+
+이 계약을 기준으로 다음 단계에서는 `features/story_loops` read repository와 provider 골격을 실제 코드로 내릴 수 있다.
