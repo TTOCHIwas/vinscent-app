@@ -55,18 +55,16 @@ class FakeDailyQuestionAnswerRepository
   final DailyQuestionAnswerState submittedState;
   final Object? submitError;
   final submittedAnswers = <String>[];
-  var fetchCallCount = 0;
+  final submittedQuestionIds = <String>[];
   var submitCallCount = 0;
 
   @override
-  Future<DailyQuestionAnswerState> fetchTodayAnswerState() async {
-    fetchCallCount += 1;
-    return currentState;
-  }
-
-  @override
-  Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) async {
+  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+    required String dailyQuestionId,
+    required String answerText,
+  }) async {
     submitCallCount += 1;
+    submittedQuestionIds.add(dailyQuestionId);
     submittedAnswers.add(answerText);
     final submitError = this.submitError;
     if (submitError != null) {

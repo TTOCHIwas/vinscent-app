@@ -13,10 +13,6 @@ final dailyQuestionAnswerRepositoryProvider =
     });
 
 abstract interface class DailyQuestionAnswerRepository {
-  Future<DailyQuestionAnswerState> fetchTodayAnswerState();
-
-  Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText);
-
   Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
     required String dailyQuestionId,
     required String answerText,
@@ -26,37 +22,6 @@ abstract interface class DailyQuestionAnswerRepository {
 class SupabaseDailyQuestionAnswerRepository
     implements DailyQuestionAnswerRepository {
   const SupabaseDailyQuestionAnswerRepository();
-
-  @override
-  Future<DailyQuestionAnswerState> fetchTodayAnswerState() async {
-    if (!AppConfig.isSupabaseConfigured) {
-      throw const DailyQuestionAnswerRepositoryException(
-        DailyQuestionAnswerFailureReason.configMissing,
-      );
-    }
-
-    try {
-      final data = await Supabase.instance.client
-          .rpc('get_today_question_answer_state')
-          .timeout(AppConfig.supabaseRpcTimeout);
-
-      return DailyQuestionAnswerState.fromJson(_asRow(data));
-    } on TimeoutException {
-      throw const DailyQuestionAnswerRepositoryException(
-        DailyQuestionAnswerFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    }
-  }
-
-  @override
-  Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) async {
-    return _submitAnswer(
-      functionName: 'submit_today_question_answer',
-      params: {'answer_text': answerText},
-    );
-  }
 
   @override
   Future<DailyQuestionAnswerState> submitStoryLoopAnswer({

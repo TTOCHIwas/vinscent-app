@@ -97,19 +97,6 @@ class _FakeDailyQuestionAnswerRepository
   final submittedAnswers = <String>[];
 
   @override
-  Future<DailyQuestionAnswerState> fetchTodayAnswerState() async {
-    return submittedState;
-  }
-
-  @override
-  Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) {
-    return submitStoryLoopAnswer(
-      dailyQuestionId: 'daily-question-id',
-      answerText: answerText,
-    );
-  }
-
-  @override
   Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
     required String dailyQuestionId,
     required String answerText,

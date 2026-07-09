@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
-import 'package:vinscent/features/questions/application/today_question_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
@@ -523,8 +522,6 @@ Future<GoRouter> _pumpRouter(
   Map<DateTime, StoryLoopDetail?> storyLoopDetails = const {},
   StoryLoopReadRepository? storyLoopRepository,
   DateTime? relationshipStartDate,
-  Future<DailyQuestion?> Function(Ref ref, TodayQuestionController notifier)?
-  questionBuilder,
 }) async {
   final today = DateTime(2026, 5, 31);
   final normalizedDetails = <DateTime, StoryLoopDetail?>{
@@ -588,9 +585,6 @@ Future<GoRouter> _pumpRouter(
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async =>
               _activeCoupleFor(relationshipStartDate: relationshipStartDate),
-        ),
-        todayQuestionControllerProvider.overrideWithBuild(
-          questionBuilder ?? (ref, notifier) async => _dailyQuestion,
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
         storyLoopReadRepositoryProvider.overrideWithValue(
@@ -693,12 +687,10 @@ class _FakeDailyQuestionAnswerRepository
   var submitCallCount = 0;
 
   @override
-  Future<DailyQuestionAnswerState> fetchTodayAnswerState() async {
-    return currentState;
-  }
-
-  @override
-  Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) async {
+  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+    required String dailyQuestionId,
+    required String answerText,
+  }) async {
     submitCallCount += 1;
     submittedAnswers.add(answerText);
     if (submitFailuresBeforeSuccess > 0) {
@@ -708,14 +700,6 @@ class _FakeDailyQuestionAnswerRepository
 
     currentState = submittedState;
     return submittedState;
-  }
-
-  @override
-  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
-    required String dailyQuestionId,
-    required String answerText,
-  }) {
-    return submitTodayAnswer(answerText);
   }
 }
 
