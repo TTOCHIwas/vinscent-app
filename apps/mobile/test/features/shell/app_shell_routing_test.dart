@@ -9,28 +9,26 @@ import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
-import 'package:vinscent/features/questions/application/today_question_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
-import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
-import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
-import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_header.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_question_summary.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 
 import '../../support/couple_fixtures.dart';
 import '../../support/question_answer_fixtures.dart';
 import '../../support/story_loop_fixtures.dart';
 
 void main() {
-  testWidgets('shows shell around authenticated home route', (tester) async {
+  testWidgets('인증된 홈 경로에 shell을 보여준다', (tester) async {
     await _pumpApp(
       tester,
       question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(pendingAnswerState),
+      todayAnswerState: pendingAnswerState,
     );
 
     expect(find.byType(AppHeader), findsOneWidget);
@@ -38,16 +36,14 @@ void main() {
     expect(find.text('홈'), findsOneWidget);
     expect(find.text('달력'), findsOneWidget);
     expect(find.text('AI'), findsOneWidget);
-    expect(find.text('오늘의 질문'), findsOneWidget);
+    expect(find.text('오늘의 스토리'), findsOneWidget);
   });
 
-  testWidgets('moves between shell routes through bottom bar and header', (
-    tester,
-  ) async {
+  testWidgets('bottom bar와 header로 shell route를 이동한다', (tester) async {
     await _pumpApp(
       tester,
       question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(pendingAnswerState),
+      todayAnswerState: pendingAnswerState,
     );
 
     await tester.tap(find.text('달력'));
@@ -73,16 +69,15 @@ void main() {
     expect(find.text('설정'), findsOneWidget);
   });
 
-  testWidgets('opens question edit route when my answer is missing', (
-    tester,
-  ) async {
+  testWidgets('내 답변이 없으면 답변 작성 route로 이동한다', (tester) async {
     await _pumpApp(
       tester,
       question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(pendingAnswerState),
+      todayAnswerState: pendingAnswerState,
     );
 
-    await tester.tap(find.text(_dailyQuestion.questionText));
+    await tester.ensureVisible(find.text('답변 남기기'));
+    await tester.tap(find.text('답변 남기기'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppHeader), findsNothing);
@@ -91,16 +86,15 @@ void main() {
     expect(find.text('내 답변'), findsNothing);
   });
 
-  testWidgets('opens readonly question route after my answer is written', (
-    tester,
-  ) async {
+  testWidgets('내 답변이 있으면 읽기 전용 질문 route로 이동한다', (tester) async {
     await _pumpApp(
       tester,
       question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(myAnswerOnlyState()),
+      todayAnswerState: myAnswerOnlyState(),
     );
 
-    await tester.tap(find.text('상대방의 답변을 기다리고 있어요.'));
+    await tester.ensureVisible(find.text('오늘 질문 보기'));
+    await tester.tap(find.text('오늘 질문 보기'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppHeader), findsNothing);
@@ -110,16 +104,17 @@ void main() {
     expect(_tabs(tester).first.isSelected, isTrue);
   });
 
-  testWidgets('opens readonly question route from ai placeholder state', (
-    tester,
-  ) async {
+  testWidgets('AI placeholder 상태에서도 읽기 전용 질문 route로 이동한다', (tester) async {
     await _pumpApp(
       tester,
       question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(completedAnswerState),
+      todayAnswerState: completedAnswerState,
     );
 
-    await tester.tap(find.text('AI 한 줄 평이 여기에 표시될 예정이에요.'));
+    expect(find.text('AI 한 줄 평이 여기에 표시될 예정이에요.'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('오늘 질문 보기'));
+    await tester.tap(find.text('오늘 질문 보기'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppHeader), findsNothing);
@@ -129,18 +124,15 @@ void main() {
     expect(_tabs(tester).first.isSelected, isTrue);
   });
 
-  testWidgets('opens dated question answer route under calendar tab', (
-    tester,
-  ) async {
+  testWidgets('달력 탭의 날짜 질문 route를 연다', (tester) async {
     await _pumpApp(
       tester,
       question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(pendingAnswerState),
-      historyRepository: const _FakeDailyQuestionHistoryRepository(),
+      todayAnswerState: pendingAnswerState,
     );
 
     GoRouter.of(
-      tester.element(find.text('오늘의 질문')),
+      tester.element(find.text('오늘의 스토리')),
     ).go('/calendar/question?date=2026-05-30');
     await tester.pumpAndSettle();
 
@@ -155,17 +147,27 @@ void main() {
 Future<void> _pumpApp(
   WidgetTester tester, {
   required DailyQuestion question,
-  required FakeDailyQuestionAnswerRepository answerRepository,
-  DailyQuestionHistoryRepository? historyRepository,
+  required DailyQuestionAnswerState todayAnswerState,
 }) async {
   final storyLoopRepository = FakeStoryLoopReadRepository(
+    todaySummary: sampleTodaySummary(
+      coupleDate: _today,
+      loopStatus: _summaryStatusFor(todayAnswerState),
+      question: StoryLoopQuestionSummary(
+        question: question,
+        myAnswerExists: todayAnswerState.hasMyAnswer,
+        partnerAnswerExists: todayAnswerState.partnerAnswerExists,
+        answerCount: todayAnswerState.answerCount,
+      ),
+    ),
     details: {
       _today: sampleStoryLoopDetail(
         coupleDate: _today,
         canAnswerQuestion: true,
+        loopStatus: _summaryStatusFor(todayAnswerState),
         question: StoryLoopQuestionDetail(
           question: question,
-          answerState: answerRepository.currentState,
+          answerState: todayAnswerState,
         ),
       ),
       DateTime(2026, 5, 30): sampleStoryLoopDetail(
@@ -192,15 +194,6 @@ Future<void> _pumpApp(
           (ref, notifier) async => _activeCouple,
         ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
-        todayQuestionControllerProvider.overrideWithBuild(
-          (ref, notifier) async => question,
-        ),
-        dailyQuestionAnswerRepositoryProvider.overrideWithValue(
-          answerRepository,
-        ),
-        dailyQuestionHistoryRepositoryProvider.overrideWithValue(
-          historyRepository ?? const _FakeDailyQuestionHistoryRepository(),
-        ),
         storyLoopReadRepositoryProvider.overrideWithValue(storyLoopRepository),
       ],
       child: const VinscentApp(),
@@ -208,6 +201,18 @@ Future<void> _pumpApp(
   );
 
   await tester.pumpAndSettle();
+}
+
+StoryLoopStatus _summaryStatusFor(DailyQuestionAnswerState state) {
+  if (state.hasMyAnswer && state.partnerAnswerExists) {
+    return StoryLoopStatus.completed;
+  }
+
+  if (state.hasMyAnswer || state.partnerAnswerExists) {
+    return StoryLoopStatus.answeredByOne;
+  }
+
+  return StoryLoopStatus.questionGenerated;
 }
 
 List<ShellTab> _tabs(WidgetTester tester) {
@@ -241,19 +246,6 @@ final _dailyQuestion = DailyQuestion(
   assignedDate: _today,
   status: DailyQuestionStatus.pending,
 );
-
-class _FakeDailyQuestionHistoryRepository
-    implements DailyQuestionHistoryRepository {
-  const _FakeDailyQuestionHistoryRepository();
-
-  @override
-  Future<DailyQuestionHistoryEntry?> fetchByDate(DateTime date) async {
-    return DailyQuestionHistoryEntry(
-      question: _historyQuestion,
-      answerState: _historyAnswerState,
-    );
-  }
-}
 
 final _historyQuestion = DailyQuestion(
   dailyQuestionId: 'history-daily-question-id',

@@ -10,139 +10,247 @@ import 'package:vinscent/features/expressions/data/couple_expression.dart';
 import 'package:vinscent/features/expressions/data/couple_expression_repository.dart';
 import 'package:vinscent/features/expressions/data/couple_expression_summary.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
-import 'package:vinscent/features/questions/application/today_question_controller.dart';
-import 'package:vinscent/features/questions/data/daily_question.dart';
-import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
+import 'package:vinscent/features/profile/application/profile_controller.dart';
+import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_question_summary.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
+import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
 
 import '../../../support/couple_fixtures.dart';
-import '../../../support/question_answer_fixtures.dart';
+import '../../../support/story_loop_fixtures.dart';
 
 void main() {
-  testWidgets('shows active couple day count and unavailable question copy', (
-    tester,
-  ) async {
+  testWidgets('활성 커플의 day count와 빈 스토리 상태를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
     );
 
     expect(find.text('우리'), findsOneWidget);
     expect(find.text('D+2일째', findRichText: true), findsOneWidget);
-    expect(find.text('오늘의 질문'), findsOneWidget);
-    expect(find.text('오늘 질문이 아직 준비되지 않았어요.'), findsOneWidget);
+    expect(find.text('오늘의 스토리'), findsOneWidget);
+    expect(find.text('오늘 스토리 카드를 아직 아무도 올리지 않았어요.'), findsOneWidget);
   });
 
-  testWidgets('shows today question text before any answer is written', (
-    tester,
-  ) async {
+  testWidgets('질문이 생성되면 질문 문구를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(pendingAnswerState),
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: false,
+          partnerAnswerExists: false,
+          answerCount: 0,
+        ),
+      ),
     );
 
-    expect(find.text('오늘의 질문'), findsOneWidget);
+    expect(find.text('오늘의 스토리'), findsOneWidget);
     expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+    expect(find.text('답변 남기기'), findsOneWidget);
   });
 
-  testWidgets('shows today question loading state', (tester) async {
+  testWidgets('today story summary loading 상태를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      questionLoading: true,
+      storyLoopRepository: _PendingStoryLoopReadRepository(),
       settle: false,
     );
 
-    expect(find.text('오늘의 질문'), findsOneWidget);
-    expect(find.text('오늘 질문을 불러오고 있어요.'), findsOneWidget);
+    expect(find.text('오늘의 스토리'), findsOneWidget);
+    expect(find.text('오늘 스토리를 불러오고 있어요.'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('shows today question error state', (tester) async {
+  testWidgets('today story summary error 상태를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      questionError: Exception('question failed'),
+      storyLoopRepository: _ThrowingStoryLoopReadRepository(),
     );
 
-    expect(find.text('오늘 질문을 불러오지 못했어요.'), findsOneWidget);
+    expect(find.text('오늘 스토리를 불러오지 못했어요.'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });
 
-  testWidgets('shows missing couple message', (tester) async {
+  testWidgets('커플 정보가 없으면 상태 메시지를 보여준다', (tester) async {
     await _pumpHome(tester, couple: null, today: _today);
 
     expect(find.text('커플 정보를 찾을 수 없어요.'), findsOneWidget);
+    expect(find.text('오늘 스토리를 아직 확인할 수 없어요.'), findsOneWidget);
   });
 
-  testWidgets('shows missing relationship start date message', (tester) async {
+  testWidgets('처음 만난 날이 없으면 시작일 안내를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCoupleWithoutDate,
       today: _today,
     );
 
-    expect(find.text('첫 만난 날을 먼저 입력해주세요.'), findsOneWidget);
+    expect(find.text('처음 만난 날을 먼저 입력해 주세요.'), findsOneWidget);
+    expect(find.text('오늘 스토리를 아직 확인할 수 없어요.'), findsOneWidget);
   });
 
-  testWidgets('shows partner answered copy before my answer is written', (
-    tester,
-  ) async {
+  testWidgets('내 카드만 있으면 상대 대기 상태를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(
-        partnerAnsweredOnlyState,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: StoryLoopStatus.waitingPartnerCard,
+        cardCount: 1,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        storyEditLocked: false,
+        cards: [
+          samplePreviewCard(
+            authorUserId: _profile.id,
+            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('내 스토리 카드가 올라갔어요.'), findsOneWidget);
+    expect(find.text('상대 카드가 오면 오늘 질문이 생성돼요.'), findsOneWidget);
+  });
+
+  testWidgets('상대 카드만 있으면 내 작성 대기 상태를 보여준다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: StoryLoopStatus.waitingPartnerCard,
+        cardCount: 1,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        storyEditLocked: false,
+        cards: [
+          samplePreviewCard(
+            authorUserId: 'partner-id',
+            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('상대가 스토리 카드를 올렸어요.'), findsOneWidget);
+    expect(find.text('내 카드 작성 화면은 다음 단계에서 연결돼요.'), findsOneWidget);
+  });
+
+  testWidgets('두 카드가 있고 질문이 없으면 질문 생성 중 상태를 보여준다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: 2,
+        storyEditLocked: false,
+        canEditStory: false,
+        canAnswerQuestion: false,
+        cards: [
+          samplePreviewCard(
+            authorUserId: _profile.id,
+            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+          ),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'https://example.com/card-2.png',
+            submittedAt: DateTime.parse('2026-05-31T09:10:00Z'),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('질문 생성 중'), findsOneWidget);
+    expect(find.text('두 카드가 모두 도착했어요. 오늘 질문을 준비하고 있어요.'), findsOneWidget);
+  });
+
+  testWidgets('상대가 먼저 답변을 남기면 안내 문구를 보여준다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: false,
+          partnerAnswerExists: true,
+          answerCount: 1,
+        ),
       ),
     );
 
     expect(find.text('상대방은 답변을 남겼어요.'), findsOneWidget);
   });
 
-  testWidgets('shows waiting for partner copy after my answer is written', (
-    tester,
-  ) async {
+  testWidgets('내가 답변을 남기면 상대 답변 대기 문구를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(myAnswerOnlyState()),
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: true,
+          partnerAnswerExists: false,
+          answerCount: 1,
+        ),
+      ),
     );
 
     expect(find.text('상대방의 답변을 기다리고 있어요.'), findsOneWidget);
+    expect(find.text('오늘 질문 보기'), findsOneWidget);
   });
 
-  testWidgets('shows ai placeholder copy when both answers are completed', (
-    tester,
-  ) async {
+  testWidgets('양쪽 답변이 모두 있으면 AI placeholder 문구를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      question: _dailyQuestion,
-      answerRepository: FakeDailyQuestionAnswerRepository(completedAnswerState),
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        loopStatus: StoryLoopStatus.completed,
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: true,
+          partnerAnswerExists: true,
+          answerCount: 2,
+        ),
+      ),
     );
 
     expect(find.text('AI 한 줄 평이 여기에 표시될 예정이에요.'), findsOneWidget);
   });
 
-  testWidgets('sends selected expression and shows success feedback', (
-    tester,
-  ) async {
+  testWidgets('표현을 보내면 성공 피드백을 보여준다', (tester) async {
     final expressionRepository = _FakeCoupleExpressionRepository();
 
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
       expressionRepository: expressionRepository,
     );
 
@@ -154,9 +262,7 @@ void main() {
     expect(find.text('표현을 보냈어요.'), findsOneWidget);
   });
 
-  testWidgets('shows failure feedback when expression send fails', (
-    tester,
-  ) async {
+  testWidgets('표현 보내기가 실패하면 실패 피드백을 보여준다', (tester) async {
     final expressionRepository = _FakeCoupleExpressionRepository(
       shouldFail: true,
     );
@@ -165,6 +271,7 @@ void main() {
       tester,
       couple: _activeCouple,
       today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
       expressionRepository: expressionRepository,
     );
 
@@ -174,10 +281,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.sentiment_dissatisfied_outlined));
     await tester.pumpAndSettle();
 
-    expect(
-      expressionRepository.sentTypes,
-      [CoupleExpressionType.feelingDown],
-    );
+    expect(expressionRepository.sentTypes, [CoupleExpressionType.feelingDown]);
     expect(find.text('표현을 보내지 못했어요.'), findsOneWidget);
   });
 }
@@ -186,12 +290,10 @@ Future<void> _pumpHome(
   WidgetTester tester, {
   required Couple? couple,
   required DateTime today,
-  DailyQuestion? question,
-  Object? questionError,
-  bool questionLoading = false,
-  bool settle = true,
+  TodayStoryLoopSummary? todaySummary,
+  StoryLoopReadRepository? storyLoopRepository,
   CoupleExpressionRepository? expressionRepository,
-  DailyQuestionAnswerRepository? answerRepository,
+  bool settle = true,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -200,19 +302,12 @@ Future<void> _pumpHome(
           (ref, notifier) async => couple,
         ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => today),
-        todayQuestionControllerProvider.overrideWithBuild((ref, notifier) {
-          if (questionLoading) {
-            return Completer<DailyQuestion?>().future;
-          }
-
-          if (questionError != null) {
-            throw questionError;
-          }
-
-          return question;
-        }),
-        dailyQuestionAnswerRepositoryProvider.overrideWithValue(
-          answerRepository ?? FakeDailyQuestionAnswerRepository(pendingAnswerState),
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _profile,
+        ),
+        storyLoopReadRepositoryProvider.overrideWithValue(
+          storyLoopRepository ??
+              FakeStoryLoopReadRepository(todaySummary: todaySummary),
         ),
         coupleExpressionRepositoryProvider.overrideWithValue(
           expressionRepository ?? _FakeCoupleExpressionRepository(),
@@ -226,6 +321,40 @@ Future<void> _pumpHome(
     await tester.pumpAndSettle();
   } else {
     await tester.pump();
+  }
+}
+
+class _PendingStoryLoopReadRepository implements StoryLoopReadRepository {
+  @override
+  Future<TodayStoryLoopSummary?> fetchTodaySummary() {
+    return Completer<TodayStoryLoopSummary?>().future;
+  }
+
+  @override
+  Future<StoryLoopDetail?> fetchDetail(DateTime date) async {
+    return null;
+  }
+
+  @override
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) async {
+    return const [];
+  }
+}
+
+class _ThrowingStoryLoopReadRepository implements StoryLoopReadRepository {
+  @override
+  Future<TodayStoryLoopSummary?> fetchTodaySummary() async {
+    throw Exception('story summary failed');
+  }
+
+  @override
+  Future<StoryLoopDetail?> fetchDetail(DateTime date) async {
+    return null;
+  }
+
+  @override
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) async {
+    return const [];
   }
 }
 
@@ -254,9 +383,7 @@ class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
   }
 
   @override
-  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(
-    DateTime date,
-  ) async {
+  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(DateTime date) async {
     return const [];
   }
 }
@@ -267,14 +394,53 @@ final _activeCouple = activeCouple(currentDate: _today);
 
 final _activeCoupleWithoutDate = activeCoupleWithoutDate(currentDate: _today);
 
-final _dailyQuestion = DailyQuestion(
-  dailyQuestionId: 'daily-question-id',
-  coupleId: 'couple-id',
-  questionId: 'question-id',
-  questionText: '오늘 서로에게 가장 고마웠던 순간은 언제였어?',
-  questionSource: QuestionSource.curated,
-  questionCategory: 'daily',
-  questionMood: 'warm',
-  assignedDate: _today,
-  status: DailyQuestionStatus.pending,
+final _profile = UserProfile(
+  id: 'user-id',
+  displayName: '연인',
+  birthDate: DateTime(2000),
+  onboardingCompletedAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
 );
+
+final _dailyQuestion = sampleDailyQuestion(assignedDate: _today);
+
+TodayStoryLoopSummary _emptyTodaySummary({required DateTime coupleDate}) {
+  return TodayStoryLoopSummary(
+    coupleId: 'couple-id',
+    coupleDate: coupleDate,
+    accessMode: CoupleAccessMode.active,
+    loopId: null,
+    loopStatus: null,
+    storyEditLocked: false,
+    canEditStory: true,
+    canAnswerQuestion: false,
+    cardCount: 0,
+    cards: const [],
+    question: null,
+  );
+}
+
+TodayStoryLoopSummary _summaryWithoutQuestion({
+  required DateTime coupleDate,
+  required StoryLoopStatus? loopStatus,
+  required int cardCount,
+  required bool storyEditLocked,
+  required bool canEditStory,
+  required bool canAnswerQuestion,
+  required List<StoryLoopCardPreview> cards,
+}) {
+  return TodayStoryLoopSummary(
+    coupleId: 'couple-id',
+    coupleDate: coupleDate,
+    accessMode: CoupleAccessMode.active,
+    loopId: 'loop-id',
+    loopStatus: loopStatus,
+    storyEditLocked: storyEditLocked,
+    canEditStory: canEditStory,
+    canAnswerQuestion: canAnswerQuestion,
+    cardCount: cardCount,
+    cards: cards,
+    question: null,
+  );
+}
