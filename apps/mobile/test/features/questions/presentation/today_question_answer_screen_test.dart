@@ -9,11 +9,15 @@ import 'package:vinscent/features/questions/application/today_question_controlle
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
-import 'package:vinscent/features/questions/data/daily_question_history_entry.dart';
-import 'package:vinscent/features/questions/data/daily_question_history_repository.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
+import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
 
 import '../../../support/couple_fixtures.dart';
+import '../../../support/story_loop_fixtures.dart';
 
 void main() {
   group('TodayQuestionAnswerScreen', () {
@@ -112,19 +116,23 @@ void main() {
 
     testWidgets('retries when question load fails', (tester) async {
       final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
-      var shouldFail = true;
+      final storyLoopRepository = _FailingOnceStoryLoopReadRepository(
+        FakeStoryLoopReadRepository(
+          details: {
+            DateTime(2026, 5, 31): _storyLoopDetailFor(
+              date: DateTime(2026, 5, 31),
+              question: _dailyQuestion,
+              answerState: _emptyAnswerState,
+              canAnswerQuestion: true,
+            ),
+          },
+        ),
+      );
 
       await _pumpRouter(
         tester,
         repository: repository,
-        questionBuilder: (ref, notifier) async {
-          if (shouldFail) {
-            shouldFail = false;
-            throw Exception('question unavailable');
-          }
-
-          return _dailyQuestion;
-        },
+        storyLoopRepository: storyLoopRepository,
       );
 
       expect(find.text('질문을 불러오지 못했어요'), findsOneWidget);
@@ -138,14 +146,18 @@ void main() {
 
     testWidgets('shows dated question as readonly history', (tester) async {
       final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
-      final historyRepository = _FakeDailyQuestionHistoryRepository(
-        entry: _historyEntry,
-      );
 
       await _pumpRouter(
         tester,
         repository: repository,
-        historyRepository: historyRepository,
+        storyLoopDetails: {
+          DateTime(2026, 5, 30): _storyLoopDetailFor(
+            date: DateTime(2026, 5, 30),
+            question: _historyQuestion,
+            answerState: _historyAnswerState,
+            canAnswerQuestion: false,
+          ),
+        },
         initialLocation: '/calendar/question?date=2026-05-30',
       );
 
@@ -178,20 +190,22 @@ void main() {
 
     testWidgets('swipes to previous dated question', (tester) async {
       final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
-      final historyRepository = _FakeDailyQuestionHistoryRepository(
-        entries: {
-          DateTime(2026, 5, 29): _historyEntryFor(
-            date: DateTime(2026, 5, 29),
-            questionText: 'previous history question',
-          ),
-          DateTime(2026, 5, 30): _historyEntry,
-        },
-      );
 
       await _pumpRouter(
         tester,
         repository: repository,
-        historyRepository: historyRepository,
+        storyLoopDetails: {
+          DateTime(2026, 5, 29): _historyDetailFor(
+            date: DateTime(2026, 5, 29),
+            questionText: 'previous history question',
+          ),
+          DateTime(2026, 5, 30): _storyLoopDetailFor(
+            date: DateTime(2026, 5, 30),
+            question: _historyQuestion,
+            answerState: _historyAnswerState,
+            canAnswerQuestion: false,
+          ),
+        },
         initialLocation: '/calendar/question?date=2026-05-30',
       );
 
@@ -206,18 +220,20 @@ void main() {
       expect(find.text('previous history question'), findsOneWidget);
     });
 
-    testWidgets('swipes to next date and keeps today editable', (
-      tester,
-    ) async {
+    testWidgets('swipes to next date and keeps today editable', (tester) async {
       final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
-      final historyRepository = _FakeDailyQuestionHistoryRepository(
-        entry: _historyEntry,
-      );
 
       await _pumpRouter(
         tester,
         repository: repository,
-        historyRepository: historyRepository,
+        storyLoopDetails: {
+          DateTime(2026, 5, 30): _storyLoopDetailFor(
+            date: DateTime(2026, 5, 30),
+            question: _historyQuestion,
+            answerState: _historyAnswerState,
+            canAnswerQuestion: false,
+          ),
+        },
         initialLocation: '/calendar/question?date=2026-05-30',
       );
 
@@ -241,14 +257,18 @@ void main() {
       tester,
     ) async {
       final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
-      final historyRepository = _FakeDailyQuestionHistoryRepository(
-        entry: _historyEntry,
-      );
 
       await _pumpRouter(
         tester,
         repository: repository,
-        historyRepository: historyRepository,
+        storyLoopDetails: {
+          DateTime(2026, 5, 30): _storyLoopDetailFor(
+            date: DateTime(2026, 5, 30),
+            question: _historyQuestion,
+            answerState: _historyAnswerState,
+            canAnswerQuestion: false,
+          ),
+        },
         initialLocation: '/calendar/question?date=2026-05-30',
         relationshipStartDate: DateTime(2026, 5, 30),
       );
@@ -447,13 +467,35 @@ void main() {
 
 Future<GoRouter> _pumpRouter(
   WidgetTester tester, {
-  required DailyQuestionAnswerRepository repository,
+  required _FakeDailyQuestionAnswerRepository repository,
   String initialLocation = '/home/question',
-  DailyQuestionHistoryRepository? historyRepository,
+  Map<DateTime, StoryLoopDetail?> storyLoopDetails = const {},
+  StoryLoopReadRepository? storyLoopRepository,
   DateTime? relationshipStartDate,
   Future<DailyQuestion?> Function(Ref ref, TodayQuestionController notifier)?
   questionBuilder,
 }) async {
+  final today = DateTime(2026, 5, 31);
+  final normalizedDetails = <DateTime, StoryLoopDetail?>{
+    for (final entry in storyLoopDetails.entries)
+      DateTime(entry.key.year, entry.key.month, entry.key.day): entry.value,
+  };
+  final resolvedStoryLoopRepository =
+      storyLoopRepository ??
+      FakeStoryLoopReadRepository(
+        details: {
+          if (!normalizedDetails.containsKey(today))
+            today: _storyLoopDetailFor(
+              date: today,
+              question: _dailyQuestion,
+              answerState: initialLocation == '/home/question/edit'
+                  ? repository.submittedState
+                  : repository.initialState,
+              canAnswerQuestion: true,
+            ),
+          ...normalizedDetails,
+        },
+      );
   final router = GoRouter(
     initialLocation: initialLocation,
     routes: [
@@ -499,16 +541,15 @@ Future<GoRouter> _pumpRouter(
           (ref, notifier) => DateTime(2026, 5, 31),
         ),
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => _activeCoupleFor(
-            relationshipStartDate: relationshipStartDate,
-          ),
+          (ref, notifier) async =>
+              _activeCoupleFor(relationshipStartDate: relationshipStartDate),
         ),
         todayQuestionControllerProvider.overrideWithBuild(
           questionBuilder ?? (ref, notifier) async => _dailyQuestion,
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
-        dailyQuestionHistoryRepositoryProvider.overrideWithValue(
-          historyRepository ?? _FakeDailyQuestionHistoryRepository(),
+        storyLoopReadRepositoryProvider.overrideWithValue(
+          resolvedStoryLoopRepository,
         ),
       ],
       child: MaterialApp.router(routerConfig: router),
@@ -519,19 +560,30 @@ Future<GoRouter> _pumpRouter(
   return router;
 }
 
-class _FakeDailyQuestionHistoryRepository
-    implements DailyQuestionHistoryRepository {
-  const _FakeDailyQuestionHistoryRepository({
-    this.entry,
-    this.entries = const {},
-  });
+class _FailingOnceStoryLoopReadRepository implements StoryLoopReadRepository {
+  _FailingOnceStoryLoopReadRepository(this.delegate);
 
-  final DailyQuestionHistoryEntry? entry;
-  final Map<DateTime, DailyQuestionHistoryEntry> entries;
+  final StoryLoopReadRepository delegate;
+  var _hasFailed = false;
 
   @override
-  Future<DailyQuestionHistoryEntry?> fetchByDate(DateTime date) async {
-    return entries[DateTime(date.year, date.month, date.day)] ?? entry;
+  Future<StoryLoopDetail?> fetchDetail(DateTime date) async {
+    if (!_hasFailed) {
+      _hasFailed = true;
+      throw Exception('detail unavailable');
+    }
+
+    return delegate.fetchDetail(date);
+  }
+
+  @override
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) {
+    return delegate.fetchMonthSummary(month);
+  }
+
+  @override
+  Future<TodayStoryLoopSummary?> fetchTodaySummary() {
+    return delegate.fetchTodaySummary();
   }
 }
 
@@ -594,46 +646,65 @@ final _historyQuestion = DailyQuestion(
   status: DailyQuestionStatus.completed,
 );
 
-final _historyEntry = DailyQuestionHistoryEntry(
-  question: _historyQuestion,
-  answerState: const DailyQuestionAnswerState(
-    dailyQuestionId: 'history-daily-question-id',
+final _historyAnswerState = const DailyQuestionAnswerState(
+  dailyQuestionId: 'history-daily-question-id',
+  status: DailyQuestionStatus.completed,
+  myAnswerId: 'history-answer-id',
+  myAnswerText: 'history answer',
+  partnerAnswerExists: true,
+  partnerAnswerId: 'partner-answer-id',
+  partnerAnswerText: 'partner answer',
+  answerCount: 2,
+);
+
+StoryLoopDetail _storyLoopDetailFor({
+  required DateTime date,
+  required DailyQuestion question,
+  required DailyQuestionAnswerState answerState,
+  required bool canAnswerQuestion,
+}) {
+  return sampleStoryLoopDetail(
+    coupleDate: date,
+    canAnswerQuestion: canAnswerQuestion,
+    question: StoryLoopQuestionDetail(
+      question: question,
+      answerState: answerState,
+    ),
+  );
+}
+
+StoryLoopDetail _historyDetailFor({
+  required DateTime date,
+  required String questionText,
+}) {
+  final question = DailyQuestion(
+    dailyQuestionId: 'history-${date.day}-daily-question-id',
+    coupleId: 'couple-id',
+    questionId: 'history-${date.day}-question-id',
+    questionText: questionText,
+    questionSource: QuestionSource.curated,
+    questionCategory: 'daily',
+    questionMood: 'warm',
+    assignedDate: date,
     status: DailyQuestionStatus.completed,
-    myAnswerId: 'history-answer-id',
-    myAnswerText: 'history answer',
+  );
+
+  final answerState = DailyQuestionAnswerState(
+    dailyQuestionId: 'history-${date.day}-daily-question-id',
+    status: DailyQuestionStatus.completed,
+    myAnswerId: 'history-${date.day}-answer-id',
+    myAnswerText: 'history ${date.day} answer',
     partnerAnswerExists: true,
     partnerAnswerId: 'partner-answer-id',
     partnerAnswerText: 'partner answer',
     answerCount: 2,
-  ),
-);
+  );
 
-DailyQuestionHistoryEntry _historyEntryFor({
-  required DateTime date,
-  required String questionText,
-}) {
-  return DailyQuestionHistoryEntry(
-    question: DailyQuestion(
-      dailyQuestionId: 'history-${date.day}-daily-question-id',
-      coupleId: 'couple-id',
-      questionId: 'history-${date.day}-question-id',
-      questionText: questionText,
-      questionSource: QuestionSource.curated,
-      questionCategory: 'daily',
-      questionMood: 'warm',
-      assignedDate: date,
-      status: DailyQuestionStatus.completed,
-    ),
-    answerState: DailyQuestionAnswerState(
-      dailyQuestionId: 'history-${date.day}-daily-question-id',
-      status: DailyQuestionStatus.completed,
-      myAnswerId: 'history-${date.day}-answer-id',
-      myAnswerText: 'history ${date.day} answer',
-      partnerAnswerExists: true,
-      partnerAnswerId: 'partner-answer-id',
-      partnerAnswerText: 'partner answer',
-      answerCount: 2,
-    ),
+  return _storyLoopDetailFor(
+    date: date,
+    question: question,
+    answerState: answerState,
+    canAnswerQuestion: false,
   );
 }
 
@@ -643,6 +714,7 @@ Couple _activeCoupleFor({DateTime? relationshipStartDate}) {
     userAId: 'user-a-id',
     userBId: 'user-b-id',
     relationshipStartDate: relationshipStartDate ?? DateTime(2026, 5, 1),
+    currentDate: DateTime(2026, 5, 31),
     connectedAt: DateTime(2026, 5, 1),
     createdAt: DateTime(2026, 5, 1),
     updatedAt: DateTime(2026, 5, 1),

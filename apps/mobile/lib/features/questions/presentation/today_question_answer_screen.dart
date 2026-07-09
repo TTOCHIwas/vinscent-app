@@ -5,14 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../application/daily_question_history_provider.dart';
-import '../application/question_detail_navigation_provider.dart';
-import '../application/question_detail_provider.dart';
+import '../../story_loops/application/story_loop_detail_navigation_provider.dart';
+import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../application/today_answer_controller.dart';
 import '../application/today_question_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
 import '../data/question_detail_state.dart';
+import 'story_loop_question_view_model.dart';
 import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
 import 'widgets/question_prompt_character.dart';
@@ -41,13 +41,13 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
     }
 
     final navigation = ref
-        .watch(questionDetailNavigationProvider(targetDate))
+        .watch(storyLoopDetailNavigationProvider(targetDate))
         .when(
           loading: () => null,
           error: (error, stackTrace) => null,
           data: (state) => state,
         );
-    final detail = ref.watch(questionDetailProvider(targetDate));
+    final detail = ref.watch(storyLoopDetailProvider(targetDate));
 
     final page = detail.when(
       loading: () => _QuestionPageFrame(
@@ -56,26 +56,25 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
       ),
       error: (error, stackTrace) => _QuestionPageFrame(
         onBackPressed: () => _goBack(context, backLocation),
-        child: _QuestionLoadError(
-          onRetry: () => _retry(ref),
-        ),
+        child: _QuestionLoadError(onRetry: () => _retry(ref)),
       ),
       data: (state) {
-        return switch (state) {
+        final questionState = toQuestionDetailState(state);
+        return switch (questionState) {
           LoadedQuestionDetailState() => _QuestionPageFrame(
-            question: state.question,
+            question: questionState.question,
             onBackPressed: () => _goBack(context, backLocation),
             child: _QuestionContent(
-              question: state.question,
+              question: questionState.question,
               child: QuestionAnswerOverview(
-                answerState: state.answerState,
-                myEmptyMessage: state.canEdit
+                answerState: questionState.answerState,
+                myEmptyMessage: questionState.canEdit
                     ? '이곳을 눌러서 답변을 입력해주세요'
                     : '이 날에는 답변하지 않았어요',
-                partnerHiddenMessage: state.canEdit
+                partnerHiddenMessage: questionState.canEdit
                     ? PartnerQuestionAnswerSection.todayHiddenMessage
                     : PartnerQuestionAnswerSection.historyHiddenMessage,
-                onMyAnswerPressed: state.canEdit
+                onMyAnswerPressed: questionState.canEdit
                     ? () => context.push('/home/question/edit')
                     : null,
               ),
@@ -83,7 +82,7 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
           ),
           UnavailableQuestionDetailState() => _QuestionPageFrame(
             onBackPressed: () => _goBack(context, backLocation),
-            child: _QuestionUnavailableMessage(reason: state.reason),
+            child: _QuestionUnavailableMessage(reason: questionState.reason),
           ),
         };
       },
@@ -104,13 +103,7 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
 
   void _retry(WidgetRef ref) {
     final retryTargetDate = targetDate;
-    ref.invalidate(questionDetailProvider(retryTargetDate));
-    ref.invalidate(todayQuestionControllerProvider);
-    ref.invalidate(todayAnswerControllerProvider);
-
-    if (retryTargetDate != null) {
-      ref.invalidate(dailyQuestionHistoryProvider(retryTargetDate));
-    }
+    ref.invalidate(storyLoopDetailProvider(retryTargetDate));
   }
 
   String _questionDetailLocation(DateTime date) {
@@ -190,16 +183,14 @@ class _QuestionUnavailableMessage extends StatelessWidget {
 
   String get _message {
     return switch (reason) {
-      QuestionDetailUnavailableReason.invalidDate =>
-        '달력에서 다시 날짜를 선택해주세요.',
+      QuestionDetailUnavailableReason.invalidDate => '달력에서 다시 날짜를 선택해주세요.',
       QuestionDetailUnavailableReason.unavailable =>
         '커플 연결과 첫 만남 날짜를 먼저 완료해주세요.',
       QuestionDetailUnavailableReason.beforeRelationshipStartDate =>
         '연애 시작일 이후의 질문만 확인할 수 있어요.',
       QuestionDetailUnavailableReason.futureDate =>
         '오늘 이후의 질문은 해당 날짜가 되면 확인할 수 있어요.',
-      QuestionDetailUnavailableReason.noQuestion =>
-        '질문이 생성된 날짜를 달력에서 선택해주세요.',
+      QuestionDetailUnavailableReason.noQuestion => '질문이 생성된 날짜를 달력에서 선택해주세요.',
     };
   }
 }
@@ -335,10 +326,7 @@ class _QuestionPageFrame extends StatelessWidget {
 }
 
 class _QuestionContent extends StatelessWidget {
-  const _QuestionContent({
-    required this.question,
-    required this.child,
-  });
+  const _QuestionContent({required this.question, required this.child});
 
   final DailyQuestion question;
   final Widget child;
@@ -580,9 +568,7 @@ class _AnswerSaveBar extends StatelessWidget {
           ),
           Text(
             '$characterCount / $maxAnswerLength',
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: countColor,
-            ),
+            style: AppTextStyles.homeCharacterLabel.copyWith(color: countColor),
           ),
         ],
       ),
