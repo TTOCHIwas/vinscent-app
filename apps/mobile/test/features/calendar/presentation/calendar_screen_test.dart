@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
+import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -38,6 +39,7 @@ void main() {
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('날짜를 선택해 주세요'), findsOneWidget);
+    expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, isEmpty);
     expect(expressionRepository.requestedDates, isEmpty);
   });
@@ -52,6 +54,7 @@ void main() {
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('2026년 04월'), findsNothing);
+    expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, isEmpty);
   });
 
@@ -72,6 +75,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('2026년 05월'), findsOneWidget);
+    expect(repository.requestedMonths, [DateTime(2026, 6), DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, isEmpty);
   });
 
@@ -85,7 +89,67 @@ void main() {
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('2026년 06월'), findsNothing);
+    expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, isEmpty);
+  });
+
+  testWidgets('renders month summary cells for empty single and stacked cards', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository(
+      monthSummaries: {
+        DateTime(2026, 5): [
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 5),
+            cardCount: 1,
+            cards: [
+              samplePreviewCard(
+                id: 'month-card-1',
+                submittedAt: DateTime(2026, 5, 5, 9, 0),
+              ),
+            ],
+          ),
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 6),
+            cardCount: 2,
+            cards: [
+              samplePreviewCard(
+                id: 'month-card-2',
+                submittedAt: DateTime(2026, 5, 6, 9, 20),
+              ),
+              samplePreviewCard(
+                id: 'month-card-3',
+                authorUserId: 'user-b',
+                previewPath: 'previews/card-3.png',
+                submittedAt: DateTime(2026, 5, 6, 9, 0),
+              ),
+            ],
+          ),
+        ],
+      },
+    );
+
+    await _pumpCalendar(tester, repository: repository);
+
+    expect(
+      find.byKey(
+        const ValueKey('calendar-month-story-cell-single-2026-05-05'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('calendar-month-story-cell-stacked-2026-05-06'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('calendar-month-story-cell-empty-2026-05-07'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(CalendarMonthStoryCell), findsWidgets);
   });
 
   testWidgets('fetches selected past date and shows story loop detail', (

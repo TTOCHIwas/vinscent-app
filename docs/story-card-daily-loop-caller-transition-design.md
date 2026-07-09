@@ -312,7 +312,8 @@ CTA 판단 규칙:
 
 전환 방향:
 
-- `_CalendarGrid`는 `storyLoopMonthSummaryProvider(_visibleMonth)`를 읽는다.
+- 부모 `CalendarScreen`은 월 이동과 `_selectedDate` 상태만 유지하고, month summary caller는 `_CalendarGrid`에만 붙인다.
+- `_CalendarGrid`는 `ConsumerWidget`으로 바꾸고 `storyLoopMonthSummaryProvider(_visibleMonth)`를 읽는다.
 - 각 날짜 셀은 month summary에 포함된 카드 수와 정렬 정보만 사용한다.
 - 월간 셀 탭의 기본 동작은 `_selectedDate`를 갱신하고, 같은 화면 안의 상세 패널 caller를 바꾸는 것이다.
 
@@ -321,6 +322,12 @@ CTA 판단 규칙:
 - 0장: 기존 날짜 숫자만 보임
 - 1장: 카드 1장만 곧게 보임
 - 2장: 업로드 시간 순으로 2장 겹침 표시
+
+구현 경계:
+
+- 월간 summary는 `StoryLoopCardPreview`만 제공하므로, 상세 패널에서 쓰는 `CalendarStoryCardStack`을 그대로 재사용하지 않는다.
+- 월간 grid는 preview 전용 위젯(`calendar_month_story_cell.dart`)을 별도로 두고, 날짜 활성/비활성/선택 상태는 현재 `_DateCell` 책임을 유지한다.
+- summary 리스트는 `_CalendarGrid` 내부에서 `coupleDate` 기준 맵으로 정규화한 뒤 각 날짜 셀에 주입한다.
 
 주의:
 

@@ -9,6 +9,9 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
 import '../../expressions/application/couple_expression_summary_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
+import '../../story_loops/application/story_loop_month_summary_provider.dart';
+import '../../story_loops/data/story_loop_month_summary_day.dart';
+import 'widgets/calendar_month_story_cell.dart';
 import 'widgets/calendar_story_loop_detail.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -242,7 +245,7 @@ class _MonthIconButton extends StatelessWidget {
   }
 }
 
-class _CalendarGrid extends StatelessWidget {
+class _CalendarGrid extends ConsumerWidget {
   const _CalendarGrid({
     required this.visibleMonth,
     required this.today,
@@ -262,8 +265,15 @@ class _CalendarGrid extends StatelessWidget {
   final ValueChanged<DateTime> onDatePressed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final days = _calendarDays(visibleMonth);
+    final monthSummary = ref.watch(storyLoopMonthSummaryProvider(visibleMonth));
+    final summaryByDate = monthSummary.maybeWhen(
+      data: (entries) => {
+        for (final entry in entries) calendarDateOnly(entry.coupleDate): entry,
+      },
+      orElse: () => const <DateTime, StoryLoopMonthSummaryDay>{},
+    );
     final cells = <Widget>[
       for (final label in _weekdayLabels) _WeekdayCell(label: label),
       for (final date in days)
@@ -272,6 +282,7 @@ class _CalendarGrid extends StatelessWidget {
           isCurrentMonth: _isSameMonth(date, visibleMonth),
           isEnabled: _isEnabled(date),
           isSelected: selectedDate != null && _isSameDate(date, selectedDate!),
+          summary: summaryByDate[calendarDateOnly(date)],
           onPressed: () => onDatePressed(date),
         ),
     ];
@@ -330,6 +341,7 @@ class _DateCell extends StatelessWidget {
     required this.isCurrentMonth,
     required this.isEnabled,
     required this.isSelected,
+    required this.summary,
     required this.onPressed,
   });
 
@@ -337,6 +349,7 @@ class _DateCell extends StatelessWidget {
   final bool isCurrentMonth;
   final bool isEnabled;
   final bool isSelected;
+  final StoryLoopMonthSummaryDay? summary;
   final VoidCallback onPressed;
 
   @override
@@ -348,20 +361,21 @@ class _DateCell extends StatelessWidget {
       label: '${date.day}일',
       child: InkWell(
         onTap: isEnabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.actionPrimary : AppColors.background,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '${date.day}',
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: _textColor,
-              fontSize: 14,
-              height: 1.4,
+            color: isSelected ? const Color(0xFFF2EEE7) : AppColors.background,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.actionPrimary
+                  : const Color(0xFFE7E2DA),
             ),
+          ),
+          child: CalendarMonthStoryCell(
+            date: date,
+            textColor: _textColor,
+            summary: isCurrentMonth ? summary : null,
           ),
         ),
       ),
@@ -369,10 +383,6 @@ class _DateCell extends StatelessWidget {
   }
 
   Color get _textColor {
-    if (isSelected) {
-      return AppColors.textInverse;
-    }
-
     if (!isCurrentMonth || !isEnabled) {
       return const Color(0xFFC7C7C7);
     }

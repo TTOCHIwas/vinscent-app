@@ -332,15 +332,26 @@
 
 구현 원칙:
 
-1. 월간 grid는 `storyLoopMonthSummaryProvider(_visibleMonth)`만 읽는다.
-2. 0장은 기존 날짜 숫자만 보인다.
-3. 1장은 단독 카드, 2장은 업로드 시간 순 겹침 카드로 표시한다.
-4. month summary는 질문/답변 텍스트를 읽지 않는다.
+1. 월간 grid caller는 부모 `CalendarScreen`이 아니라 `_CalendarGrid`에만 붙인다.
+2. `_CalendarGrid`는 `ConsumerWidget`으로 바꾸고 `storyLoopMonthSummaryProvider(_visibleMonth)`만 읽는다.
+3. month summary 결과는 `coupleDate` 기준 맵으로 정규화한 뒤 각 날짜 셀에서 lookup 한다.
+4. 0장은 기존 날짜 숫자만 보인다.
+5. 1장은 카드 1장을 곧게 보인다.
+6. 2장은 업로드 시간 순으로 정렬한 뒤 겹침 카드로 보인다.
+7. month summary는 질문/답변 텍스트를 읽지 않고 preview 정보만 소비한다.
+8. 상세 패널용 `CalendarStoryCardStack`은 재사용하지 않고, preview 전용 셀 렌더러를 별도 둔다.
 
 보존되는 것:
 
+- `CalendarScreen`의 월 이동 상태 관리
 - 날짜 범위 enable/disable 계산
 - `_selectedDate` 갱신 방식
+- `selectedDate -> inline detail panel` 구조
+
+주의:
+
+- 현재 월간 summary 모델은 `StoryLoopCardPreview`만 제공하므로, 4단계 상세 패널에서 쓰는 `StoryLoopCardDetail` 기반 위젯과 책임을 섞지 않는다.
+- 즉 5단계는 `상세 패널 card stack 재사용`이 아니라 `월간 grid preview 전용 셀 추가`로 잠근다.
 
 커밋 메시지:
 
@@ -350,6 +361,8 @@
 
 - `flutter analyze`
 - `test/features/calendar/presentation/calendar_screen_test.dart`
+- `storyLoopMonthSummaryProvider`가 visible month 기준으로 실제 호출되는지 확인
+- 이전/다음 달 이동 시 month summary 재조회가 일어나는지 확인
 - 한 달 안에서 0장/1장/2장 셀 표현 확인
 
 ## 4.7 6단계 홈 caller 전환
