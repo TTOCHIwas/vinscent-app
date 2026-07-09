@@ -9,6 +9,7 @@ import 'package:vinscent/features/questions/application/today_question_controlle
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/presentation/question_route_context.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -462,6 +463,56 @@ void main() {
       expect(find.text('edited answer'), findsOneWidget);
       expect(find.text('partner answer'), findsOneWidget);
     });
+
+    testWidgets('returns to calendar detail when leaving edit with pop stack', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/calendar/question?date=2026-05-31',
+      );
+
+      await tester.tap(find.text('내 답변'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsOneWidget);
+
+      await tester.tap(find.byTooltip('뒤로가기'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('today question'), findsOneWidget);
+    });
+
+    testWidgets(
+      'submits from calendar source and restores dated detail route',
+      (tester) async {
+        final repository = _FakeDailyQuestionAnswerRepository(
+          _emptyAnswerState,
+          submittedState: _submittedAnswerState,
+        );
+
+        await _pumpRouter(
+          tester,
+          repository: repository,
+          initialLocation:
+              '/home/question/edit?source=calendar&date=2026-05-31',
+        );
+
+        await tester.enterText(find.byType(TextField), 'hello');
+        await tester.pump();
+
+        await tester.tap(find.text('저장'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextField), findsNothing);
+        expect(find.text('hello'), findsOneWidget);
+        expect(find.text('today question'), findsOneWidget);
+      },
+    );
   });
 }
 
@@ -482,19 +533,10 @@ Future<GoRouter> _pumpRouter(
   };
   final resolvedStoryLoopRepository =
       storyLoopRepository ??
-      FakeStoryLoopReadRepository(
-        details: {
-          if (!normalizedDetails.containsKey(today))
-            today: _storyLoopDetailFor(
-              date: today,
-              question: _dailyQuestion,
-              answerState: initialLocation == '/home/question/edit'
-                  ? repository.submittedState
-                  : repository.initialState,
-              canAnswerQuestion: true,
-            ),
-          ...normalizedDetails,
-        },
+      _QuestionScreenStoryLoopReadRepository(
+        today: today,
+        answerRepository: repository,
+        details: normalizedDetails,
       );
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -503,29 +545,32 @@ Future<GoRouter> _pumpRouter(
         path: '/home/question',
         builder: (context, state) {
           final dateQuery = state.uri.queryParameters['date'];
-          final targetDate = DateTime.tryParse(dateQuery ?? '');
+          final targetDate = parseQuestionRouteDate(dateQuery);
           return Scaffold(
             body: TodayQuestionAnswerScreen(
               targetDate: targetDate,
-              hasInvalidTargetDate: dateQuery != null && targetDate == null,
+              hasInvalidTargetDate: hasInvalidQuestionRouteDate(dateQuery),
             ),
           );
         },
       ),
       GoRoute(
         path: '/home/question/edit',
-        builder: (context, state) =>
-            const Scaffold(body: TodayQuestionAnswerEditScreen()),
+        builder: (context, state) => Scaffold(
+          body: TodayQuestionAnswerEditScreen(
+            routeContext: QuestionRouteContext.fromEditUri(state.uri),
+          ),
+        ),
       ),
       GoRoute(
         path: '/calendar/question',
         builder: (context, state) {
           final dateQuery = state.uri.queryParameters['date'];
-          final targetDate = DateTime.tryParse(dateQuery ?? '');
+          final targetDate = parseQuestionRouteDate(dateQuery);
           return Scaffold(
             body: TodayQuestionAnswerScreen(
               targetDate: targetDate,
-              hasInvalidTargetDate: dateQuery != null && targetDate == null,
+              hasInvalidTargetDate: hasInvalidQuestionRouteDate(dateQuery),
               backLocation: '/calendar',
             ),
           );
@@ -584,6 +629,50 @@ class _FailingOnceStoryLoopReadRepository implements StoryLoopReadRepository {
   @override
   Future<TodayStoryLoopSummary?> fetchTodaySummary() {
     return delegate.fetchTodaySummary();
+  }
+}
+
+class _QuestionScreenStoryLoopReadRepository
+    implements StoryLoopReadRepository {
+  const _QuestionScreenStoryLoopReadRepository({
+    required this.today,
+    required this.answerRepository,
+    required this.details,
+  });
+
+  final DateTime today;
+  final _FakeDailyQuestionAnswerRepository answerRepository;
+  final Map<DateTime, StoryLoopDetail?> details;
+
+  @override
+  Future<StoryLoopDetail?> fetchDetail(DateTime date) async {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    if (details.containsKey(normalizedDate)) {
+      return details[normalizedDate];
+    }
+
+    if (normalizedDate == today) {
+      return _storyLoopDetailFor(
+        date: today,
+        question: _dailyQuestion,
+        answerState: answerRepository.currentState,
+        canAnswerQuestion: true,
+      );
+    }
+
+    return null;
+  }
+
+  @override
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(
+    DateTime month,
+  ) async {
+    return const [];
+  }
+
+  @override
+  Future<TodayStoryLoopSummary?> fetchTodaySummary() async {
+    return null;
   }
 }
 

@@ -18,9 +18,12 @@ import 'package:vinscent/features/questions/data/daily_question_history_reposito
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_header.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
 
 import '../../support/couple_fixtures.dart';
 import '../../support/question_answer_fixtures.dart';
+import '../../support/story_loop_fixtures.dart';
 
 void main() {
   testWidgets('shows shell around authenticated home route', (tester) async {
@@ -155,6 +158,27 @@ Future<void> _pumpApp(
   required FakeDailyQuestionAnswerRepository answerRepository,
   DailyQuestionHistoryRepository? historyRepository,
 }) async {
+  final storyLoopRepository = FakeStoryLoopReadRepository(
+    details: {
+      _today: sampleStoryLoopDetail(
+        coupleDate: _today,
+        canAnswerQuestion: true,
+        question: StoryLoopQuestionDetail(
+          question: question,
+          answerState: answerRepository.currentState,
+        ),
+      ),
+      DateTime(2026, 5, 30): sampleStoryLoopDetail(
+        coupleDate: DateTime(2026, 5, 30),
+        canAnswerQuestion: false,
+        question: StoryLoopQuestionDetail(
+          question: _historyQuestion,
+          answerState: _historyAnswerState,
+        ),
+      ),
+    },
+  );
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -177,6 +201,7 @@ Future<void> _pumpApp(
         dailyQuestionHistoryRepositoryProvider.overrideWithValue(
           historyRepository ?? const _FakeDailyQuestionHistoryRepository(),
         ),
+        storyLoopReadRepositoryProvider.overrideWithValue(storyLoopRepository),
       ],
       child: const VinscentApp(),
     ),

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/date/app_date_policy.dart';
 import '../features/ai/presentation/ai_screen.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_status.dart';
@@ -18,6 +17,7 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/questions/presentation/today_question_answer_screen.dart';
+import '../features/questions/presentation/question_route_context.dart';
 import '../features/recordings/presentation/recording_library_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
@@ -146,17 +146,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'todayQuestionAnswer',
             builder: (context, state) {
               final dateQuery = state.uri.queryParameters['date'];
-              final targetDate = _parseRouteDate(dateQuery);
+              final targetDate = parseQuestionRouteDate(dateQuery);
               return TodayQuestionAnswerScreen(
                 targetDate: targetDate,
-                hasInvalidTargetDate: _hasInvalidRouteDate(dateQuery),
+                hasInvalidTargetDate: hasInvalidQuestionRouteDate(dateQuery),
               );
             },
           ),
           GoRoute(
             path: '/home/question/edit',
             name: 'todayQuestionAnswerEdit',
-            builder: (context, state) => const TodayQuestionAnswerEditScreen(),
+            builder: (context, state) => TodayQuestionAnswerEditScreen(
+              routeContext: QuestionRouteContext.fromEditUri(state.uri),
+            ),
           ),
           GoRoute(
             path: '/home/recordings',
@@ -173,10 +175,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'calendarQuestionAnswer',
             builder: (context, state) {
               final dateQuery = state.uri.queryParameters['date'];
-              final targetDate = _parseRouteDate(dateQuery);
+              final targetDate = parseQuestionRouteDate(dateQuery);
               return TodayQuestionAnswerScreen(
                 targetDate: targetDate,
-                hasInvalidTargetDate: _hasInvalidRouteDate(dateQuery),
+                hasInvalidTargetDate: hasInvalidQuestionRouteDate(dateQuery),
                 backLocation: '/calendar',
               );
             },
@@ -206,26 +208,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-final _routeDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-
-DateTime? _parseRouteDate(String? value) {
-  if (value == null) {
-    return null;
-  }
-
-  if (!_routeDatePattern.hasMatch(value)) {
-    return null;
-  }
-
-  final parsed = DateTime.tryParse(value);
-  if (parsed == null) {
-    return null;
-  }
-
-  return calendarDateOnly(parsed);
-}
-
-bool _hasInvalidRouteDate(String? value) {
-  return value != null && _parseRouteDate(value) == null;
-}

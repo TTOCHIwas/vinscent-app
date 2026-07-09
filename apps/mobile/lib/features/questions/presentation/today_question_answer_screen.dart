@@ -8,10 +8,10 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../story_loops/application/story_loop_detail_navigation_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../application/today_answer_controller.dart';
-import '../application/today_question_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
 import '../data/question_detail_state.dart';
+import 'question_route_context.dart';
 import 'story_loop_question_view_model.dart';
 import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
@@ -48,6 +48,10 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
           data: (state) => state,
         );
     final detail = ref.watch(storyLoopDetailProvider(targetDate));
+    final routeContext = QuestionRouteContext.fromQuestionScreen(
+      backLocation: backLocation,
+      targetDate: targetDate,
+    );
 
     final page = detail.when(
       loading: () => _QuestionPageFrame(
@@ -75,7 +79,7 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
                     ? PartnerQuestionAnswerSection.todayHiddenMessage
                     : PartnerQuestionAnswerSection.historyHiddenMessage,
                 onMyAnswerPressed: questionState.canEdit
-                    ? () => context.push('/home/question/edit')
+                    ? () => context.push(routeContext.buildEditLocation())
                     : null,
               ),
             ),
@@ -107,10 +111,10 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
   }
 
   String _questionDetailLocation(DateTime date) {
-    final route = backLocation == '/calendar'
-        ? '/calendar/question'
-        : '/home/question';
-    return '$route?date=${_formatRouteDate(date)}';
+    return QuestionRouteContext.fromQuestionScreen(
+      backLocation: backLocation,
+      targetDate: date,
+    ).buildQuestionLocation();
   }
 }
 
@@ -195,89 +199,85 @@ class _QuestionUnavailableMessage extends StatelessWidget {
   }
 }
 
+class _QuestionEditUnavailableMessage extends StatelessWidget {
+  const _QuestionEditUnavailableMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _StateMessage(
+      title: '답변을 작성할 수 없어요',
+      message: '오늘 질문 화면에서만 답변을 작성할 수 있어요.',
+    );
+  }
+}
+
 class TodayQuestionAnswerEditScreen extends ConsumerWidget {
-  const TodayQuestionAnswerEditScreen({super.key});
+  const TodayQuestionAnswerEditScreen({
+    super.key,
+    this.routeContext = const QuestionRouteContext(
+      source: QuestionRouteSource.home,
+    ),
+  });
+
+  final QuestionRouteContext routeContext;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final question = ref.watch(todayQuestionControllerProvider);
-    final answerState = ref.watch(todayAnswerControllerProvider);
+    final detail = ref.watch(storyLoopDetailProvider(routeContext.targetDate));
 
-    return question.when(
+    return detail.when(
       loading: () => _QuestionPageFrame(
-        onBackPressed: () => _goBackToQuestion(context),
+        onBackPressed: () => _goBackToQuestion(context, routeContext),
         child: const _CenteredLoader(),
       ),
       error: (error, stackTrace) => _QuestionPageFrame(
-        onBackPressed: () => _goBackToQuestion(context),
+        onBackPressed: () => _goBackToQuestion(context, routeContext),
         child: _QuestionLoadError(
-          onRetry: () => ref.invalidate(todayQuestionControllerProvider),
+          onRetry: () =>
+              ref.invalidate(storyLoopDetailProvider(routeContext.targetDate)),
         ),
       ),
-      data: (question) {
-        if (question == null) {
-          return _QuestionPageFrame(
-            onBackPressed: () => _goBackToQuestion(context),
-            child: const _StateMessage(
-              title: '오늘 질문이 아직 없어요',
-              message: '커플 연결과 첫 만남일 입력을 먼저 완료해 주세요.',
-            ),
-          );
-        }
-
-        return _QuestionPageFrame(
-          question: question,
-          onBackPressed: () => _goBackToQuestion(context),
-          child: answerState.when(
-            loading: () => _QuestionContent(
-              question: question,
-              child: const _CenteredLoader(),
-            ),
-            error: (error, stackTrace) => _QuestionContent(
-              question: question,
-              child: Column(
-                children: [
-                  const _StateMessage(
-                    title: '답변 정보를 불러오지 못했어요',
-                    message: '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
-                  ),
-                  const SizedBox(height: 16),
-                  AppActionButton(
-                    label: '다시 시도',
-                    enabled: true,
-                    onPressed: () => ref
-                        .read(todayAnswerControllerProvider.notifier)
-                        .refresh(),
-                  ),
-                ],
+      data: (state) {
+        final questionState = toQuestionDetailState(state);
+        return switch (questionState) {
+          LoadedQuestionDetailState() when questionState.canEdit =>
+            _QuestionPageFrame(
+              question: questionState.question,
+              onBackPressed: () => _goBackToQuestion(context, routeContext),
+              child: _AnswerForm(
+                key: ValueKey(
+                  questionState.answerState?.myAnswerId ?? 'empty-answer',
+                ),
+                question: questionState.question,
+                answerState: questionState.answerState,
+                routeContext: routeContext,
               ),
             ),
-            data: (state) => _AnswerForm(
-              key: ValueKey(state?.myAnswerId ?? 'empty-answer'),
-              question: question,
-              answerState: state,
-            ),
+          LoadedQuestionDetailState() => _QuestionPageFrame(
+            question: questionState.question,
+            onBackPressed: () => _goBackToQuestion(context, routeContext),
+            child: const _QuestionEditUnavailableMessage(),
           ),
-        );
+          UnavailableQuestionDetailState() => _QuestionPageFrame(
+            onBackPressed: () => _goBackToQuestion(context, routeContext),
+            child: _QuestionUnavailableMessage(reason: questionState.reason),
+          ),
+        };
       },
     );
   }
 }
 
-String _formatRouteDate(DateTime date) {
-  final year = date.year.toString().padLeft(4, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '$year-$month-$day';
-}
-
-void _goBackToQuestion(BuildContext context) {
+void _goBackToQuestion(
+  BuildContext context,
+  QuestionRouteContext routeContext,
+) {
   if (context.canPop()) {
     context.pop();
     return;
   }
 
-  context.go('/home/question');
+  context.go(routeContext.buildQuestionLocation());
 }
 
 class _QuestionLoadError extends StatelessWidget {
@@ -352,10 +352,12 @@ class _AnswerForm extends ConsumerStatefulWidget {
     super.key,
     required this.question,
     required this.answerState,
+    required this.routeContext,
   });
 
   final DailyQuestion question;
   final DailyQuestionAnswerState? answerState;
+  final QuestionRouteContext routeContext;
 
   @override
   ConsumerState<_AnswerForm> createState() => _AnswerFormState();
@@ -498,11 +500,13 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       await ref
           .read(todayAnswerControllerProvider.notifier)
           .submit(_controller.text);
+      ref.invalidate(storyLoopDetailProvider(widget.routeContext.targetDate));
+      ref.invalidate(storyLoopDetailProvider(null));
       if (!mounted) {
         return;
       }
 
-      context.go('/home/question');
+      _goBackToQuestion(context, widget.routeContext);
       return;
     } catch (_) {
       submitErrorMessage = _submitFailureMessage;

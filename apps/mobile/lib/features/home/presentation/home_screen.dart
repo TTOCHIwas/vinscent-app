@@ -10,6 +10,7 @@ import '../../expressions/data/couple_expression.dart';
 import '../../questions/application/question_detail_provider.dart';
 import '../../questions/data/daily_question.dart';
 import '../../questions/data/question_detail_state.dart';
+import '../../questions/presentation/question_route_context.dart';
 import '../../recordings/presentation/widgets/home_recording_panel.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../application/day_count.dart';
@@ -76,9 +77,7 @@ class _CoupleStatus extends ConsumerWidget {
 
             if (!couple.hasRelationshipStartDate) {
               return Text(
-                couple.isArchivedReadOnly
-                    ? '기록 보관 중이에요'
-                    : '첫 만난 날을 먼저 입력해주세요.',
+                couple.isArchivedReadOnly ? '기록 보관 중이에요' : '첫 만난 날을 먼저 입력해주세요.',
                 textAlign: TextAlign.end,
                 style: AppTextStyles.homeBody.copyWith(
                   color: AppColors.textMuted,
@@ -243,7 +242,11 @@ class _ActiveQuestionPreview extends StatelessWidget {
       speechText = state.question.questionText;
     }
 
-    final targetLocation = hasMyAnswer ? '/home/question' : '/home/question/edit';
+    final targetLocation = hasMyAnswer
+        ? '/home/question'
+        : const QuestionRouteContext(
+            source: QuestionRouteSource.home,
+          ).buildEditLocation();
 
     return _HomeQuestionSpeechPrompt(
       speechText: speechText,
