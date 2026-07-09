@@ -61,6 +61,10 @@ can also assign a question when no question-generating story loop exists.
 - `public.get_today_question_answer_state()` becomes read-only lookup logic.
   It no longer calls `private.get_or_assign_today_daily_question()` and does
   not create a question as a side effect.
+- `public.get_or_assign_today_question()` keeps its legacy name and result
+  shape, but becomes a read-only lookup for an already-linked current loop
+  question. This prevents older clients from bypassing story-card-gated
+  question generation.
 - Existing answer-state return columns remain unchanged.
 
 ## Why the Expected Question Id Is Required
