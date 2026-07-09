@@ -709,6 +709,14 @@ class _FakeDailyQuestionAnswerRepository
     currentState = submittedState;
     return submittedState;
   }
+
+  @override
+  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+    required String dailyQuestionId,
+    required String answerText,
+  }) {
+    return submitTodayAnswer(answerText);
+  }
 }
 
 final _dailyQuestion = DailyQuestion(

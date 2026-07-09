@@ -16,51 +16,57 @@ import '../../../support/story_loop_fixtures.dart';
 void main() {
   final today = DateTime(2026, 7, 6);
 
-  test('submits the daily question linked to the writable story loop', () async {
-    final repository = _FakeDailyQuestionAnswerRepository(_submittedState);
-    final container = _container(
-      today: today,
-      repository: repository,
-      detail: sampleStoryLoopDetail(coupleDate: today),
-    );
-    addTearDown(container.dispose);
+  test(
+    'submits the daily question linked to the writable story loop',
+    () async {
+      final repository = _FakeDailyQuestionAnswerRepository(_submittedState);
+      final container = _container(
+        today: today,
+        repository: repository,
+        detail: sampleStoryLoopDetail(coupleDate: today),
+      );
+      addTearDown(container.dispose);
 
-    final answerState = await container
-        .read(questionAnswerSubmitControllerProvider.notifier)
-        .submit(targetDate: today, answerText: 'answer');
-
-    expect(answerState, _submittedState);
-    expect(repository.submittedQuestionIds, ['daily-question-id']);
-    expect(repository.submittedAnswers, ['answer']);
-  });
-
-  test('rejects submission when the story loop question is not writable', () async {
-    final repository = _FakeDailyQuestionAnswerRepository(_submittedState);
-    final container = _container(
-      today: today,
-      repository: repository,
-      detail: sampleStoryLoopDetail(
-        coupleDate: today,
-        canAnswerQuestion: false,
-      ),
-    );
-    addTearDown(container.dispose);
-
-    await expectLater(
-      container
+      final answerState = await container
           .read(questionAnswerSubmitControllerProvider.notifier)
-          .submit(targetDate: today, answerText: 'answer'),
-      throwsA(
-        isA<DailyQuestionAnswerRepositoryException>().having(
-          (error) => error.reason,
-          'reason',
-          DailyQuestionAnswerFailureReason.questionNotReady,
-        ),
-      ),
-    );
+          .submit(targetDate: today, answerText: 'answer');
 
-    expect(repository.submittedQuestionIds, isEmpty);
-  });
+      expect(answerState, _submittedState);
+      expect(repository.submittedQuestionIds, ['daily-question-id']);
+      expect(repository.submittedAnswers, ['answer']);
+    },
+  );
+
+  test(
+    'rejects submission when the story loop question is not writable',
+    () async {
+      final repository = _FakeDailyQuestionAnswerRepository(_submittedState);
+      final container = _container(
+        today: today,
+        repository: repository,
+        detail: sampleStoryLoopDetail(
+          coupleDate: today,
+          canAnswerQuestion: false,
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container
+            .read(questionAnswerSubmitControllerProvider.notifier)
+            .submit(targetDate: today, answerText: 'answer'),
+        throwsA(
+          isA<DailyQuestionAnswerRepositoryException>().having(
+            (error) => error.reason,
+            'reason',
+            DailyQuestionAnswerFailureReason.questionNotReady,
+          ),
+        ),
+      );
+
+      expect(repository.submittedQuestionIds, isEmpty);
+    },
+  );
 }
 
 ProviderContainer _container({
@@ -89,6 +95,19 @@ class _FakeDailyQuestionAnswerRepository
   final DailyQuestionAnswerState submittedState;
   final submittedQuestionIds = <String>[];
   final submittedAnswers = <String>[];
+
+  @override
+  Future<DailyQuestionAnswerState> fetchTodayAnswerState() async {
+    return submittedState;
+  }
+
+  @override
+  Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) {
+    return submitStoryLoopAnswer(
+      dailyQuestionId: 'daily-question-id',
+      answerText: answerText,
+    );
+  }
 
   @override
   Future<DailyQuestionAnswerState> submitStoryLoopAnswer({

@@ -7,7 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../story_loops/application/story_loop_detail_navigation_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
-import '../application/today_answer_controller.dart';
+import '../application/question_answer_submit_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
 import '../data/question_detail_state.dart';
@@ -498,10 +498,11 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
     String? submitErrorMessage;
     try {
       await ref
-          .read(todayAnswerControllerProvider.notifier)
-          .submit(_controller.text);
-      ref.invalidate(storyLoopDetailProvider(widget.routeContext.targetDate));
-      ref.invalidate(storyLoopDetailProvider(null));
+          .read(questionAnswerSubmitControllerProvider.notifier)
+          .submit(
+            targetDate: widget.routeContext.targetDate,
+            answerText: _controller.text,
+          );
       if (!mounted) {
         return;
       }

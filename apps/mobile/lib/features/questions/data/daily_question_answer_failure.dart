@@ -4,6 +4,7 @@ enum DailyQuestionAnswerFailureReason {
   relationshipDateRequired,
   questionPoolEmpty,
   questionAssignmentFailed,
+  questionNotReady,
   answerRequired,
   answerTooLong,
   configMissing,

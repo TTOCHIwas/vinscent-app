@@ -16,6 +16,11 @@ abstract interface class DailyQuestionAnswerRepository {
   Future<DailyQuestionAnswerState> fetchTodayAnswerState();
 
   Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText);
+
+  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+    required String dailyQuestionId,
+    required String answerText,
+  });
 }
 
 class SupabaseDailyQuestionAnswerRepository
@@ -47,6 +52,30 @@ class SupabaseDailyQuestionAnswerRepository
 
   @override
   Future<DailyQuestionAnswerState> submitTodayAnswer(String answerText) async {
+    return _submitAnswer(
+      functionName: 'submit_today_question_answer',
+      params: {'answer_text': answerText},
+    );
+  }
+
+  @override
+  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+    required String dailyQuestionId,
+    required String answerText,
+  }) async {
+    return _submitAnswer(
+      functionName: 'submit_story_loop_question_answer',
+      params: {
+        'expected_daily_question_id': dailyQuestionId,
+        'answer_text': answerText,
+      },
+    );
+  }
+
+  Future<DailyQuestionAnswerState> _submitAnswer({
+    required String functionName,
+    required Map<String, Object?> params,
+  }) async {
     if (!AppConfig.isSupabaseConfigured) {
       throw const DailyQuestionAnswerRepositoryException(
         DailyQuestionAnswerFailureReason.configMissing,
@@ -55,10 +84,7 @@ class SupabaseDailyQuestionAnswerRepository
 
     try {
       final data = await Supabase.instance.client
-          .rpc(
-            'submit_today_question_answer',
-            params: {'answer_text': answerText},
-          )
+          .rpc(functionName, params: params)
           .timeout(AppConfig.supabaseRpcTimeout);
 
       return DailyQuestionAnswerState.fromJson(_asRow(data));
@@ -116,6 +142,7 @@ class SupabaseDailyQuestionAnswerRepository
         DailyQuestionAnswerFailureReason.questionPoolEmpty,
       'question_assignment_failed' =>
         DailyQuestionAnswerFailureReason.questionAssignmentFailed,
+      'question_not_ready' => DailyQuestionAnswerFailureReason.questionNotReady,
       'answer_required' => DailyQuestionAnswerFailureReason.answerRequired,
       'answer_too_long' => DailyQuestionAnswerFailureReason.answerTooLong,
       _ => DailyQuestionAnswerFailureReason.unknown,
