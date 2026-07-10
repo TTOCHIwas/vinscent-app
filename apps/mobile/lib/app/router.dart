@@ -128,6 +128,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'coupleAnniversary',
         builder: (context, state) => const RelationshipStartDateScreen(),
       ),
+      GoRoute(
+        path: '/home/story',
+        name: 'storyCardEditor',
+        builder: (context, state) => const StoryCardEditorScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) {
           return AppShell(location: state.uri.path, child: child);
@@ -137,11 +142,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/home',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
-          ),
-          GoRoute(
-            path: '/home/story',
-            name: 'storyCardEditor',
-            builder: (context, state) => const StoryCardEditorScreen(),
           ),
           GoRoute(
             path: '/home/character',

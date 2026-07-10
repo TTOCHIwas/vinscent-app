@@ -50,6 +50,7 @@ dependencies:
   just_audio: ^0.10.5
   path_provider: ^2.1.6
   record: ^6.2.1
+  camera: 0.11.1
   image_picker: ^1.2.1
   image: ^4.9.1
   uuid: ^4.5.3

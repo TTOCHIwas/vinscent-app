@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image;
-import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/presentation/widgets/app_back_button.dart';
@@ -15,8 +14,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/story_card_editor_controller.dart';
 import '../data/story_card_draft.dart';
+import '../data/story_card_editor_session.dart';
 import '../data/story_card_scene.dart';
 import '../data/story_loop_write_failure.dart';
+import 'widgets/story_card_camera_stage.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
   const StoryCardEditorScreen({super.key});
@@ -25,17 +26,15 @@ class StoryCardEditorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final draftAsync = ref.watch(storyCardEditorControllerProvider);
 
-    return SafeArea(
-      child: draftAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        error: (error, stackTrace) => _StoryCardEditorError(
-          onRetry: () => ref.invalidate(storyCardEditorControllerProvider),
-        ),
-        data: (draft) => _StoryCardEditorContent(
-          key: ValueKey(draft.existingRevision),
-          initialDraft: draft,
-        ),
+    return draftAsync.when(
+      loading: () =>
+          const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      error: (error, stackTrace) => _StoryCardEditorError(
+        onRetry: () => ref.invalidate(storyCardEditorControllerProvider),
+      ),
+      data: (draft) => _StoryCardEditorContent(
+        key: ValueKey(draft.existingRevision),
+        initialDraft: draft,
       ),
     );
   }
@@ -54,15 +53,12 @@ class _StoryCardEditorContent extends ConsumerStatefulWidget {
 class _StoryCardEditorContentState
     extends ConsumerState<_StoryCardEditorContent> {
   final _previewKey = GlobalKey();
-  final _imagePicker = ImagePicker();
 
-  late StoryCardDraft _draft;
+  late StoryCardEditorSession _session;
   ui.Image? _backgroundImage;
   StoryCardStroke? _activeStroke;
   Color _selectedColor = storyCardColorPalette.first;
   double _selectedStrokeWidth = storyCardNormalStrokeWidth;
-  _StoryCardInteractionMode _interactionMode =
-      _StoryCardInteractionMode.drawing;
   int? _activePointer;
   double _backgroundScaleStart = 1;
   Offset _backgroundOffsetStart = Offset.zero;
@@ -73,7 +69,7 @@ class _StoryCardEditorContentState
   @override
   void initState() {
     super.initState();
-    _draft = widget.initialDraft;
+    _session = StoryCardEditorSession.fromDraft(widget.initialDraft);
     _loadBackgroundImage(_draft.backgroundImageBytes);
   }
 
@@ -83,6 +79,8 @@ class _StoryCardEditorContentState
     super.dispose();
   }
 
+  StoryCardDraft get _draft => _session.draft;
+
   List<StoryCardStroke> get _visibleStrokes {
     return [..._draft.scene.strokes, ?_activeStroke];
   }
@@ -91,6 +89,16 @@ class _StoryCardEditorContentState
 
   @override
   Widget build(BuildContext context) {
+    if (_session.stage == StoryCardEditorStage.camera) {
+      return StoryCardCameraStage(
+        onBack: () => context.go('/home'),
+        onImageSelected: _useBackgroundImage,
+        onTextSelected: () => _enterBlankDecorator(StoryCardEditorTool.text),
+        onDrawingSelected: () =>
+            _enterBlankDecorator(StoryCardEditorTool.drawing),
+      );
+    }
+
     return Column(
       children: [
         _EditorHeader(
@@ -118,7 +126,7 @@ class _StoryCardEditorContentState
                       backgroundImage: _backgroundImage,
                       scene: _draft.scene,
                       visibleStrokes: _visibleStrokes,
-                      interactionMode: _interactionMode,
+                      interactionMode: _session.tool,
                       onStrokeStart: _startStroke,
                       onStrokeUpdate: _updateStroke,
                       onStrokeEnd: _endStroke,
@@ -131,21 +139,22 @@ class _StoryCardEditorContentState
                 ),
                 const SizedBox(height: 20),
                 _StoryCardActionBar(
-                  interactionMode: _interactionMode,
+                  interactionMode: _session.tool,
                   hasBackground: _draft.hasPhoto,
-                  onGalleryPressed: () => _pickImage(ImageSource.gallery),
-                  onCameraPressed: () => _pickImage(ImageSource.camera),
                   onAddTextPressed: _addTextLayer,
                   onDrawingModePressed: () {
                     setState(() {
-                      _interactionMode = _StoryCardInteractionMode.drawing;
+                      _session = _session.selectTool(
+                        StoryCardEditorTool.drawing,
+                      );
                     });
                   },
                   onBackgroundModePressed: _draft.hasPhoto
                       ? () {
                           setState(() {
-                            _interactionMode =
-                                _StoryCardInteractionMode.background;
+                            _session = _session.selectTool(
+                              StoryCardEditorTool.background,
+                            );
                           });
                         }
                       : null,
@@ -157,7 +166,9 @@ class _StoryCardEditorContentState
                   onColorChanged: (color) {
                     setState(() {
                       _selectedColor = color;
-                      _interactionMode = _StoryCardInteractionMode.drawing;
+                      _session = _session.selectTool(
+                        StoryCardEditorTool.drawing,
+                      );
                     });
                   },
                   onStrokeWidthChanged: (width) {
@@ -174,25 +185,21 @@ class _StoryCardEditorContentState
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  void _enterBlankDecorator(StoryCardEditorTool tool) {
+    setState(() {
+      _backgroundImage?.dispose();
+      _backgroundImage = null;
+      _session = _session.enterBlankDecorator(tool: tool);
+    });
+  }
+
+  Future<void> _useBackgroundImage(Uint8List sourceBytes) async {
     if (_isSaving || _isDeleting) {
       return;
     }
 
     try {
-      final selected = await _imagePicker.pickImage(
-        source: source,
-        imageQuality: 90,
-        maxWidth: 2048,
-        maxHeight: 2048,
-      );
-      if (selected == null) {
-        return;
-      }
-
-      final normalizedImageBytes = await _normalizeBackgroundImage(
-        await selected.readAsBytes(),
-      );
+      final normalizedImageBytes = await _normalizeBackgroundImage(sourceBytes);
       if (!mounted) {
         return;
       }
@@ -206,13 +213,7 @@ class _StoryCardEditorContentState
 
       setState(() {
         _backgroundImage = backgroundImage;
-        _draft = _draft.copyWith(
-          backgroundImageBytes: normalizedImageBytes,
-          scene: _draft.scene.copyWith(
-            backgroundTransform: const StoryCardBackgroundTransform.initial(),
-          ),
-        );
-        _interactionMode = _StoryCardInteractionMode.background;
+        _session = _session.enterPhotoDecorator(normalizedImageBytes);
       });
     } catch (_) {
       if (mounted) {
@@ -285,7 +286,7 @@ class _StoryCardEditorContentState
   }
 
   void _startStroke(StoryCardPoint point, int pointer) {
-    if (_interactionMode != _StoryCardInteractionMode.drawing ||
+    if (_session.tool != StoryCardEditorTool.drawing ||
         _activePointer != null) {
       return;
     }
@@ -322,9 +323,11 @@ class _StoryCardEditorContentState
       _activePointer = null;
       _activeStroke = null;
       if (activeStroke != null) {
-        _draft = _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            strokes: [..._draft.scene.strokes, activeStroke],
+        _session = _session.updateDraft(
+          _draft.copyWith(
+            scene: _draft.scene.copyWith(
+              strokes: [..._draft.scene.strokes, activeStroke],
+            ),
           ),
         );
       }
@@ -346,55 +349,23 @@ class _StoryCardEditorContentState
 
     final scale = (_backgroundScaleStart * details.scale).clamp(1.0, 4.0);
     final focalDelta = details.localFocalPoint - _backgroundFocalPointStart;
-    final offset = _clampBackgroundOffset(
-      image: image,
-      size: size,
-      scale: scale,
-      offset:
-          _backgroundOffsetStart +
-          Offset(focalDelta.dx / size.width, focalDelta.dy / size.height),
-    );
+    final offset =
+        _backgroundOffsetStart +
+        Offset(focalDelta.dx / size.width, focalDelta.dy / size.height);
 
     setState(() {
-      _draft = _draft.copyWith(
-        scene: _draft.scene.copyWith(
-          backgroundTransform: StoryCardBackgroundTransform(
-            scale: scale,
-            offsetX: offset.dx,
-            offsetY: offset.dy,
+      _session = _session.updateDraft(
+        _draft.copyWith(
+          scene: _draft.scene.copyWith(
+            backgroundTransform: StoryCardBackgroundTransform(
+              scale: scale,
+              offsetX: offset.dx,
+              offsetY: offset.dy,
+            ),
           ),
         ),
       );
     });
-  }
-
-  Offset _clampBackgroundOffset({
-    required ui.Image image,
-    required Size size,
-    required double scale,
-    required Offset offset,
-  }) {
-    final coverScale = _coverScale(image, size) * scale;
-    final drawWidth = image.width * coverScale;
-    final drawHeight = image.height * coverScale;
-    final maxOffsetX = ((drawWidth - size.width) / 2).clamp(
-      0.0,
-      double.maxFinite,
-    );
-    final maxOffsetY = ((drawHeight - size.height) / 2).clamp(
-      0.0,
-      double.maxFinite,
-    );
-    final offsetX = (offset.dx * size.width).clamp(-maxOffsetX, maxOffsetX);
-    final offsetY = (offset.dy * size.height).clamp(-maxOffsetY, maxOffsetY);
-
-    return Offset(offsetX / size.width, offsetY / size.height);
-  }
-
-  double _coverScale(ui.Image image, Size size) {
-    return (size.width / image.width).compareTo(size.height / image.height) >= 0
-        ? size.width / image.width
-        : size.height / image.height;
   }
 
   Future<void> _addTextLayer() async {
@@ -409,18 +380,20 @@ class _StoryCardEditorContentState
     }
 
     setState(() {
-      _draft = _draft.copyWith(
-        scene: _draft.scene.copyWith(
-          textLayers: [
-            ..._draft.scene.textLayers,
-            StoryCardTextLayer(
-              id: Uuid().v4(),
-              text: text,
-              x: 0.5,
-              y: 0.5,
-              color: Colors.black,
-            ),
-          ],
+      _session = _session.updateDraft(
+        _draft.copyWith(
+          scene: _draft.scene.copyWith(
+            textLayers: [
+              ..._draft.scene.textLayers,
+              StoryCardTextLayer(
+                id: const Uuid().v4(),
+                text: text,
+                x: 0.5,
+                y: 0.5,
+                color: Colors.black,
+              ),
+            ],
+          ),
         ),
       );
     });
@@ -436,19 +409,21 @@ class _StoryCardEditorContentState
     }
 
     setState(() {
-      _draft = _draft.copyWith(
-        scene: _draft.scene.copyWith(
-          textLayers: text.isEmpty
-              ? _draft.scene.textLayers
-                    .where((candidate) => candidate.id != layerId)
-                    .toList(growable: false)
-              : _draft.scene.textLayers
-                    .map(
-                      (candidate) => candidate.id == layerId
-                          ? candidate.copyWith(text: text)
-                          : candidate,
-                    )
-                    .toList(growable: false),
+      _session = _session.updateDraft(
+        _draft.copyWith(
+          scene: _draft.scene.copyWith(
+            textLayers: text.isEmpty
+                ? _draft.scene.textLayers
+                      .where((candidate) => candidate.id != layerId)
+                      .toList(growable: false)
+                : _draft.scene.textLayers
+                      .map(
+                        (candidate) => candidate.id == layerId
+                            ? candidate.copyWith(text: text)
+                            : candidate,
+                      )
+                      .toList(growable: false),
+          ),
         ),
       );
     });
@@ -497,18 +472,20 @@ class _StoryCardEditorContentState
     }
 
     setState(() {
-      _draft = _draft.copyWith(
-        scene: _draft.scene.copyWith(
-          textLayers: _draft.scene.textLayers
-              .map(
-                (layer) => layer.id == layerId
-                    ? layer.copyWith(
-                        x: (layer.x + delta.dx / size.width).clamp(0.0, 1.0),
-                        y: (layer.y + delta.dy / size.height).clamp(0.0, 1.0),
-                      )
-                    : layer,
-              )
-              .toList(growable: false),
+      _session = _session.updateDraft(
+        _draft.copyWith(
+          scene: _draft.scene.copyWith(
+            textLayers: _draft.scene.textLayers
+                .map(
+                  (layer) => layer.id == layerId
+                      ? layer.copyWith(
+                          x: (layer.x + delta.dx / size.width).clamp(0.0, 1.0),
+                          y: (layer.y + delta.dy / size.height).clamp(0.0, 1.0),
+                        )
+                      : layer,
+                )
+                .toList(growable: false),
+          ),
         ),
       );
     });
@@ -649,8 +626,6 @@ class _StoryCardEditorContentState
   }
 }
 
-enum _StoryCardInteractionMode { drawing, background }
-
 class _EditorHeader extends StatelessWidget {
   const _EditorHeader({
     required this.canSave,
@@ -727,7 +702,7 @@ class _StoryCardCanvas extends StatelessWidget {
   final ui.Image? backgroundImage;
   final StoryCardScene scene;
   final List<StoryCardStroke> visibleStrokes;
-  final _StoryCardInteractionMode interactionMode;
+  final StoryCardEditorTool interactionMode;
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
   final void Function(StoryCardPoint point, int pointer) onStrokeUpdate;
   final ValueChanged<int> onStrokeEnd;
@@ -762,7 +737,7 @@ class _StoryCardCanvas extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (interactionMode == _StoryCardInteractionMode.drawing)
+                  if (interactionMode == StoryCardEditorTool.drawing)
                     Positioned.fill(
                       child: Listener(
                         behavior: HitTestBehavior.opaque,
@@ -921,17 +896,13 @@ class _StoryCardActionBar extends StatelessWidget {
   const _StoryCardActionBar({
     required this.interactionMode,
     required this.hasBackground,
-    required this.onGalleryPressed,
-    required this.onCameraPressed,
     required this.onAddTextPressed,
     required this.onDrawingModePressed,
     required this.onBackgroundModePressed,
   });
 
-  final _StoryCardInteractionMode interactionMode;
+  final StoryCardEditorTool interactionMode;
   final bool hasBackground;
-  final VoidCallback onGalleryPressed;
-  final VoidCallback onCameraPressed;
   final VoidCallback onAddTextPressed;
   final VoidCallback onDrawingModePressed;
   final VoidCallback? onBackgroundModePressed;
@@ -944,16 +915,6 @@ class _StoryCardActionBar extends StatelessWidget {
       runSpacing: 8,
       children: [
         _EditorIconButton(
-          tooltip: '사진 선택',
-          icon: Icons.photo_outlined,
-          onPressed: onGalleryPressed,
-        ),
-        _EditorIconButton(
-          tooltip: '카메라',
-          icon: Icons.camera_alt_outlined,
-          onPressed: onCameraPressed,
-        ),
-        _EditorIconButton(
           tooltip: '텍스트 추가',
           icon: Icons.text_fields,
           onPressed: onAddTextPressed,
@@ -961,13 +922,13 @@ class _StoryCardActionBar extends StatelessWidget {
         _EditorIconButton(
           tooltip: '그리기',
           icon: Icons.brush_outlined,
-          isSelected: interactionMode == _StoryCardInteractionMode.drawing,
+          isSelected: interactionMode == StoryCardEditorTool.drawing,
           onPressed: onDrawingModePressed,
         ),
         _EditorIconButton(
           tooltip: '사진 위치 조정',
           icon: Icons.crop,
-          isSelected: interactionMode == _StoryCardInteractionMode.background,
+          isSelected: interactionMode == StoryCardEditorTool.background,
           onPressed: onBackgroundModePressed,
         ),
       ],
