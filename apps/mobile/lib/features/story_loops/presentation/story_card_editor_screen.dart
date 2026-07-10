@@ -593,42 +593,14 @@ class _StoryCardEditorContentState
   Future<String?> _editText({
     String initialValue = '',
     bool canDelete = false,
-  }) async {
-    final controller = TextEditingController(text: initialValue);
-
-    try {
-      return await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(canDelete ? '텍스트 수정' : '텍스트 추가'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: storyCardMaxTextCharactersPerLayer,
-            maxLines: 5,
-            decoration: const InputDecoration(hintText: '짧은 글을 적어주세요.'),
-          ),
-          actions: [
-            if (canDelete)
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(''),
-                child: const Text('삭제'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: const Text('완료'),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
+  }) {
+    return showDialog<String>(
+      context: context,
+      builder: (_) => _StoryCardTextDialog(
+        initialValue: initialValue,
+        canDelete: canDelete,
+      ),
+    );
   }
 
   void _startTextLayerTransform(String layerId, ScaleStartDetails details) {
@@ -807,6 +779,64 @@ class _StoryCardEditorContentState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _StoryCardTextDialog extends StatefulWidget {
+  const _StoryCardTextDialog({
+    required this.initialValue,
+    required this.canDelete,
+  });
+
+  final String initialValue;
+  final bool canDelete;
+
+  @override
+  State<_StoryCardTextDialog> createState() => _StoryCardTextDialogState();
+}
+
+class _StoryCardTextDialogState extends State<_StoryCardTextDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.canDelete ? '텍스트 수정' : '텍스트 추가'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: storyCardMaxTextCharactersPerLayer,
+        maxLines: 5,
+        decoration: const InputDecoration(hintText: '짧은 글을 적어주세요.'),
+      ),
+      actions: [
+        if (widget.canDelete)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(''),
+            child: const Text('삭제'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('완료'),
+        ),
+      ],
+    );
   }
 }
 

@@ -28,13 +28,56 @@ void main() {
   testWidgets('delivers text placement taps to the canvas', (tester) async {
     await _pumpEditor(tester, draft: _existingEmptyDraft());
 
-    await tester.tap(find.byIcon(Icons.text_fields));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('story-card-editor-canvas')));
-    await tester.pumpAndSettle();
+    await _openTextDialog(tester);
 
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('keeps the text controller alive through dialog dismissal', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+
+    await _openTextDialog(tester);
+    await tester.enterText(find.byType(TextField), 'first text');
+    await tester.tap(find.text('완료'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('first text'), findsOneWidget);
+
+    await tester.tap(find.text('first text'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'updated text');
+    await tester.tap(find.text('완료'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('updated text'), findsOneWidget);
+
+    await tester.tap(find.text('updated text'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('삭제'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('updated text'), findsNothing);
+  });
+
+  testWidgets('keeps the text controller alive when input is cancelled', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+
+    await _openTextDialog(tester);
+    await tester.enterText(find.byType(TextField), 'cancelled text');
+    await tester.tap(find.text('취소'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('cancelled text'), findsNothing);
   });
 
   testWidgets('delivers drawing pointer events to the canvas', (tester) async {
@@ -102,6 +145,13 @@ Future<void> _pumpEditor(
       child: const MaterialApp(home: StoryCardEditorScreen()),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openTextDialog(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.text_fields));
+  await tester.pump();
+  await tester.tap(find.byKey(const ValueKey('story-card-editor-canvas')));
   await tester.pumpAndSettle();
 }
 
