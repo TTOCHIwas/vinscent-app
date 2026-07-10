@@ -22,19 +22,39 @@ const storyCardMaxStrokeWidth = storyCardThickStrokeWidth;
 const storyCardMaxTextLayers = 10;
 const storyCardMaxTextCharactersPerLayer = 500;
 const storyCardMaxTextCharacters = 5000;
+const storyCardCanvasAspectRatio = 9 / 16;
+const storyCardPreviewWidth = 540;
+const storyCardPreviewHeight = 960;
+const storyCardMinTextScale = 0.5;
+const storyCardMaxTextScale = 4.0;
+
+enum StoryCardCanvasBackground {
+  white,
+  black;
+
+  Color get color => switch (this) {
+    StoryCardCanvasBackground.white => Colors.white,
+    StoryCardCanvasBackground.black => Colors.black,
+  };
+}
 
 class StoryCardScene {
   const StoryCardScene({
     required this.backgroundTransform,
     required this.strokes,
     required this.textLayers,
+    this.canvasBackground = StoryCardCanvasBackground.white,
   });
 
-  factory StoryCardScene.empty() {
-    return const StoryCardScene(
-      backgroundTransform: StoryCardBackgroundTransform.initial(),
-      strokes: [],
-      textLayers: [],
+  factory StoryCardScene.empty({
+    StoryCardCanvasBackground canvasBackground =
+        StoryCardCanvasBackground.white,
+  }) {
+    return StoryCardScene(
+      backgroundTransform: const StoryCardBackgroundTransform.initial(),
+      strokes: const [],
+      textLayers: const [],
+      canvasBackground: canvasBackground,
     );
   }
 
@@ -48,6 +68,7 @@ class StoryCardScene {
     final strokes = json['strokes'] as List<dynamic>? ?? const [];
     final textLayers = json['text_layers'] as List<dynamic>? ?? const [];
     final background = json['background'] as Map<String, dynamic>?;
+    final canvas = json['canvas'] as Map<String, dynamic>?;
 
     return StoryCardScene(
       backgroundTransform: background == null
@@ -67,12 +88,16 @@ class StoryCardScene {
             ),
           )
           .toList(growable: false),
+      canvasBackground: _canvasBackgroundFromJson(
+        canvas?['background_color'] as String?,
+      ),
     );
   }
 
   final StoryCardBackgroundTransform backgroundTransform;
   final List<StoryCardStroke> strokes;
   final List<StoryCardTextLayer> textLayers;
+  final StoryCardCanvasBackground canvasBackground;
 
   bool get hasDrawing => strokes.isNotEmpty;
 
@@ -87,17 +112,24 @@ class StoryCardScene {
     StoryCardBackgroundTransform? backgroundTransform,
     List<StoryCardStroke>? strokes,
     List<StoryCardTextLayer>? textLayers,
+    StoryCardCanvasBackground? canvasBackground,
   }) {
     return StoryCardScene(
       backgroundTransform: backgroundTransform ?? this.backgroundTransform,
       strokes: strokes ?? this.strokes,
       textLayers: textLayers ?? this.textLayers,
+      canvasBackground: canvasBackground ?? this.canvasBackground,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'version': 1,
+      'version': 2,
+      'canvas': {
+        'width_ratio': 9,
+        'height_ratio': 16,
+        'background_color': canvasBackground.name,
+      },
       'background': backgroundTransform.toJson(),
       'strokes': strokes.map((stroke) => stroke.toJson()).toList(),
       'text_layers': textLayers.map((layer) => layer.toJson()).toList(),
@@ -215,6 +247,7 @@ class StoryCardTextLayer {
     required this.x,
     required this.y,
     required this.color,
+    this.scale = 1,
   });
 
   factory StoryCardTextLayer.fromJson(Map<String, dynamic> json) {
@@ -224,6 +257,9 @@ class StoryCardTextLayer {
       x: (json['x'] as num).toDouble(),
       y: (json['y'] as num).toDouble(),
       color: _colorFromJson(json['color'] as String),
+      scale: ((json['scale'] as num?)?.toDouble() ?? 1)
+          .clamp(storyCardMinTextScale, storyCardMaxTextScale)
+          .toDouble(),
     );
   }
 
@@ -232,12 +268,14 @@ class StoryCardTextLayer {
   final double x;
   final double y;
   final Color color;
+  final double scale;
 
   StoryCardTextLayer copyWith({
     String? text,
     double? x,
     double? y,
     Color? color,
+    double? scale,
   }) {
     return StoryCardTextLayer(
       id: id,
@@ -245,6 +283,7 @@ class StoryCardTextLayer {
       x: x ?? this.x,
       y: y ?? this.y,
       color: color ?? this.color,
+      scale: scale ?? this.scale,
     );
   }
 
@@ -255,8 +294,16 @@ class StoryCardTextLayer {
       'x': x,
       'y': y,
       'color': _colorToJson(color),
+      'scale': scale,
     };
   }
+}
+
+StoryCardCanvasBackground _canvasBackgroundFromJson(String? value) {
+  return StoryCardCanvasBackground.values.firstWhere(
+    (background) => background.name == value,
+    orElse: () => StoryCardCanvasBackground.white,
+  );
 }
 
 String _colorToJson(Color color) {
