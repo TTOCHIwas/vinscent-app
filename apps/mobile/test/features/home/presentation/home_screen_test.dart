@@ -36,6 +36,8 @@ void main() {
     expect(find.text('D+2일째', findRichText: true), findsOneWidget);
     expect(find.text('오늘의 스토리'), findsOneWidget);
     expect(find.text('오늘 스토리 카드를 아직 아무도 올리지 않았어요.'), findsOneWidget);
+    expect(find.text('사진, 그림, 글로 오늘의 카드를 만들어 보세요.'), findsOneWidget);
+    expect(find.text('\uce74\ub4dc\u0020\uc791\uc131'), findsOneWidget);
   });
 
   testWidgets('질문이 생성되면 질문 문구를 보여준다', (tester) async {
@@ -93,11 +95,7 @@ void main() {
   });
 
   testWidgets('처음 만난 날이 없으면 시작일 안내를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCoupleWithoutDate,
-      today: _today,
-    );
+    await _pumpHome(tester, couple: _activeCoupleWithoutDate, today: _today);
 
     expect(find.text('처음 만난 날을 먼저 입력해 주세요.'), findsOneWidget);
     expect(find.text('오늘 스토리를 아직 확인할 수 없어요.'), findsOneWidget);
@@ -126,6 +124,7 @@ void main() {
 
     expect(find.text('내 스토리 카드가 올라갔어요.'), findsOneWidget);
     expect(find.text('상대 카드가 오면 오늘 질문이 생성돼요.'), findsOneWidget);
+    expect(find.text('\uce74\ub4dc\u0020\uc218\uc815'), findsOneWidget);
   });
 
   testWidgets('상대 카드만 있으면 내 작성 대기 상태를 보여준다', (tester) async {
@@ -150,7 +149,8 @@ void main() {
     );
 
     expect(find.text('상대가 스토리 카드를 올렸어요.'), findsOneWidget);
-    expect(find.text('내 카드 작성 화면은 다음 단계에서 연결돼요.'), findsOneWidget);
+    expect(find.text('내 카드를 올리면 오늘 질문이 생성돼요.'), findsOneWidget);
+    expect(find.text('\uce74\ub4dc\u0020\uc791\uc131'), findsOneWidget);
   });
 
   testWidgets('두 카드가 있고 질문이 없으면 질문 생성 중 상태를 보여준다', (tester) async {
@@ -336,7 +336,9 @@ class _PendingStoryLoopReadRepository implements StoryLoopReadRepository {
   }
 
   @override
-  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) async {
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(
+    DateTime month,
+  ) async {
     return const [];
   }
 }
@@ -353,7 +355,9 @@ class _ThrowingStoryLoopReadRepository implements StoryLoopReadRepository {
   }
 
   @override
-  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) async {
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(
+    DateTime month,
+  ) async {
     return const [];
   }
 }
@@ -383,7 +387,9 @@ class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
   }
 
   @override
-  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(DateTime date) async {
+  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(
+    DateTime date,
+  ) async {
     return const [];
   }
 }

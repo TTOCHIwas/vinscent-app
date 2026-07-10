@@ -23,6 +23,7 @@ import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/shell/presentation/app_shell.dart';
+import '../features/story_loops/presentation/story_card_editor_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authStatus = ref.watch(authControllerProvider);
@@ -84,6 +85,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                             isOnboardingRoute ||
                             isCoupleAnniversaryRoute ||
                             path == '/' ||
+                            path == '/home/story' ||
                             path == '/home/question/edit')
                         ? '/home'
                         : null,
@@ -135,6 +137,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/home',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/home/story',
+            name: 'storyCardEditor',
+            builder: (context, state) => const StoryCardEditorScreen(),
           ),
           GoRoute(
             path: '/home/character',

@@ -13,10 +13,11 @@ import '../data/story_card_scene.dart';
 import '../data/story_loop_write_failure.dart';
 import '../data/story_loop_write_repository.dart';
 
-final storyCardEditorControllerProvider = AsyncNotifierProvider.autoDispose<
-  StoryCardEditorController,
-  StoryCardDraft
->(StoryCardEditorController.new);
+final storyCardEditorControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      StoryCardEditorController,
+      StoryCardDraft
+    >(StoryCardEditorController.new);
 
 class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
   @override
@@ -28,18 +29,10 @@ class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
     return _draftFromEditableCard(editableCard);
   }
 
-  void updateDraft(StoryCardDraft draft) {
-    state = AsyncValue.data(draft);
-  }
-
-  Future<StoryLoopCardSaveResult> save(Uint8List previewImageBytes) async {
-    final draft = _currentDraft;
-    if (draft == null) {
-      throw const StoryLoopWriteRepositoryException(
-        StoryLoopWriteFailureReason.unknown,
-      );
-    }
-
+  Future<StoryLoopCardSaveResult> save({
+    required StoryCardDraft draft,
+    required Uint8List previewImageBytes,
+  }) async {
     final couple = await ref.read(coupleControllerProvider.future);
     final profile = await ref.read(profileControllerProvider.future);
     if (couple == null || !couple.canEditSharedData || profile == null) {
@@ -62,15 +55,7 @@ class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
     return result;
   }
 
-  Future<void> delete() async {
-    final draft = _currentDraft;
-    final expectedRevision = draft?.existingRevision;
-    if (expectedRevision == null) {
-      throw const StoryLoopWriteRepositoryException(
-        StoryLoopWriteFailureReason.cardNotFound,
-      );
-    }
-
+  Future<void> delete({required int expectedRevision}) async {
     final couple = await ref.read(coupleControllerProvider.future);
     if (couple == null || !couple.canEditSharedData) {
       throw const StoryLoopWriteRepositoryException(
@@ -101,19 +86,14 @@ class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
     return StoryCardDraft(scene: StoryCardScene.empty());
   }
 
-  StoryCardDraft? get _currentDraft {
-    return switch (state) {
-      AsyncData<StoryCardDraft>(:final value) => value,
-      _ => null,
-    };
-  }
-
   void _invalidateReadState(DateTime coupleDate) {
     ref.invalidate(todayStoryLoopSummaryProvider);
     ref.invalidate(storyLoopDetailProvider(null));
     ref.invalidate(storyLoopDetailProvider(coupleDate));
     ref.invalidate(
-      storyLoopMonthSummaryProvider(DateTime(coupleDate.year, coupleDate.month)),
+      storyLoopMonthSummaryProvider(
+        DateTime(coupleDate.year, coupleDate.month),
+      ),
     );
   }
 }

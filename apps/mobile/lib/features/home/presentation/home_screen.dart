@@ -23,10 +23,12 @@ const _homeStatusLoadError =
     '\ucee4\ud50c\u0020\uc815\ubcf4\ub97c\u0020\ubd88\ub7ec\uc624\uc9c0\u0020\ubabb\ud588\uc5b4\uc694\u002e';
 const _homeStatusMissingCouple =
     '\ucee4\ud50c\u0020\uc815\ubcf4\ub97c\u0020\ucc3e\uc744\u0020\uc218\u0020\uc5c6\uc5b4\uc694\u002e';
-const _homeStatusArchivedNoDate = '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911\uc774\uc5d0\uc694';
+const _homeStatusArchivedNoDate =
+    '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911\uc774\uc5d0\uc694';
 const _homeStatusMissingStartDate =
     '\ucc98\uc74c\u0020\ub9cc\ub09c\u0020\ub0a0\uc744\u0020\uba3c\uc800\u0020\uc785\ub825\ud574\u0020\uc8fc\uc138\uc694\u002e';
-const _homeStatusArchivedHeadline = '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911';
+const _homeStatusArchivedHeadline =
+    '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911';
 const _homeStatusActiveHeadline = '\uc6b0\ub9ac';
 const _homeStatusArchivedSuffix = '\u0020\ubcf4\uad00\u0020\uc911';
 const _homeStatusDaySuffix = '\uc77c\uc9f8';
@@ -48,7 +50,7 @@ const _homeStoryEmpty =
 const _homeStoryReadonlySupporting =
     '\uc9c0\uae08\uc740\u0020\uc77d\uae30\u0020\uc804\uc6a9\uc73c\ub85c\ub9cc\u0020\ubcfc\u0020\uc218\u0020\uc788\uc5b4\uc694\u002e';
 const _homeStoryEditorPlaceholder =
-    '\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\u0020\ud3b8\uc9d1\u0020\uae30\ub2a5\uc740\u0020\ub2e4\uc74c\u0020\ub2e8\uacc4\uc5d0\uc11c\u0020\uc5f0\uacb0\ub3fc\uc694\u002e';
+    '\uc0ac\uc9c4\u002c\u0020\uadf8\ub9bc\u002c\u0020\uae00\ub85c\u0020\uc624\ub298\uc758\u0020\uce74\ub4dc\ub97c\u0020\ub9cc\ub4e4\uc5b4\u0020\ubcf4\uc138\uc694\u002e';
 const _homeStoryArchivedSingle =
     '\ubcf4\uad00\u0020\uc911\uc778\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\uc608\uc694\u002e';
 const _homeStoryMineFirst =
@@ -58,7 +60,7 @@ const _homeStoryPartnerFirst =
 const _homeStoryWaitingPartner =
     '\uc0c1\ub300\u0020\uce74\ub4dc\uac00\u0020\uc624\uba74\u0020\uc624\ub298\u0020\uc9c8\ubb38\uc774\u0020\uc0dd\uc131\ub3fc\uc694\u002e';
 const _homeStoryMyCardPlaceholder =
-    '\ub0b4\u0020\uce74\ub4dc\u0020\uc791\uc131\u0020\ud654\uba74\uc740\u0020\ub2e4\uc74c\u0020\ub2e8\uacc4\uc5d0\uc11c\u0020\uc5f0\uacb0\ub3fc\uc694\u002e';
+    '\ub0b4\u0020\uce74\ub4dc\ub97c\u0020\uc62c\ub9ac\uba74\u0020\uc624\ub298\u0020\uc9c8\ubb38\uc774\u0020\uc0dd\uc131\ub3fc\uc694\u002e';
 const _homeStoryArchivedDouble =
     '\ubcf4\uad00\u0020\uc911\uc778\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\uac00\u0020\ubaa8\ub450\u0020\ubaa8\uc5ec\u0020\uc788\uc5b4\uc694\u002e';
 const _homeStoryGenerating = '\uc9c8\ubb38\u0020\uc0dd\uc131\u0020\uc911';
@@ -71,8 +73,11 @@ const _homeStoryPartnerAnswered =
 const _homeStoryWaitingAnswer =
     '\uc0c1\ub300\ubc29\uc758\u0020\ub2f5\ubcc0\uc744\u0020\uae30\ub2e4\ub9ac\uace0\u0020\uc788\uc5b4\uc694\u002e';
 const _homeStoryActionRead = '\uae30\ub85d\u0020\ubcf4\uae30';
-const _homeStoryActionQuestion = '\uc624\ub298\u0020\uc9c8\ubb38\u0020\ubcf4\uae30';
+const _homeStoryActionQuestion =
+    '\uc624\ub298\u0020\uc9c8\ubb38\u0020\ubcf4\uae30';
 const _homeStoryActionAnswer = '\ub2f5\ubcc0\u0020\ub0a8\uae30\uae30';
+const _homeStoryActionCreate = '\uce74\ub4dc\u0020\uc791\uc131';
+const _homeStoryActionEdit = '\uce74\ub4dc\u0020\uc218\uc815';
 
 const _homeExpressionArchivedHint =
     '\ubcf4\uad00\u0020\uc911\uc5d0\ub294\u0020\ud45c\ud604\u0020\ubcf4\ub0b4\uae30\uac00\u0020\uc7a0\uc2dc\u0020\ub9c9\ud600\u0020\uc788\uc5b4\uc694\u002e';
@@ -617,11 +622,14 @@ class _HomeStoryLoopPresentation {
         supportingText: isArchived
             ? _homeStoryReadonlySupporting
             : _homeStoryEditorPlaceholder,
+        actionLabel: isArchived ? null : _homeStoryActionCreate,
+        onActionTap: isArchived ? null : (context) => context.go('/home/story'),
       );
     }
 
     if (sortedCards.length == 1) {
-      final isMyCard = currentUserId != null &&
+      final isMyCard =
+          currentUserId != null &&
           sortedCards.first.authorUserId == currentUserId;
       return _HomeStoryLoopPresentation(
         cards: sortedCards,
@@ -635,6 +643,12 @@ class _HomeStoryLoopPresentation {
             : isMyCard
             ? _homeStoryWaitingPartner
             : _homeStoryMyCardPlaceholder,
+        actionLabel: isArchived
+            ? null
+            : isMyCard
+            ? _homeStoryActionEdit
+            : _homeStoryActionCreate,
+        onActionTap: isArchived ? null : (context) => context.go('/home/story'),
       );
     }
 
@@ -800,9 +814,9 @@ class _ExpressionGrid extends ConsumerWidget {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(_homeExpressionSendFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(_homeExpressionSendFailed)));
     }
   }
 }
