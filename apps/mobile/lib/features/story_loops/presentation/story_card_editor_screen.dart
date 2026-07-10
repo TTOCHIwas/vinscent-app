@@ -124,6 +124,7 @@ class _StoryCardEditorContentState
           SafeArea(
             child: Center(
               child: AspectRatio(
+                key: const ValueKey('story-card-editor-canvas'),
                 aspectRatio: storyCardCanvasAspectRatio,
                 child: RepaintBoundary(
                   key: _previewKey,
@@ -146,15 +147,24 @@ class _StoryCardEditorContentState
               ),
             ),
           ),
-          SafeArea(
-            child: _EditorHeader(
-              canSave: _canSave,
-              isSaving: _isSaving,
-              canDelete:
-                  _draft.existingRevision != null && !_isSaving && !_isDeleting,
-              onBackPressed: _handleBack,
-              onDeletePressed: _deleteCard,
-              onSavePressed: _saveCard,
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: _EditorHeader(
+                key: const ValueKey('story-card-editor-header'),
+                canSave: _canSave,
+                isSaving: _isSaving,
+                canDelete:
+                    _draft.existingRevision != null &&
+                    !_isSaving &&
+                    !_isDeleting,
+                onBackPressed: _handleBack,
+                onDeletePressed: _deleteCard,
+                onSavePressed: _saveCard,
+              ),
             ),
           ),
           SafeArea(
@@ -802,6 +812,7 @@ class _StoryCardEditorContentState
 
 class _EditorHeader extends StatelessWidget {
   const _EditorHeader({
+    super.key,
     required this.canSave,
     required this.isSaving,
     required this.canDelete,
@@ -855,6 +866,7 @@ class _EditorHeader extends StatelessWidget {
                       icon: const Icon(Icons.delete_outline),
                     ),
                   TextButton(
+                    key: const ValueKey('story-card-editor-save'),
                     style: TextButton.styleFrom(foregroundColor: Colors.white),
                     onPressed: canSave ? onSavePressed : null,
                     child: isSaving
