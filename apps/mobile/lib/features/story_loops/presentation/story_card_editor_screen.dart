@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -26,15 +25,20 @@ class StoryCardEditorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final draftAsync = ref.watch(storyCardEditorControllerProvider);
 
-    return draftAsync.when(
-      loading: () =>
-          const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      error: (error, stackTrace) => _StoryCardEditorError(
-        onRetry: () => ref.invalidate(storyCardEditorControllerProvider),
-      ),
-      data: (draft) => _StoryCardEditorContent(
-        key: ValueKey(draft.existingRevision),
-        initialDraft: draft,
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      backgroundColor: Colors.black,
+      body: draftAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+        ),
+        error: (error, stackTrace) => _StoryCardEditorError(
+          onRetry: () => ref.invalidate(storyCardEditorControllerProvider),
+        ),
+        data: (draft) => _StoryCardEditorContent(
+          key: ValueKey(draft.existingRevision),
+          initialDraft: draft,
+        ),
       ),
     );
   }
@@ -63,6 +67,8 @@ class _StoryCardEditorContentState
   double _backgroundScaleStart = 1;
   Offset _backgroundOffsetStart = Offset.zero;
   Offset _backgroundFocalPointStart = Offset.zero;
+  StoryCardTextLayer? _textLayerTransformStart;
+  Offset _textLayerFocalPointStart = Offset.zero;
   bool _isSaving = false;
   bool _isDeleting = false;
 
@@ -89,100 +95,221 @@ class _StoryCardEditorContentState
 
   @override
   Widget build(BuildContext context) {
-    if (_session.stage == StoryCardEditorStage.camera) {
-      return StoryCardCameraStage(
-        onBack: () => context.go('/home'),
-        onImageSelected: _useBackgroundImage,
-        onTextSelected: () => _enterBlankDecorator(StoryCardEditorTool.text),
-        onDrawingSelected: () =>
-            _enterBlankDecorator(StoryCardEditorTool.drawing),
-      );
-    }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBack();
+        }
+      },
+      child: _session.stage == StoryCardEditorStage.camera
+          ? StoryCardCameraStage(
+              onBack: _handleBack,
+              onImageSelected: _useBackgroundImage,
+              onTextSelected: () =>
+                  _enterBlankDecorator(StoryCardEditorTool.text),
+              onDrawingSelected: () =>
+                  _enterBlankDecorator(StoryCardEditorTool.drawing),
+            )
+          : _buildDecorator(),
+    );
+  }
 
-    return Column(
-      children: [
-        _EditorHeader(
-          canSave: _canSave,
-          isSaving: _isSaving,
-          canDelete:
-              _draft.existingRevision != null && !_isSaving && !_isDeleting,
-          onBackPressed: () => context.go('/home'),
-          onDeletePressed: _deleteCard,
-          onSavePressed: _saveCard,
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            physics: _activePointer == null
-                ? null
-                : const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-            child: Column(
-              children: [
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: RepaintBoundary(
-                    key: _previewKey,
-                    child: _StoryCardCanvas(
-                      backgroundImage: _backgroundImage,
-                      scene: _draft.scene,
-                      visibleStrokes: _visibleStrokes,
-                      interactionMode: _session.tool,
-                      onStrokeStart: _startStroke,
-                      onStrokeUpdate: _updateStroke,
-                      onStrokeEnd: _endStroke,
-                      onBackgroundScaleStart: _startBackgroundTransform,
-                      onBackgroundScaleUpdate: _updateBackgroundTransform,
-                      onTextLayerMoved: _moveTextLayer,
-                      onTextLayerTapped: _editTextLayer,
-                    ),
+  Widget _buildDecorator() {
+    return ColoredBox(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: storyCardCanvasAspectRatio,
+                child: RepaintBoundary(
+                  key: _previewKey,
+                  child: _StoryCardCanvas(
+                    backgroundImage: _backgroundImage,
+                    scene: _draft.scene,
+                    visibleStrokes: _visibleStrokes,
+                    interactionMode: _session.tool,
+                    onCanvasTapped: _addTextLayerAt,
+                    onStrokeStart: _startStroke,
+                    onStrokeUpdate: _updateStroke,
+                    onStrokeEnd: _endStroke,
+                    onBackgroundScaleStart: _startBackgroundTransform,
+                    onBackgroundScaleUpdate: _updateBackgroundTransform,
+                    onTextLayerScaleStart: _startTextLayerTransform,
+                    onTextLayerScaleUpdate: _updateTextLayerTransform,
+                    onTextLayerTapped: _editTextLayer,
                   ),
                 ),
-                const SizedBox(height: 20),
-                _StoryCardActionBar(
-                  interactionMode: _session.tool,
-                  hasBackground: _draft.hasPhoto,
-                  onAddTextPressed: _addTextLayer,
-                  onDrawingModePressed: () {
-                    setState(() {
-                      _session = _session.selectTool(
-                        StoryCardEditorTool.drawing,
-                      );
-                    });
-                  },
-                  onBackgroundModePressed: _draft.hasPhoto
-                      ? () {
-                          setState(() {
-                            _session = _session.selectTool(
-                              StoryCardEditorTool.background,
-                            );
-                          });
-                        }
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                _StoryCardDrawingControls(
-                  selectedColor: _selectedColor,
-                  selectedStrokeWidth: _selectedStrokeWidth,
-                  onColorChanged: (color) {
-                    setState(() {
-                      _selectedColor = color;
-                      _session = _session.selectTool(
-                        StoryCardEditorTool.drawing,
-                      );
-                    });
-                  },
-                  onStrokeWidthChanged: (width) {
-                    setState(() {
-                      _selectedStrokeWidth = width;
-                    });
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ],
+          SafeArea(
+            child: _EditorHeader(
+              canSave: _canSave,
+              isSaving: _isSaving,
+              canDelete:
+                  _draft.existingRevision != null && !_isSaving && !_isDeleting,
+              onBackPressed: _handleBack,
+              onDeletePressed: _deleteCard,
+              onSavePressed: _saveCard,
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: _StoryCardActionBar(
+                  interactionMode: _session.tool,
+                  hasBackground: _draft.hasPhoto,
+                  onAddTextPressed: _selectTextTool,
+                  onDrawingModePressed: () =>
+                      _selectTool(StoryCardEditorTool.drawing),
+                  onBackgroundModePressed: _draft.hasPhoto
+                      ? () => _selectTool(StoryCardEditorTool.background)
+                      : null,
+                  onBackgroundColorPressed: _draft.hasPhoto
+                      ? null
+                      : _toggleCanvasBackground,
+                ),
+              ),
+            ),
+          ),
+          if (_session.tool == StoryCardEditorTool.drawing)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: _StoryCardDrawingControls(
+                    selectedColor: _selectedColor,
+                    selectedStrokeWidth: _selectedStrokeWidth,
+                    onColorChanged: (color) {
+                      setState(() {
+                        _selectedColor = color;
+                      });
+                    },
+                    onStrokeWidthChanged: (width) {
+                      setState(() {
+                        _selectedStrokeWidth = width;
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _handleBack() async {
+    if (_isSaving || _isDeleting) {
+      return;
+    }
+
+    if (_session.stage == StoryCardEditorStage.camera) {
+      context.go('/home');
+      return;
+    }
+
+    if (!_session.hasUnsavedChanges) {
+      if (_session.hasPersistedCard) {
+        context.go('/home');
+      } else {
+        _returnToCamera();
+      }
+      return;
+    }
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('수정 내용을 삭제하시겠어요?'),
+        content: const Text('현재 편집 중인 사진, 그림, 텍스트가 모두 삭제돼요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('계속 수정'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDiscard != true || !mounted) {
+      return;
+    }
+
+    await _discardUnsavedChanges();
+  }
+
+  void _returnToCamera() {
+    _backgroundImage?.dispose();
+    setState(() {
+      _backgroundImage = null;
+      _session = _session.returnToCamera();
+    });
+  }
+
+  Future<void> _discardUnsavedChanges() async {
+    final nextSession = _session.discardChanges();
+    final bytes = nextSession.draft.backgroundImageBytes;
+    ui.Image? nextBackgroundImage;
+    if (bytes != null) {
+      try {
+        nextBackgroundImage = await _decodeUiImage(bytes);
+      } catch (_) {
+        if (mounted) {
+          _showSnackBar('기존 사진을 불러오지 못했어요.');
+        }
+      }
+    }
+    if (!mounted) {
+      nextBackgroundImage?.dispose();
+      return;
+    }
+
+    _backgroundImage?.dispose();
+    setState(() {
+      _backgroundImage = nextBackgroundImage;
+      _activeStroke = null;
+      _activePointer = null;
+      _session = nextSession;
+    });
+  }
+
+  void _selectTool(StoryCardEditorTool tool) {
+    setState(() {
+      _session = _session.selectTool(tool);
+    });
+  }
+
+  void _selectTextTool() {
+    if (_draft.scene.textLayers.length >= storyCardMaxTextLayers) {
+      _showSnackBar('텍스트는 최대 $storyCardMaxTextLayers개까지 추가할 수 있어요.');
+      return;
+    }
+    _selectTool(StoryCardEditorTool.text);
+  }
+
+  void _toggleCanvasBackground() {
+    final background =
+        _draft.scene.canvasBackground == StoryCardCanvasBackground.white
+        ? StoryCardCanvasBackground.black
+        : StoryCardCanvasBackground.white;
+    setState(() {
+      _session = _session.updateDraft(
+        _draft.copyWith(
+          scene: _draft.scene.copyWith(canvasBackground: background),
+        ),
+      );
+    });
   }
 
   void _enterBlankDecorator(StoryCardEditorTool tool) {
@@ -347,7 +474,9 @@ class _StoryCardEditorContentState
       return;
     }
 
-    final scale = (_backgroundScaleStart * details.scale).clamp(1.0, 4.0);
+    final scale = (_backgroundScaleStart * details.scale)
+        .clamp(storyCardMinBackgroundScale, storyCardMaxBackgroundScale)
+        .toDouble();
     final focalDelta = details.localFocalPoint - _backgroundFocalPointStart;
     final offset =
         _backgroundOffsetStart +
@@ -368,7 +497,11 @@ class _StoryCardEditorContentState
     });
   }
 
-  Future<void> _addTextLayer() async {
+  Future<void> _addTextLayerAt(StoryCardPoint point) async {
+    if (_session.tool != StoryCardEditorTool.text) {
+      return;
+    }
+
     final text = await _editText();
     if (text == null || text.isEmpty || !mounted) {
       return;
@@ -376,6 +509,11 @@ class _StoryCardEditorContentState
 
     if (_draft.scene.textLayers.length >= storyCardMaxTextLayers) {
       _showSnackBar('텍스트는 최대 $storyCardMaxTextLayers개까지 추가할 수 있어요.');
+      return;
+    }
+    if (_draft.scene.textCharacterCount + text.characters.length >
+        storyCardMaxTextCharacters) {
+      _showSnackBar('텍스트 전체 글자 수는 최대 $storyCardMaxTextCharacters자예요.');
       return;
     }
 
@@ -388,13 +526,18 @@ class _StoryCardEditorContentState
               StoryCardTextLayer(
                 id: const Uuid().v4(),
                 text: text,
-                x: 0.5,
-                y: 0.5,
-                color: Colors.black,
+                x: point.x,
+                y: point.y,
+                color:
+                    _draft.scene.canvasBackground ==
+                        StoryCardCanvasBackground.black
+                    ? Colors.white
+                    : Colors.black,
               ),
             ],
           ),
         ),
+        tool: StoryCardEditorTool.none,
       );
     });
   }
@@ -405,6 +548,14 @@ class _StoryCardEditorContentState
     );
     final text = await _editText(initialValue: layer.text, canDelete: true);
     if (!mounted || text == null) {
+      return;
+    }
+    final nextCharacterCount =
+        _draft.scene.textCharacterCount -
+        layer.text.characters.length +
+        text.characters.length;
+    if (nextCharacterCount > storyCardMaxTextCharacters) {
+      _showSnackBar('텍스트 전체 글자 수는 최대 $storyCardMaxTextCharacters자예요.');
       return;
     }
 
@@ -432,44 +583,67 @@ class _StoryCardEditorContentState
   Future<String?> _editText({
     String initialValue = '',
     bool canDelete = false,
-  }) {
+  }) async {
     final controller = TextEditingController(text: initialValue);
 
-    return showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(canDelete ? '텍스트 수정' : '텍스트 추가'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: storyCardMaxTextCharactersPerLayer,
-          maxLines: 5,
-          decoration: const InputDecoration(hintText: '짧은 글을 적어주세요.'),
-        ),
-        actions: [
-          if (canDelete)
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(canDelete ? '텍스트 수정' : '텍스트 추가'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: storyCardMaxTextCharactersPerLayer,
+            maxLines: 5,
+            decoration: const InputDecoration(hintText: '짧은 글을 적어주세요.'),
+          ),
+          actions: [
+            if (canDelete)
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(''),
+                child: const Text('삭제'),
+              ),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(''),
-              child: const Text('삭제'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('취소'),
             ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('완료'),
-          ),
-        ],
-      ),
-    );
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: const Text('완료'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 
-  void _moveTextLayer(String layerId, Offset delta, Size size) {
-    if (size.isEmpty) {
+  void _startTextLayerTransform(String layerId, ScaleStartDetails details) {
+    _textLayerTransformStart = _draft.scene.textLayers.firstWhere(
+      (layer) => layer.id == layerId,
+    );
+    _textLayerFocalPointStart = details.focalPoint;
+  }
+
+  void _updateTextLayerTransform(
+    String layerId,
+    ScaleUpdateDetails details,
+    Size size,
+  ) {
+    final start = _textLayerTransformStart;
+    if (start == null || start.id != layerId || size.isEmpty) {
       return;
     }
+
+    final delta = details.focalPoint - _textLayerFocalPointStart;
+    final x = (start.x + delta.dx / size.width).clamp(0.0, 1.0);
+    final y = (start.y + delta.dy / size.height).clamp(0.0, 1.0);
+    final scale = (start.scale * details.scale)
+        .clamp(storyCardMinTextScale, storyCardMaxTextScale)
+        .toDouble();
 
     setState(() {
       _session = _session.updateDraft(
@@ -478,10 +652,7 @@ class _StoryCardEditorContentState
             textLayers: _draft.scene.textLayers
                 .map(
                   (layer) => layer.id == layerId
-                      ? layer.copyWith(
-                          x: (layer.x + delta.dx / size.width).clamp(0.0, 1.0),
-                          y: (layer.y + delta.dy / size.height).clamp(0.0, 1.0),
-                        )
+                      ? layer.copyWith(x: x, y: y, scale: scale)
                       : layer,
                 )
                 .toList(growable: false),
@@ -528,7 +699,10 @@ class _StoryCardEditorContentState
       throw StateError('Story card preview boundary is unavailable.');
     }
 
-    final pixelRatio = math.min(2.0, 960 / renderObject.size.width).toDouble();
+    if (renderObject.size.width <= 0) {
+      throw StateError('Story card preview boundary has an invalid size.');
+    }
+    final pixelRatio = storyCardPreviewWidth / renderObject.size.width;
     final image = await renderObject.toImage(pixelRatio: pixelRatio);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
@@ -645,40 +819,59 @@ class _EditorHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: AppBackButton(onPressed: onBackPressed, iconSize: 32),
-          ),
-          const Text('오늘의 스토리', style: AppTextStyles.shellTitle),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (canDelete)
-                  IconButton(
-                    tooltip: '카드 삭제',
-                    onPressed: onDeletePressed,
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                TextButton(
-                  onPressed: canSave ? onSavePressed : null,
-                  child: isSaving
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('올리기'),
-                ),
-              ],
+    return ColoredBox(
+      color: const Color(0x52000000),
+      child: SizedBox(
+        height: 56,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppBackButton(
+                onPressed: onBackPressed,
+                color: Colors.white,
+                iconSize: 30,
+              ),
             ),
-          ),
-        ],
+            const Text(
+              '오늘의 스토리',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (canDelete)
+                    IconButton(
+                      tooltip: '카드 삭제',
+                      color: Colors.white,
+                      onPressed: onDeletePressed,
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: canSave ? onSavePressed : null,
+                    child: isSaving
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('올리기'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -690,12 +883,14 @@ class _StoryCardCanvas extends StatelessWidget {
     required this.scene,
     required this.visibleStrokes,
     required this.interactionMode,
+    required this.onCanvasTapped,
     required this.onStrokeStart,
     required this.onStrokeUpdate,
     required this.onStrokeEnd,
     required this.onBackgroundScaleStart,
     required this.onBackgroundScaleUpdate,
-    required this.onTextLayerMoved,
+    required this.onTextLayerScaleStart,
+    required this.onTextLayerScaleUpdate,
     required this.onTextLayerTapped,
   });
 
@@ -703,77 +898,71 @@ class _StoryCardCanvas extends StatelessWidget {
   final StoryCardScene scene;
   final List<StoryCardStroke> visibleStrokes;
   final StoryCardEditorTool interactionMode;
+  final ValueChanged<StoryCardPoint> onCanvasTapped;
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
   final void Function(StoryCardPoint point, int pointer) onStrokeUpdate;
   final ValueChanged<int> onStrokeEnd;
   final ValueChanged<ScaleStartDetails> onBackgroundScaleStart;
   final void Function(ScaleUpdateDetails details, Size size)
   onBackgroundScaleUpdate;
-  final void Function(String layerId, Offset delta, Size size) onTextLayerMoved;
+  final void Function(String layerId, ScaleStartDetails details)
+  onTextLayerScaleStart;
+  final void Function(String layerId, ScaleUpdateDetails details, Size size)
+  onTextLayerScaleUpdate;
   final ValueChanged<String> onTextLayerTapped;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final size = Size.square(constraints.biggest.shortestSide);
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            border: Border.all(color: AppColors.wireframeBorder),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(7),
-            child: SizedBox.expand(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _StoryCardPainter(
-                        backgroundImage: backgroundImage,
-                        backgroundTransform: scene.backgroundTransform,
-                        strokes: visibleStrokes,
-                      ),
-                    ),
+        final size = constraints.biggest;
+        return ClipRect(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _StoryCardPainter(
+                    backgroundImage: backgroundImage,
+                    backgroundTransform: scene.backgroundTransform,
+                    canvasBackground: scene.canvasBackground,
+                    strokes: visibleStrokes,
                   ),
-                  if (interactionMode == StoryCardEditorTool.drawing)
-                    Positioned.fill(
-                      child: Listener(
-                        behavior: HitTestBehavior.opaque,
-                        onPointerDown: (event) => onStrokeStart(
-                          _normalize(event.localPosition, size),
-                          event.pointer,
-                        ),
-                        onPointerMove: (event) => onStrokeUpdate(
-                          _normalize(event.localPosition, size),
-                          event.pointer,
-                        ),
-                        onPointerUp: (event) => onStrokeEnd(event.pointer),
-                        onPointerCancel: (event) => onStrokeEnd(event.pointer),
-                      ),
-                    )
-                  else
-                    Positioned.fill(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onScaleStart: onBackgroundScaleStart,
-                        onScaleUpdate: (details) =>
-                            onBackgroundScaleUpdate(details, size),
-                      ),
-                    ),
-                  for (final layer in scene.textLayers)
-                    Positioned(
-                      left: layer.x * size.width - 80,
-                      top: layer.y * size.height - 24,
-                      child: GestureDetector(
-                        onTap: () => onTextLayerTapped(layer.id),
-                        onPanUpdate: (details) =>
-                            onTextLayerMoved(layer.id, details.delta, size),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: size.width * .72,
-                          ),
+                ),
+              ),
+              if (interactionMode == StoryCardEditorTool.background &&
+                  backgroundImage != null)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onScaleStart: onBackgroundScaleStart,
+                    onScaleUpdate: (details) =>
+                        onBackgroundScaleUpdate(details, size),
+                  ),
+                ),
+              if (interactionMode == StoryCardEditorTool.text)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (details) =>
+                        onCanvasTapped(_normalize(details.localPosition, size)),
+                  ),
+                ),
+              for (final layer in scene.textLayers)
+                Positioned(
+                  left: layer.x * size.width,
+                  top: layer.y * size.height,
+                  child: FractionalTranslation(
+                    translation: const Offset(-0.5, -0.5),
+                    child: GestureDetector(
+                      onTap: () => onTextLayerTapped(layer.id),
+                      onScaleStart: (details) =>
+                          onTextLayerScaleStart(layer.id, details),
+                      onScaleUpdate: (details) =>
+                          onTextLayerScaleUpdate(layer.id, details, size),
+                      child: Transform.scale(
+                        scale: layer.scale,
+                        child: SizedBox(
+                          width: size.width * .72,
                           child: Text(
                             layer.text,
                             textAlign: TextAlign.center,
@@ -781,8 +970,8 @@ class _StoryCardCanvas extends StatelessWidget {
                               color: layer.color,
                               shadows: const [
                                 Shadow(
-                                  color: Color(0x33000000),
-                                  blurRadius: 2,
+                                  color: Color(0x66000000),
+                                  blurRadius: 3,
                                   offset: Offset(0, 1),
                                 ),
                               ],
@@ -791,9 +980,25 @@ class _StoryCardCanvas extends StatelessWidget {
                         ),
                       ),
                     ),
-                ],
-              ),
-            ),
+                  ),
+                ),
+              if (interactionMode == StoryCardEditorTool.drawing)
+                Positioned.fill(
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (event) => onStrokeStart(
+                      _normalize(event.localPosition, size),
+                      event.pointer,
+                    ),
+                    onPointerMove: (event) => onStrokeUpdate(
+                      _normalize(event.localPosition, size),
+                      event.pointer,
+                    ),
+                    onPointerUp: (event) => onStrokeEnd(event.pointer),
+                    onPointerCancel: (event) => onStrokeEnd(event.pointer),
+                  ),
+                ),
+            ],
           ),
         );
       },
@@ -812,15 +1017,21 @@ class _StoryCardPainter extends CustomPainter {
   const _StoryCardPainter({
     required this.backgroundImage,
     required this.backgroundTransform,
+    required this.canvasBackground,
     required this.strokes,
   });
 
   final ui.Image? backgroundImage;
   final StoryCardBackgroundTransform backgroundTransform;
+  final StoryCardCanvasBackground canvasBackground;
   final List<StoryCardStroke> strokes;
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = canvasBackground.color,
+    );
     final image = backgroundImage;
     if (image != null) {
       final coverScale =
@@ -888,6 +1099,7 @@ class _StoryCardPainter extends CustomPainter {
   bool shouldRepaint(covariant _StoryCardPainter oldDelegate) {
     return oldDelegate.backgroundImage != backgroundImage ||
         oldDelegate.backgroundTransform != backgroundTransform ||
+        oldDelegate.canvasBackground != canvasBackground ||
         oldDelegate.strokes != strokes;
   }
 }
@@ -899,6 +1111,7 @@ class _StoryCardActionBar extends StatelessWidget {
     required this.onAddTextPressed,
     required this.onDrawingModePressed,
     required this.onBackgroundModePressed,
+    required this.onBackgroundColorPressed,
   });
 
   final StoryCardEditorTool interactionMode;
@@ -906,31 +1119,42 @@ class _StoryCardActionBar extends StatelessWidget {
   final VoidCallback onAddTextPressed;
   final VoidCallback onDrawingModePressed;
   final VoidCallback? onBackgroundModePressed;
+  final VoidCallback? onBackgroundColorPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _EditorIconButton(
           tooltip: '텍스트 추가',
           icon: Icons.text_fields,
+          isSelected: interactionMode == StoryCardEditorTool.text,
           onPressed: onAddTextPressed,
         ),
+        const SizedBox(height: 8),
         _EditorIconButton(
           tooltip: '그리기',
           icon: Icons.brush_outlined,
           isSelected: interactionMode == StoryCardEditorTool.drawing,
           onPressed: onDrawingModePressed,
         ),
-        _EditorIconButton(
-          tooltip: '사진 위치 조정',
-          icon: Icons.crop,
-          isSelected: interactionMode == StoryCardEditorTool.background,
-          onPressed: onBackgroundModePressed,
-        ),
+        if (hasBackground) ...[
+          const SizedBox(height: 8),
+          _EditorIconButton(
+            tooltip: '사진 위치 조정',
+            icon: Icons.crop,
+            isSelected: interactionMode == StoryCardEditorTool.background,
+            onPressed: onBackgroundModePressed,
+          ),
+        ] else ...[
+          const SizedBox(height: 8),
+          _EditorIconButton(
+            tooltip: '배경색 전환',
+            icon: Icons.contrast,
+            onPressed: onBackgroundColorPressed,
+          ),
+        ],
       ],
     );
   }
@@ -955,12 +1179,11 @@ class _EditorIconButton extends StatelessWidget {
       tooltip: tooltip,
       onPressed: onPressed,
       icon: Icon(icon),
-      color: isSelected ? AppColors.actionPrimary : AppColors.textPrimary,
+      color: Colors.white,
       style: IconButton.styleFrom(
         backgroundColor: isSelected
-            ? AppColors.actionDisabled
-            : AppColors.white,
-        side: const BorderSide(color: AppColors.wireframeBorder),
+            ? AppColors.actionPrimary
+            : const Color(0x85000000),
       ),
     );
   }
@@ -981,63 +1204,78 @@ class _StoryCardDrawingControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xB8000000),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (final color in storyCardColorPalette)
-              GestureDetector(
-                onTap: () => onColorChanged(color),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: color == selectedColor
-                          ? AppColors.actionPrimary
-                          : AppColors.wireframeBorder,
-                      width: color == selectedColor ? 2 : 1,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final color in storyCardColorPalette)
+                  GestureDetector(
+                    onTap: () => onColorChanged(color),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: color == selectedColor
+                              ? Colors.white
+                              : Colors.white54,
+                          width: color == selectedColor ? 2 : 1,
+                        ),
+                      ),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     ),
                   ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Text(
+                  '굵기',
+                  style: TextStyle(color: Colors.white, fontSize: 13),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 12 + selectedStrokeWidth * 300,
+                  height: 12 + selectedStrokeWidth * 300,
+                  decoration: BoxDecoration(
+                    color: selectedColor,
+                    shape: BoxShape.circle,
                   ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            const Text('굵기', style: AppTextStyles.homeCharacterLabel),
-            const SizedBox(width: 12),
-            Container(
-              width: 12 + selectedStrokeWidth * 360,
-              height: 12 + selectedStrokeWidth * 360,
-              decoration: BoxDecoration(
-                color: selectedColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            Expanded(
-              child: Slider(
-                min: storyCardMinStrokeWidth,
-                max: storyCardMaxStrokeWidth,
-                value: selectedStrokeWidth,
-                onChanged: onStrokeWidthChanged,
-              ),
+                Expanded(
+                  child: Slider(
+                    min: storyCardMinStrokeWidth,
+                    max: storyCardMaxStrokeWidth,
+                    value: selectedStrokeWidth,
+                    activeColor: Colors.white,
+                    inactiveColor: Colors.white38,
+                    onChanged: onStrokeWidthChanged,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -1053,7 +1291,10 @@ class _StoryCardEditorError extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('스토리 카드를 불러오지 못했어요.'),
+          const Text(
+            '스토리 카드를 불러오지 못했어요.',
+            style: TextStyle(color: Colors.white),
+          ),
           const SizedBox(height: 12),
           TextButton(onPressed: onRetry, child: const Text('다시 시도')),
         ],

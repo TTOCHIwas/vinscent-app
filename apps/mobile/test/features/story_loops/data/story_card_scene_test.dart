@@ -3,6 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {
+  test('canvas and preview keep the portrait 9:16 contract', () {
+    expect(storyCardCanvasAspectRatio, 9 / 16);
+    expect(storyCardPreviewWidth, 540);
+    expect(storyCardPreviewHeight, 960);
+    expect(storyCardMinBackgroundScale, lessThan(1));
+  });
+
   test('scene JSON preserves visual layers and text count', () {
     const scene = StoryCardScene(
       canvasBackground: StoryCardCanvasBackground.black,

@@ -26,6 +26,16 @@ void main() {
     expect(session.hasUnsavedChanges, isTrue);
   });
 
+  test('blank editor stays clean until its draft changes', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(scene: StoryCardScene.empty()),
+    ).enterBlankDecorator(tool: StoryCardEditorTool.text);
+
+    expect(session.stage, StoryCardEditorStage.decorating);
+    expect(session.tool, StoryCardEditorTool.text);
+    expect(session.hasUnsavedChanges, isFalse);
+  });
+
   test('discarding a new card stays clean in the decorating stage', () {
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
@@ -34,6 +44,16 @@ void main() {
     expect(session.stage, StoryCardEditorStage.decorating);
     expect(session.draft.hasContent, isFalse);
     expect(session.hasUnsavedChanges, isFalse);
+  });
+
+  test('clean new decorator can return to a fresh camera stage', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(scene: StoryCardScene.empty()),
+    ).enterBlankDecorator(tool: StoryCardEditorTool.drawing).returnToCamera();
+
+    expect(session.stage, StoryCardEditorStage.camera);
+    expect(session.tool, StoryCardEditorTool.none);
+    expect(session.draft.hasContent, isFalse);
   });
 
   test('persisted card starts in decorating and restores its baseline', () {

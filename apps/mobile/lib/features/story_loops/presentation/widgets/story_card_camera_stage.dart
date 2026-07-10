@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
@@ -40,15 +41,10 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) {
-      return;
-    }
-
     if (state == AppLifecycleState.inactive) {
-      _disposeCamera();
+      unawaited(_disposeCamera());
     } else if (state == AppLifecycleState.resumed) {
-      _initializeCamera();
+      unawaited(_initializeCamera());
     }
   }
 
@@ -199,6 +195,10 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 18),
                     child: _CaptureButton(
+                      isEnabled:
+                          controller != null &&
+                          controller.value.isInitialized &&
+                          !_isCapturing,
                       isCapturing: _isCapturing,
                       onPressed: _capturePhoto,
                     ),
@@ -261,8 +261,13 @@ class _CoveringCameraPreview extends StatelessWidget {
 }
 
 class _CaptureButton extends StatelessWidget {
-  const _CaptureButton({required this.isCapturing, required this.onPressed});
+  const _CaptureButton({
+    required this.isEnabled,
+    required this.isCapturing,
+    required this.onPressed,
+  });
 
+  final bool isEnabled;
   final bool isCapturing;
   final VoidCallback onPressed;
 
@@ -270,7 +275,7 @@ class _CaptureButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: '촬영',
-      onPressed: isCapturing ? null : onPressed,
+      onPressed: isEnabled ? onPressed : null,
       iconSize: 72,
       color: Colors.white,
       icon: isCapturing

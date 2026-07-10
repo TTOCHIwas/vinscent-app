@@ -25,6 +25,8 @@ const storyCardMaxTextCharacters = 5000;
 const storyCardCanvasAspectRatio = 9 / 16;
 const storyCardPreviewWidth = 540;
 const storyCardPreviewHeight = 960;
+const storyCardMinBackgroundScale = 0.25;
+const storyCardMaxBackgroundScale = 4.0;
 const storyCardMinTextScale = 0.5;
 const storyCardMaxTextScale = 4.0;
 
@@ -153,7 +155,9 @@ class StoryCardBackgroundTransform {
 
   factory StoryCardBackgroundTransform.fromJson(Map<String, dynamic> json) {
     return StoryCardBackgroundTransform(
-      scale: (json['scale'] as num?)?.toDouble() ?? 1,
+      scale: ((json['scale'] as num?)?.toDouble() ?? 1)
+          .clamp(storyCardMinBackgroundScale, storyCardMaxBackgroundScale)
+          .toDouble(),
       offsetX: (json['offset_x'] as num?)?.toDouble() ?? 0,
       offsetY: (json['offset_y'] as num?)?.toDouble() ?? 0,
     );
