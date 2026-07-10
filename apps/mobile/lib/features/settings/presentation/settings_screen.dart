@@ -28,7 +28,7 @@ class SettingsScreen extends StatelessWidget {
             _SettingsItem(
               icon: AppIcons.alarm,
               title: '알림 설정',
-              subtitle: '카테고리별 수신 여부와 질문 도착 시각을 관리해요.',
+              subtitle: '카테고리별 수신 여부를 관리해요.',
               onTap: () => context.push('/settings/notifications'),
             ),
             const SizedBox(height: 24),
