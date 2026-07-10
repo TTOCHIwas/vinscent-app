@@ -18,7 +18,9 @@ import 'story_loop_read_failure.dart';
 import 'story_loop_status.dart';
 import 'today_story_loop_summary.dart';
 
-final storyLoopReadRepositoryProvider = Provider<StoryLoopReadRepository>((ref) {
+final storyLoopReadRepositoryProvider = Provider<StoryLoopReadRepository>((
+  ref,
+) {
   return const SupabaseStoryLoopReadRepository();
 });
 
@@ -33,6 +35,9 @@ abstract interface class StoryLoopReadRepository {
 class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
   const SupabaseStoryLoopReadRepository();
 
+  static const _previewSignedUrlExpiresInSeconds = 60 * 60;
+  static const _bucketId = 'story-cards';
+
   @override
   Future<TodayStoryLoopSummary?> fetchTodaySummary() async {
     _ensureSupabaseConfigured();
@@ -43,7 +48,7 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
           .timeout(AppConfig.supabaseRpcTimeout);
       final row = _asOptionalRow(data);
 
-      return row == null ? null : _parseTodaySummary(row);
+      return row == null ? null : await _parseTodaySummary(row);
     } on TimeoutException {
       throw const StoryLoopReadRepositoryException(
         StoryLoopReadFailureReason.requestTimeout,
@@ -66,7 +71,7 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
           .timeout(AppConfig.supabaseRpcTimeout);
       final row = _asOptionalRow(data);
 
-      return row == null ? null : _parseDetail(row);
+      return row == null ? null : await _parseDetail(row);
     } on TimeoutException {
       throw const StoryLoopReadRepositoryException(
         StoryLoopReadFailureReason.requestTimeout,
@@ -77,7 +82,9 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
   }
 
   @override
-  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) async {
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(
+    DateTime month,
+  ) async {
     _ensureSupabaseConfigured();
 
     try {
@@ -89,7 +96,8 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
           .timeout(AppConfig.supabaseRpcTimeout);
       final rows = _asRows(data);
 
-      return rows.map(_parseMonthSummaryDay).toList(growable: false);
+      final summaries = rows.map(_parseMonthSummaryDay).toList(growable: false);
+      return _withMonthPreviewUrls(summaries);
     } on TimeoutException {
       throw const StoryLoopReadRepositoryException(
         StoryLoopReadFailureReason.requestTimeout,
@@ -107,7 +115,9 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
     }
   }
 
-  TodayStoryLoopSummary _parseTodaySummary(Map<String, dynamic> row) {
+  Future<TodayStoryLoopSummary> _parseTodaySummary(
+    Map<String, dynamic> row,
+  ) async {
     return TodayStoryLoopSummary(
       coupleId: row['couple_id'] as String,
       coupleDate: _parseDate(row['couple_date']),
@@ -118,12 +128,12 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
       canEditStory: row['can_edit_story'] as bool? ?? false,
       canAnswerQuestion: row['can_answer_question'] as bool? ?? false,
       cardCount: _toInt(row['card_count']),
-      cards: _parsePreviewCards(row),
+      cards: await _withPreviewUrls(_parsePreviewCards(row)),
       question: _parseQuestionSummary(row),
     );
   }
 
-  StoryLoopDetail _parseDetail(Map<String, dynamic> row) {
+  Future<StoryLoopDetail> _parseDetail(Map<String, dynamic> row) async {
     return StoryLoopDetail(
       coupleId: row['couple_id'] as String,
       coupleDate: _parseDate(row['couple_date']),
@@ -134,7 +144,7 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
       canEditStory: row['can_edit_story'] as bool? ?? false,
       canAnswerQuestion: row['can_answer_question'] as bool? ?? false,
       cardCount: _toInt(row['card_count']),
-      cards: _parseDetailCards(row),
+      cards: await _withDetailPreviewUrls(_parseDetailCards(row)),
       question: _parseQuestionDetail(row),
     );
   }
@@ -242,6 +252,82 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
     return cards;
   }
 
+  Future<List<StoryLoopCardPreview>> _withPreviewUrls(
+    List<StoryLoopCardPreview> cards,
+  ) async {
+    final urlsByPath = await _createPreviewUrlsByPath(
+      cards.map((card) => card.previewPath),
+    );
+
+    return _applyPreviewUrls(cards, urlsByPath);
+  }
+
+  Future<List<StoryLoopMonthSummaryDay>> _withMonthPreviewUrls(
+    List<StoryLoopMonthSummaryDay> summaries,
+  ) async {
+    final urlsByPath = await _createPreviewUrlsByPath(
+      summaries.expand(
+        (summary) => summary.cards.map((card) => card.previewPath),
+      ),
+    );
+
+    return summaries
+        .map(
+          (summary) => summary.copyWith(
+            cards: _applyPreviewUrls(summary.cards, urlsByPath),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<StoryLoopCardPreview> _applyPreviewUrls(
+    List<StoryLoopCardPreview> cards,
+    Map<String, String> urlsByPath,
+  ) {
+    return cards
+        .map((card) => card.copyWith(previewUrl: urlsByPath[card.previewPath]))
+        .toList(growable: false);
+  }
+
+  Future<List<StoryLoopCardDetail>> _withDetailPreviewUrls(
+    List<StoryLoopCardDetail> cards,
+  ) async {
+    final urlsByPath = await _createPreviewUrlsByPath(
+      cards.map((card) => card.previewPath),
+    );
+
+    return cards
+        .map((card) => card.copyWith(previewUrl: urlsByPath[card.previewPath]))
+        .toList(growable: false);
+  }
+
+  Future<Map<String, String>> _createPreviewUrlsByPath(
+    Iterable<String> paths,
+  ) async {
+    final uniquePaths = paths.toSet().toList(growable: false);
+    if (uniquePaths.isEmpty) {
+      return const {};
+    }
+
+    try {
+      final signedUrls = await _bucket
+          .createSignedUrls(uniquePaths, _previewSignedUrlExpiresInSeconds)
+          .timeout(AppConfig.supabaseRpcTimeout);
+
+      return {
+        for (final signedUrl in signedUrls)
+          if (signedUrl.path.isNotEmpty) signedUrl.path: signedUrl.signedUrl,
+      };
+    } on TimeoutException {
+      return const {};
+    } on StorageException {
+      return const {};
+    }
+  }
+
+  StorageFileApi get _bucket =>
+      Supabase.instance.client.storage.from(_bucketId);
+
   Map<String, dynamic> _toDailyQuestionJson(Map<String, dynamic> row) {
     return {
       'daily_question_id': row['daily_question_id'],
@@ -338,7 +424,9 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
     return [row];
   }
 
-  StoryLoopReadRepositoryException _mapPostgrestError(PostgrestException error) {
+  StoryLoopReadRepositoryException _mapPostgrestError(
+    PostgrestException error,
+  ) {
     return StoryLoopReadRepositoryException(
       _reasonFromMessage(error.message),
       error.message,

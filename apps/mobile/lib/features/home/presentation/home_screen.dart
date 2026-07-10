@@ -495,7 +495,8 @@ class _HomeStoryCardSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previewUri = Uri.tryParse(card.previewPath);
+    final previewUrl = card.previewUrl;
+    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl);
     final hasRemotePreview =
         previewUri != null &&
         previewUri.hasScheme &&
@@ -525,7 +526,7 @@ class _HomeStoryCardSurface extends StatelessWidget {
                 Positioned.fill(
                   child: hasRemotePreview
                       ? Image.network(
-                          card.previewPath,
+                          previewUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return const _HomeStoryCardPreviewPlaceholder();

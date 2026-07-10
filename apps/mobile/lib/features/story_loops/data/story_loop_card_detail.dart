@@ -9,6 +9,7 @@ class StoryLoopCardDetail {
     required this.hasText,
     required this.submittedAt,
     required this.revision,
+    this.previewUrl,
   });
 
   final String id;
@@ -20,4 +21,20 @@ class StoryLoopCardDetail {
   final bool hasText;
   final DateTime submittedAt;
   final int revision;
+  final String? previewUrl;
+
+  StoryLoopCardDetail copyWith({String? previewUrl}) {
+    return StoryLoopCardDetail(
+      id: id,
+      authorUserId: authorUserId,
+      previewPath: previewPath,
+      sceneDataPath: sceneDataPath,
+      hasPhoto: hasPhoto,
+      hasDrawing: hasDrawing,
+      hasText: hasText,
+      submittedAt: submittedAt,
+      revision: revision,
+      previewUrl: previewUrl ?? this.previewUrl,
+    );
+  }
 }

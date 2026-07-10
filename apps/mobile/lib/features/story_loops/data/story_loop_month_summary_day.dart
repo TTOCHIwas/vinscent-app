@@ -13,4 +13,13 @@ class StoryLoopMonthSummaryDay {
   final StoryLoopStatus loopStatus;
   final int cardCount;
   final List<StoryLoopCardPreview> cards;
+
+  StoryLoopMonthSummaryDay copyWith({List<StoryLoopCardPreview>? cards}) {
+    return StoryLoopMonthSummaryDay(
+      coupleDate: coupleDate,
+      loopStatus: loopStatus,
+      cardCount: cardCount,
+      cards: cards ?? this.cards,
+    );
+  }
 }

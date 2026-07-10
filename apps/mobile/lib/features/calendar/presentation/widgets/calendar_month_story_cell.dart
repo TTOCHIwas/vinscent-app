@@ -41,9 +41,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Expanded(
-            child: _MonthStoryPreview(cards: visibleCards),
-          ),
+          Expanded(child: _MonthStoryPreview(cards: visibleCards)),
         ],
       ),
     );
@@ -140,7 +138,8 @@ class _MonthStorySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previewUri = Uri.tryParse(card.previewPath);
+    final previewUrl = card.previewUrl;
+    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl);
     final hasRemotePreview =
         previewUri != null &&
         previewUri.hasScheme &&
@@ -169,7 +168,7 @@ class _MonthStorySurface extends StatelessWidget {
               borderRadius: BorderRadius.circular(2.4),
               child: hasRemotePreview
                   ? Image.network(
-                      card.previewPath,
+                      previewUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return _MonthStoryPlaceholder(card: card);
