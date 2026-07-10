@@ -48,7 +48,7 @@ foreach ($generatedFile in $generatedFiles) {
   }
 
   if (-not $containsExpectedPattern) {
-    $warnings.Add("$generatedFile 에 로컬 Pub cache 경로가 아직 보이지 않습니다.")
+    $failures.Add("$generatedFile 에 기대한 로컬 Pub cache 경로가 없습니다: $expectedPubCache")
   }
 }
 
