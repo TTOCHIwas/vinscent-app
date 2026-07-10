@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../story_loops/data/story_loop_card_detail.dart';
+import '../../../story_loops/data/story_card_scene.dart';
 
 class CalendarStoryCardStack extends StatelessWidget {
   const CalendarStoryCardStack({super.key, required this.cards});
@@ -17,17 +18,19 @@ class CalendarStoryCardStack extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final visibleCards = cards.take(2).toList(growable: false);
+    final sortedCards = [...cards]
+      ..sort((left, right) => left.submittedAt.compareTo(right.submittedAt));
+    final visibleCards = sortedCards.take(2).toList(growable: false);
     if (visibleCards.length == 1) {
       return Center(
-        child: _StoryCardSurface(card: visibleCards.first, width: 220),
+        child: _StoryCardSurface(card: visibleCards.first, width: 180),
       );
     }
 
     return Center(
       child: SizedBox(
         width: 280,
-        height: 260,
+        height: 330,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -38,7 +41,7 @@ class CalendarStoryCardStack extends StatelessWidget {
                 angle: -0.05,
                 child: _StoryCardSurface(
                   card: visibleCards.first,
-                  width: 200,
+                  width: 170,
                   backgroundColor: const Color(0xFFF3F0EA),
                 ),
               ),
@@ -50,7 +53,7 @@ class CalendarStoryCardStack extends StatelessWidget {
                 angle: 0.1,
                 child: _StoryCardSurface(
                   card: visibleCards[1],
-                  width: 200,
+                  width: 170,
                   backgroundColor: const Color(0xFFEAF2EF),
                 ),
               ),
@@ -85,7 +88,7 @@ class _StoryCardSurface extends StatelessWidget {
     return SizedBox(
       width: width,
       child: AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: storyCardCanvasAspectRatio,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -107,7 +110,7 @@ class _StoryCardSurface extends StatelessWidget {
                   child: hasRemotePreview
                       ? Image.network(
                           previewUrl!,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return _StoryCardPlaceholder(card: card);
                           },

@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/config/app_config.dart';
+import '../story_loop_debug_log.dart';
 import 'editable_story_loop_card.dart';
 import 'story_card_draft.dart';
 import 'story_card_scene.dart';
@@ -59,8 +60,8 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       final backgroundImageBytes = backgroundImagePath == null
           ? null
           : await _bucket
-              .download(backgroundImagePath)
-              .timeout(AppConfig.supabaseRpcTimeout);
+                .download(backgroundImagePath)
+                .timeout(AppConfig.supabaseRpcTimeout);
 
       return EditableStoryLoopCard(
         storyLoopId: row['story_loop_id'] as String,
@@ -103,7 +104,18 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       userId: userId,
       artifactRevision: artifactRevision,
     );
+    final sceneBytes = Uint8List.fromList(
+      utf8.encode(draft.scene.toJsonString()),
+    );
     var uploadAttempted = false;
+    var stage = 'preview-upload';
+
+    debugStoryLoopLog(
+      'Save started: artifactRevision=$artifactRevision, '
+      'previewBytes=${previewImageBytes.length}, '
+      'sceneBytes=${sceneBytes.length}, '
+      'backgroundBytes=${draft.backgroundImageBytes?.length ?? 0}',
+    );
 
     try {
       uploadAttempted = true;
@@ -117,19 +129,27 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
             ),
           )
           .timeout(AppConfig.supabaseRpcTimeout);
+      debugStoryLoopLog(
+        'Preview upload completed: path=${artifactPaths.previewPath}',
+      );
+      stage = 'scene-upload';
       await _bucket
           .uploadBinary(
             artifactPaths.sceneDataPath,
-            Uint8List.fromList(utf8.encode(draft.scene.toJsonString())),
+            sceneBytes,
             fileOptions: const FileOptions(
               contentType: 'application/json',
               cacheControl: '60',
             ),
           )
           .timeout(AppConfig.supabaseRpcTimeout);
+      debugStoryLoopLog(
+        'Scene upload completed: path=${artifactPaths.sceneDataPath}',
+      );
 
       final backgroundImageBytes = draft.backgroundImageBytes;
       if (backgroundImageBytes != null) {
+        stage = 'background-upload';
         await _bucket
             .uploadBinary(
               artifactPaths.backgroundImagePath,
@@ -140,8 +160,13 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
               ),
             )
             .timeout(AppConfig.supabaseRpcTimeout);
+        debugStoryLoopLog(
+          'Background upload completed: '
+          'path=${artifactPaths.backgroundImagePath}',
+        );
       }
 
+      stage = 'finalize-rpc';
       final data = await Supabase.instance.client
           .rpc(
             'upsert_today_story_loop_card',
@@ -156,13 +181,16 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
               'requested_has_drawing': draft.scene.hasDrawing,
               'requested_has_text': draft.scene.hasText,
               'requested_text_layer_count': draft.scene.textLayers.length,
-              'requested_text_character_count':
-                  draft.scene.textCharacterCount,
+              'requested_text_character_count': draft.scene.textCharacterCount,
               'expected_revision': draft.existingRevision,
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
       final row = _asRow(data);
+      debugStoryLoopLog(
+        'Save completed: artifactRevision=$artifactRevision, '
+        'cardRevision=${row['card_revision']}',
+      );
 
       return StoryLoopCardSaveResult(
         storyLoopId: row['story_loop_id'] as String,
@@ -173,6 +201,9 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
         dailyQuestionId: row['daily_question_id'] as String?,
       );
     } on TimeoutException {
+      debugStoryLoopLog(
+        'Save timed out: stage=$stage, artifactRevision=$artifactRevision',
+      );
       final error = const StoryLoopWriteRepositoryException(
         StoryLoopWriteFailureReason.requestTimeout,
       );
@@ -183,6 +214,10 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       throw error;
     } on PostgrestException catch (error) {
       final mappedError = _mapPostgrestError(error);
+      debugStoryLoopLog(
+        'Save RPC failed: stage=$stage, artifactRevision=$artifactRevision, '
+        'message=${error.message}',
+      );
       await _discardUploadedArtifactsIfNeeded(
         uploadAttempted: uploadAttempted,
         artifactRevision: artifactRevision,
@@ -190,11 +225,25 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       throw mappedError;
     } on StorageException catch (error) {
       final mappedError = _mapStorageError(error);
+      debugStoryLoopLog(
+        'Storage upload failed: stage=$stage, '
+        'artifactRevision=$artifactRevision, message=${error.message}',
+      );
       await _discardUploadedArtifactsIfNeeded(
         uploadAttempted: uploadAttempted,
         artifactRevision: artifactRevision,
       );
       throw mappedError;
+    } catch (error) {
+      debugStoryLoopLog(
+        'Save failed unexpectedly: stage=$stage, '
+        'artifactRevision=$artifactRevision, error=$error',
+      );
+      await _discardUploadedArtifactsIfNeeded(
+        uploadAttempted: uploadAttempted,
+        artifactRevision: artifactRevision,
+      );
+      rethrow;
     }
   }
 
@@ -239,8 +288,8 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
     if (draft.scene.textLayers.length > storyCardMaxTextLayers ||
         draft.scene.textCharacterCount > storyCardMaxTextCharacters ||
         draft.scene.textLayers.any(
-          (layer) => layer.text.characters.length >
-              storyCardMaxTextCharactersPerLayer,
+          (layer) =>
+              layer.text.characters.length > storyCardMaxTextCharactersPerLayer,
         )) {
       throw const StoryLoopWriteRepositoryException(
         StoryLoopWriteFailureReason.invalidTextContent,
@@ -257,13 +306,23 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
     }
 
     try {
+      debugStoryLoopLog(
+        'Artifact cleanup started: artifactRevision=$artifactRevision',
+      );
       await Supabase.instance.client
           .rpc(
             'discard_uploaded_story_loop_card_artifacts',
             params: {'requested_artifact_revision': artifactRevision},
           )
           .timeout(AppConfig.supabaseRpcTimeout);
-    } catch (_) {
+      debugStoryLoopLog(
+        'Artifact cleanup completed: artifactRevision=$artifactRevision',
+      );
+    } catch (error) {
+      debugStoryLoopLog(
+        'Artifact cleanup failed: artifactRevision=$artifactRevision, '
+        'error=$error',
+      );
     }
   }
 
@@ -337,7 +396,8 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       'relationship_date_required' =>
         StoryLoopWriteFailureReason.relationshipDateRequired,
       'story_not_ready' => StoryLoopWriteFailureReason.storyNotReady,
-      'story_card_content_required' => StoryLoopWriteFailureReason.contentRequired,
+      'story_card_content_required' =>
+        StoryLoopWriteFailureReason.contentRequired,
       'invalid_story_card_text_content' =>
         StoryLoopWriteFailureReason.invalidTextContent,
       'story_card_locked' => StoryLoopWriteFailureReason.cardLocked,

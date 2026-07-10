@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../story_loops/data/story_loop_card_preview.dart';
+import '../../../story_loops/data/story_card_scene.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
 
 class CalendarMonthStoryCell extends StatelessWidget {
@@ -92,7 +93,7 @@ class _MonthStoryPreview extends StatelessWidget {
       alignment: Alignment.bottomCenter,
       child: SizedBox(
         width: 22,
-        height: 18,
+        height: 24,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -150,7 +151,7 @@ class _MonthStorySurface extends StatelessWidget {
       child: SizedBox(
         width: width,
         child: AspectRatio(
-          aspectRatio: 0.78,
+          aspectRatio: storyCardCanvasAspectRatio,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: backgroundColor,
@@ -169,7 +170,7 @@ class _MonthStorySurface extends StatelessWidget {
               child: hasRemotePreview
                   ? Image.network(
                       previewUrl!,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return _MonthStoryPlaceholder(card: card);
                       },

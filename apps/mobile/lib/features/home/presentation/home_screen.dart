@@ -14,6 +14,7 @@ import '../../questions/presentation/question_route_context.dart';
 import '../../recordings/presentation/widgets/home_recording_panel.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import '../../story_loops/data/story_loop_card_preview.dart';
+import '../../story_loops/data/story_card_scene.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
@@ -412,14 +413,14 @@ class _HomeStoryCardStack extends StatelessWidget {
 
     if (limitedCards.length == 1) {
       return Center(
-        child: _HomeStoryCardSurface(card: limitedCards.first, width: 220),
+        child: _HomeStoryCardSurface(card: limitedCards.first, width: 180),
       );
     }
 
     return Center(
       child: SizedBox(
         width: 280,
-        height: 260,
+        height: 330,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -430,7 +431,7 @@ class _HomeStoryCardStack extends StatelessWidget {
                 angle: -0.05,
                 child: _HomeStoryCardSurface(
                   card: limitedCards.first,
-                  width: 200,
+                  width: 170,
                   backgroundColor: const Color(0xFFF3F0EA),
                 ),
               ),
@@ -442,7 +443,7 @@ class _HomeStoryCardStack extends StatelessWidget {
                 angle: 0.1,
                 child: _HomeStoryCardSurface(
                   card: limitedCards[1],
-                  width: 200,
+                  width: 170,
                   backgroundColor: const Color(0xFFEAF2EF),
                 ),
               ),
@@ -460,9 +461,9 @@ class _HomeStoryCardEmptySlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 220,
+      width: 180,
       child: AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: storyCardCanvasAspectRatio,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: const Color(0xFFF8F8F8),
@@ -505,7 +506,7 @@ class _HomeStoryCardSurface extends StatelessWidget {
     return SizedBox(
       width: width,
       child: AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: storyCardCanvasAspectRatio,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -527,7 +528,7 @@ class _HomeStoryCardSurface extends StatelessWidget {
                   child: hasRemotePreview
                       ? Image.network(
                           previewUrl!,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return const _HomeStoryCardPreviewPlaceholder();
                           },
