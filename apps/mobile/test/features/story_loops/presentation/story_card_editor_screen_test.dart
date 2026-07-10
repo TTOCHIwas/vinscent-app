@@ -100,6 +100,106 @@ void main() {
     expect(saveButton().onPressed, isNotNull);
   });
 
+  testWidgets('moves text with one finger', (tester) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final text = find.text('pinch target');
+    final before = tester.getCenter(text);
+    await tester.dragFrom(before, const Offset(30, 40));
+    await tester.pump();
+
+    final after = tester.getCenter(text);
+    expect(after.dx, greaterThan(before.dx));
+    expect(after.dy, greaterThan(before.dy));
+  });
+
+  testWidgets('scales text when only one pointer starts on the text', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final text = find.text('pinch target');
+    final textCenter = tester.getCenter(text);
+    final secondStart = textCenter + const Offset(0, 100);
+    expect(tester.getRect(canvas).contains(secondStart), isTrue);
+    expect(tester.getRect(text).contains(secondStart), isFalse);
+
+    final beforeScale = _textScale(tester, 'pinch target');
+    final first = await tester.startGesture(textCenter, pointer: 1);
+    final second = await tester.startGesture(secondStart, pointer: 2);
+    await tester.pump();
+    await second.moveTo(secondStart + const Offset(0, 100));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
+  });
+
+  testWidgets('renders text without a shadow', (tester) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final text = tester.widget<Text>(find.text('pinch target'));
+
+    expect(text.style?.shadows, isEmpty);
+  });
+
+  testWidgets('scales text when the outside pointer starts first', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final textCenter = tester.getCenter(find.text('pinch target'));
+    final outsideStart = textCenter + const Offset(0, 100);
+    final beforeScale = _textScale(tester, 'pinch target');
+    final first = await tester.startGesture(outsideStart, pointer: 1);
+    final second = await tester.startGesture(textCenter, pointer: 2);
+    await tester.pump();
+    await first.moveTo(outsideStart + const Offset(0, 100));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
+  });
+
+  testWidgets('prioritizes text over the background during a pinch', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingPhotoTextDraft());
+
+    await tester.tap(find.byIcon(Icons.crop));
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final textCenter = tester.getCenter(find.text('pinch target'));
+    final secondStart = textCenter + const Offset(0, 100);
+    expect(tester.getRect(canvas).contains(secondStart), isTrue);
+
+    final beforeScale = _textScale(tester, 'pinch target');
+    final first = await tester.startGesture(textCenter, pointer: 1);
+    final second = await tester.startGesture(secondStart, pointer: 2);
+    await tester.pump();
+    await second.moveTo(secondStart + const Offset(0, 100));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    final backgroundTransform = _backgroundTransform(tester);
+    expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
+    expect(backgroundTransform.scale, 1);
+    expect(backgroundTransform.offsetX, 0);
+    expect(backgroundTransform.offsetY, 0);
+  });
+
   testWidgets('delivers background transform gestures to the canvas', (
     tester,
   ) async {
@@ -121,13 +221,84 @@ void main() {
     expect(scaleDetectors, hasLength(1));
 
     final center = tester.getCenter(canvas);
-    await tester.dragFrom(center, const Offset(40, 50));
+    final first = await tester.startGesture(
+      center - const Offset(30, 0),
+      pointer: 1,
+    );
+    final second = await tester.startGesture(
+      center + const Offset(30, 0),
+      pointer: 2,
+    );
+    await tester.pump();
+    await first.moveBy(const Offset(30, 40));
+    await second.moveBy(const Offset(30, 40));
+    await tester.pump();
+    await first.up();
+    await second.up();
     await tester.pump();
 
     await tester.tap(find.byType(AppBackButton));
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('moves the background only with two pointers', (tester) async {
+    await _pumpEditor(tester, draft: _existingPhotoDraft());
+
+    await tester.tap(find.byIcon(Icons.crop));
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final center = tester.getCenter(canvas);
+    await tester.dragFrom(center, const Offset(30, 40));
+    await tester.pump();
+
+    var transform = _backgroundTransform(tester);
+    expect(transform.offsetX, 0);
+    expect(transform.offsetY, 0);
+
+    final first = await tester.startGesture(
+      center - const Offset(30, 0),
+      pointer: 1,
+    );
+    final second = await tester.startGesture(
+      center + const Offset(30, 0),
+      pointer: 2,
+    );
+    await tester.pump();
+    await first.moveBy(const Offset(30, 40));
+    await second.moveBy(const Offset(30, 40));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    transform = _backgroundTransform(tester);
+    expect(transform.offsetX, isNot(0));
+    expect(transform.offsetY, isNot(0));
+
+    final scaleBeforePinch = transform.scale;
+    final pinchFirst = await tester.startGesture(
+      center - const Offset(30, 0),
+      pointer: 3,
+    );
+    final pinchSecond = await tester.startGesture(
+      center + const Offset(30, 0),
+      pointer: 4,
+    );
+    await tester.pump();
+    await pinchSecond.moveBy(const Offset(60, 0));
+    await tester.pump();
+    await pinchFirst.up();
+    await pinchSecond.up();
+    await tester.pump();
+
+    expect(_backgroundTransform(tester).scale, greaterThan(scaleBeforePinch));
   });
 }
 
@@ -166,6 +337,51 @@ StoryCardDraft _existingPhotoDraft() {
     backgroundImageBytes: Uint8List.fromList(image.encodePng(photo)),
     existingRevision: 1,
   );
+}
+
+StoryCardDraft _existingTextDraft() {
+  return const StoryCardDraft(
+    scene: StoryCardScene(
+      backgroundTransform: StoryCardBackgroundTransform.initial(),
+      strokes: [],
+      textLayers: [
+        StoryCardTextLayer(
+          id: 'text-1',
+          text: 'pinch target',
+          x: 0.5,
+          y: 0.5,
+          color: Colors.black,
+          scale: 0.5,
+        ),
+      ],
+    ),
+    existingRevision: 1,
+  );
+}
+
+StoryCardDraft _existingPhotoTextDraft() {
+  final photo = image.Image(width: 4, height: 4);
+  return StoryCardDraft(
+    scene: _existingTextDraft().scene,
+    backgroundImageBytes: Uint8List.fromList(image.encodePng(photo)),
+    existingRevision: 1,
+  );
+}
+
+double _textScale(WidgetTester tester, String value) {
+  final transform = tester.widget<Transform>(
+    find.ancestor(of: find.text(value), matching: find.byType(Transform)),
+  );
+  return transform.transform.entry(0, 0).abs();
+}
+
+StoryCardBackgroundTransform _backgroundTransform(WidgetTester tester) {
+  final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+  final customPaint = tester.widget<CustomPaint>(
+    find.descendant(of: canvas, matching: find.byType(CustomPaint)).first,
+  );
+  final dynamic painter = customPaint.painter;
+  return painter.backgroundTransform as StoryCardBackgroundTransform;
 }
 
 class _TestStoryCardEditorController extends StoryCardEditorController {

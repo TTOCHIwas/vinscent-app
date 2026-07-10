@@ -141,6 +141,7 @@ class _StoryCardEditorContentState
                     onBackgroundScaleUpdate: _updateBackgroundTransform,
                     onTextLayerScaleStart: _startTextLayerTransform,
                     onTextLayerScaleUpdate: _updateTextLayerTransform,
+                    onTextLayerScaleEnd: _endTextLayerTransform,
                     onTextLayerTapped: _editTextLayer,
                   ),
                 ),
@@ -607,7 +608,7 @@ class _StoryCardEditorContentState
     _textLayerTransformStart = _draft.scene.textLayers.firstWhere(
       (layer) => layer.id == layerId,
     );
-    _textLayerFocalPointStart = details.focalPoint;
+    _textLayerFocalPointStart = details.localFocalPoint;
   }
 
   void _updateTextLayerTransform(
@@ -620,7 +621,7 @@ class _StoryCardEditorContentState
       return;
     }
 
-    final delta = details.focalPoint - _textLayerFocalPointStart;
+    final delta = details.localFocalPoint - _textLayerFocalPointStart;
     final x = (start.x + delta.dx / size.width).clamp(0.0, 1.0);
     final y = (start.y + delta.dy / size.height).clamp(0.0, 1.0);
     final scale = (start.scale * details.scale)
@@ -642,6 +643,10 @@ class _StoryCardEditorContentState
         ),
       );
     });
+  }
+
+  void _endTextLayerTransform() {
+    _textLayerTransformStart = null;
   }
 
   Future<void> _saveCard() async {
@@ -919,7 +924,7 @@ class _EditorHeader extends StatelessWidget {
   }
 }
 
-class _StoryCardCanvas extends StatelessWidget {
+class _StoryCardCanvas extends StatefulWidget {
   const _StoryCardCanvas({
     required this.backgroundImage,
     required this.scene,
@@ -933,6 +938,7 @@ class _StoryCardCanvas extends StatelessWidget {
     required this.onBackgroundScaleUpdate,
     required this.onTextLayerScaleStart,
     required this.onTextLayerScaleUpdate,
+    required this.onTextLayerScaleEnd,
     required this.onTextLayerTapped,
   });
 
@@ -951,100 +957,195 @@ class _StoryCardCanvas extends StatelessWidget {
   onTextLayerScaleStart;
   final void Function(String layerId, ScaleUpdateDetails details, Size size)
   onTextLayerScaleUpdate;
+  final VoidCallback onTextLayerScaleEnd;
   final ValueChanged<String> onTextLayerTapped;
+
+  @override
+  State<_StoryCardCanvas> createState() => _StoryCardCanvasState();
+}
+
+class _StoryCardCanvasState extends State<_StoryCardCanvas> {
+  final Set<int> _activePointers = {};
+  final Map<int, String> _textPointerTargets = {};
+
+  String? _lockedTextLayerId;
+  bool _isBackgroundTransformLocked = false;
+
+  @override
+  void didUpdateWidget(covariant _StoryCardCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final layerIds = widget.scene.textLayers.map((layer) => layer.id).toSet();
+    _textPointerTargets.removeWhere(
+      (pointer, layerId) => !layerIds.contains(layerId),
+    );
+    if (!layerIds.contains(_lockedTextLayerId)) {
+      _lockedTextLayerId = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
-        return ClipRect(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _StoryCardPainter(
-                    backgroundImage: backgroundImage,
-                    backgroundTransform: scene.backgroundTransform,
-                    canvasBackground: scene.canvasBackground,
-                    strokes: visibleStrokes,
+        return Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (event) {
+            _activePointers.add(event.pointer);
+          },
+          onPointerUp: _releaseCanvasPointer,
+          onPointerCancel: _releaseCanvasPointer,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onScaleStart: _handleScaleStart,
+            onScaleUpdate: (details) => _handleScaleUpdate(details, size),
+            child: ClipRect(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _StoryCardPainter(
+                        backgroundImage: widget.backgroundImage,
+                        backgroundTransform: widget.scene.backgroundTransform,
+                        canvasBackground: widget.scene.canvasBackground,
+                        strokes: widget.visibleStrokes,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              if (interactionMode == StoryCardEditorTool.background &&
-                  backgroundImage != null)
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onScaleStart: onBackgroundScaleStart,
-                    onScaleUpdate: (details) =>
-                        onBackgroundScaleUpdate(details, size),
-                  ),
-                ),
-              if (interactionMode == StoryCardEditorTool.text)
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapUp: (details) =>
-                        onCanvasTapped(_normalize(details.localPosition, size)),
-                  ),
-                ),
-              for (final layer in scene.textLayers)
-                Positioned(
-                  left: layer.x * size.width,
-                  top: layer.y * size.height,
-                  child: FractionalTranslation(
-                    translation: const Offset(-0.5, -0.5),
-                    child: GestureDetector(
-                      onTap: () => onTextLayerTapped(layer.id),
-                      onScaleStart: (details) =>
-                          onTextLayerScaleStart(layer.id, details),
-                      onScaleUpdate: (details) =>
-                          onTextLayerScaleUpdate(layer.id, details, size),
-                      child: Transform.scale(
-                        scale: layer.scale,
-                        child: SizedBox(
-                          width: size.width * .72,
-                          child: Text(
-                            layer.text,
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.homeBodyMedium.copyWith(
-                              color: layer.color,
-                              shadows: const [
-                                Shadow(
-                                  color: Color(0x66000000),
-                                  blurRadius: 3,
-                                  offset: Offset(0, 1),
+                  if (widget.interactionMode == StoryCardEditorTool.text)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapUp: (details) => widget.onCanvasTapped(
+                          _normalize(details.localPosition, size),
+                        ),
+                      ),
+                    ),
+                  for (final layer in widget.scene.textLayers)
+                    Positioned(
+                      left: layer.x * size.width,
+                      top: layer.y * size.height,
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, -0.5),
+                        child: Listener(
+                          onPointerDown: (event) {
+                            _textPointerTargets.putIfAbsent(
+                              event.pointer,
+                              () => layer.id,
+                            );
+                          },
+                          onPointerUp: (event) {
+                            _textPointerTargets.remove(event.pointer);
+                          },
+                          onPointerCancel: (event) {
+                            _textPointerTargets.remove(event.pointer);
+                          },
+                          child: GestureDetector(
+                            onTap: () => widget.onTextLayerTapped(layer.id),
+                            child: Transform.scale(
+                              scale: layer.scale,
+                              child: SizedBox(
+                                width: size.width * .72,
+                                child: Text(
+                                  layer.text,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.homeBodyMedium.copyWith(
+                                    color: layer.color,
+                                    shadows: const [],
+                                  ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              if (interactionMode == StoryCardEditorTool.drawing)
-                Positioned.fill(
-                  child: Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (event) => onStrokeStart(
-                      _normalize(event.localPosition, size),
-                      event.pointer,
+                  if (widget.interactionMode == StoryCardEditorTool.drawing)
+                    Positioned.fill(
+                      child: Listener(
+                        behavior: HitTestBehavior.opaque,
+                        onPointerDown: (event) => widget.onStrokeStart(
+                          _normalize(event.localPosition, size),
+                          event.pointer,
+                        ),
+                        onPointerMove: (event) => widget.onStrokeUpdate(
+                          _normalize(event.localPosition, size),
+                          event.pointer,
+                        ),
+                        onPointerUp: (event) =>
+                            widget.onStrokeEnd(event.pointer),
+                        onPointerCancel: (event) =>
+                            widget.onStrokeEnd(event.pointer),
+                      ),
                     ),
-                    onPointerMove: (event) => onStrokeUpdate(
-                      _normalize(event.localPosition, size),
-                      event.pointer,
-                    ),
-                    onPointerUp: (event) => onStrokeEnd(event.pointer),
-                    onPointerCancel: (event) => onStrokeEnd(event.pointer),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         );
       },
     );
+  }
+
+  void _handleScaleStart(ScaleStartDetails details) {
+    final lockedTextLayerId = _lockedTextLayerId;
+    if (lockedTextLayerId != null) {
+      widget.onTextLayerScaleStart(lockedTextLayerId, details);
+      return;
+    }
+
+    if (_isBackgroundTransformLocked) {
+      if (details.pointerCount >= 2) {
+        widget.onBackgroundScaleStart(details);
+      }
+      return;
+    }
+
+    final textLayerId = _textPointerTargets.isEmpty
+        ? null
+        : _textPointerTargets.values.first;
+    if (textLayerId != null) {
+      _lockedTextLayerId = textLayerId;
+      widget.onTextLayerScaleStart(textLayerId, details);
+      return;
+    }
+
+    if (details.pointerCount >= 2 &&
+        widget.interactionMode == StoryCardEditorTool.background &&
+        widget.backgroundImage != null) {
+      _isBackgroundTransformLocked = true;
+      widget.onBackgroundScaleStart(details);
+    }
+  }
+
+  void _handleScaleUpdate(ScaleUpdateDetails details, Size size) {
+    final lockedTextLayerId = _lockedTextLayerId;
+    if (lockedTextLayerId != null) {
+      final hasActiveTextPointer = _textPointerTargets.containsValue(
+        lockedTextLayerId,
+      );
+      if (details.pointerCount >= 2 || hasActiveTextPointer) {
+        widget.onTextLayerScaleUpdate(lockedTextLayerId, details, size);
+      }
+      return;
+    }
+
+    if (_isBackgroundTransformLocked && details.pointerCount >= 2) {
+      widget.onBackgroundScaleUpdate(details, size);
+    }
+  }
+
+  void _releaseCanvasPointer(PointerEvent event) {
+    _activePointers.remove(event.pointer);
+    _textPointerTargets.remove(event.pointer);
+    if (_activePointers.isNotEmpty) {
+      return;
+    }
+
+    _lockedTextLayerId = null;
+    _isBackgroundTransformLocked = false;
+    _textPointerTargets.clear();
+    widget.onTextLayerScaleEnd();
   }
 
   StoryCardPoint _normalize(Offset position, Size size) {
