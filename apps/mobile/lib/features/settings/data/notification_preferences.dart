@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class NotificationPreferences {
   const NotificationPreferences({
     required this.userId,
@@ -9,7 +7,7 @@ class NotificationPreferences {
     required this.reminderEnabled,
     required this.coupleDisconnectEnabled,
     required this.recordingEnabled,
-    required this.dailyQuestionDeliveryTime,
+    required this.partnerStoryCardEnabled,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,9 +21,7 @@ class NotificationPreferences {
       reminderEnabled: json['reminder_enabled'] as bool,
       coupleDisconnectEnabled: json['couple_disconnect_enabled'] as bool,
       recordingEnabled: json['recording_enabled'] as bool,
-      dailyQuestionDeliveryTime: _parseTimeOfDay(
-        json['daily_question_delivery_time'] as String,
-      ),
+      partnerStoryCardEnabled: json['partner_story_card_enabled'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -38,22 +34,9 @@ class NotificationPreferences {
   final bool reminderEnabled;
   final bool coupleDisconnectEnabled;
   final bool recordingEnabled;
-  final TimeOfDay dailyQuestionDeliveryTime;
+  final bool partnerStoryCardEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  TimeOfDay get reminderDeliveryTime {
-    final totalMinutes =
-        dailyQuestionDeliveryTime.hour * 60 +
-        dailyQuestionDeliveryTime.minute +
-        60;
-    final normalizedMinutes = totalMinutes % (24 * 60);
-
-    return TimeOfDay(
-      hour: normalizedMinutes ~/ 60,
-      minute: normalizedMinutes % 60,
-    );
-  }
 
   NotificationPreferences copyWith({
     bool? expressionEnabled,
@@ -62,7 +45,7 @@ class NotificationPreferences {
     bool? reminderEnabled,
     bool? coupleDisconnectEnabled,
     bool? recordingEnabled,
-    TimeOfDay? dailyQuestionDeliveryTime,
+    bool? partnerStoryCardEnabled,
   }) {
     return NotificationPreferences(
       userId: userId,
@@ -74,22 +57,11 @@ class NotificationPreferences {
       coupleDisconnectEnabled:
           coupleDisconnectEnabled ?? this.coupleDisconnectEnabled,
       recordingEnabled: recordingEnabled ?? this.recordingEnabled,
-      dailyQuestionDeliveryTime:
-          dailyQuestionDeliveryTime ?? this.dailyQuestionDeliveryTime,
+      partnerStoryCardEnabled:
+          partnerStoryCardEnabled ?? this.partnerStoryCardEnabled,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
   }
 
-  static TimeOfDay _parseTimeOfDay(String value) {
-    final parts = value.split(':');
-    if (parts.length < 2) {
-      throw FormatException('Invalid time value: $value');
-    }
-
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
-  }
 }

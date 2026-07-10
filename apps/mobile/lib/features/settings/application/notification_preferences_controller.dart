@@ -106,9 +106,6 @@ class NotificationPreferencesController
         next.reminderEnabled == current.reminderEnabled &&
         next.coupleDisconnectEnabled == current.coupleDisconnectEnabled &&
         next.recordingEnabled == current.recordingEnabled &&
-        next.dailyQuestionDeliveryTime.hour ==
-            current.dailyQuestionDeliveryTime.hour &&
-        next.dailyQuestionDeliveryTime.minute ==
-            current.dailyQuestionDeliveryTime.minute;
+        next.partnerStoryCardEnabled == current.partnerStoryCardEnabled;
   }
 }

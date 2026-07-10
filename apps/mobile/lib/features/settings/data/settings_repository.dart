@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -60,9 +59,8 @@ class SupabaseSettingsRepository implements SettingsRepository {
           'requested_couple_disconnect_enabled':
               preferences.coupleDisconnectEnabled,
           'requested_recording_enabled': preferences.recordingEnabled,
-          'requested_daily_question_delivery_time': _formatTimeOfDay(
-            preferences.dailyQuestionDeliveryTime,
-          ),
+          'requested_partner_story_card_enabled':
+              preferences.partnerStoryCardEnabled,
         },
       );
 
@@ -105,14 +103,7 @@ class SupabaseSettingsRepository implements SettingsRepository {
   SettingsFailureReason _reasonFromMessage(String message) {
     return switch (message) {
       'auth_required' => SettingsFailureReason.authRequired,
-      'invalid_delivery_time' => SettingsFailureReason.invalidDeliveryTime,
       _ => SettingsFailureReason.unknown,
     };
-  }
-
-  String _formatTimeOfDay(TimeOfDay value) {
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '$hour:$minute:00';
   }
 }

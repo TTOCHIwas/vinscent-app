@@ -60,30 +60,6 @@ class _NotificationSettingsContent extends ConsumerWidget {
 
     return ListView(
       children: [
-        _TimeSettingCard(
-          title: '오늘 질문 도착 시각',
-          timeLabel: _formatTimeOfDay(preferences.dailyQuestionDeliveryTime),
-          description:
-              '미답변 리마인드는 ${_formatTimeOfDay(preferences.reminderDeliveryTime)}에 고정으로 발송돼요.',
-          onTap: () async {
-            final pickedTime = await showTimePicker(
-              context: context,
-              initialTime: preferences.dailyQuestionDeliveryTime,
-            );
-
-            if (pickedTime == null || !context.mounted) {
-              return;
-            }
-
-            await _updatePreferences(
-              context: context,
-              update: controller.updatePreferences(
-                preferences.copyWith(dailyQuestionDeliveryTime: pickedTime),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 20),
         _PreferenceToggleTile(
           title: '표현 알림',
           value: preferences.expressionEnabled,
@@ -105,12 +81,22 @@ class _NotificationSettingsContent extends ConsumerWidget {
           ),
         ),
         _PreferenceToggleTile(
-          title: '오늘 질문 도착',
+          title: '질문 생성 완료',
           value: preferences.dailyQuestionEnabled,
           onChanged: (value) => _updatePreferences(
             context: context,
             update: controller.updatePreferences(
               preferences.copyWith(dailyQuestionEnabled: value),
+            ),
+          ),
+        ),
+        _PreferenceToggleTile(
+          title: '상대 스토리 카드 업로드',
+          value: preferences.partnerStoryCardEnabled,
+          onChanged: (value) => _updatePreferences(
+            context: context,
+            update: controller.updatePreferences(
+              preferences.copyWith(partnerStoryCardEnabled: value),
             ),
           ),
         ),
@@ -166,53 +152,6 @@ class _NotificationSettingsContent extends ConsumerWidget {
   }
 }
 
-class _TimeSettingCard extends StatelessWidget {
-  const _TimeSettingCard({
-    required this.title,
-    required this.timeLabel,
-    required this.description,
-    required this.onTap,
-  });
-
-  final String title;
-  final String timeLabel;
-  final String description;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.wireframeBorder),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.homeBodyMedium),
-              const SizedBox(height: 8),
-              Text(timeLabel, style: AppTextStyles.onboardingTitle),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                style: AppTextStyles.homeCharacterLabel.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PreferenceToggleTile extends StatelessWidget {
   const _PreferenceToggleTile({
     required this.title,
@@ -265,11 +204,4 @@ class _SettingsLoadError extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatTimeOfDay(TimeOfDay value) {
-  final period = value.hour >= 12 ? '오후' : '오전';
-  final hour = value.hourOfPeriod == 0 ? 12 : value.hourOfPeriod;
-  final minute = value.minute.toString().padLeft(2, '0');
-  return '$period $hour:$minute';
 }

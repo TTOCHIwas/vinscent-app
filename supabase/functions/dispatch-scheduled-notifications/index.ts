@@ -6,27 +6,28 @@ import {
   verifyWebhookSecret,
 } from '../_shared/push.ts';
 
-type ActiveCoupleRow = {
+type StoryLoopRow = {
+  id: string;
+  couple_id: string;
+  couple_date: string;
+  question_generated_at: string;
+};
+
+type DailyQuestionRow = {
+  id: string;
+  couple_id: string;
+  story_loop_id: string;
+};
+
+type CoupleRow = {
   id: string;
   user_a_id: string;
   user_b_id: string;
-  relationship_start_date: string | null;
-  timezone: string;
 };
 
 type PreferenceRow = {
   user_id: string;
-  daily_question_enabled: boolean;
   reminder_enabled: boolean;
-  daily_question_delivery_time: string;
-};
-
-type DailyQuestionRow = {
-  daily_question_id: string;
-  couple_id: string;
-  question_id: string;
-  assigned_date: string;
-  status: string;
 };
 
 type AnswerStateRow = {
@@ -34,16 +35,15 @@ type AnswerStateRow = {
   user_id: string;
 };
 
-type ScheduledJob = {
-  notificationType: 'daily_question_delivery' | 'unanswered_reminder';
-  sourceId: string;
+type ReminderJob = {
+  dailyQuestionId: string;
   coupleId: string;
   receiverUserId: string;
   assignedDate: string;
 };
 
-const defaultDeliveryTime = '09:00:00';
 const defaultLookbackMinutes = 10;
+const reminderDelayMinutes = 60;
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
@@ -69,48 +69,8 @@ Deno.serve(async (request) => {
 
   try {
     const supabase = createServiceRoleClient();
-    const couples = await loadActiveCouples(supabase);
-    if (couples.length === 0) {
-      return jsonResponse({
-        status: 'ok',
-        runAt: runAt.toISOString(),
-        lookbackMinutes,
-        processedCount: 0,
-      });
-    }
-
-    const preferencesByUserId = await loadPreferencesByUserId(
-      supabase,
-      couples,
-    );
-
-    const pendingJobs = buildPendingJobs(
-      couples,
-      preferencesByUserId,
-      runAt,
-      lookbackMinutes,
-    );
-    if (pendingJobs.length === 0) {
-      return jsonResponse({
-        status: 'ok',
-        runAt: runAt.toISOString(),
-        lookbackMinutes,
-        processedCount: 0,
-      });
-    }
-
-    const jobs = await hydrateJobsWithQuestionIds(supabase, pendingJobs);
+    const jobs = await loadDueReminderJobs(supabase, runAt, lookbackMinutes);
     if (jobs.length === 0) {
-      return jsonResponse({
-        status: 'ok',
-        runAt: runAt.toISOString(),
-        lookbackMinutes,
-        processedCount: 0,
-      });
-    }
-
-    const filteredJobs = await filterReminderTargets(supabase, jobs);
-    if (filteredJobs.length === 0) {
       return jsonResponse({
         status: 'ok',
         runAt: runAt.toISOString(),
@@ -122,22 +82,22 @@ Deno.serve(async (request) => {
     const accessToken = await createFcmAccessToken();
     const results = [];
 
-    for (const job of filteredJobs) {
+    for (const job of jobs) {
       const result = await sendPushNotification({
         supabase,
-        notificationType: job.notificationType,
-        sourceId: job.sourceId,
+        notificationType: 'unanswered_reminder',
+        sourceId: job.dailyQuestionId,
         receiverUserId: job.receiverUserId,
         title: 'Vinscent',
-        body: notificationBodyFor(job.notificationType),
+        body: '아직 오늘 질문에 답변하지 않았어요.',
         accessToken,
         data: {
-          daily_question_id: job.sourceId,
+          daily_question_id: job.dailyQuestionId,
           couple_id: job.coupleId,
           assigned_date: job.assignedDate,
         },
       });
-      results.push({ notificationType: job.notificationType, ...result });
+      results.push({ notificationType: 'unanswered_reminder', ...result });
     }
 
     return jsonResponse({
@@ -186,283 +146,148 @@ function normalizeRunAt(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-async function loadActiveCouples(
+async function loadDueReminderJobs(
   supabase: ReturnType<typeof createServiceRoleClient>,
-) {
-  const { data, error } = await supabase
-    .from('couples')
-    .select('id, user_a_id, user_b_id, relationship_start_date, timezone')
-    .eq('status', 'active')
-    .not('relationship_start_date', 'is', null);
-
-  if (error) {
-    throw new Error(`active_couple_query_failed:${error.message}`);
-  }
-
-  return (data ?? []) as ActiveCoupleRow[];
-}
-
-async function loadPreferencesByUserId(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  couples: ActiveCoupleRow[],
-) {
-  const userIds = Array.from(
-    new Set(couples.flatMap((couple) => [couple.user_a_id, couple.user_b_id])),
-  );
-  const { data, error } = await supabase
-    .from('user_notification_preferences')
-    .select(
-      'user_id, daily_question_enabled, reminder_enabled, daily_question_delivery_time',
-    )
-    .in('user_id', userIds);
-
-  if (error) {
-    throw new Error(`notification_preference_query_failed:${error.message}`);
-  }
-
-  const preferences = new Map<string, PreferenceRow>();
-  for (const row of (data ?? []) as PreferenceRow[]) {
-    preferences.set(row.user_id, row);
-  }
-
-  return preferences;
-}
-
-function buildPendingJobs(
-  couples: ActiveCoupleRow[],
-  preferencesByUserId: Map<string, PreferenceRow>,
   runAt: Date,
   lookbackMinutes: number,
 ) {
-  const jobs: Array<{
-    notificationType: 'daily_question_delivery' | 'unanswered_reminder';
-    coupleId: string;
-    receiverUserId: string;
-    assignedDate: string;
-  }> = [];
+  const dueLoopStart = new Date(
+    runAt.getTime() - (reminderDelayMinutes + lookbackMinutes) * 60_000,
+  );
+  const dueLoopEnd = new Date(
+    runAt.getTime() - reminderDelayMinutes * 60_000,
+  );
+  const { data: loopData, error: loopError } = await supabase
+    .from('daily_story_loops')
+    .select('id, couple_id, couple_date, question_generated_at')
+    .in('status', ['question_generated', 'answered_by_one'])
+    .gte('question_generated_at', dueLoopStart.toISOString())
+    .lt('question_generated_at', dueLoopEnd.toISOString());
 
-  for (const couple of couples) {
-    const localClock = getLocalClock(runAt, couple.timezone);
-    const relationshipStartDate = couple.relationship_start_date;
-    if (!relationshipStartDate) {
+  if (loopError) {
+    throw new Error(`due_story_loop_query_failed:${loopError.message}`);
+  }
+
+  const loops = (loopData ?? []) as StoryLoopRow[];
+  if (loops.length === 0) {
+    return [] as ReminderJob[];
+  }
+
+  const loopIds = loops.map((loop) => loop.id);
+  const { data: questionData, error: questionError } = await supabase
+    .from('daily_questions')
+    .select('id, couple_id, story_loop_id')
+    .in('story_loop_id', loopIds);
+
+  if (questionError) {
+    throw new Error(`story_loop_question_query_failed:${questionError.message}`);
+  }
+
+  const questionsByLoopId = new Map(
+    ((questionData ?? []) as DailyQuestionRow[]).map((question) => [
+      question.story_loop_id,
+      question,
+    ]),
+  );
+  const dueLoops = loops.filter((loop) => questionsByLoopId.has(loop.id));
+  if (dueLoops.length === 0) {
+    return [] as ReminderJob[];
+  }
+
+  const coupleIds = Array.from(new Set(dueLoops.map((loop) => loop.couple_id)));
+  const { data: coupleData, error: coupleError } = await supabase
+    .from('couples')
+    .select('id, user_a_id, user_b_id')
+    .in('id', coupleIds)
+    .eq('status', 'active');
+
+  if (coupleError) {
+    throw new Error(`reminder_couple_query_failed:${coupleError.message}`);
+  }
+
+  const couplesById = new Map(
+    ((coupleData ?? []) as CoupleRow[]).map((couple) => [couple.id, couple]),
+  );
+  const userIds = Array.from(
+    new Set(
+      [...couplesById.values()].flatMap((couple) => [
+        couple.user_a_id,
+        couple.user_b_id,
+      ]),
+    ),
+  );
+  const preferencesByUserId = await loadPreferencesByUserId(supabase, userIds);
+
+  const questionIds = Array.from(
+    new Set(
+      dueLoops.map((loop) => questionsByLoopId.get(loop.id)!.id),
+    ),
+  );
+  const { data: answerData, error: answerError } = await supabase
+    .from('daily_question_answers')
+    .select('daily_question_id, user_id')
+    .in('daily_question_id', questionIds);
+
+  if (answerError) {
+    throw new Error(`daily_question_answer_query_failed:${answerError.message}`);
+  }
+
+  const answeredPairs = new Set(
+    ((answerData ?? []) as AnswerStateRow[]).map(
+      (answer) => `${answer.daily_question_id}:${answer.user_id}`,
+    ),
+  );
+  const jobs: ReminderJob[] = [];
+
+  for (const loop of dueLoops) {
+    const couple = couplesById.get(loop.couple_id);
+    const question = questionsByLoopId.get(loop.id);
+    if (!couple || !question) {
       continue;
     }
 
     for (const receiverUserId of [couple.user_a_id, couple.user_b_id]) {
-      const preference = preferencesByUserId.get(receiverUserId);
-      const deliveryTime = parseTimeToMinutes(
-        preference?.daily_question_delivery_time ?? defaultDeliveryTime,
-      );
-      const deliveryDueDate = resolveDueDate(
-        localClock.date,
-        localClock.minutes,
-        deliveryTime,
-        lookbackMinutes,
-      );
-
-      if (
-        (preference?.daily_question_enabled ?? true) &&
-        deliveryDueDate !== null &&
-        deliveryDueDate >= relationshipStartDate
-      ) {
-        jobs.push({
-          notificationType: 'daily_question_delivery',
-          coupleId: couple.id,
-          receiverUserId,
-          assignedDate: deliveryDueDate,
-        });
+      if (preferencesByUserId.get(receiverUserId)?.reminder_enabled === false) {
+        continue;
       }
 
-      const reminderDueDate = resolveDueDate(
-        localClock.date,
-        localClock.minutes,
-        getReminderMinutes(deliveryTime),
-        lookbackMinutes,
-      );
-      const reminderDate = reminderDueDate === null
-        ? null
-        : getReminderAssignedDate(reminderDueDate, deliveryTime);
-
-      if (
-        (preference?.reminder_enabled ?? true) &&
-        reminderDate !== null &&
-        reminderDate >= relationshipStartDate
-      ) {
-        jobs.push({
-          notificationType: 'unanswered_reminder',
-          coupleId: couple.id,
-          receiverUserId,
-          assignedDate: reminderDate,
-        });
+      if (answeredPairs.has(`${question.id}:${receiverUserId}`)) {
+        continue;
       }
+
+      jobs.push({
+        dailyQuestionId: question.id,
+        coupleId: couple.id,
+        receiverUserId,
+        assignedDate: loop.couple_date,
+      });
     }
   }
 
   return jobs;
 }
 
-async function hydrateJobsWithQuestionIds(
+async function loadPreferencesByUserId(
   supabase: ReturnType<typeof createServiceRoleClient>,
-  pendingJobs: Array<{
-    notificationType: 'daily_question_delivery' | 'unanswered_reminder';
-    coupleId: string;
-    receiverUserId: string;
-    assignedDate: string;
-  }>,
-): Promise<ScheduledJob[]> {
-  const dailyQuestionIds = new Map<string, string>();
-
-  for (const job of pendingJobs) {
-    const cacheKey = `${job.coupleId}:${job.assignedDate}`;
-    if (!dailyQuestionIds.has(cacheKey)) {
-      const { data, error } = await supabase
-        .rpc('get_or_assign_daily_question_for_couple', {
-          requested_couple_id: job.coupleId,
-          requested_target_date: job.assignedDate,
-        })
-        .single();
-
-      if (error) {
-        throw new Error(`daily_question_assign_failed:${error.message}`);
-      }
-
-      const row = data as DailyQuestionRow | null;
-      if (!row?.daily_question_id) {
-        throw new Error('daily_question_assign_missing');
-      }
-
-      dailyQuestionIds.set(cacheKey, row.daily_question_id);
-    }
-  }
-
-  return pendingJobs.map((job) => ({
-    notificationType: job.notificationType,
-    sourceId: dailyQuestionIds.get(`${job.coupleId}:${job.assignedDate}`)!,
-    coupleId: job.coupleId,
-    receiverUserId: job.receiverUserId,
-    assignedDate: job.assignedDate,
-  }));
-}
-
-async function filterReminderTargets(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  jobs: ScheduledJob[],
+  userIds: string[],
 ) {
-  const reminderJobs = jobs.filter(
-    (job) => job.notificationType === 'unanswered_reminder',
-  );
-  if (reminderJobs.length === 0) {
-    return jobs;
+  if (userIds.length === 0) {
+    return new Map<string, PreferenceRow>();
   }
 
-  const questionIds = Array.from(
-    new Set(reminderJobs.map((job) => job.sourceId)),
-  );
   const { data, error } = await supabase
-    .from('daily_question_answers')
-    .select('daily_question_id, user_id')
-    .in('daily_question_id', questionIds);
+    .from('user_notification_preferences')
+    .select('user_id, reminder_enabled')
+    .in('user_id', userIds);
 
   if (error) {
-    throw new Error(`daily_question_answer_query_failed:${error.message}`);
+    throw new Error(`notification_preference_query_failed:${error.message}`);
   }
 
-  const answeredPairs = new Set(
-    ((data ?? []) as AnswerStateRow[]).map(
-      (row) => `${row.daily_question_id}:${row.user_id}`,
-    ),
+  return new Map(
+    ((data ?? []) as PreferenceRow[]).map((preference) => [
+      preference.user_id,
+      preference,
+    ]),
   );
-
-  return jobs.filter((job) => {
-    if (job.notificationType !== 'unanswered_reminder') {
-      return true;
-    }
-
-    return !answeredPairs.has(`${job.sourceId}:${job.receiverUserId}`);
-  });
-}
-
-function notificationBodyFor(
-  notificationType: ScheduledJob['notificationType'],
-) {
-  return notificationType === 'daily_question_delivery'
-    ? '오늘 질문이 도착했어요.'
-    : '아직 오늘 질문에 답변하지 않았어요.';
-}
-
-function parseTimeToMinutes(value: string) {
-  const parts = value.split(':');
-  if (parts.length < 2) {
-    return parseTimeToMinutes(defaultDeliveryTime);
-  }
-
-  const hour = Number.parseInt(parts[0], 10);
-  const minute = Number.parseInt(parts[1], 10);
-  return hour * 60 + minute;
-}
-
-function getReminderMinutes(deliveryMinutes: number) {
-  return (deliveryMinutes + 60) % (24 * 60);
-}
-
-function resolveDueDate(
-  localDate: string,
-  localMinutes: number,
-  targetMinutes: number,
-  lookbackMinutes: number,
-) {
-  if (
-    localMinutes >= targetMinutes &&
-    localMinutes < targetMinutes + lookbackMinutes
-  ) {
-    return localDate;
-  }
-
-  const wrappedWindowEnd = targetMinutes + lookbackMinutes - (24 * 60);
-  if (
-    targetMinutes + lookbackMinutes > 24 * 60 &&
-    localMinutes < wrappedWindowEnd
-  ) {
-    return addDays(localDate, -1);
-  }
-
-  return null;
-}
-
-function getReminderAssignedDate(localDate: string, deliveryMinutes: number) {
-  if (deliveryMinutes + 60 < 24 * 60) {
-    return localDate;
-  }
-
-  return addDays(localDate, -1);
-}
-
-function getLocalClock(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
-
-  const map = new Map(parts.map((part) => [part.type, part.value]));
-  const year = map.get('year')!;
-  const month = map.get('month')!;
-  const day = map.get('day')!;
-  const hour = Number.parseInt(map.get('hour')!, 10);
-  const minute = Number.parseInt(map.get('minute')!, 10);
-
-  return {
-    date: `${year}-${month}-${day}`,
-    minutes: hour * 60 + minute,
-  };
-}
-
-function addDays(date: string, deltaDays: number) {
-  const baseDate = new Date(`${date}T00:00:00Z`);
-  baseDate.setUTCDate(baseDate.getUTCDate() + deltaDays);
-  return baseDate.toISOString().slice(0, 10);
 }
