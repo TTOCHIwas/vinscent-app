@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -95,7 +96,8 @@ class _StoryCardEditorContentState
         _EditorHeader(
           canSave: _canSave,
           isSaving: _isSaving,
-          canDelete: _draft.existingRevision != null && !_isDeleting,
+          canDelete:
+              _draft.existingRevision != null && !_isSaving && !_isDeleting,
           onBackPressed: () => context.go('/home'),
           onDeletePressed: _deleteCard,
           onSavePressed: _saveCard,
@@ -549,7 +551,8 @@ class _StoryCardEditorContentState
       throw StateError('Story card preview boundary is unavailable.');
     }
 
-    final image = await renderObject.toImage(pixelRatio: 3);
+    final pixelRatio = math.min(2.0, 960 / renderObject.size.width).toDouble();
+    final image = await renderObject.toImage(pixelRatio: pixelRatio);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
     if (byteData == null) {
