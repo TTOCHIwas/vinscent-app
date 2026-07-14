@@ -64,7 +64,7 @@ void main() {
     expect(input.style?.color, selectedColor);
     expect(input.cursorColor, selectedColor);
 
-    tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
     expect(
@@ -106,6 +106,26 @@ void main() {
       find.byKey(const ValueKey('story-card-editor-save')),
     );
     expect(save.onPressed, isNull);
+  });
+
+  testWidgets('back cancels inline text input before leaving the editor', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+    await _openTextInput(tester);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('story-card-text-input-overlay')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('story-card-editor-canvas')),
+      findsOneWidget,
+    );
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('does not edit an existing text layer on tap', (tester) async {
@@ -353,6 +373,8 @@ void main() {
     final before = tester.getCenter(find.text('pinch target'));
     await outsidePointer.moveBy(const Offset(40, 30));
     await tester.pump();
+    await outsidePointer.moveBy(const Offset(20, 15));
+    await tester.pump();
     final after = tester.getCenter(find.text('pinch target'));
 
     await outsidePointer.up();
@@ -518,13 +540,16 @@ void main() {
     expect(_backgroundTransform(tester).scale, greaterThan(scaleBeforePinch));
   });
 
-  testWidgets('moves the background with two pointers while text tool is on', (
+  testWidgets('returns to background gestures after text input is cancelled', (
     tester,
   ) async {
     await _pumpEditor(tester, draft: _existingPhotoTextDraft());
 
-    await tester.tap(find.byIcon(Icons.text_fields));
-    await tester.pump();
+    await _openTextInput(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-text-input-cancel')),
+    );
+    await tester.pumpAndSettle();
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
@@ -550,7 +575,10 @@ void main() {
     final transform = _backgroundTransform(tester);
     expect(transform.offsetX, isNot(0));
     expect(transform.offsetY, isNot(0));
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.byKey(const ValueKey('story-card-text-input-overlay')),
+      findsNothing,
+    );
   });
 }
 

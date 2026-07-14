@@ -57,6 +57,7 @@ class _StoryCardEditorContent extends ConsumerStatefulWidget {
 class _StoryCardEditorContentState
     extends ConsumerState<_StoryCardEditorContent> {
   final _previewKey = GlobalKey();
+  final _textTrashTargetKey = GlobalKey();
 
   late StoryCardEditorSession _session;
   ui.Image? _backgroundImage;
@@ -70,6 +71,9 @@ class _StoryCardEditorContentState
   Offset _backgroundFocalPointStart = Offset.zero;
   StoryCardTextLayer? _textLayerTransformStart;
   Offset _textLayerFocalPointStart = Offset.zero;
+  bool _isTextInputActive = false;
+  bool _isDraggingText = false;
+  bool _isTextOverTrash = false;
   bool _isSaving = false;
   bool _isDeleting = false;
 
@@ -92,7 +96,8 @@ class _StoryCardEditorContentState
     return [..._draft.scene.strokes, ?_activeStroke];
   }
 
-  bool get _canSave => !_isSaving && !_isDeleting && _draft.hasContent;
+  bool get _canSave =>
+      !_isTextInputActive && !_isSaving && !_isDeleting && _draft.hasContent;
 
   @override
   Widget build(BuildContext context) {
@@ -107,8 +112,7 @@ class _StoryCardEditorContentState
           ? StoryCardCameraStage(
               onBack: _handleBack,
               onImageSelected: _useBackgroundImage,
-              onTextSelected: () =>
-                  _enterBlankDecorator(StoryCardEditorTool.text),
+              onTextSelected: _enterBlankTextDecorator,
               onDrawingSelected: () =>
                   _enterBlankDecorator(StoryCardEditorTool.drawing),
             )
@@ -134,7 +138,6 @@ class _StoryCardEditorContentState
                     scene: _draft.scene,
                     visibleStrokes: _visibleStrokes,
                     interactionMode: _session.tool,
-                    onCanvasTapped: _addTextLayerAt,
                     onStrokeStart: _startStroke,
                     onStrokeUpdate: _updateStroke,
                     onStrokeEnd: _endStroke,
@@ -143,7 +146,6 @@ class _StoryCardEditorContentState
                     onTextLayerScaleStart: _startTextLayerTransform,
                     onTextLayerScaleUpdate: _updateTextLayerTransform,
                     onTextLayerScaleEnd: _endTextLayerTransform,
-                    onTextLayerTapped: _editTextLayer,
                   ),
                 ),
               ),
@@ -222,12 +224,44 @@ class _StoryCardEditorContentState
                 ),
               ),
             ),
+          if (_isDraggingText)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _StoryCardTextTrashTarget(
+                    key: _textTrashTargetKey,
+                    isActive: _isTextOverTrash,
+                  ),
+                ),
+              ),
+            ),
+          if (_isTextInputActive)
+            _StoryCardTextInputOverlay(
+              maxLength: _remainingTextCharacterLimit,
+              onCancelled: _cancelTextInput,
+              onSubmitted: _submitTextInput,
+            ),
         ],
       ),
     );
   }
 
+  int get _remainingTextCharacterLimit {
+    final remaining =
+        storyCardMaxTextCharacters - _draft.scene.textCharacterCount;
+    return remaining < storyCardMaxTextCharactersPerLayer
+        ? remaining
+        : storyCardMaxTextCharactersPerLayer;
+  }
+
   Future<void> _handleBack() async {
+    if (_isTextInputActive) {
+      _cancelTextInput();
+      return;
+    }
+
     if (_isSaving || _isDeleting) {
       return;
     }
@@ -347,7 +381,15 @@ class _StoryCardEditorContentState
       _showSnackBar('텍스트는 최대 $storyCardMaxTextLayers개까지 추가할 수 있어요.');
       return;
     }
-    _selectTool(StoryCardEditorTool.text);
+    if (_remainingTextCharacterLimit <= 0) {
+      _showSnackBar('텍스트 전체 글자 수는 최대 $storyCardMaxTextCharacters자예요.');
+      return;
+    }
+
+    setState(() {
+      _session = _session.selectTool(StoryCardEditorTool.text);
+      _isTextInputActive = true;
+    });
   }
 
   void _toggleCanvasBackground() {
@@ -369,6 +411,77 @@ class _StoryCardEditorContentState
       _backgroundImage?.dispose();
       _backgroundImage = null;
       _session = _session.enterBlankDecorator(tool: tool);
+    });
+  }
+
+  void _enterBlankTextDecorator() {
+    setState(() {
+      _backgroundImage?.dispose();
+      _backgroundImage = null;
+      _session = _session.enterBlankDecorator(
+        tool: StoryCardEditorTool.text,
+        background: StoryCardCanvasBackground.black,
+      );
+      _isTextInputActive = true;
+    });
+  }
+
+  void _cancelTextInput() {
+    if (!_isTextInputActive) {
+      return;
+    }
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _isTextInputActive = false;
+      _session = _session.selectTool(
+        _draft.hasPhoto
+            ? StoryCardEditorTool.background
+            : StoryCardEditorTool.none,
+      );
+    });
+  }
+
+  void _submitTextInput(String value, Color color) {
+    final text = value.trim();
+    if (text.isEmpty) {
+      _cancelTextInput();
+      return;
+    }
+    if (text.characters.length > storyCardMaxTextCharactersPerLayer) {
+      _showSnackBar('텍스트는 레이어당 최대 $storyCardMaxTextCharactersPerLayer자예요.');
+      return;
+    }
+    if (_draft.scene.textLayers.length >= storyCardMaxTextLayers) {
+      _showSnackBar('텍스트는 최대 $storyCardMaxTextLayers개까지 추가할 수 있어요.');
+      return;
+    }
+    if (_draft.scene.textCharacterCount + text.characters.length >
+        storyCardMaxTextCharacters) {
+      _showSnackBar('텍스트 전체 글자 수는 최대 $storyCardMaxTextCharacters자예요.');
+      return;
+    }
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _isTextInputActive = false;
+      _session = _session.updateDraft(
+        _draft.copyWith(
+          scene: _draft.scene.copyWith(
+            textLayers: [
+              ..._draft.scene.textLayers,
+              StoryCardTextLayer(
+                id: const Uuid().v4(),
+                text: text,
+                x: 0.5,
+                y: 0.5,
+                color: color,
+              ),
+            ],
+          ),
+        ),
+        tool: StoryCardEditorTool.none,
+      );
     });
   }
 
@@ -550,107 +663,17 @@ class _StoryCardEditorContentState
     });
   }
 
-  Future<void> _addTextLayerAt(StoryCardPoint point) async {
-    if (_session.tool != StoryCardEditorTool.text) {
-      return;
-    }
-
-    final text = await _editText();
-    if (text == null || text.isEmpty || !mounted) {
-      return;
-    }
-
-    if (_draft.scene.textLayers.length >= storyCardMaxTextLayers) {
-      _showSnackBar('텍스트는 최대 $storyCardMaxTextLayers개까지 추가할 수 있어요.');
-      return;
-    }
-    if (_draft.scene.textCharacterCount + text.characters.length >
-        storyCardMaxTextCharacters) {
-      _showSnackBar('텍스트 전체 글자 수는 최대 $storyCardMaxTextCharacters자예요.');
-      return;
-    }
-
-    setState(() {
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            textLayers: [
-              ..._draft.scene.textLayers,
-              StoryCardTextLayer(
-                id: const Uuid().v4(),
-                text: text,
-                x: point.x,
-                y: point.y,
-                color:
-                    _draft.scene.canvasBackground ==
-                        StoryCardCanvasBackground.black
-                    ? Colors.white
-                    : Colors.black,
-              ),
-            ],
-          ),
-        ),
-        tool: StoryCardEditorTool.none,
-      );
-    });
-  }
-
-  Future<void> _editTextLayer(String layerId) async {
-    final layer = _draft.scene.textLayers.firstWhere(
-      (candidate) => candidate.id == layerId,
-    );
-    final text = await _editText(initialValue: layer.text, canDelete: true);
-    if (!mounted || text == null) {
-      return;
-    }
-    final nextCharacterCount =
-        _draft.scene.textCharacterCount -
-        layer.text.characters.length +
-        text.characters.length;
-    if (nextCharacterCount > storyCardMaxTextCharacters) {
-      _showSnackBar('텍스트 전체 글자 수는 최대 $storyCardMaxTextCharacters자예요.');
-      return;
-    }
-
-    setState(() {
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            textLayers: text.isEmpty
-                ? _draft.scene.textLayers
-                      .where((candidate) => candidate.id != layerId)
-                      .toList(growable: false)
-                : _draft.scene.textLayers
-                      .map(
-                        (candidate) => candidate.id == layerId
-                            ? candidate.copyWith(text: text)
-                            : candidate,
-                      )
-                      .toList(growable: false),
-          ),
-        ),
-      );
-    });
-  }
-
-  Future<String?> _editText({
-    String initialValue = '',
-    bool canDelete = false,
-  }) {
-    return showDialog<String>(
-      context: context,
-      builder: (_) => _StoryCardTextDialog(
-        initialValue: initialValue,
-        canDelete: canDelete,
-      ),
-    );
-  }
-
   void _startTextLayerTransform(String layerId, ScaleStartDetails details) {
     _textLayerTransformStart = _draft.scene.textLayers.firstWhere(
       (layer) => layer.id == layerId,
     );
     _textLayerFocalPointStart = details.localFocalPoint;
+    if (!_isDraggingText) {
+      setState(() {
+        _isDraggingText = true;
+        _isTextOverTrash = false;
+      });
+    }
   }
 
   void _updateTextLayerTransform(
@@ -670,8 +693,10 @@ class _StoryCardEditorContentState
         .clamp(storyCardMinTextScale, storyCardMaxTextScale)
         .toDouble();
     final rotation = start.rotation + details.rotation;
+    final isOverTrash = _isTextCenterOverTrash(x: x, y: y);
 
     setState(() {
+      _isTextOverTrash = isOverTrash;
       _session = _session.updateDraft(
         _draft.copyWith(
           scene: _draft.scene.copyWith(
@@ -694,7 +719,41 @@ class _StoryCardEditorContentState
   }
 
   void _endTextLayerTransform() {
-    _textLayerTransformStart = null;
+    final layerId = _textLayerTransformStart?.id;
+    final shouldDelete = _isTextOverTrash && layerId != null;
+    setState(() {
+      if (shouldDelete) {
+        _session = _session.updateDraft(
+          _draft.copyWith(
+            scene: _draft.scene.copyWith(
+              textLayers: _draft.scene.textLayers
+                  .where((layer) => layer.id != layerId)
+                  .toList(growable: false),
+            ),
+          ),
+        );
+      }
+      _textLayerTransformStart = null;
+      _isDraggingText = false;
+      _isTextOverTrash = false;
+    });
+  }
+
+  bool _isTextCenterOverTrash({required double x, required double y}) {
+    final previewBox = _previewKey.currentContext?.findRenderObject();
+    final trashBox = _textTrashTargetKey.currentContext?.findRenderObject();
+    if (previewBox is! RenderBox ||
+        trashBox is! RenderBox ||
+        !previewBox.hasSize ||
+        !trashBox.hasSize) {
+      return false;
+    }
+
+    final textCenter = previewBox.localToGlobal(
+      Offset(x * previewBox.size.width, y * previewBox.size.height),
+    );
+    final trashRect = trashBox.localToGlobal(Offset.zero) & trashBox.size;
+    return trashRect.inflate(12).contains(textCenter);
   }
 
   Future<void> _saveCard() async {
@@ -835,60 +894,231 @@ class _StoryCardEditorContentState
   }
 }
 
-class _StoryCardTextDialog extends StatefulWidget {
-  const _StoryCardTextDialog({
-    required this.initialValue,
-    required this.canDelete,
+class _StoryCardTextInputOverlay extends StatefulWidget {
+  const _StoryCardTextInputOverlay({
+    required this.maxLength,
+    required this.onCancelled,
+    required this.onSubmitted,
   });
 
-  final String initialValue;
-  final bool canDelete;
+  final int maxLength;
+  final VoidCallback onCancelled;
+  final void Function(String text, Color color) onSubmitted;
 
   @override
-  State<_StoryCardTextDialog> createState() => _StoryCardTextDialogState();
+  State<_StoryCardTextInputOverlay> createState() =>
+      _StoryCardTextInputOverlayState();
 }
 
-class _StoryCardTextDialogState extends State<_StoryCardTextDialog> {
-  late final TextEditingController _controller;
+class _StoryCardTextInputOverlayState
+    extends State<_StoryCardTextInputOverlay> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+
+  Color _selectedColor = Colors.white;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.canDelete ? '텍스트 수정' : '텍스트 추가'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        maxLength: storyCardMaxTextCharactersPerLayer,
-        maxLines: 5,
-        decoration: const InputDecoration(hintText: '짧은 글을 적어주세요.'),
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    return GestureDetector(
+      key: const ValueKey('story-card-text-input-overlay'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      child: ColoredBox(
+        color: const Color(0xB3000000),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedPadding(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.only(bottom: keyboardInset),
+              child: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: TextField(
+                      key: const ValueKey('story-card-text-input'),
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      autofocus: true,
+                      maxLength: widget.maxLength,
+                      maxLines: null,
+                      textAlign: TextAlign.center,
+                      textInputAction: TextInputAction.done,
+                      keyboardAppearance: Brightness.dark,
+                      style: AppTextStyles.homeBodyMedium.copyWith(
+                        color: _selectedColor,
+                      ),
+                      cursorColor: _selectedColor,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        counterText: '',
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onSubmitted: (_) => _submit(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        key: const ValueKey('story-card-text-input-cancel'),
+                        tooltip: '텍스트 입력 취소',
+                        color: Colors.white,
+                        onPressed: widget.onCancelled,
+                        icon: const Icon(Icons.close),
+                      ),
+                      TextButton(
+                        key: const ValueKey('story-card-text-input-done'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _submit,
+                        child: const Text('완료'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              left: 16,
+              right: 16,
+              bottom: keyboardInset + 12,
+              child: _StoryCardTextColorPalette(
+                selectedColor: _selectedColor,
+                onColorChanged: (color) {
+                  setState(() {
+                    _selectedColor = color;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      actions: [
-        if (widget.canDelete)
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(''),
-            child: const Text('삭제'),
+    );
+  }
+
+  void _submit() {
+    widget.onSubmitted(_controller.text, _selectedColor);
+  }
+}
+
+class _StoryCardTextColorPalette extends StatelessWidget {
+  const _StoryCardTextColorPalette({
+    required this.selectedColor,
+    required this.onColorChanged,
+  });
+
+  final Color selectedColor;
+  final ValueChanged<Color> onColorChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xC9000000),
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        height: 52,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          scrollDirection: Axis.horizontal,
+          itemCount: storyCardColorPalette.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            final color = storyCardColorPalette[index];
+            final isSelected = color == selectedColor;
+            return Tooltip(
+              message: '텍스트 색상 ${index + 1}',
+              child: Semantics(
+                selected: isSelected,
+                button: true,
+                child: GestureDetector(
+                  key: ValueKey('story-card-text-input-color-$index'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onColorChanged(color),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color,
+                      border: Border.all(
+                        color: isSelected ? Colors.white : Colors.white54,
+                        width: isSelected ? 3 : 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _StoryCardTextTrashTarget extends StatelessWidget {
+  const _StoryCardTextTrashTarget({super.key, required this.isActive});
+
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      key: const ValueKey('story-card-text-trash-target'),
+      dimension: 72,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isActive ? const Color(0xE6000000) : const Color(0xB8000000),
+          border: Border.all(
+            color: isActive ? AppColors.actionPrimary : Colors.white54,
           ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('완료'),
+        child: Icon(
+          Icons.delete_outline,
+          key: const ValueKey('story-card-text-trash-icon'),
+          color: isActive ? AppColors.actionPrimary : Colors.white,
+          size: isActive ? 36 : 32,
         ),
-      ],
+      ),
     );
   }
 }
@@ -978,7 +1208,6 @@ class _StoryCardCanvas extends StatefulWidget {
     required this.scene,
     required this.visibleStrokes,
     required this.interactionMode,
-    required this.onCanvasTapped,
     required this.onStrokeStart,
     required this.onStrokeUpdate,
     required this.onStrokeEnd,
@@ -987,14 +1216,12 @@ class _StoryCardCanvas extends StatefulWidget {
     required this.onTextLayerScaleStart,
     required this.onTextLayerScaleUpdate,
     required this.onTextLayerScaleEnd,
-    required this.onTextLayerTapped,
   });
 
   final ui.Image? backgroundImage;
   final StoryCardScene scene;
   final List<StoryCardStroke> visibleStrokes;
   final StoryCardEditorTool interactionMode;
-  final ValueChanged<StoryCardPoint> onCanvasTapped;
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
   final void Function(StoryCardPoint point, int pointer) onStrokeUpdate;
   final ValueChanged<int> onStrokeEnd;
@@ -1006,7 +1233,6 @@ class _StoryCardCanvas extends StatefulWidget {
   final void Function(String layerId, ScaleUpdateDetails details, Size size)
   onTextLayerScaleUpdate;
   final VoidCallback onTextLayerScaleEnd;
-  final ValueChanged<String> onTextLayerTapped;
 
   @override
   State<_StoryCardCanvas> createState() => _StoryCardCanvasState();
@@ -1045,11 +1271,6 @@ class _StoryCardCanvasState extends State<_StoryCardCanvas> {
           onPointerCancel: _releaseCanvasPointer,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapUp: widget.interactionMode == StoryCardEditorTool.text
-                ? (details) => widget.onCanvasTapped(
-                    _normalize(details.localPosition, size),
-                  )
-                : null,
             onScaleStart: _handleScaleStart,
             onScaleUpdate: (details) => _handleScaleUpdate(details, size),
             child: ClipRect(
@@ -1084,28 +1305,24 @@ class _StoryCardCanvasState extends State<_StoryCardCanvas> {
                           onPointerCancel: (event) {
                             _textPointerTargets.remove(event.pointer);
                           },
-                          child: GestureDetector(
-                            onTap: () => widget.onTextLayerTapped(layer.id),
-                            child: Transform.rotate(
+                          child: Transform.rotate(
+                            key: ValueKey(
+                              'story-card-text-transform-${layer.id}',
+                            ),
+                            angle: layer.rotation,
+                            child: Transform.scale(
                               key: ValueKey(
-                                'story-card-text-transform-${layer.id}',
+                                'story-card-text-scale-${layer.id}',
                               ),
-                              angle: layer.rotation,
-                              child: Transform.scale(
-                                key: ValueKey(
-                                  'story-card-text-scale-${layer.id}',
-                                ),
-                                scale: layer.scale,
-                                child: SizedBox(
-                                  width: size.width * .72,
-                                  child: Text(
-                                    layer.text,
-                                    textAlign: TextAlign.center,
-                                    style: AppTextStyles.homeBodyMedium
-                                        .copyWith(
-                                          color: layer.color,
-                                          shadows: const [],
-                                        ),
+                              scale: layer.scale,
+                              child: SizedBox(
+                                width: size.width * .72,
+                                child: Text(
+                                  layer.text,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.homeBodyMedium.copyWith(
+                                    color: layer.color,
+                                    shadows: const [],
                                   ),
                                 ),
                               ),
@@ -1175,12 +1392,7 @@ class _StoryCardCanvasState extends State<_StoryCardCanvas> {
   void _handleScaleUpdate(ScaleUpdateDetails details, Size size) {
     final lockedTextLayerId = _lockedTextLayerId;
     if (lockedTextLayerId != null) {
-      final hasActiveTextPointer = _textPointerTargets.containsValue(
-        lockedTextLayerId,
-      );
-      if (details.pointerCount >= 2 || hasActiveTextPointer) {
-        widget.onTextLayerScaleUpdate(lockedTextLayerId, details, size);
-      }
+      widget.onTextLayerScaleUpdate(lockedTextLayerId, details, size);
       return;
     }
 
