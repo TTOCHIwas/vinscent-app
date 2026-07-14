@@ -27,59 +27,99 @@ void main() {
     expect(tester.getRect(save).overlaps(tester.getRect(textTool)), isFalse);
   });
 
-  testWidgets('delivers text placement taps to the canvas', (tester) async {
-    await _pumpEditor(tester, draft: _existingEmptyDraft());
-
-    await _openTextDialog(tester);
-
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
-  });
-
-  testWidgets('keeps the text controller alive through dialog dismissal', (
+  testWidgets('opens inline text input with focus instead of a dialog', (
     tester,
   ) async {
     await _pumpEditor(tester, draft: _existingEmptyDraft());
 
-    await _openTextDialog(tester);
-    await tester.enterText(find.byType(TextField), 'first text');
-    await tester.tap(find.text('완료'));
-    await tester.pumpAndSettle();
+    await _openTextInput(tester);
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('first text'), findsOneWidget);
-
-    await tester.tap(find.text('first text'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'updated text');
-    await tester.tap(find.text('완료'));
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
-    expect(find.text('updated text'), findsOneWidget);
-
-    await tester.tap(find.text('updated text'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('삭제'));
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
-    expect(find.text('updated text'), findsNothing);
-  });
-
-  testWidgets('keeps the text controller alive when input is cancelled', (
-    tester,
-  ) async {
-    await _pumpEditor(tester, draft: _existingEmptyDraft());
-
-    await _openTextDialog(tester);
-    await tester.enterText(find.byType(TextField), 'cancelled text');
-    await tester.tap(find.text('취소'));
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
     expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.byKey(const ValueKey('story-card-text-input-overlay')),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsOneWidget);
+    final input = tester.widget<TextField>(find.byType(TextField));
+    expect(input.autofocus, isTrue);
+    expect(input.style?.color, Colors.white);
+    expect(input.cursorColor, Colors.white);
+    expect(tester.testTextInput.isVisible, isTrue);
+  });
+
+  testWidgets('creates centered text with the selected input color', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+    const selectedColor = Color(0xFFE94B5F);
+
+    await _openTextInput(tester);
+    await tester.enterText(find.byType(TextField), 'new text');
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-text-input-color-2')),
+    );
+    await tester.pump();
+
+    var input = tester.widget<TextField>(find.byType(TextField));
+    expect(input.style?.color, selectedColor);
+    expect(input.cursorColor, selectedColor);
+
+    tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('story-card-text-input-overlay')),
+      findsNothing,
+    );
+    final createdText = find.text('new text');
+    expect(createdText, findsOneWidget);
+    expect(tester.widget<Text>(createdText).style?.color, selectedColor);
+    expect(
+      (tester.getCenter(createdText) -
+              tester.getCenter(
+                find.byKey(const ValueKey('story-card-editor-canvas')),
+              ))
+          .distance,
+      lessThan(1),
+    );
+  });
+
+  testWidgets('cancels inline text input without changing the draft', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+
+    await _openTextInput(tester);
+    await tester.enterText(find.byType(TextField), 'cancelled text');
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-text-input-cancel')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey('story-card-text-input-overlay')),
+      findsNothing,
+    );
     expect(find.text('cancelled text'), findsNothing);
+    final save = tester.widget<TextButton>(
+      find.byKey(const ValueKey('story-card-editor-save')),
+    );
+    expect(save.onPressed, isNull);
+  });
+
+  testWidgets('does not edit an existing text layer on tap', (tester) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    await tester.tap(find.text('pinch target'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.byKey(const ValueKey('story-card-text-input-overlay')),
+      findsNothing,
+    );
+    expect(find.text('pinch target'), findsOneWidget);
   });
 
   testWidgets('delivers drawing pointer events to the canvas', (tester) async {
@@ -225,6 +265,33 @@ void main() {
     expect(after.dy, greaterThan(before.dy));
   });
 
+  testWidgets('deletes text when it is dropped on the trash target', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final text = find.text('pinch target');
+    final gesture = await tester.startGesture(tester.getCenter(text));
+    await gesture.moveBy(const Offset(20, 0));
+    await tester.pump();
+
+    final trash = find.byKey(const ValueKey('story-card-text-trash-target'));
+    final trashIcon = find.byKey(const ValueKey('story-card-text-trash-icon'));
+    expect(trash, findsOneWidget);
+    final inactiveColor = tester.widget<Icon>(trashIcon).color;
+
+    await gesture.moveTo(tester.getCenter(trash));
+    await tester.pump();
+
+    expect(tester.widget<Icon>(trashIcon).color, isNot(inactiveColor));
+
+    await gesture.up();
+    await tester.pump();
+
+    expect(find.text('pinch target'), findsNothing);
+    expect(trash, findsNothing);
+  });
+
   testWidgets('scales text when only one pointer starts on the text', (
     tester,
   ) async {
@@ -267,6 +334,32 @@ void main() {
     await tester.pump();
 
     expect(_textRotation(tester, 'text-1').abs(), greaterThan(0.5));
+  });
+
+  testWidgets('continues moving text with the remaining outside pointer', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final textCenter = tester.getCenter(find.text('pinch target'));
+    final outsideStart = textCenter + const Offset(0, 100);
+    final textPointer = await tester.startGesture(textCenter, pointer: 1);
+    final outsidePointer = await tester.startGesture(outsideStart, pointer: 2);
+    await outsidePointer.moveBy(const Offset(0, 30));
+    await tester.pump();
+    await textPointer.up();
+    await tester.pump();
+
+    final before = tester.getCenter(find.text('pinch target'));
+    await outsidePointer.moveBy(const Offset(40, 30));
+    await tester.pump();
+    final after = tester.getCenter(find.text('pinch target'));
+
+    await outsidePointer.up();
+    await tester.pump();
+
+    expect(after.dx, greaterThan(before.dx));
+    expect(after.dy, greaterThan(before.dy));
   });
 
   testWidgets('renders text without a shadow', (tester) async {
@@ -478,10 +571,8 @@ Future<void> _pumpEditor(
   await tester.pumpAndSettle();
 }
 
-Future<void> _openTextDialog(WidgetTester tester) async {
+Future<void> _openTextInput(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.text_fields));
-  await tester.pump();
-  await tester.tap(find.byKey(const ValueKey('story-card-editor-canvas')));
   await tester.pumpAndSettle();
 }
 
