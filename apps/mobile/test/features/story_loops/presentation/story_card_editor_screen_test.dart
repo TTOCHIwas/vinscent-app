@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
@@ -135,6 +137,39 @@ void main() {
     await tester.pump();
 
     expect(saveButton().onPressed, isNull);
+  });
+
+  testWidgets('eraser clears drawing pixels without clearing the background', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingErasedDrawingDraft());
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.descendant(of: canvas, matching: find.byType(RepaintBoundary)),
+    );
+    ui.Image? rendered;
+    ByteData? bytes;
+    await tester.runAsync(() async {
+      rendered = await boundary.toImage(pixelRatio: 1);
+      bytes = await rendered!.toByteData(format: ui.ImageByteFormat.rawRgba);
+    });
+
+    expect(rendered, isNotNull);
+    expect(bytes, isNotNull);
+    final capturedImage = rendered!;
+    final capturedBytes = bytes!;
+    addTearDown(capturedImage.dispose);
+    final visiblePen = _pixelAt(capturedBytes, capturedImage, x: 0.3, y: 0.5);
+    final erasedIntersection = _pixelAt(
+      capturedBytes,
+      capturedImage,
+      x: 0.5,
+      y: 0.5,
+    );
+
+    expect(visiblePen, const Color(0xFFFFFFFF));
+    expect(erasedIntersection, const Color(0xFF000000));
   });
 
   testWidgets('drawing done returns a photo card to background gestures', (
@@ -492,6 +527,37 @@ StoryCardDraft _existingPhotoTextDraft() {
   );
 }
 
+StoryCardDraft _existingErasedDrawingDraft() {
+  return const StoryCardDraft(
+    scene: StoryCardScene(
+      canvasBackground: StoryCardCanvasBackground.black,
+      backgroundTransform: StoryCardBackgroundTransform.initial(),
+      strokes: [
+        StoryCardStroke(
+          tool: StoryCardDrawingTool.pen,
+          color: Colors.white,
+          width: storyCardMaxStrokeWidth,
+          points: [
+            StoryCardPoint(x: 0.2, y: 0.5),
+            StoryCardPoint(x: 0.8, y: 0.5),
+          ],
+        ),
+        StoryCardStroke(
+          tool: StoryCardDrawingTool.eraser,
+          color: Colors.black,
+          width: storyCardMaxStrokeWidth,
+          points: [
+            StoryCardPoint(x: 0.5, y: 0.4),
+            StoryCardPoint(x: 0.5, y: 0.6),
+          ],
+        ),
+      ],
+      textLayers: [],
+    ),
+    existingRevision: 1,
+  );
+}
+
 double _textScale(WidgetTester tester, String layerId) {
   final transform = tester.widget<Transform>(
     find.byKey(ValueKey('story-card-text-scale-$layerId')),
@@ -514,6 +580,23 @@ StoryCardBackgroundTransform _backgroundTransform(WidgetTester tester) {
   );
   final dynamic painter = customPaint.painter;
   return painter.backgroundTransform as StoryCardBackgroundTransform;
+}
+
+Color _pixelAt(
+  ByteData bytes,
+  ui.Image image, {
+  required double x,
+  required double y,
+}) {
+  final pixelX = (image.width * x).floor().clamp(0, image.width - 1);
+  final pixelY = (image.height * y).floor().clamp(0, image.height - 1);
+  final offset = (pixelY * image.width + pixelX) * 4;
+  return Color.fromARGB(
+    bytes.getUint8(offset + 3),
+    bytes.getUint8(offset),
+    bytes.getUint8(offset + 1),
+    bytes.getUint8(offset + 2),
+  );
 }
 
 class _TestStoryCardEditorController extends StoryCardEditorController {
