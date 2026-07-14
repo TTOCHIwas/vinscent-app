@@ -125,6 +125,7 @@ void main() {
     expect(find.text('내 스토리 카드가 올라갔어요.'), findsOneWidget);
     expect(find.text('상대 카드가 오면 오늘 질문이 생성돼요.'), findsOneWidget);
     expect(find.text('\uce74\ub4dc\u0020\uc218\uc815'), findsOneWidget);
+    expect(find.text('09:00'), findsNothing);
   });
 
   testWidgets('상대 카드만 있으면 내 작성 대기 상태를 보여준다', (tester) async {

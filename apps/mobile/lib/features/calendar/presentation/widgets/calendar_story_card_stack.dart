@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../story_loops/data/story_loop_card_detail.dart';
 import '../../../story_loops/data/story_card_scene.dart';
 
@@ -122,29 +121,6 @@ class _StoryCardSurface extends StatelessWidget {
                   top: 12,
                   child: _StoryCardContentKinds(card: card),
                 ),
-                Positioned(
-                  right: 12,
-                  top: 12,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: const Color(0xCC171717),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      child: Text(
-                        _formatTime(card.submittedAt),
-                        style: AppTextStyles.homeCharacterLabel.copyWith(
-                          color: AppColors.textInverse,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -226,10 +202,4 @@ class _StoryCardContentKinds extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatTime(DateTime dateTime) {
-  final hour = dateTime.hour.toString().padLeft(2, '0');
-  final minute = dateTime.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
 }

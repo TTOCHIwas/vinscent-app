@@ -209,6 +209,7 @@ void main() {
     expect(find.text('스토리 카드가 먼저 도착했어요'), findsOneWidget);
     expect(find.text('두 사람의 카드가 모두 올라오면 질문이 생성돼요'), findsOneWidget);
     expect(find.text('history question'), findsNothing);
+    expect(find.text('09:00'), findsNothing);
   });
 
   testWidgets('shows empty state when selected date has no loop', (

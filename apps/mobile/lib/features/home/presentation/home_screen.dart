@@ -535,29 +535,6 @@ class _HomeStoryCardSurface extends StatelessWidget {
                         )
                       : const _HomeStoryCardPreviewPlaceholder(),
                 ),
-                Positioned(
-                  right: 12,
-                  top: 12,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: const Color(0xCC171717),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      child: Text(
-                        _formatStoryCardTime(card.submittedAt),
-                        style: AppTextStyles.homeCharacterLabel.copyWith(
-                          color: AppColors.textInverse,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -700,12 +677,6 @@ class _HomeStoryLoopPresentation {
       onActionTap: (context) => context.go(targetLocation),
     );
   }
-}
-
-String _formatStoryCardTime(DateTime dateTime) {
-  final hour = dateTime.hour.toString().padLeft(2, '0');
-  final minute = dateTime.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
 }
 
 class _ExpressionGrid extends ConsumerWidget {
