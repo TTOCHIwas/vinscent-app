@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {
-  test('canvas and preview keep the portrait 9:16 contract', () {
-    expect(storyCardCanvasAspectRatio, 9 / 16);
-    expect(storyCardPreviewWidth, 540);
-    expect(storyCardPreviewHeight, 960);
+  test('canvas and preview keep the 4:5 polaroid contract', () {
+    expect(storyCardCanvasAspectRatio, 4 / 5);
+    expect(storyCardPhotoAspectRatio, 1);
+    expect(storyCardPreviewWidth, 800);
+    expect(storyCardPreviewHeight, 1000);
+    expect(storyCardMaxCaptionCharacters, 50);
+    expect(storyCardMaxCaptionLines, 2);
     expect(storyCardMinBackgroundScale, lessThan(1));
     expect(storyCardMaxStrokeWidth, 0.08);
     expect(storyCardMaxTextScale, 8);
+  });
+
+  test('polaroid layout keeps a square photo above the caption area', () {
+    final layout = StoryCardPolaroidLayout.fromSize(const Size(400, 500));
+
+    expect(layout.photoRect.width, layout.photoRect.height);
+    expect(layout.photoRect.top, greaterThan(0));
+    expect(
+      layout.captionRect.top,
+      greaterThanOrEqualTo(layout.photoRect.bottom),
+    );
+    expect(layout.captionRect.bottom, lessThanOrEqualTo(500));
   });
 
   test('scene JSON preserves visual layers and text count', () {
@@ -45,6 +61,7 @@ void main() {
           rotation: 0.75,
         ),
       ],
+      caption: 'first date',
     );
 
     final restored = StoryCardScene.fromJsonString(scene.toJsonString());
@@ -61,7 +78,9 @@ void main() {
     expect(restored.textLayers.single.scale, 1.8);
     expect(restored.textLayers.single.rotation, 0.75);
     expect(restored.textCharacterCount, 7);
-    expect(restored.toJson()['version'], 3);
+    expect(restored.caption, 'first date');
+    expect(restored.captionCharacterCount, 10);
+    expect(restored.toJson()['version'], 4);
   });
 
   test('legacy scene defaults to pen strokes and unrotated text', () {
@@ -92,6 +111,16 @@ void main() {
     expect(restored.strokes.single.tool, StoryCardDrawingTool.pen);
     expect(restored.textLayers.single.scale, 1);
     expect(restored.textLayers.single.rotation, 0);
+    expect(restored.caption, isNull);
+  });
+
+  test('caption alone does not make an otherwise empty draft saveable', () {
+    final draft = StoryCardDraft(
+      scene: StoryCardScene.empty().copyWith(caption: 'caption only'),
+    );
+
+    expect(draft.scene.hasCaption, isTrue);
+    expect(draft.hasContent, isFalse);
   });
 
   test('eraser-only scene is not valid drawing content', () {

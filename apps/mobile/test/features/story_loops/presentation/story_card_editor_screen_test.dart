@@ -27,6 +27,112 @@ void main() {
     expect(tester.getRect(save).overlaps(tester.getRect(textTool)), isFalse);
   });
 
+  testWidgets('uses a 4:5 polaroid frame in the editor', (tester) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final size = tester.getSize(canvas);
+
+    expect(size.width / size.height, closeTo(4 / 5, 0.001));
+  });
+
+  testWidgets(
+    'edits an optional fixed caption with 50 characters and 2 lines',
+    (tester) async {
+      await _pumpEditor(tester, draft: _existingEmptyDraft());
+
+      await _openCaptionInput(tester);
+
+      expect(
+        find.byKey(const ValueKey('story-card-caption-input-overlay')),
+        findsOneWidget,
+      );
+      final inputFinder = find.byKey(
+        const ValueKey('story-card-caption-input'),
+      );
+      final input = tester.widget<TextField>(inputFinder);
+      expect(input.maxLength, storyCardMaxCaptionCharacters);
+      expect(input.maxLines, storyCardMaxCaptionLines);
+
+      await tester.enterText(inputFinder, 'first date');
+      await tester.tap(
+        find.byKey(const ValueKey('story-card-caption-input-done')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('story-card-caption-input-overlay')),
+        findsNothing,
+      );
+      expect(_captionFromPainter(tester), 'first date');
+    },
+  );
+
+  testWidgets('limits the fixed caption to 50 grapheme characters', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+    await _openCaptionInput(tester);
+
+    final inputFinder = find.byKey(const ValueKey('story-card-caption-input'));
+    await tester.enterText(inputFinder, 'a' * 51);
+    await tester.pump();
+
+    final input = tester.widget<TextField>(inputFinder);
+    expect(input.controller?.text, 'a' * 50);
+  });
+
+  testWidgets('does not enable save for a caption-only card', (tester) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+    await _openCaptionInput(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('story-card-caption-input')),
+      'caption only',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-caption-input-done')),
+    );
+    await tester.pumpAndSettle();
+
+    final save = tester.widget<TextButton>(
+      find.byKey(const ValueKey('story-card-editor-save')),
+    );
+    expect(save.onPressed, isNull);
+  });
+
+  testWidgets('clips a photo to the square polaroid photo area', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingRedPhotoDraft());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.descendant(of: canvas, matching: find.byType(RepaintBoundary)),
+    );
+    ui.Image? rendered;
+    ByteData? bytes;
+    await tester.runAsync(() async {
+      rendered = await boundary.toImage(pixelRatio: 1);
+      bytes = await rendered!.toByteData(format: ui.ImageByteFormat.rawRgba);
+    });
+
+    final capturedImage = rendered!;
+    final capturedBytes = bytes!;
+    addTearDown(capturedImage.dispose);
+    expect(
+      _pixelAt(capturedBytes, capturedImage, x: 0.5, y: 0.5),
+      const Color(0xFFFF0000),
+    );
+    expect(
+      _pixelAt(capturedBytes, capturedImage, x: 0.5, y: 0.9),
+      const Color(0xFFFFFFFF),
+    );
+  });
+
   testWidgets('opens inline text input with focus instead of a dialog', (
     tester,
   ) async {
@@ -604,12 +710,27 @@ Future<void> _openTextInput(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _openCaptionInput(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('story-card-caption-tool')));
+  await tester.pumpAndSettle();
+}
+
 StoryCardDraft _existingEmptyDraft() {
   return StoryCardDraft(scene: StoryCardScene.empty(), existingRevision: 1);
 }
 
 StoryCardDraft _existingPhotoDraft() {
   final photo = image.Image(width: 4, height: 4);
+  return StoryCardDraft(
+    scene: StoryCardScene.empty(),
+    backgroundImageBytes: Uint8List.fromList(image.encodePng(photo)),
+    existingRevision: 1,
+  );
+}
+
+StoryCardDraft _existingRedPhotoDraft() {
+  final photo = image.Image(width: 4, height: 4);
+  image.fill(photo, color: image.ColorRgb8(255, 0, 0));
   return StoryCardDraft(
     scene: StoryCardScene.empty(),
     backgroundImageBytes: Uint8List.fromList(image.encodePng(photo)),
@@ -699,6 +820,15 @@ StoryCardBackgroundTransform _backgroundTransform(WidgetTester tester) {
   );
   final dynamic painter = customPaint.painter;
   return painter.backgroundTransform as StoryCardBackgroundTransform;
+}
+
+String? _captionFromPainter(WidgetTester tester) {
+  final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+  final customPaint = tester.widget<CustomPaint>(
+    find.descendant(of: canvas, matching: find.byType(CustomPaint)).first,
+  );
+  final dynamic painter = customPaint.painter;
+  return painter.caption as String?;
 }
 
 Color _pixelAt(
