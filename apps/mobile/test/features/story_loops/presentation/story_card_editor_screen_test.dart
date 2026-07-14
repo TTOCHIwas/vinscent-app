@@ -1,10 +1,10 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
-import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
@@ -100,6 +100,79 @@ void main() {
     expect(saveButton().onPressed, isNotNull);
   });
 
+  testWidgets('drawing mode exposes eraser undo and done without crop', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingPhotoDraft());
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('story-card-drawing-eraser')), findsOne);
+    expect(find.byKey(const ValueKey('story-card-drawing-undo')), findsOne);
+    expect(find.byKey(const ValueKey('story-card-drawing-done')), findsOne);
+    expect(find.byIcon(Icons.crop), findsNothing);
+  });
+
+  testWidgets('undo removes the last completed drawing stroke', (tester) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+
+    TextButton saveButton() => tester.widget<TextButton>(
+      find.byKey(const ValueKey('story-card-editor-save')),
+    );
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final center = tester.getCenter(canvas);
+    await tester.dragFrom(center - const Offset(30, 0), const Offset(60, 0));
+    await tester.pump();
+
+    expect(saveButton().onPressed, isNotNull);
+
+    await tester.tap(find.byKey(const ValueKey('story-card-drawing-undo')));
+    await tester.pump();
+
+    expect(saveButton().onPressed, isNull);
+  });
+
+  testWidgets('drawing done returns a photo card to background gestures', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingPhotoDraft());
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('story-card-drawing-done')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('story-card-drawing-done')), findsNothing);
+    expect(find.byIcon(Icons.crop), findsNothing);
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final center = tester.getCenter(canvas);
+    final first = await tester.startGesture(
+      center - const Offset(30, 0),
+      pointer: 1,
+    );
+    final second = await tester.startGesture(
+      center + const Offset(30, 0),
+      pointer: 2,
+    );
+    await tester.pump();
+    await first.moveBy(const Offset(20, 30));
+    await second.moveBy(const Offset(20, 30));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    final transform = _backgroundTransform(tester);
+    expect(transform.offsetX, isNot(0));
+    expect(transform.offsetY, isNot(0));
+  });
+
   testWidgets('moves text with one finger', (tester) async {
     await _pumpEditor(tester, draft: _existingTextDraft());
 
@@ -138,6 +211,25 @@ void main() {
     expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
   });
 
+  testWidgets('rotates text when only one pointer starts on the text', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingTextDraft());
+
+    final textCenter = tester.getCenter(find.text('pinch target'));
+    final outsideStart = textCenter + const Offset(100, 0);
+    final first = await tester.startGesture(textCenter, pointer: 1);
+    final second = await tester.startGesture(outsideStart, pointer: 2);
+    await tester.pump();
+    await second.moveTo(textCenter + const Offset(0, 100));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    expect(_textRotation(tester, 'text-1').abs(), greaterThan(0.5));
+  });
+
   testWidgets('renders text without a shadow', (tester) async {
     await _pumpEditor(tester, draft: _existingTextDraft());
 
@@ -171,8 +263,6 @@ void main() {
   ) async {
     await _pumpEditor(tester, draft: _existingPhotoTextDraft());
 
-    await tester.tap(find.byIcon(Icons.crop));
-    await tester.pump();
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
@@ -205,8 +295,6 @@ void main() {
   ) async {
     await _pumpEditor(tester, draft: _existingPhotoDraft());
 
-    await tester.tap(find.byIcon(Icons.crop));
-    await tester.pump();
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
@@ -237,17 +325,14 @@ void main() {
     await second.up();
     await tester.pump();
 
-    await tester.tap(find.byType(AppBackButton));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AlertDialog), findsOneWidget);
+    final transform = _backgroundTransform(tester);
+    expect(transform.offsetX, isNot(0));
+    expect(transform.offsetY, isNot(0));
   });
 
   testWidgets('moves the background only with two pointers', (tester) async {
     await _pumpEditor(tester, draft: _existingPhotoDraft());
 
-    await tester.tap(find.byIcon(Icons.crop));
-    await tester.pump();
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
@@ -299,6 +384,37 @@ void main() {
     await tester.pump();
 
     expect(_backgroundTransform(tester).scale, greaterThan(scaleBeforePinch));
+  });
+
+  testWidgets('moves the background with two pointers while text tool is on', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingPhotoTextDraft());
+
+    await tester.tap(find.byIcon(Icons.text_fields));
+    await tester.pump();
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final canvasRect = tester.getRect(canvas);
+    final firstStart = Offset(
+      canvasRect.left + 30,
+      canvasRect.top + canvasRect.height * 0.75,
+    );
+    final secondStart = firstStart + const Offset(60, 0);
+    final first = await tester.startGesture(firstStart, pointer: 1);
+    final second = await tester.startGesture(secondStart, pointer: 2);
+    await tester.pump();
+    await first.moveBy(const Offset(20, 30));
+    await second.moveBy(const Offset(20, 30));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    final transform = _backgroundTransform(tester);
+    expect(transform.offsetX, isNot(0));
+    expect(transform.offsetY, isNot(0));
+    expect(find.byType(AlertDialog), findsNothing);
   });
 }
 
@@ -373,6 +489,14 @@ double _textScale(WidgetTester tester, String value) {
     find.ancestor(of: find.text(value), matching: find.byType(Transform)),
   );
   return transform.transform.entry(0, 0).abs();
+}
+
+double _textRotation(WidgetTester tester, String layerId) {
+  final transform = tester.widget<Transform>(
+    find.byKey(ValueKey('story-card-text-transform-$layerId')),
+  );
+  final matrix = transform.transform;
+  return math.atan2(matrix.entry(1, 0), matrix.entry(0, 0));
 }
 
 StoryCardBackgroundTransform _backgroundTransform(WidgetTester tester) {

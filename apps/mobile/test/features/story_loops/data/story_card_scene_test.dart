@@ -8,6 +8,8 @@ void main() {
     expect(storyCardPreviewWidth, 540);
     expect(storyCardPreviewHeight, 960);
     expect(storyCardMinBackgroundScale, lessThan(1));
+    expect(storyCardMaxStrokeWidth, 0.08);
+    expect(storyCardMaxTextScale, 8);
   });
 
   test('scene JSON preserves visual layers and text count', () {
@@ -20,9 +22,16 @@ void main() {
       ),
       strokes: [
         StoryCardStroke(
+          tool: StoryCardDrawingTool.pen,
           color: Color(0xFFE94B5F),
           width: storyCardNormalStrokeWidth,
           points: [StoryCardPoint(x: 0.1, y: 0.2)],
+        ),
+        StoryCardStroke(
+          tool: StoryCardDrawingTool.eraser,
+          color: Color(0xFF111111),
+          width: storyCardMaxStrokeWidth,
+          points: [StoryCardPoint(x: 0.2, y: 0.3)],
         ),
       ],
       textLayers: [
@@ -33,6 +42,7 @@ void main() {
           y: 0.6,
           color: Color(0xFFFFFFFF),
           scale: 1.8,
+          rotation: 0.75,
         ),
       ],
     );
@@ -44,17 +54,29 @@ void main() {
     expect(restored.backgroundTransform.offsetY, -0.2);
     expect(restored.canvasBackground, StoryCardCanvasBackground.black);
     expect(restored.hasDrawing, isTrue);
+    expect(restored.strokes.first.tool, StoryCardDrawingTool.pen);
+    expect(restored.strokes.last.tool, StoryCardDrawingTool.eraser);
     expect(restored.hasText, isTrue);
     expect(restored.textLayers.single.text, '오늘도 좋아해');
     expect(restored.textLayers.single.scale, 1.8);
+    expect(restored.textLayers.single.rotation, 0.75);
     expect(restored.textCharacterCount, 7);
+    expect(restored.toJson()['version'], 3);
   });
 
-  test('version 1 scene defaults to white canvas and unit text scale', () {
+  test('legacy scene defaults to pen strokes and unrotated text', () {
     final restored = StoryCardScene.fromJson({
       'version': 1,
       'background': {'scale': 1, 'offset_x': 0, 'offset_y': 0},
-      'strokes': <Object>[],
+      'strokes': <Object>[
+        {
+          'color': '#ff111111',
+          'width': 0.022,
+          'points': [
+            {'x': 0.2, 'y': 0.3},
+          ],
+        },
+      ],
       'text_layers': [
         {
           'id': 'legacy-text',
@@ -67,6 +89,25 @@ void main() {
     });
 
     expect(restored.canvasBackground, StoryCardCanvasBackground.white);
+    expect(restored.strokes.single.tool, StoryCardDrawingTool.pen);
     expect(restored.textLayers.single.scale, 1);
+    expect(restored.textLayers.single.rotation, 0);
+  });
+
+  test('eraser-only scene is not valid drawing content', () {
+    const scene = StoryCardScene(
+      backgroundTransform: StoryCardBackgroundTransform.initial(),
+      strokes: [
+        StoryCardStroke(
+          tool: StoryCardDrawingTool.eraser,
+          color: Color(0xFF111111),
+          width: storyCardNormalStrokeWidth,
+          points: [StoryCardPoint(x: 0.5, y: 0.5)],
+        ),
+      ],
+      textLayers: [],
+    );
+
+    expect(scene.hasDrawing, isFalse);
   });
 }
