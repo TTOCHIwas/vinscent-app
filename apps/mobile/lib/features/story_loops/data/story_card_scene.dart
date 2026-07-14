@@ -16,7 +16,7 @@ const storyCardColorPalette = [
 
 const storyCardThinStrokeWidth = 0.012;
 const storyCardNormalStrokeWidth = 0.022;
-const storyCardThickStrokeWidth = 0.038;
+const storyCardThickStrokeWidth = 0.08;
 const storyCardMinStrokeWidth = storyCardThinStrokeWidth;
 const storyCardMaxStrokeWidth = storyCardThickStrokeWidth;
 const storyCardMaxTextLayers = 10;
@@ -26,9 +26,9 @@ const storyCardCanvasAspectRatio = 9 / 16;
 const storyCardPreviewWidth = 540;
 const storyCardPreviewHeight = 960;
 const storyCardMinBackgroundScale = 0.25;
-const storyCardMaxBackgroundScale = 4.0;
+const storyCardMaxBackgroundScale = 8.0;
 const storyCardMinTextScale = 0.5;
-const storyCardMaxTextScale = 4.0;
+const storyCardMaxTextScale = 8.0;
 
 enum StoryCardCanvasBackground {
   white,
@@ -38,6 +38,19 @@ enum StoryCardCanvasBackground {
     StoryCardCanvasBackground.white => Colors.white,
     StoryCardCanvasBackground.black => Colors.black,
   };
+}
+
+enum StoryCardDrawingTool {
+  pen,
+  eraser;
+
+  factory StoryCardDrawingTool.fromJson(String? value) {
+    return switch (value) {
+      null || 'pen' => StoryCardDrawingTool.pen,
+      'eraser' => StoryCardDrawingTool.eraser,
+      _ => throw FormatException('Unknown story card drawing tool: $value'),
+    };
+  }
 }
 
 class StoryCardScene {
@@ -101,7 +114,8 @@ class StoryCardScene {
   final List<StoryCardTextLayer> textLayers;
   final StoryCardCanvasBackground canvasBackground;
 
-  bool get hasDrawing => strokes.isNotEmpty;
+  bool get hasDrawing =>
+      strokes.any((stroke) => stroke.tool == StoryCardDrawingTool.pen);
 
   bool get hasText => textLayers.isNotEmpty;
 
@@ -126,7 +140,7 @@ class StoryCardScene {
 
   Map<String, dynamic> toJson() {
     return {
-      'version': 2,
+      'version': 3,
       'canvas': {
         'width_ratio': 9,
         'height_ratio': 16,
@@ -189,12 +203,14 @@ class StoryCardStroke {
     required this.color,
     required this.width,
     required this.points,
+    this.tool = StoryCardDrawingTool.pen,
   });
 
   factory StoryCardStroke.fromJson(Map<String, dynamic> json) {
     final points = json['points'] as List<dynamic>? ?? const [];
 
     return StoryCardStroke(
+      tool: StoryCardDrawingTool.fromJson(json['tool'] as String?),
       color: _colorFromJson(json['color'] as String),
       width: (json['width'] as num).toDouble(),
       points: points
@@ -207,12 +223,14 @@ class StoryCardStroke {
     );
   }
 
+  final StoryCardDrawingTool tool;
   final Color color;
   final double width;
   final List<StoryCardPoint> points;
 
   StoryCardStroke copyWith({List<StoryCardPoint>? points}) {
     return StoryCardStroke(
+      tool: tool,
       color: color,
       width: width,
       points: points ?? this.points,
@@ -221,6 +239,7 @@ class StoryCardStroke {
 
   Map<String, dynamic> toJson() {
     return {
+      'tool': tool.name,
       'color': _colorToJson(color),
       'width': width,
       'points': points.map((point) => point.toJson()).toList(),
@@ -252,6 +271,7 @@ class StoryCardTextLayer {
     required this.y,
     required this.color,
     this.scale = 1,
+    this.rotation = 0,
   });
 
   factory StoryCardTextLayer.fromJson(Map<String, dynamic> json) {
@@ -264,6 +284,7 @@ class StoryCardTextLayer {
       scale: ((json['scale'] as num?)?.toDouble() ?? 1)
           .clamp(storyCardMinTextScale, storyCardMaxTextScale)
           .toDouble(),
+      rotation: (json['rotation'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -273,6 +294,7 @@ class StoryCardTextLayer {
   final double y;
   final Color color;
   final double scale;
+  final double rotation;
 
   StoryCardTextLayer copyWith({
     String? text,
@@ -280,6 +302,7 @@ class StoryCardTextLayer {
     double? y,
     Color? color,
     double? scale,
+    double? rotation,
   }) {
     return StoryCardTextLayer(
       id: id,
@@ -288,6 +311,7 @@ class StoryCardTextLayer {
       y: y ?? this.y,
       color: color ?? this.color,
       scale: scale ?? this.scale,
+      rotation: rotation ?? this.rotation,
     );
   }
 
@@ -299,6 +323,7 @@ class StoryCardTextLayer {
       'y': y,
       'color': _colorToJson(color),
       'scale': scale,
+      'rotation': rotation,
     };
   }
 }

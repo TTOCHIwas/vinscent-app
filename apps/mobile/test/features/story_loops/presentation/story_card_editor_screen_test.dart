@@ -146,6 +146,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('story-card-drawing-done')));
     await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
 
     expect(find.byKey(const ValueKey('story-card-drawing-done')), findsNothing);
     expect(find.byIcon(Icons.crop), findsNothing);
@@ -198,7 +202,7 @@ void main() {
     expect(tester.getRect(canvas).contains(secondStart), isTrue);
     expect(tester.getRect(text).contains(secondStart), isFalse);
 
-    final beforeScale = _textScale(tester, 'pinch target');
+    final beforeScale = _textScale(tester, 'text-1');
     final first = await tester.startGesture(textCenter, pointer: 1);
     final second = await tester.startGesture(secondStart, pointer: 2);
     await tester.pump();
@@ -208,7 +212,7 @@ void main() {
     await second.up();
     await tester.pump();
 
-    expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
+    expect(_textScale(tester, 'text-1'), greaterThan(beforeScale));
   });
 
   testWidgets('rotates text when only one pointer starts on the text', (
@@ -245,7 +249,7 @@ void main() {
 
     final textCenter = tester.getCenter(find.text('pinch target'));
     final outsideStart = textCenter + const Offset(0, 100);
-    final beforeScale = _textScale(tester, 'pinch target');
+    final beforeScale = _textScale(tester, 'text-1');
     final first = await tester.startGesture(outsideStart, pointer: 1);
     final second = await tester.startGesture(textCenter, pointer: 2);
     await tester.pump();
@@ -255,7 +259,7 @@ void main() {
     await second.up();
     await tester.pump();
 
-    expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
+    expect(_textScale(tester, 'text-1'), greaterThan(beforeScale));
   });
 
   testWidgets('prioritizes text over the background during a pinch', (
@@ -273,7 +277,7 @@ void main() {
     final secondStart = textCenter + const Offset(0, 100);
     expect(tester.getRect(canvas).contains(secondStart), isTrue);
 
-    final beforeScale = _textScale(tester, 'pinch target');
+    final beforeScale = _textScale(tester, 'text-1');
     final first = await tester.startGesture(textCenter, pointer: 1);
     final second = await tester.startGesture(secondStart, pointer: 2);
     await tester.pump();
@@ -284,7 +288,7 @@ void main() {
     await tester.pump();
 
     final backgroundTransform = _backgroundTransform(tester);
-    expect(_textScale(tester, 'pinch target'), greaterThan(beforeScale));
+    expect(_textScale(tester, 'text-1'), greaterThan(beforeScale));
     expect(backgroundTransform.scale, 1);
     expect(backgroundTransform.offsetX, 0);
     expect(backgroundTransform.offsetY, 0);
@@ -393,6 +397,10 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.text_fields));
     await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
 
     final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
     final canvasRect = tester.getRect(canvas);
@@ -484,9 +492,9 @@ StoryCardDraft _existingPhotoTextDraft() {
   );
 }
 
-double _textScale(WidgetTester tester, String value) {
+double _textScale(WidgetTester tester, String layerId) {
   final transform = tester.widget<Transform>(
-    find.ancestor(of: find.text(value), matching: find.byType(Transform)),
+    find.byKey(ValueKey('story-card-text-scale-$layerId')),
   );
   return transform.transform.entry(0, 0).abs();
 }
