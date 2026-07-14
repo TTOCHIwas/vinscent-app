@@ -287,6 +287,8 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
 
     if (draft.scene.textLayers.length > storyCardMaxTextLayers ||
         draft.scene.textCharacterCount > storyCardMaxTextCharacters ||
+        draft.scene.captionCharacterCount > storyCardMaxCaptionCharacters ||
+        draft.scene.captionLineCount > storyCardMaxCaptionLines ||
         draft.scene.textLayers.any(
           (layer) =>
               layer.text.characters.length > storyCardMaxTextCharactersPerLayer,

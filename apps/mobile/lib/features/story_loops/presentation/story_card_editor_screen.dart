@@ -1,8 +1,8 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image;
@@ -72,6 +72,7 @@ class _StoryCardEditorContentState
   StoryCardTextLayer? _textLayerTransformStart;
   Offset _textLayerFocalPointStart = Offset.zero;
   bool _isTextInputActive = false;
+  bool _isCaptionInputActive = false;
   bool _isDraggingText = false;
   bool _isTextOverTrash = false;
   bool _isSaving = false;
@@ -97,7 +98,11 @@ class _StoryCardEditorContentState
   }
 
   bool get _canSave =>
-      !_isTextInputActive && !_isSaving && !_isDeleting && _draft.hasContent;
+      !_isTextInputActive &&
+      !_isCaptionInputActive &&
+      !_isSaving &&
+      !_isDeleting &&
+      _draft.hasContent;
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +185,7 @@ class _StoryCardEditorContentState
                   interactionMode: _session.tool,
                   hasBackground: _draft.hasPhoto,
                   onAddTextPressed: _selectTextTool,
+                  onEditCaptionPressed: _selectCaptionTool,
                   onDrawingModePressed: () =>
                       _selectTool(StoryCardEditorTool.drawing),
                   onBackgroundColorPressed: _draft.hasPhoto
@@ -243,6 +249,12 @@ class _StoryCardEditorContentState
               onCancelled: _cancelTextInput,
               onSubmitted: _submitTextInput,
             ),
+          if (_isCaptionInputActive)
+            _StoryCardCaptionInputOverlay(
+              initialValue: _draft.scene.caption ?? '',
+              onCancelled: _cancelCaptionInput,
+              onSubmitted: _submitCaptionInput,
+            ),
         ],
       ),
     );
@@ -259,6 +271,10 @@ class _StoryCardEditorContentState
   Future<void> _handleBack() async {
     if (_isTextInputActive) {
       _cancelTextInput();
+      return;
+    }
+    if (_isCaptionInputActive) {
+      _cancelCaptionInput();
       return;
     }
 
@@ -392,6 +408,13 @@ class _StoryCardEditorContentState
     });
   }
 
+  void _selectCaptionTool() {
+    setState(() {
+      _session = _session.selectTool(StoryCardEditorTool.none);
+      _isCaptionInputActive = true;
+    });
+  }
+
   void _toggleCanvasBackground() {
     final background =
         _draft.scene.canvasBackground == StoryCardCanvasBackground.white
@@ -438,6 +461,51 @@ class _StoryCardEditorContentState
         _draft.hasPhoto
             ? StoryCardEditorTool.background
             : StoryCardEditorTool.none,
+      );
+    });
+  }
+
+  void _cancelCaptionInput() {
+    if (!_isCaptionInputActive) {
+      return;
+    }
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _isCaptionInputActive = false;
+      _session = _session.selectTool(
+        _draft.hasPhoto
+            ? StoryCardEditorTool.background
+            : StoryCardEditorTool.none,
+      );
+    });
+  }
+
+  void _submitCaptionInput(String value) {
+    final caption = value.trim();
+    if (caption.characters.length > storyCardMaxCaptionCharacters ||
+        caption.split(RegExp(r'\r\n?|\n')).length > storyCardMaxCaptionLines) {
+      _showSnackBar(
+        '짧은 글은 최대 $storyCardMaxCaptionCharacters자, '
+        '$storyCardMaxCaptionLines줄까지 입력할 수 있어요.',
+      );
+      return;
+    }
+
+    final nextCaption = caption.isEmpty ? null : caption;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _isCaptionInputActive = false;
+      final nextTool = _draft.hasPhoto
+          ? StoryCardEditorTool.background
+          : StoryCardEditorTool.none;
+      if (nextCaption == _draft.scene.caption) {
+        _session = _session.selectTool(nextTool);
+        return;
+      }
+      _session = _session.updateDraft(
+        _draft.copyWith(scene: _draft.scene.copyWith(caption: nextCaption)),
+        tool: nextTool,
       );
     });
   }
@@ -640,13 +708,17 @@ class _StoryCardEditorContentState
       return;
     }
 
+    final photoRect = StoryCardPolaroidLayout.fromSize(size).photoRect;
     final scale = (_backgroundScaleStart * details.scale)
         .clamp(storyCardMinBackgroundScale, storyCardMaxBackgroundScale)
         .toDouble();
     final focalDelta = details.localFocalPoint - _backgroundFocalPointStart;
     final offset =
         _backgroundOffsetStart +
-        Offset(focalDelta.dx / size.width, focalDelta.dy / size.height);
+        Offset(
+          focalDelta.dx / photoRect.width,
+          focalDelta.dy / photoRect.height,
+        );
 
     setState(() {
       _session = _session.updateDraft(
@@ -1038,6 +1110,168 @@ class _StoryCardTextInputOverlayState
   }
 }
 
+class _StoryCardCaptionInputOverlay extends StatefulWidget {
+  const _StoryCardCaptionInputOverlay({
+    required this.initialValue,
+    required this.onCancelled,
+    required this.onSubmitted,
+  });
+
+  final String initialValue;
+  final VoidCallback onCancelled;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  State<_StoryCardCaptionInputOverlay> createState() =>
+      _StoryCardCaptionInputOverlayState();
+}
+
+class _StoryCardCaptionInputOverlayState
+    extends State<_StoryCardCaptionInputOverlay> {
+  late final TextEditingController _controller;
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    return GestureDetector(
+      key: const ValueKey('story-card-caption-input-overlay'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      child: ColoredBox(
+        color: const Color(0xB3000000),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedPadding(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.only(bottom: keyboardInset),
+              child: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: TextField(
+                      key: const ValueKey('story-card-caption-input'),
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      autofocus: true,
+                      maxLength: storyCardMaxCaptionCharacters,
+                      maxLines: storyCardMaxCaptionLines,
+                      textAlign: TextAlign.center,
+                      textInputAction: TextInputAction.newline,
+                      keyboardAppearance: Brightness.dark,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(
+                          storyCardMaxCaptionCharacters,
+                        ),
+                        const _MaximumLineCountFormatter(
+                          storyCardMaxCaptionLines,
+                        ),
+                      ],
+                      style: AppTextStyles.homeBodyMedium.copyWith(
+                        color: Colors.white,
+                      ),
+                      cursorColor: Colors.white,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        counterText: '',
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        key: const ValueKey('story-card-caption-input-cancel'),
+                        tooltip: '짧은 글 입력 취소',
+                        color: Colors.white,
+                        onPressed: widget.onCancelled,
+                        icon: const Icon(Icons.close),
+                      ),
+                      TextButton(
+                        key: const ValueKey('story-card-caption-input-done'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => widget.onSubmitted(_controller.text),
+                        child: const Text('완료'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MaximumLineCountFormatter extends TextInputFormatter {
+  const _MaximumLineCountFormatter(this.maxLines);
+
+  final int maxLines;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final lines = newValue.text.split(RegExp(r'\r\n?|\n'));
+    if (lines.length <= maxLines) {
+      return newValue;
+    }
+
+    final text = lines.take(maxLines).join('\n');
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection(
+        baseOffset: newValue.selection.baseOffset.clamp(0, text.length).toInt(),
+        extentOffset: newValue.selection.extentOffset
+            .clamp(0, text.length)
+            .toInt(),
+      ),
+    );
+  }
+}
+
 class _StoryCardTextColorPalette extends StatelessWidget {
   const _StoryCardTextColorPalette({
     required this.selectedColor,
@@ -1282,6 +1516,7 @@ class _StoryCardCanvasState extends State<_StoryCardCanvas> {
                         backgroundImage: widget.backgroundImage,
                         backgroundTransform: widget.scene.backgroundTransform,
                         canvasBackground: widget.scene.canvasBackground,
+                        caption: widget.scene.caption,
                         strokes: widget.visibleStrokes,
                       ),
                     ),
@@ -1427,34 +1662,43 @@ class _StoryCardPainter extends CustomPainter {
     required this.backgroundImage,
     required this.backgroundTransform,
     required this.canvasBackground,
+    required this.caption,
     required this.strokes,
   });
 
   final ui.Image? backgroundImage;
   final StoryCardBackgroundTransform backgroundTransform;
   final StoryCardCanvasBackground canvasBackground;
+  final String? caption;
   final List<StoryCardStroke> strokes;
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = canvasBackground.color,
-    );
+    final layout = StoryCardPolaroidLayout.fromSize(size);
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
+
+    canvas.save();
+    canvas.clipRect(layout.photoRect);
+    canvas.drawRect(layout.photoRect, Paint()..color = canvasBackground.color);
     final image = backgroundImage;
     if (image != null) {
       final coverScale =
-          (size.width / image.width).compareTo(size.height / image.height) >= 0
-          ? size.width / image.width
-          : size.height / image.height;
+          (layout.photoRect.width / image.width).compareTo(
+                layout.photoRect.height / image.height,
+              ) >=
+              0
+          ? layout.photoRect.width / image.width
+          : layout.photoRect.height / image.height;
       final drawWidth = image.width * coverScale * backgroundTransform.scale;
       final drawHeight = image.height * coverScale * backgroundTransform.scale;
       final offsetX =
-          (size.width - drawWidth) / 2 +
-          backgroundTransform.offsetX * size.width;
+          layout.photoRect.left +
+          (layout.photoRect.width - drawWidth) / 2 +
+          backgroundTransform.offsetX * layout.photoRect.width;
       final offsetY =
-          (size.height - drawHeight) / 2 +
-          backgroundTransform.offsetY * size.height;
+          layout.photoRect.top +
+          (layout.photoRect.height - drawHeight) / 2 +
+          backgroundTransform.offsetY * layout.photoRect.height;
       canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
@@ -1462,6 +1706,9 @@ class _StoryCardPainter extends CustomPainter {
         Paint(),
       );
     }
+    canvas.restore();
+
+    _drawCaption(canvas, size, layout.captionRect);
 
     if (strokes.isNotEmpty) {
       final bounds = Offset.zero & size;
@@ -1471,6 +1718,37 @@ class _StoryCardPainter extends CustomPainter {
       }
       canvas.restore();
     }
+  }
+
+  void _drawCaption(Canvas canvas, Size size, Rect captionRect) {
+    final value = caption;
+    if (value == null || value.isEmpty || captionRect.isEmpty) {
+      return;
+    }
+
+    final painter = TextPainter(
+      text: TextSpan(
+        text: value,
+        style: TextStyle(
+          color: const Color(0xFF222222),
+          fontSize: size.width * 0.055,
+          fontWeight: FontWeight.w500,
+          height: 1.3,
+          letterSpacing: 0,
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+      maxLines: storyCardMaxCaptionLines,
+      ellipsis: '…',
+    )..layout(maxWidth: captionRect.width);
+    painter.paint(
+      canvas,
+      Offset(
+        captionRect.left,
+        captionRect.top + (captionRect.height - painter.height) / 2,
+      ),
+    );
   }
 
   void _drawStroke(Canvas canvas, Size size, StoryCardStroke stroke) {
@@ -1519,6 +1797,7 @@ class _StoryCardPainter extends CustomPainter {
     return oldDelegate.backgroundImage != backgroundImage ||
         oldDelegate.backgroundTransform != backgroundTransform ||
         oldDelegate.canvasBackground != canvasBackground ||
+        oldDelegate.caption != caption ||
         oldDelegate.strokes != strokes;
   }
 }
@@ -1528,6 +1807,7 @@ class _StoryCardActionBar extends StatelessWidget {
     required this.interactionMode,
     required this.hasBackground,
     required this.onAddTextPressed,
+    required this.onEditCaptionPressed,
     required this.onDrawingModePressed,
     required this.onBackgroundColorPressed,
   });
@@ -1535,6 +1815,7 @@ class _StoryCardActionBar extends StatelessWidget {
   final StoryCardEditorTool interactionMode;
   final bool hasBackground;
   final VoidCallback onAddTextPressed;
+  final VoidCallback onEditCaptionPressed;
   final VoidCallback onDrawingModePressed;
   final VoidCallback? onBackgroundColorPressed;
 
@@ -1548,6 +1829,13 @@ class _StoryCardActionBar extends StatelessWidget {
           icon: Icons.text_fields,
           isSelected: interactionMode == StoryCardEditorTool.text,
           onPressed: onAddTextPressed,
+        ),
+        const SizedBox(height: 8),
+        _EditorIconButton(
+          key: const ValueKey('story-card-caption-tool'),
+          tooltip: '짧은 글',
+          icon: Icons.short_text,
+          onPressed: onEditCaptionPressed,
         ),
         const SizedBox(height: 8),
         _EditorIconButton(

@@ -82,6 +82,20 @@ void main() {
     expect(input.controller?.text, 'a' * 50);
   });
 
+  testWidgets('keeps only the first two caption lines when text is pasted', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+    await _openCaptionInput(tester);
+
+    final inputFinder = find.byKey(const ValueKey('story-card-caption-input'));
+    await tester.enterText(inputFinder, 'first\nsecond\nthird');
+    await tester.pump();
+
+    final input = tester.widget<TextField>(inputFinder);
+    expect(input.controller?.text, 'first\nsecond');
+  });
+
   testWidgets('does not enable save for a caption-only card', (tester) async {
     await _pumpEditor(tester, draft: _existingEmptyDraft());
     await _openCaptionInput(tester);

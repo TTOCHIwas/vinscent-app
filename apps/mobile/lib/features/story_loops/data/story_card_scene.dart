@@ -22,13 +22,51 @@ const storyCardMaxStrokeWidth = storyCardThickStrokeWidth;
 const storyCardMaxTextLayers = 10;
 const storyCardMaxTextCharactersPerLayer = 500;
 const storyCardMaxTextCharacters = 5000;
-const storyCardCanvasAspectRatio = 9 / 16;
-const storyCardPreviewWidth = 540;
-const storyCardPreviewHeight = 960;
+const storyCardMaxCaptionCharacters = 50;
+const storyCardMaxCaptionLines = 2;
+const storyCardCanvasAspectRatio = 4 / 5;
+const storyCardPhotoAspectRatio = 1.0;
+const storyCardPreviewWidth = 800;
+const storyCardPreviewHeight = 1000;
 const storyCardMinBackgroundScale = 0.25;
 const storyCardMaxBackgroundScale = 8.0;
 const storyCardMinTextScale = 0.5;
 const storyCardMaxTextScale = 8.0;
+
+const _storyCardCaptionUnchanged = Object();
+
+class StoryCardPolaroidLayout {
+  const StoryCardPolaroidLayout({
+    required this.photoRect,
+    required this.captionRect,
+  });
+
+  factory StoryCardPolaroidLayout.fromSize(Size size) {
+    final horizontalInset = size.width * 0.06;
+    final topInset = horizontalInset;
+    final photoSide = size.width - horizontalInset * 2;
+    final photoRect = Rect.fromLTWH(
+      horizontalInset,
+      topInset,
+      photoSide,
+      photoSide / storyCardPhotoAspectRatio,
+    );
+    final captionTop = photoRect.bottom + size.width * 0.03;
+
+    return StoryCardPolaroidLayout(
+      photoRect: photoRect,
+      captionRect: Rect.fromLTRB(
+        horizontalInset,
+        captionTop,
+        size.width - horizontalInset,
+        size.height - topInset,
+      ),
+    );
+  }
+
+  final Rect photoRect;
+  final Rect captionRect;
+}
 
 enum StoryCardCanvasBackground {
   white,
@@ -59,6 +97,7 @@ class StoryCardScene {
     required this.strokes,
     required this.textLayers,
     this.canvasBackground = StoryCardCanvasBackground.white,
+    this.caption,
   });
 
   factory StoryCardScene.empty({
@@ -106,6 +145,7 @@ class StoryCardScene {
       canvasBackground: _canvasBackgroundFromJson(
         canvas?['background_color'] as String?,
       ),
+      caption: json['caption'] as String?,
     );
   }
 
@@ -113,42 +153,59 @@ class StoryCardScene {
   final List<StoryCardStroke> strokes;
   final List<StoryCardTextLayer> textLayers;
   final StoryCardCanvasBackground canvasBackground;
+  final String? caption;
 
   bool get hasDrawing =>
       strokes.any((stroke) => stroke.tool == StoryCardDrawingTool.pen);
 
   bool get hasText => textLayers.isNotEmpty;
 
+  bool get hasCaption => caption?.isNotEmpty ?? false;
+
   int get textCharacterCount => textLayers.fold(
     0,
     (total, layer) => total + layer.text.characters.length,
   );
+
+  int get captionCharacterCount => caption?.characters.length ?? 0;
+
+  int get captionLineCount {
+    final value = caption;
+    return value == null || value.isEmpty
+        ? 0
+        : value.split(RegExp(r'\r\n?|\n')).length;
+  }
 
   StoryCardScene copyWith({
     StoryCardBackgroundTransform? backgroundTransform,
     List<StoryCardStroke>? strokes,
     List<StoryCardTextLayer>? textLayers,
     StoryCardCanvasBackground? canvasBackground,
+    Object? caption = _storyCardCaptionUnchanged,
   }) {
     return StoryCardScene(
       backgroundTransform: backgroundTransform ?? this.backgroundTransform,
       strokes: strokes ?? this.strokes,
       textLayers: textLayers ?? this.textLayers,
       canvasBackground: canvasBackground ?? this.canvasBackground,
+      caption: identical(caption, _storyCardCaptionUnchanged)
+          ? this.caption
+          : caption as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'version': 3,
+      'version': 4,
       'canvas': {
-        'width_ratio': 9,
-        'height_ratio': 16,
+        'width_ratio': 4,
+        'height_ratio': 5,
         'background_color': canvasBackground.name,
       },
       'background': backgroundTransform.toJson(),
       'strokes': strokes.map((stroke) => stroke.toJson()).toList(),
       'text_layers': textLayers.map((layer) => layer.toJson()).toList(),
+      'caption': caption,
     };
   }
 
