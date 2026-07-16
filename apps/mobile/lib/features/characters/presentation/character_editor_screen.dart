@@ -211,7 +211,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
           );
 
       if (mounted) {
-        context.go('/home');
+        _closeEditor();
       }
     } catch (error) {
       if (mounted) {
@@ -253,6 +253,10 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _closeEditor() {
+    context.go('/settings');
+  }
+
   String _saveFailureMessage(Object error) {
     if (error is CoupleCharacterRepositoryException) {
       return switch (error.reason) {
@@ -284,7 +288,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         _CharacterEditorHeader(
           canSave: _canSave,
           isSaving: _isSaving,
-          onBackPressed: () => context.go('/home'),
+          onBackPressed: _closeEditor,
           onSavePressed: _save,
         ),
         Expanded(

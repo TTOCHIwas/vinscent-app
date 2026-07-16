@@ -35,6 +35,13 @@ class SettingsScreen extends StatelessWidget {
             const _SectionLabel('커플'),
             const SizedBox(height: 10),
             _SettingsItem(
+              icon: AppIcons.user,
+              title: '캐릭터 꾸미기',
+              subtitle: '함께 사용하는 캐릭터를 그리고 관리해요.',
+              onTap: () => context.push('/settings/character'),
+            ),
+            const SizedBox(height: 12),
+            _SettingsItem(
               icon: AppIcons.heart,
               title: '커플 설정',
               subtitle: '연결 해제와 보관 데이터 관리를 진행할 수 있어요.',

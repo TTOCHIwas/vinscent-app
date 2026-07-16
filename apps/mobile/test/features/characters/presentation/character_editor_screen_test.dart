@@ -19,6 +19,7 @@ void main() {
     final repository = _FakeCoupleCharacterRepository();
 
     await _pumpCharacterEditor(tester, repository);
+    final router = GoRouter.of(tester.element(find.text('캐릭터 그리기')));
 
     expect(_saveButton(tester).onPressed, isNull);
 
@@ -27,16 +28,14 @@ void main() {
 
     expect(_saveButton(tester).onPressed, isNotNull);
 
-    await tester.runAsync(() async {
-      await tester.tap(find.text('저장'));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pump();
+    await tester.tap(find.text('저장'));
+    await _waitForRoute(tester, router, '/settings');
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(repository.savedImageBytes, isNotNull);
     expect(repository.savedDrawingDataJson, contains('"strokes"'));
     expect(repository.savedImageBytes!.take(4), [137, 80, 78, 71]);
+    expect(router.routeInformationProvider.value.uri.path, '/settings');
     expect(find.text('settings'), findsOneWidget);
   });
 
@@ -162,6 +161,21 @@ Future<void> _pumpCharacterEditor(
 
 TextButton _saveButton(WidgetTester tester) {
   return tester.widget<TextButton>(find.widgetWithText(TextButton, '저장'));
+}
+
+Future<void> _waitForRoute(
+  WidgetTester tester,
+  GoRouter router,
+  String path,
+) async {
+  final timeoutAt = DateTime.now().add(const Duration(seconds: 2));
+  while (router.routeInformationProvider.value.uri.path != path &&
+      DateTime.now().isBefore(timeoutAt)) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump();
+  }
 }
 
 class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {

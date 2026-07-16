@@ -51,7 +51,6 @@ class AppShell extends StatelessWidget {
   bool get _hidesMainHeader {
     return location == '/calendar' ||
         location == '/calendar/question' ||
-        location == '/home/character' ||
         location == '/home/recordings' ||
         location == '/home/question' ||
         location == '/home/question/edit' ||
@@ -59,8 +58,7 @@ class AppShell extends StatelessWidget {
   }
 
   bool get _hidesBottomBar {
-    return location == '/home/character' ||
-        location == '/home/recordings' ||
+    return location == '/home/recordings' ||
         location == '/home/question/edit' ||
         location.startsWith('/settings');
   }

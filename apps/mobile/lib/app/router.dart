@@ -145,8 +145,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/home/character',
-            name: 'characterEditor',
-            builder: (context, state) => const CharacterEditorScreen(),
+            redirect: (context, state) => '/settings/character',
           ),
           GoRoute(
             path: '/home/question',
@@ -204,6 +203,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/settings/notifications',
             name: 'notificationSettings',
             builder: (context, state) => const NotificationSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/settings/character',
+            name: 'characterEditor',
+            builder: (context, state) => const CharacterEditorScreen(),
           ),
           GoRoute(
             path: '/settings/couple',

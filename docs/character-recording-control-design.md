@@ -50,7 +50,7 @@
 3. `CharacterEditorScreen`
 4. 저장 또는 뒤로가기 시 `/home`으로 이동
 
-새 설계에서는 설정 항목이 `/settings/character`를 `push`하고 편집 완료 또는 뒤로가기는 기존 탐색 스택으로 돌아간다. 직접 진입해 반환할 스택이 없으면 `/settings`로 이동한다.
+새 설계에서는 설정 항목이 `/settings/character`를 열고 편집 완료 또는 뒤로가기는 탐색 스택 상태와 관계없이 `/settings`로 이동한다.
 
 ## 4. 설계 결정
 
@@ -87,7 +87,7 @@ Flutter의 `GestureDetector` 탭과 길게 누르기 recognizer를 같은 표면
 - 설정의 커플 섹션에 `캐릭터 꾸미기` 항목을 추가한다.
 - 정식 경로는 `/settings/character`이고 기존 `characterEditor` 라우트 이름을 유지한다.
 - `/home/character`는 정식 경로로 리다이렉트한다.
-- 편집 화면은 `context.canPop()`이면 이전 설정 화면으로 `pop`하고, 직접 진입이면 `/settings`로 이동한다.
+- 편집 화면은 저장과 뒤로가기 모두 `/settings`로 명시 이동한다.
 - 홈, 질문과 다른 캐릭터 표시 동작은 변경하지 않는다.
 
 ## 5. 레이아웃과 최적화
