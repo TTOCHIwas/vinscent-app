@@ -85,7 +85,7 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
     final shouldProceed = await _confirmAction(
       title: '커플 연결을 해제할까요?',
       content:
-          '연결을 해제해도 답변, 표현, 캐릭터 기록은 30일 동안 보관돼요. 보관 기간 안에는 기존 초대 코드 흐름으로 다시 연결할 수 있어요.',
+          '연결을 해제해도 답변과 캐릭터 기록은 30일 동안 보관돼요. 보관 기간 안에는 기존 초대 코드 흐름으로 다시 연결할 수 있어요.',
       confirmLabel: '연결 해제',
     );
 
@@ -127,7 +127,7 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
   Future<void> _deleteArchiveNow() async {
     final shouldProceed = await _confirmAction(
       title: '보관 데이터를 지금 삭제할까요?',
-      content: '삭제하면 커플, 답변, 표현, 캐릭터 데이터가 모두 영구 삭제되고 복구할 수 없어요.',
+      content: '삭제하면 커플, 답변, 캐릭터 데이터가 모두 영구 삭제되고 복구할 수 없어요.',
       confirmLabel: '즉시 삭제',
     );
 

@@ -35,7 +35,7 @@ abstract final class AppTextStyles {
     letterSpacing: 0,
   );
 
-  static const homeDayCount = TextStyle(
+  static const shellDayCount = TextStyle(
     color: AppColors.textPrimary,
     fontSize: 24,
     fontWeight: FontWeight.w500,

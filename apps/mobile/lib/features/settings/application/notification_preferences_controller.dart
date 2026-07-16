@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/notification_preferences.dart';
 import '../data/settings_repository.dart';
 
-final notificationPreferencesControllerProvider = AsyncNotifierProvider<
-  NotificationPreferencesController,
-  NotificationPreferences
->(NotificationPreferencesController.new);
+final notificationPreferencesControllerProvider =
+    AsyncNotifierProvider<
+      NotificationPreferencesController,
+      NotificationPreferences
+    >(NotificationPreferencesController.new);
 
 class NotificationPreferencesController
     extends AsyncNotifier<NotificationPreferences> {
@@ -100,7 +101,6 @@ class NotificationPreferencesController
     }
 
     return next.userId == current.userId &&
-        next.expressionEnabled == current.expressionEnabled &&
         next.partnerAnswerEnabled == current.partnerAnswerEnabled &&
         next.dailyQuestionEnabled == current.dailyQuestionEnabled &&
         next.reminderEnabled == current.reminderEnabled &&

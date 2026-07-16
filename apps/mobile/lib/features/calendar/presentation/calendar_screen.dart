@@ -7,7 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
-import '../../expressions/application/couple_expression_summary_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../../story_loops/application/story_loop_month_summary_provider.dart';
 import '../../story_loops/data/story_loop_month_summary_day.dart';
@@ -407,39 +406,16 @@ class _CalendarDetail extends ConsumerWidget {
     }
 
     final detail = ref.watch(storyLoopDetailProvider(selected));
-    final expressionSummary = ref.watch(
-      coupleExpressionSummaryProvider(selected),
-    );
-
     return detail.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 32),
         child: _CenteredLoader(),
       ),
       error: (error, stackTrace) => _CalendarHistoryErrorDetail(
-        onRetry: () {
-          ref.invalidate(storyLoopDetailProvider(selected));
-          ref.invalidate(coupleExpressionSummaryProvider(selected));
-        },
+        onRetry: () => ref.invalidate(storyLoopDetailProvider(selected)),
       ),
-      data: (storyLoopState) {
-        return expressionSummary.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: _CenteredLoader(),
-          ),
-          error: (error, stackTrace) => _CalendarHistoryErrorDetail(
-            onRetry: () {
-              ref.invalidate(storyLoopDetailProvider(selected));
-              ref.invalidate(coupleExpressionSummaryProvider(selected));
-            },
-          ),
-          data: (summaries) => CalendarStoryLoopDetail(
-            storyLoopState: storyLoopState,
-            expressionSummaries: summaries,
-          ),
-        );
-      },
+      data: (storyLoopState) =>
+          CalendarStoryLoopDetail(storyLoopState: storyLoopState),
     );
   }
 }

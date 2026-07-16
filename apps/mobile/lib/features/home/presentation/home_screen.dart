@@ -7,8 +7,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../characters/presentation/widgets/couple_character_avatar.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
-import '../../expressions/application/couple_expression_controller.dart';
-import '../../expressions/data/couple_expression.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
 import '../../recordings/presentation/widgets/home_recording_panel.dart';
@@ -76,13 +74,6 @@ const _homeStoryActionAnswer = '\ub2f5\ubcc0\u0020\ub0a8\uae30\uae30';
 const _homeStoryActionCreate = '\uce74\ub4dc\u0020\uc791\uc131';
 const _homeStoryActionEdit = '\uce74\ub4dc\u0020\uc218\uc815';
 
-const _homeExpressionArchivedHint =
-    '\ubcf4\uad00\u0020\uc911\uc5d0\ub294\u0020\ud45c\ud604\u0020\ubcf4\ub0b4\uae30\uac00\u0020\uc7a0\uc2dc\u0020\ub9c9\ud600\u0020\uc788\uc5b4\uc694\u002e';
-const _homeExpressionSent =
-    '\ud45c\ud604\uc744\u0020\ubcf4\ub0c8\uc5b4\uc694\u002e';
-const _homeExpressionSendFailed =
-    '\ud45c\ud604\uc744\u0020\ubcf4\ub0b4\uc9c0\u0020\ubabb\ud588\uc5b4\uc694\u002e';
-
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -106,7 +97,6 @@ class HomeScreen extends StatelessWidget {
                   _CoupleStatus(),
                   _HomeMainStage(),
                   HomeRecordingPanel(),
-                  _ExpressionGrid(),
                 ],
               ),
             ),
@@ -649,174 +639,6 @@ class _HomeStoryLoopPresentation {
       supportingText: isArchived ? _homeStoryReadonlySupporting : null,
       actionLabel: actionLabel,
       onActionTap: (context) => context.go(targetLocation),
-    );
-  }
-}
-
-class _ExpressionGrid extends ConsumerWidget {
-  const _ExpressionGrid();
-
-  static const _actions = [
-    _ExpressionAction(
-      type: CoupleExpressionType.missYou,
-      icon: Icons.favorite_border,
-    ),
-    _ExpressionAction(
-      type: CoupleExpressionType.thanks,
-      icon: Icons.thumb_up_alt_outlined,
-    ),
-    _ExpressionAction(
-      type: CoupleExpressionType.feelingDown,
-      icon: Icons.sentiment_dissatisfied_outlined,
-    ),
-    _ExpressionAction(
-      type: CoupleExpressionType.cheerUp,
-      icon: Icons.wb_sunny_outlined,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final expressionState = ref.watch(coupleExpressionControllerProvider);
-    final couple = ref.watch(
-      coupleControllerProvider.select(
-        (state) => state.maybeWhen(data: (value) => value, orElse: () => null),
-      ),
-    );
-    final isSending = expressionState.isLoading;
-    final canSend = (couple?.canEditSharedData ?? false) && !isSending;
-
-    return Column(
-      children: [
-        if (couple?.isArchivedReadOnly == true)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              _homeExpressionArchivedHint,
-              style: AppTextStyles.homeCharacterLabel.copyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ),
-        Row(
-          children: [
-            Expanded(
-              child: _ExpressionButton(
-                action: _actions[0],
-                isEnabled: canSend,
-                onTap: () => _sendExpression(context, ref, _actions[0].type),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _ExpressionButton(
-                action: _actions[1],
-                isEnabled: canSend,
-                onTap: () => _sendExpression(context, ref, _actions[1].type),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _ExpressionButton(
-                action: _actions[2],
-                isEnabled: canSend,
-                onTap: () => _sendExpression(context, ref, _actions[2].type),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _ExpressionButton(
-                action: _actions[3],
-                isEnabled: canSend,
-                onTap: () => _sendExpression(context, ref, _actions[3].type),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Future<void> _sendExpression(
-    BuildContext context,
-    WidgetRef ref,
-    CoupleExpressionType type,
-  ) async {
-    try {
-      await ref.read(coupleExpressionControllerProvider.notifier).send(type);
-
-      if (!context.mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text(_homeExpressionSent)));
-    } catch (_) {
-      if (!context.mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text(_homeExpressionSendFailed)));
-    }
-  }
-}
-
-class _ExpressionAction {
-  const _ExpressionAction({required this.type, required this.icon});
-
-  final CoupleExpressionType type;
-  final IconData icon;
-}
-
-class _ExpressionButton extends StatelessWidget {
-  const _ExpressionButton({
-    required this.action,
-    required this.isEnabled,
-    required this.onTap,
-  });
-
-  final _ExpressionAction action;
-  final bool isEnabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = isEnabled
-        ? AppColors.textPrimary
-        : AppColors.actionDisabledContent;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isEnabled ? onTap : null,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.wireframeBorder),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(action.icon, size: 24, color: foreground),
-              const SizedBox(width: 10),
-              Text(
-                action.type.label,
-                style: AppTextStyles.homeBody.copyWith(color: foreground),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

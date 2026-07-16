@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../expressions/data/couple_expression.dart';
-import '../../../expressions/data/couple_expression_summary.dart';
 import '../../../questions/data/daily_question.dart';
 import '../../../questions/data/daily_question_answer_state.dart';
 import '../../../questions/presentation/question_route_context.dart';
@@ -15,48 +13,31 @@ import '../../../story_loops/data/story_loop_detail_state.dart';
 import 'calendar_story_card_stack.dart';
 
 class CalendarStoryLoopDetail extends StatelessWidget {
-  const CalendarStoryLoopDetail({
-    super.key,
-    required this.storyLoopState,
-    required this.expressionSummaries,
-  });
+  const CalendarStoryLoopDetail({super.key, required this.storyLoopState});
 
   final StoryLoopDetailState storyLoopState;
-  final List<CoupleExpressionSummary> expressionSummaries;
 
   @override
   Widget build(BuildContext context) {
     return switch (storyLoopState) {
       LoadedStoryLoopDetailState(detail: final detail) => _LoadedDetailSection(
         detail: detail,
-        expressionSummaries: expressionSummaries,
       ),
       EmptyStoryLoopDetailState(targetDate: final targetDate) =>
-        _EmptyDetailSection(
-          targetDate: targetDate,
-          expressionSummaries: expressionSummaries,
-        ),
+        _EmptyDetailSection(targetDate: targetDate),
       UnavailableStoryLoopDetailState(
         targetDate: final targetDate,
         reason: final reason,
       ) =>
-        _UnavailableDetailSection(
-          targetDate: targetDate,
-          reason: reason,
-          expressionSummaries: expressionSummaries,
-        ),
+        _UnavailableDetailSection(targetDate: targetDate, reason: reason),
     };
   }
 }
 
 class _LoadedDetailSection extends StatelessWidget {
-  const _LoadedDetailSection({
-    required this.detail,
-    required this.expressionSummaries,
-  });
+  const _LoadedDetailSection({required this.detail});
 
   final StoryLoopDetail detail;
-  final List<CoupleExpressionSummary> expressionSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +75,6 @@ class _LoadedDetailSection extends StatelessWidget {
           if (question.answerState.status == DailyQuestionStatus.completed)
             const _AiCommentPlaceholder(),
         ],
-        _ExpressionSummarySection(summaries: expressionSummaries),
       ],
     );
   }
@@ -120,13 +100,9 @@ class _LoadedDetailSection extends StatelessWidget {
 }
 
 class _EmptyDetailSection extends StatelessWidget {
-  const _EmptyDetailSection({
-    required this.targetDate,
-    required this.expressionSummaries,
-  });
+  const _EmptyDetailSection({required this.targetDate});
 
   final DateTime targetDate;
-  final List<CoupleExpressionSummary> expressionSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -139,8 +115,6 @@ class _EmptyDetailSection extends StatelessWidget {
           title: '이 날의 질문 기록이 없어요',
           message: '질문이 생성된 날짜를 선택하면 기록을 볼 수 있어요',
         ),
-        const SizedBox(height: 20),
-        _ExpressionSummarySection(summaries: expressionSummaries),
       ],
     );
   }
@@ -150,12 +124,10 @@ class _UnavailableDetailSection extends StatelessWidget {
   const _UnavailableDetailSection({
     required this.targetDate,
     required this.reason,
-    required this.expressionSummaries,
   });
 
   final DateTime targetDate;
   final StoryLoopDetailUnavailableReason reason;
-  final List<CoupleExpressionSummary> expressionSummaries;
 
   @override
   Widget build(BuildContext context) {
@@ -180,8 +152,6 @@ class _UnavailableDetailSection extends StatelessWidget {
               '오늘 이후 날짜의 기록은 아직 볼 수 없어요',
           },
         ),
-        const SizedBox(height: 20),
-        _ExpressionSummarySection(summaries: expressionSummaries),
       ],
     );
   }
@@ -280,127 +250,6 @@ class _AiCommentPlaceholder extends StatelessWidget {
   }
 }
 
-class _ExpressionSummarySection extends StatelessWidget {
-  const _ExpressionSummarySection({required this.summaries});
-
-  static const _types = [
-    CoupleExpressionType.missYou,
-    CoupleExpressionType.thanks,
-    CoupleExpressionType.feelingDown,
-    CoupleExpressionType.cheerUp,
-  ];
-
-  final List<CoupleExpressionSummary> summaries;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('그 날의 표현 횟수', style: AppTextStyles.homeCharacterLabel),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _ExpressionSummaryPill(
-                  type: _types[0],
-                  sentCount: _sentCountFor(_types[0]),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ExpressionSummaryPill(
-                  type: _types[1],
-                  sentCount: _sentCountFor(_types[1]),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _ExpressionSummaryPill(
-                  type: _types[2],
-                  sentCount: _sentCountFor(_types[2]),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ExpressionSummaryPill(
-                  type: _types[3],
-                  sentCount: _sentCountFor(_types[3]),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  int _sentCountFor(CoupleExpressionType type) {
-    for (final summary in summaries) {
-      if (summary.type == type) {
-        return summary.sentCount;
-      }
-    }
-
-    return 0;
-  }
-}
-
-class _ExpressionSummaryPill extends StatelessWidget {
-  const _ExpressionSummaryPill({required this.type, required this.sentCount});
-
-  final CoupleExpressionType type;
-  final int sentCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 42,
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF838384)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _expressionIconFor(type),
-            size: 18,
-            color: AppColors.textPrimary,
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              type.label,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '$sentCount',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StateMessage extends StatelessWidget {
   const _StateMessage({required this.title, required this.message});
 
@@ -430,15 +279,6 @@ class _StateMessage extends StatelessWidget {
       ),
     );
   }
-}
-
-IconData _expressionIconFor(CoupleExpressionType type) {
-  return switch (type) {
-    CoupleExpressionType.missYou => Icons.favorite_border,
-    CoupleExpressionType.thanks => Icons.thumb_up_alt_outlined,
-    CoupleExpressionType.feelingDown => Icons.sentiment_dissatisfied_outlined,
-    CoupleExpressionType.cheerUp => Icons.wb_sunny_outlined,
-  };
 }
 
 String _formatFullDate(DateTime date) {

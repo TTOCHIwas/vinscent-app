@@ -6,9 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
-import 'package:vinscent/features/expressions/data/couple_expression.dart';
-import 'package:vinscent/features/expressions/data/couple_expression_repository.dart';
-import 'package:vinscent/features/expressions/data/couple_expression_summary.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
@@ -38,6 +35,10 @@ void main() {
     expect(find.text('오늘 스토리 카드를 아직 아무도 올리지 않았어요.'), findsOneWidget);
     expect(find.text('사진, 그림, 글로 오늘의 카드를 만들어 보세요.'), findsOneWidget);
     expect(find.text('\uce74\ub4dc\u0020\uc791\uc131'), findsOneWidget);
+    expect(find.text('보고싶어'), findsNothing);
+    expect(find.text('고마워'), findsNothing);
+    expect(find.text('우울해'), findsNothing);
+    expect(find.text('힘내'), findsNothing);
   });
 
   testWidgets('질문이 생성되면 질문 문구를 보여준다', (tester) async {
@@ -243,48 +244,6 @@ void main() {
 
     expect(find.text('AI 한 줄 평이 여기에 표시될 예정이에요.'), findsOneWidget);
   });
-
-  testWidgets('표현을 보내면 성공 피드백을 보여준다', (tester) async {
-    final expressionRepository = _FakeCoupleExpressionRepository();
-
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _emptyTodaySummary(coupleDate: _today),
-      expressionRepository: expressionRepository,
-    );
-
-    await tester.ensureVisible(find.byIcon(Icons.thumb_up_alt_outlined));
-    await tester.tap(find.byIcon(Icons.thumb_up_alt_outlined));
-    await tester.pumpAndSettle();
-
-    expect(expressionRepository.sentTypes, [CoupleExpressionType.thanks]);
-    expect(find.text('표현을 보냈어요.'), findsOneWidget);
-  });
-
-  testWidgets('표현 보내기가 실패하면 실패 피드백을 보여준다', (tester) async {
-    final expressionRepository = _FakeCoupleExpressionRepository(
-      shouldFail: true,
-    );
-
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _emptyTodaySummary(coupleDate: _today),
-      expressionRepository: expressionRepository,
-    );
-
-    await tester.ensureVisible(
-      find.byIcon(Icons.sentiment_dissatisfied_outlined),
-    );
-    await tester.tap(find.byIcon(Icons.sentiment_dissatisfied_outlined));
-    await tester.pumpAndSettle();
-
-    expect(expressionRepository.sentTypes, [CoupleExpressionType.feelingDown]);
-    expect(find.text('표현을 보내지 못했어요.'), findsOneWidget);
-  });
 }
 
 Future<void> _pumpHome(
@@ -293,7 +252,6 @@ Future<void> _pumpHome(
   required DateTime today,
   TodayStoryLoopSummary? todaySummary,
   StoryLoopReadRepository? storyLoopRepository,
-  CoupleExpressionRepository? expressionRepository,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -309,9 +267,6 @@ Future<void> _pumpHome(
         storyLoopReadRepositoryProvider.overrideWithValue(
           storyLoopRepository ??
               FakeStoryLoopReadRepository(todaySummary: todaySummary),
-        ),
-        coupleExpressionRepositoryProvider.overrideWithValue(
-          expressionRepository ?? _FakeCoupleExpressionRepository(),
         ),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
@@ -358,38 +313,6 @@ class _ThrowingStoryLoopReadRepository implements StoryLoopReadRepository {
   @override
   Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(
     DateTime month,
-  ) async {
-    return const [];
-  }
-}
-
-class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
-  _FakeCoupleExpressionRepository({this.shouldFail = false});
-
-  final bool shouldFail;
-  final sentTypes = <CoupleExpressionType>[];
-
-  @override
-  Future<CoupleExpression> send(CoupleExpressionType type) async {
-    sentTypes.add(type);
-
-    if (shouldFail) {
-      throw Exception('expression unavailable');
-    }
-
-    return CoupleExpression(
-      id: 'expression-id',
-      coupleId: 'couple-id',
-      senderUserId: 'user-id',
-      receiverUserId: 'partner-id',
-      type: type,
-      sentAt: DateTime(2026, 5, 31, 12),
-    );
-  }
-
-  @override
-  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(
-    DateTime date,
   ) async {
     return const [];
   }

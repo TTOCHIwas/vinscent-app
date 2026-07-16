@@ -1,7 +1,6 @@
 class NotificationPreferences {
   const NotificationPreferences({
     required this.userId,
-    required this.expressionEnabled,
     required this.partnerAnswerEnabled,
     required this.dailyQuestionEnabled,
     required this.reminderEnabled,
@@ -15,7 +14,6 @@ class NotificationPreferences {
   factory NotificationPreferences.fromJson(Map<String, dynamic> json) {
     return NotificationPreferences(
       userId: json['user_id'] as String,
-      expressionEnabled: json['expression_enabled'] as bool,
       partnerAnswerEnabled: json['partner_answer_enabled'] as bool,
       dailyQuestionEnabled: json['daily_question_enabled'] as bool,
       reminderEnabled: json['reminder_enabled'] as bool,
@@ -28,7 +26,6 @@ class NotificationPreferences {
   }
 
   final String userId;
-  final bool expressionEnabled;
   final bool partnerAnswerEnabled;
   final bool dailyQuestionEnabled;
   final bool reminderEnabled;
@@ -39,7 +36,6 @@ class NotificationPreferences {
   final DateTime updatedAt;
 
   NotificationPreferences copyWith({
-    bool? expressionEnabled,
     bool? partnerAnswerEnabled,
     bool? dailyQuestionEnabled,
     bool? reminderEnabled,
@@ -49,9 +45,7 @@ class NotificationPreferences {
   }) {
     return NotificationPreferences(
       userId: userId,
-      expressionEnabled: expressionEnabled ?? this.expressionEnabled,
-      partnerAnswerEnabled:
-          partnerAnswerEnabled ?? this.partnerAnswerEnabled,
+      partnerAnswerEnabled: partnerAnswerEnabled ?? this.partnerAnswerEnabled,
       dailyQuestionEnabled: dailyQuestionEnabled ?? this.dailyQuestionEnabled,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       coupleDisconnectEnabled:
@@ -63,5 +57,4 @@ class NotificationPreferences {
       updatedAt: updatedAt,
     );
   }
-
 }

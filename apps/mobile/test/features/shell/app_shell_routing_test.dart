@@ -34,6 +34,7 @@ void main() {
     expect(find.byType(AppHeader), findsOneWidget);
     expect(find.byType(AppBottomBar), findsOneWidget);
     expect(find.text('D+2'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('D+2')).style?.fontSize, 24);
     expect(find.text('앱 이름'), findsNothing);
     final headerRow = tester.widget<Row>(
       find.descendant(of: find.byType(AppHeader), matching: find.byType(Row)),

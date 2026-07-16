@@ -34,9 +34,9 @@ class FirebasePushTokenRepository implements PushTokenRepository {
            localNotifications ?? FlutterLocalNotificationsPlugin();
 
   static const _androidChannel = AndroidNotificationChannel(
-    'couple_expression_notifications',
+    'vinscent_notifications',
     '커플 알림',
-    description: '질문, 표현, 연결 상태 알림을 표시합니다.',
+    description: '질문, 스토리, 녹음, 연결 상태 알림을 표시합니다.',
     importance: Importance.high,
   );
 

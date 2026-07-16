@@ -9,9 +9,6 @@ import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_s
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
-import 'package:vinscent/features/expressions/data/couple_expression.dart';
-import 'package:vinscent/features/expressions/data/couple_expression_repository.dart';
-import 'package:vinscent/features/expressions/data/couple_expression_summary.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
@@ -29,19 +26,12 @@ void main() {
     tester,
   ) async {
     final repository = FakeStoryLoopReadRepository();
-    final expressionRepository = _FakeCoupleExpressionRepository();
-
-    await _pumpCalendar(
-      tester,
-      repository: repository,
-      expressionRepository: expressionRepository,
-    );
+    await _pumpCalendar(tester, repository: repository);
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('날짜를 선택해 주세요'), findsOneWidget);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, isEmpty);
-    expect(expressionRepository.requestedDates, isEmpty);
   });
 
   testWidgets('does not move before relationship start month', (tester) async {
@@ -93,64 +83,65 @@ void main() {
     expect(repository.requestedDetailDates, isEmpty);
   });
 
-  testWidgets('renders month summary cells for empty single and stacked cards', (
-    tester,
-  ) async {
-    final repository = FakeStoryLoopReadRepository(
-      monthSummaries: {
-        DateTime(2026, 5): [
-          sampleMonthSummaryDay(
-            coupleDate: DateTime(2026, 5, 5),
-            cardCount: 1,
-            cards: [
-              samplePreviewCard(
-                id: 'month-card-1',
-                submittedAt: DateTime(2026, 5, 5, 9, 0),
-              ),
-            ],
-          ),
-          sampleMonthSummaryDay(
-            coupleDate: DateTime(2026, 5, 6),
-            cardCount: 2,
-            cards: [
-              samplePreviewCard(
-                id: 'month-card-2',
-                submittedAt: DateTime(2026, 5, 6, 9, 20),
-              ),
-              samplePreviewCard(
-                id: 'month-card-3',
-                authorUserId: 'user-b',
-                previewPath: 'previews/card-3.png',
-                submittedAt: DateTime(2026, 5, 6, 9, 0),
-              ),
-            ],
-          ),
-        ],
-      },
-    );
+  testWidgets(
+    'renders month summary cells for empty single and stacked cards',
+    (tester) async {
+      final repository = FakeStoryLoopReadRepository(
+        monthSummaries: {
+          DateTime(2026, 5): [
+            sampleMonthSummaryDay(
+              coupleDate: DateTime(2026, 5, 5),
+              cardCount: 1,
+              cards: [
+                samplePreviewCard(
+                  id: 'month-card-1',
+                  submittedAt: DateTime(2026, 5, 5, 9, 0),
+                ),
+              ],
+            ),
+            sampleMonthSummaryDay(
+              coupleDate: DateTime(2026, 5, 6),
+              cardCount: 2,
+              cards: [
+                samplePreviewCard(
+                  id: 'month-card-2',
+                  submittedAt: DateTime(2026, 5, 6, 9, 20),
+                ),
+                samplePreviewCard(
+                  id: 'month-card-3',
+                  authorUserId: 'user-b',
+                  previewPath: 'previews/card-3.png',
+                  submittedAt: DateTime(2026, 5, 6, 9, 0),
+                ),
+              ],
+            ),
+          ],
+        },
+      );
 
-    await _pumpCalendar(tester, repository: repository);
+      await _pumpCalendar(tester, repository: repository);
 
-    expect(
-      find.byKey(
-        const ValueKey('calendar-month-story-cell-single-2026-05-05'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(
-        const ValueKey('calendar-month-story-cell-stacked-2026-05-06'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(
-        const ValueKey('calendar-month-story-cell-empty-2026-05-07'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byType(CalendarMonthStoryCell), findsWidgets);
-  });
+      expect(
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-single-2026-05-05'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-stacked-2026-05-06'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-07'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(CalendarMonthStoryCell), findsWidgets);
+    },
+  );
 
   testWidgets('fetches selected past date and shows story loop detail', (
     tester,
@@ -158,22 +149,7 @@ void main() {
     final repository = FakeStoryLoopReadRepository(
       details: {DateTime(2026, 5, 5): _completedDetail},
     );
-    final expressionRepository = _FakeCoupleExpressionRepository(
-      summaries: {
-        DateTime(2026, 5, 5): const [
-          CoupleExpressionSummary(
-            type: CoupleExpressionType.missYou,
-            sentCount: 42,
-          ),
-        ],
-      },
-    );
-
-    await _pumpCalendar(
-      tester,
-      repository: repository,
-      expressionRepository: expressionRepository,
-    );
+    await _pumpCalendar(tester, repository: repository);
 
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
@@ -187,9 +163,7 @@ void main() {
     expect(find.text('종합'), findsOneWidget);
     expect(find.text('AI 한 줄 평'), findsOneWidget);
     expect(find.text('아직 AI 한 줄 평이 없어요'), findsOneWidget);
-    expect(find.text('그 날의 표현 횟수'), findsOneWidget);
-    expect(find.text('보고싶어'), findsOneWidget);
-    expect(find.text('42'), findsOneWidget);
+    expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
 
   testWidgets('shows card only detail when question has not been generated', (
@@ -216,31 +190,14 @@ void main() {
     tester,
   ) async {
     final repository = FakeStoryLoopReadRepository();
-    final expressionRepository = _FakeCoupleExpressionRepository(
-      summaries: {
-        DateTime(2026, 5, 5): const [
-          CoupleExpressionSummary(
-            type: CoupleExpressionType.cheerUp,
-            sentCount: 42,
-          ),
-        ],
-      },
-    );
-
-    await _pumpCalendar(
-      tester,
-      repository: repository,
-      expressionRepository: expressionRepository,
-    );
+    await _pumpCalendar(tester, repository: repository);
 
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
     expect(find.text('이 날의 질문 기록이 없어요'), findsOneWidget);
-    expect(find.text('그 날의 표현 횟수'), findsOneWidget);
-    expect(find.text('힘내'), findsOneWidget);
-    expect(find.text('42'), findsOneWidget);
+    expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
 
   testWidgets('retries selected past date after detail load failure', (
@@ -322,7 +279,6 @@ void main() {
 Future<void> _pumpCalendar(
   WidgetTester tester, {
   required StoryLoopReadRepository repository,
-  CoupleExpressionRepository? expressionRepository,
   DateTime? today,
   DateTime? relationshipStartDate,
 }) async {
@@ -359,9 +315,6 @@ Future<void> _pumpCalendar(
           ),
         ),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
-        coupleExpressionRepositoryProvider.overrideWithValue(
-          expressionRepository ?? _FakeCoupleExpressionRepository(),
-        ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -369,35 +322,6 @@ Future<void> _pumpCalendar(
 
   await tester.pumpAndSettle();
 }
-
-class _FakeCoupleExpressionRepository implements CoupleExpressionRepository {
-  _FakeCoupleExpressionRepository({this.summaries = const {}});
-
-  final Map<DateTime, List<CoupleExpressionSummary>> summaries;
-  final requestedDates = <DateTime>[];
-
-  @override
-  Future<CoupleExpression> send(CoupleExpressionType type) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<List<CoupleExpressionSummary>> fetchSummaryByDate(
-    DateTime date,
-  ) async {
-    final normalizedDate = calendarDateOnly(date);
-    requestedDates.add(normalizedDate);
-
-    return summaries[normalizedDate] ?? _zeroExpressionSummaries;
-  }
-}
-
-const _zeroExpressionSummaries = [
-  CoupleExpressionSummary(type: CoupleExpressionType.missYou, sentCount: 0),
-  CoupleExpressionSummary(type: CoupleExpressionType.thanks, sentCount: 0),
-  CoupleExpressionSummary(type: CoupleExpressionType.feelingDown, sentCount: 0),
-  CoupleExpressionSummary(type: CoupleExpressionType.cheerUp, sentCount: 0),
-];
 
 class _FlakyStoryLoopReadRepository implements StoryLoopReadRepository {
   _FlakyStoryLoopReadRepository({required this.entry});

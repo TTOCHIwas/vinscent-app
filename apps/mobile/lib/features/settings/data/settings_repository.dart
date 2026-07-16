@@ -52,7 +52,6 @@ class SupabaseSettingsRepository implements SettingsRepository {
       final data = await Supabase.instance.client.rpc(
         'update_my_notification_preferences',
         params: {
-          'requested_expression_enabled': preferences.expressionEnabled,
           'requested_partner_answer_enabled': preferences.partnerAnswerEnabled,
           'requested_daily_question_enabled': preferences.dailyQuestionEnabled,
           'requested_reminder_enabled': preferences.reminderEnabled,

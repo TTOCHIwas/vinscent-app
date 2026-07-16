@@ -61,16 +61,6 @@ class _NotificationSettingsContent extends ConsumerWidget {
     return ListView(
       children: [
         _PreferenceToggleTile(
-          title: '표현 알림',
-          value: preferences.expressionEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(expressionEnabled: value),
-            ),
-          ),
-        ),
-        _PreferenceToggleTile(
           title: '상대 답변 완료',
           value: preferences.partnerAnswerEnabled,
           onChanged: (value) => _updatePreferences(

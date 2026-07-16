@@ -36,7 +36,7 @@ class AppHeader extends ConsumerWidget {
                 startDate: couple.relationshipStartDate!,
                 today: couple.effectiveCurrentDate,
               );
-              return Text('D+$dayCount', style: AppTextStyles.shellTitle);
+              return Text('D+$dayCount', style: AppTextStyles.shellDayCount);
             },
           );
     }
