@@ -10,98 +10,39 @@ import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
-import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_card_scene.dart';
+import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
 
 const _homeStatusLoadError =
-    '\ucee4\ud50c\u0020\uc815\ubcf4\ub97c\u0020\ubd88\ub7ec\uc624\uc9c0\u0020\ubabb\ud588\uc5b4\uc694\u002e';
+    '\ucee4\ud50c \uc815\ubcf4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694.';
 const _homeStatusMissingCouple =
-    '\ucee4\ud50c\u0020\uc815\ubcf4\ub97c\u0020\ucc3e\uc744\u0020\uc218\u0020\uc5c6\uc5b4\uc694\u002e';
+    '\ucee4\ud50c \uc815\ubcf4\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc5b4\uc694.';
 const _homeStatusArchivedNoDate =
-    '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911\uc774\uc5d0\uc694';
+    '\uae30\ub85d \ubcf4\uad00 \uc911\uc774\uc5d0\uc694';
 const _homeStatusMissingStartDate =
-    '\ucc98\uc74c\u0020\ub9cc\ub09c\u0020\ub0a0\uc744\u0020\uba3c\uc800\u0020\uc785\ub825\ud574\u0020\uc8fc\uc138\uc694\u002e';
-const _homeStatusArchivedHeadline =
-    '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911';
-
-const _homeStoryLoading =
-    '\uc624\ub298\u0020\uc2a4\ud1a0\ub9ac\ub97c\u0020\ubd88\ub7ec\uc624\uace0\u0020\uc788\uc5b4\uc694\u002e';
-const _homeStoryLoadError =
-    '\uc624\ub298\u0020\uc2a4\ud1a0\ub9ac\ub97c\u0020\ubd88\ub7ec\uc624\uc9c0\u0020\ubabb\ud588\uc5b4\uc694\u002e';
-const _homeStoryRetry = '\ub2e4\uc2dc\u0020\uc2dc\ub3c4';
-const _homeStoryUnavailable =
-    '\uc624\ub298\u0020\uc2a4\ud1a0\ub9ac\ub97c\u0020\uc544\uc9c1\u0020\ud655\uc778\ud560\u0020\uc218\u0020\uc5c6\uc5b4\uc694\u002e';
-const _homeStoryUnavailableSupporting =
-    '\ucee4\ud50c\u0020\uc5f0\uacb0\uacfc\u0020\uc2dc\uc791\uc77c\uc744\u0020\uba3c\uc800\u0020\ud655\uc778\ud574\u0020\uc8fc\uc138\uc694\u002e';
-const _homeStoryLabel = '\uc624\ub298\uc758\u0020\uc2a4\ud1a0\ub9ac';
-const _homeStoryArchivedEmpty =
-    '\ubcf4\uad00\u0020\uc911\uc778\u0020\uc624\ub298\u0020\uc2a4\ud1a0\ub9ac\u0020\uae30\ub85d\uc774\u0020\uc5c6\uc5b4\uc694\u002e';
-const _homeStoryEmpty =
-    '\uc624\ub298\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\ub97c\u0020\uc544\uc9c1\u0020\uc544\ubb34\ub3c4\u0020\uc62c\ub9ac\uc9c0\u0020\uc54a\uc558\uc5b4\uc694\u002e';
-const _homeStoryReadonlySupporting =
-    '\uc9c0\uae08\uc740\u0020\uc77d\uae30\u0020\uc804\uc6a9\uc73c\ub85c\ub9cc\u0020\ubcfc\u0020\uc218\u0020\uc788\uc5b4\uc694\u002e';
-const _homeStoryEditorPlaceholder =
-    '\uc0ac\uc9c4\u002c\u0020\uadf8\ub9bc\u002c\u0020\uae00\ub85c\u0020\uc624\ub298\uc758\u0020\uce74\ub4dc\ub97c\u0020\ub9cc\ub4e4\uc5b4\u0020\ubcf4\uc138\uc694\u002e';
-const _homeStoryArchivedSingle =
-    '\ubcf4\uad00\u0020\uc911\uc778\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\uc608\uc694\u002e';
-const _homeStoryMineFirst =
-    '\ub0b4\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\uac00\u0020\uc62c\ub77c\uac14\uc5b4\uc694\u002e';
-const _homeStoryPartnerFirst =
-    '\uc0c1\ub300\uac00\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\ub97c\u0020\uc62c\ub838\uc5b4\uc694\u002e';
-const _homeStoryWaitingPartner =
-    '\uc0c1\ub300\u0020\uce74\ub4dc\uac00\u0020\uc624\uba74\u0020\uc624\ub298\u0020\uc9c8\ubb38\uc774\u0020\uc0dd\uc131\ub3fc\uc694\u002e';
-const _homeStoryMyCardPlaceholder =
-    '\ub0b4\u0020\uce74\ub4dc\ub97c\u0020\uc62c\ub9ac\uba74\u0020\uc624\ub298\u0020\uc9c8\ubb38\uc774\u0020\uc0dd\uc131\ub3fc\uc694\u002e';
-const _homeStoryArchivedDouble =
-    '\ubcf4\uad00\u0020\uc911\uc778\u0020\uc2a4\ud1a0\ub9ac\u0020\uce74\ub4dc\uac00\u0020\ubaa8\ub450\u0020\ubaa8\uc5ec\u0020\uc788\uc5b4\uc694\u002e';
-const _homeStoryGenerating = '\uc9c8\ubb38\u0020\uc0dd\uc131\u0020\uc911';
-const _homeStoryGeneratingSupporting =
-    '\ub450\u0020\uce74\ub4dc\uac00\u0020\ubaa8\ub450\u0020\ub3c4\ucc29\ud588\uc5b4\uc694\u002e\u0020\uc624\ub298\u0020\uc9c8\ubb38\uc744\u0020\uc900\ube44\ud558\uace0\u0020\uc788\uc5b4\uc694\u002e';
-const _homeStoryAiPlaceholder =
-    '\u0041\u0049\u0020\ud55c\u0020\uc904\u0020\ud3c9\uc774\u0020\uc5ec\uae30\uc5d0\u0020\ud45c\uc2dc\ub420\u0020\uc608\uc815\uc774\uc5d0\uc694\u002e';
-const _homeStoryPartnerAnswered =
-    '\uc0c1\ub300\ubc29\uc740\u0020\ub2f5\ubcc0\uc744\u0020\ub0a8\uacbc\uc5b4\uc694\u002e';
-const _homeStoryWaitingAnswer =
-    '\uc0c1\ub300\ubc29\uc758\u0020\ub2f5\ubcc0\uc744\u0020\uae30\ub2e4\ub9ac\uace0\u0020\uc788\uc5b4\uc694\u002e';
-const _homeStoryActionRead = '\uae30\ub85d\u0020\ubcf4\uae30';
-const _homeStoryActionQuestion =
-    '\uc624\ub298\u0020\uc9c8\ubb38\u0020\ubcf4\uae30';
-const _homeStoryActionAnswer = '\ub2f5\ubcc0\u0020\ub0a8\uae30\uae30';
-const _homeStoryActionCreate = '\uce74\ub4dc\u0020\uc791\uc131';
-const _homeStoryActionEdit = '\uce74\ub4dc\u0020\uc218\uc815';
+    '\ucc98\uc74c \ub9cc\ub09c \ub0a0\uc744 \uba3c\uc800 \uc785\ub825\ud574 \uc8fc\uc138\uc694.';
+const _homeStatusArchivedHeadline = '\uae30\ub85d \ubcf4\uad00 \uc911';
+const _homeStoryCreateTooltip = '\uce74\ub4dc \uc791\uc131';
+const _homeStoryCardSemantics = '\uc2a4\ud1a0\ub9ac \uce74\ub4dc';
+const _homeStoryRetryTooltip = '\ub2e4\uc2dc \uc2dc\ub3c4';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final contentMinHeight = (constraints.maxHeight - 64).clamp(
-          0.0,
-          double.infinity,
-        );
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 32),
-          child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: contentMinHeight),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _CoupleStatus(),
-                  _HomeMainStage(),
-                  HomeCharacterRecordingControl(),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Column(
+        children: [
+          _CoupleStatus(),
+          Expanded(flex: 4, child: _HomeMainStage()),
+          Expanded(flex: 5, child: HomeCharacterRecordingControl()),
+        ],
+      ),
     );
   }
 }
@@ -189,12 +130,9 @@ class _HomeMainStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: double.infinity,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: _HomeStoryLoopPreview(),
-      ),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: _HomeStoryLoopPreview(),
     );
   }
 }
@@ -212,18 +150,17 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
     final summaryAsync = ref.watch(todayStoryLoopSummaryProvider);
 
     return summaryAsync.when(
-      loading: () => const _HomeStoryLoopCard(
-        message: _homeStoryLoading,
-        footer: SizedBox.square(
-          dimension: 20,
+      loading: () => const Center(
+        child: SizedBox.square(
+          dimension: 24,
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
-      error: (error, stackTrace) => _HomeStoryLoopCard(
-        message: _homeStoryLoadError,
-        footer: TextButton(
+      error: (error, stackTrace) => Center(
+        child: IconButton(
           onPressed: () => ref.invalidate(todayStoryLoopSummaryProvider),
-          child: const Text(_homeStoryRetry),
+          tooltip: _homeStoryRetryTooltip,
+          icon: const Icon(Icons.refresh_rounded),
         ),
       ),
       data: (state) {
@@ -238,10 +175,7 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
               summary: summary,
               currentUserId: profile?.id,
             ),
-          UnavailableTodayStoryLoopSummaryState() => const _HomeStoryLoopCard(
-            message: _homeStoryUnavailable,
-            supportingText: _homeStoryUnavailableSupporting,
-          ),
+          UnavailableTodayStoryLoopSummaryState() => const SizedBox.shrink(),
         };
       },
     );
@@ -263,181 +197,158 @@ class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
       summary: summary,
       currentUserId: currentUserId,
     );
+    final questionTargetLocation = presentation.questionTargetLocation;
 
-    return _HomeStoryLoopCard(
+    return _HomeStoryLoopContent(
       cards: presentation.cards,
-      message: presentation.message,
-      supportingText: presentation.supportingText,
-      actionLabel: presentation.actionLabel,
-      onActionTap: presentation.onActionTap == null
+      questionText: presentation.questionText,
+      canAddCard: presentation.canAddCard,
+      onAddCard: presentation.canAddCard
+          ? () => context.go('/home/story')
+          : null,
+      onQuestionTap: questionTargetLocation == null
           ? null
-          : () => presentation.onActionTap!(context),
+          : () => context.go(questionTargetLocation),
+      cardTargetLocation: presentation.targetLocationForCard,
     );
   }
 }
 
-class _HomeStoryLoopCard extends StatelessWidget {
-  const _HomeStoryLoopCard({
-    required this.message,
-    this.cards = const [],
-    this.supportingText,
-    this.actionLabel,
-    this.onActionTap,
-    this.footer,
+class _HomeStoryLoopContent extends StatelessWidget {
+  const _HomeStoryLoopContent({
+    required this.cards,
+    required this.questionText,
+    required this.canAddCard,
+    required this.onAddCard,
+    required this.onQuestionTap,
+    required this.cardTargetLocation,
   });
 
   final List<StoryLoopCardPreview> cards;
-  final String message;
-  final String? supportingText;
-  final String? actionLabel;
-  final VoidCallback? onActionTap;
-  final Widget? footer;
+  final String? questionText;
+  final bool canAddCard;
+  final VoidCallback? onAddCard;
+  final VoidCallback? onQuestionTap;
+  final String? Function(StoryLoopCardPreview card) cardTargetLocation;
 
   @override
   Widget build(BuildContext context) {
-    final actionLabel = this.actionLabel;
-    final footer = this.footer;
+    final storyEntry = _CompactStoryEntry(
+      cards: cards,
+      canAddCard: canAddCard,
+      onAddCard: onAddCard,
+      onCardTap: (card) {
+        final targetLocation = cardTargetLocation(card);
+        return targetLocation == null ? null : () => context.go(targetLocation);
+      },
+    );
+    final questionText = this.questionText;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onActionTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            children: [
-              Text(_homeStoryLabel, style: AppTextStyles.homeBody),
-              const SizedBox(height: 16),
-              _HomeStoryCardStack(cards: cards),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.homeBodyMedium,
-              ),
-              if (supportingText != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  supportingText!,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.homeCharacterLabel.copyWith(
-                    color: AppColors.textMuted,
+    if (questionText == null) {
+      return Center(child: storyEntry);
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onQuestionTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    questionText,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.shellTitle,
                   ),
                 ),
-              ],
-              if (actionLabel != null && onActionTap != null) ...[
-                const SizedBox(height: 12),
-                TextButton(onPressed: onActionTap, child: Text(actionLabel)),
-              ] else if (footer != null) ...[
-                const SizedBox(height: 12),
-                footer,
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeStoryCardStack extends StatelessWidget {
-  const _HomeStoryCardStack({required this.cards});
-
-  final List<StoryLoopCardPreview> cards;
-
-  @override
-  Widget build(BuildContext context) {
-    final visibleCards = [...cards]
-      ..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
-    final limitedCards = visibleCards.take(2).toList(growable: false);
-
-    if (limitedCards.isEmpty) {
-      return const _HomeStoryCardEmptySlot();
-    }
-
-    if (limitedCards.length == 1) {
-      return Center(
-        child: _HomeStoryCardSurface(card: limitedCards.first, width: 180),
-      );
-    }
-
-    return Center(
-      child: SizedBox(
-        width: 280,
-        height: 330,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 8,
-              top: 10,
-              child: Transform.rotate(
-                angle: -0.05,
-                child: _HomeStoryCardSurface(
-                  card: limitedCards.first,
-                  width: 170,
-                  backgroundColor: const Color(0xFFF3F0EA),
-                ),
               ),
             ),
-            Positioned(
-              right: 6,
-              top: 18,
-              child: Transform.rotate(
-                angle: 0.1,
-                child: _HomeStoryCardSurface(
-                  card: limitedCards[1],
-                  width: 170,
-                  backgroundColor: const Color(0xFFEAF2EF),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        storyEntry,
+      ],
     );
   }
 }
 
-class _HomeStoryCardEmptySlot extends StatelessWidget {
-  const _HomeStoryCardEmptySlot();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 180,
-      child: AspectRatio(
-        aspectRatio: storyCardCanvasAspectRatio,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F8F8),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.wireframeBorder),
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.auto_awesome_mosaic_outlined,
-              size: 40,
-              color: AppColors.textMuted,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeStoryCardSurface extends StatelessWidget {
-  const _HomeStoryCardSurface({
-    required this.card,
-    required this.width,
-    this.backgroundColor = Colors.white,
+class _CompactStoryEntry extends StatelessWidget {
+  const _CompactStoryEntry({
+    required this.cards,
+    required this.canAddCard,
+    required this.onAddCard,
+    required this.onCardTap,
   });
 
+  final List<StoryLoopCardPreview> cards;
+  final bool canAddCard;
+  final VoidCallback? onAddCard;
+  final VoidCallback? Function(StoryLoopCardPreview card) onCardTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleCards = cards.take(2).toList(growable: false);
+    final entries = <Widget>[
+      for (final card in visibleCards)
+        _HomeStoryCardThumbnail(card: card, onTap: onCardTap(card)),
+      if (canAddCard) _HomeStoryAddButton(onPressed: onAddCard),
+    ];
+
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (var index = 0; index < entries.length; index++) ...[
+          if (index > 0) const SizedBox(width: 12),
+          entries[index],
+        ],
+      ],
+    );
+  }
+}
+
+class _HomeStoryAddButton extends StatelessWidget {
+  const _HomeStoryAddButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: const Key('home-story-add-button'),
+      onPressed: onPressed,
+      tooltip: _homeStoryCreateTooltip,
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(56),
+        backgroundColor: AppColors.actionPrimary,
+        foregroundColor: AppColors.textInverse,
+        shape: const CircleBorder(),
+      ),
+      icon: const Icon(Icons.add_rounded, size: 28),
+    );
+  }
+}
+
+class _HomeStoryCardThumbnail extends StatelessWidget {
+  const _HomeStoryCardThumbnail({required this.card, required this.onTap});
+
+  static const _width = 64.0;
+
   final StoryLoopCardPreview card;
-  final double width;
-  final Color backgroundColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -448,39 +359,44 @@ class _HomeStoryCardSurface extends StatelessWidget {
         previewUri.hasScheme &&
         (previewUri.scheme == 'http' || previewUri.scheme == 'https');
 
-    return SizedBox(
-      width: width,
-      child: AspectRatio(
-        aspectRatio: storyCardCanvasAspectRatio,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.wireframeBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 14,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Stack(
-              children: [
-                Positioned.fill(
+    return Semantics(
+      label: _homeStoryCardSemantics,
+      button: onTap != null,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: Key('home-story-card-${card.id}'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            width: _width,
+            child: AspectRatio(
+              aspectRatio: storyCardCanvasAspectRatio,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.wireframeBorder),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x12000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
                   child: hasRemotePreview
                       ? Image.network(
                           previewUrl!,
                           fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const _HomeStoryCardPreviewPlaceholder();
-                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              const _HomeStoryCardPreviewPlaceholder(),
                         )
                       : const _HomeStoryCardPreviewPlaceholder(),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -499,7 +415,7 @@ class _HomeStoryCardPreviewPlaceholder extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.auto_awesome_mosaic_outlined,
-          size: 40,
+          size: 20,
           color: AppColors.textMuted,
         ),
       ),
@@ -510,17 +426,17 @@ class _HomeStoryCardPreviewPlaceholder extends StatelessWidget {
 class _HomeStoryLoopPresentation {
   const _HomeStoryLoopPresentation({
     required this.cards,
-    required this.message,
-    this.supportingText,
-    this.actionLabel,
-    this.onActionTap,
+    required this.questionText,
+    required this.canAddCard,
+    required this.questionTargetLocation,
+    required this.editableCardId,
   });
 
   final List<StoryLoopCardPreview> cards;
-  final String message;
-  final String? supportingText;
-  final String? actionLabel;
-  final void Function(BuildContext context)? onActionTap;
+  final String? questionText;
+  final bool canAddCard;
+  final String? questionTargetLocation;
+  final String? editableCardId;
 
   factory _HomeStoryLoopPresentation.fromSummary({
     required TodayStoryLoopSummary summary,
@@ -530,96 +446,48 @@ class _HomeStoryLoopPresentation {
       ..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
     final question = summary.question;
     final isArchived = summary.accessMode == CoupleAccessMode.archivedReadOnly;
-
-    if (question != null) {
-      return _fromQuestionSummary(
-        cards: sortedCards,
-        question: question,
-        isArchived: isArchived,
-      );
-    }
-
-    if (sortedCards.isEmpty) {
-      return _HomeStoryLoopPresentation(
-        cards: const [],
-        message: isArchived ? _homeStoryArchivedEmpty : _homeStoryEmpty,
-        supportingText: isArchived
-            ? _homeStoryReadonlySupporting
-            : _homeStoryEditorPlaceholder,
-        actionLabel: isArchived ? null : _homeStoryActionCreate,
-        onActionTap: isArchived ? null : (context) => context.go('/home/story'),
-      );
-    }
-
-    if (sortedCards.length == 1) {
-      final isMyCard =
-          currentUserId != null &&
-          sortedCards.first.authorUserId == currentUserId;
-      return _HomeStoryLoopPresentation(
-        cards: sortedCards,
-        message: isArchived
-            ? _homeStoryArchivedSingle
-            : isMyCard
-            ? _homeStoryMineFirst
-            : _homeStoryPartnerFirst,
-        supportingText: isArchived
-            ? _homeStoryReadonlySupporting
-            : isMyCard
-            ? _homeStoryWaitingPartner
-            : _homeStoryMyCardPlaceholder,
-        actionLabel: isArchived
-            ? null
-            : isMyCard
-            ? _homeStoryActionEdit
-            : _homeStoryActionCreate,
-        onActionTap: isArchived ? null : (context) => context.go('/home/story'),
-      );
-    }
+    final myCard = currentUserId == null
+        ? null
+        : sortedCards.cast<StoryLoopCardPreview?>().firstWhere(
+            (card) => card?.authorUserId == currentUserId,
+            orElse: () => null,
+          );
+    final canAddCard =
+        !isArchived &&
+        currentUserId != null &&
+        summary.canEditStory &&
+        myCard == null;
 
     return _HomeStoryLoopPresentation(
       cards: sortedCards,
-      message: isArchived ? _homeStoryArchivedDouble : _homeStoryGenerating,
-      supportingText: isArchived
-          ? _homeStoryReadonlySupporting
-          : _homeStoryGeneratingSupporting,
+      questionText: question?.question.questionText,
+      canAddCard: canAddCard,
+      questionTargetLocation: question == null
+          ? null
+          : _questionTargetLocation(question, isArchived: isArchived),
+      editableCardId: question == null && !isArchived && summary.canEditStory
+          ? myCard?.id
+          : null,
     );
   }
 
-  static _HomeStoryLoopPresentation _fromQuestionSummary({
-    required List<StoryLoopCardPreview> cards,
-    required StoryLoopQuestionSummary question,
+  String? targetLocationForCard(StoryLoopCardPreview card) {
+    final questionTargetLocation = this.questionTargetLocation;
+    if (questionTargetLocation != null) {
+      return questionTargetLocation;
+    }
+    return card.id == editableCardId ? '/home/story' : null;
+  }
+
+  static String _questionTargetLocation(
+    StoryLoopQuestionSummary question, {
     required bool isArchived,
   }) {
     final routeContext = const QuestionRouteContext(
       source: QuestionRouteSource.home,
     );
-    final hasMyAnswer = question.myAnswerExists;
-    final hasPartnerAnswer = question.partnerAnswerExists;
-    final isCompleted = hasMyAnswer && hasPartnerAnswer;
-
-    final message = isCompleted
-        ? _homeStoryAiPlaceholder
-        : !hasMyAnswer && hasPartnerAnswer
-        ? _homeStoryPartnerAnswered
-        : hasMyAnswer
-        ? _homeStoryWaitingAnswer
-        : question.question.questionText;
-
-    final actionLabel = isArchived
-        ? _homeStoryActionRead
-        : hasMyAnswer
-        ? _homeStoryActionQuestion
-        : _homeStoryActionAnswer;
-    final targetLocation = isArchived || hasMyAnswer
+    return isArchived || question.myAnswerExists
         ? routeContext.buildQuestionLocation()
         : routeContext.buildEditLocation();
-
-    return _HomeStoryLoopPresentation(
-      cards: cards,
-      message: message,
-      supportingText: isArchived ? _homeStoryReadonlySupporting : null,
-      actionLabel: actionLabel,
-      onActionTap: (context) => context.go(targetLocation),
-    );
   }
 }

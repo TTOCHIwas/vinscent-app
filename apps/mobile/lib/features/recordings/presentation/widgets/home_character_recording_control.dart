@@ -98,7 +98,13 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
         final availableWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth
             : _preferredControlSize;
-        final controlSize = math.min(_preferredControlSize, availableWidth);
+        final availableHeight = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : _preferredControlSize;
+        final controlSize = math.min(
+          _preferredControlSize,
+          math.min(availableWidth, availableHeight),
+        );
         final characterSize = math.max(0.0, controlSize - _characterSpacing);
 
         return Center(
