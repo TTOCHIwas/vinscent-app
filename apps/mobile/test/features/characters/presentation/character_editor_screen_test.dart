@@ -37,6 +37,7 @@ void main() {
     expect(repository.savedImageBytes, isNotNull);
     expect(repository.savedDrawingDataJson, contains('"strokes"'));
     expect(repository.savedImageBytes!.take(4), [137, 80, 78, 71]);
+    expect(find.text('settings'), findsOneWidget);
   });
 
   testWidgets('enables save after drawing a dot', (tester) async {
@@ -108,6 +109,19 @@ void main() {
 
     expect((stroke['width'] as num).toDouble(), characterThickStrokeWidth);
   });
+
+  testWidgets('returns to settings when back is pressed from a direct route', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    await tester.tap(find.byTooltip('뒤로가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('settings'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpCharacterEditor(
@@ -124,11 +138,15 @@ Future<void> _pumpCharacterEditor(
       ],
       child: MaterialApp.router(
         routerConfig: GoRouter(
-          initialLocation: '/home/character',
+          initialLocation: '/settings/character',
           routes: [
             GoRoute(
-              path: '/home/character',
+              path: '/settings/character',
               builder: (context, state) => const CharacterEditorScreen(),
+            ),
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) => const Text('settings'),
             ),
             GoRoute(
               path: '/home',

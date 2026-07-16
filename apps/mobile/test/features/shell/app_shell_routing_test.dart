@@ -149,6 +149,24 @@ void main() {
     expect(find.text('history question'), findsOneWidget);
     expect(_tabs(tester)[1].isSelected, isTrue);
   });
+
+  testWidgets('기존 캐릭터 경로를 설정 캐릭터 경로로 이동한다', (tester) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(tester.element(find.text('오늘의 스토리'))).go('/home/character');
+    await tester.pumpAndSettle();
+
+    expect(find.text('캐릭터 그리기'), findsOneWidget);
+    final router = GoRouter.of(tester.element(find.text('캐릭터 그리기')));
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/settings/character',
+    );
+  });
 }
 
 Future<void> _pumpApp(
