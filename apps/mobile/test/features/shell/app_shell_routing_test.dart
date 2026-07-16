@@ -97,7 +97,10 @@ void main() {
         todayAnswerState: pendingAnswerState,
       );
 
-      await tester.tap(find.text(_dailyQuestion.questionText));
+      final question = find.text(_dailyQuestion.questionText);
+      expect(question.hitTestable(), findsOneWidget);
+
+      await tester.tap(question);
       await tester.pumpAndSettle();
 
       expect(find.byType(AppHeader), findsNothing);
