@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/app/app.dart';
+import 'package:vinscent/features/auth/presentation/login_screen.dart';
 
 void main() {
   testWidgets('redirects unauthenticated users to login screen', (
@@ -11,5 +13,18 @@ void main() {
 
     expect(find.text('카카오 로그인'), findsOneWidget);
     expect(find.text('Apple로 로그인'), findsOneWidget);
+  });
+
+  testWidgets('keeps the app in light mode when the system is dark', (
+    tester,
+  ) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await tester.pumpWidget(const ProviderScope(child: VinscentApp()));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(LoginScreen));
+    expect(Theme.of(context).brightness, Brightness.light);
   });
 }
