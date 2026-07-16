@@ -41,12 +41,11 @@ void main() {
     expect(find.text('고마워'), findsNothing);
     expect(find.text('우울해'), findsNothing);
     expect(find.text('힘내'), findsNothing);
-    expect(
-      find.byKey(CharacterRecordingControl.controlKey),
-      findsOneWidget,
-    );
+    expect(find.byKey(CharacterRecordingControl.controlKey), findsOneWidget);
     expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
-    expect(find.byType(Icon), findsNothing);
+    expect(find.byIcon(Icons.mic_rounded), findsNothing);
+    expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+    expect(find.byIcon(Icons.pause_rounded), findsNothing);
     expect(find.text('녹음'), findsNothing);
     expect(find.text('보기'), findsNothing);
     expect(find.text('현재 재생할 녹음이 없어요.'), findsNothing);

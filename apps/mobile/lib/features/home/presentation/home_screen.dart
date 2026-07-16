@@ -4,12 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../characters/presentation/widgets/couple_character_avatar.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
-import '../../recordings/presentation/widgets/home_recording_panel.dart';
+import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_card_scene.dart';
@@ -96,7 +95,7 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   _CoupleStatus(),
                   _HomeMainStage(),
-                  HomeRecordingPanel(),
+                  HomeCharacterRecordingControl(),
                 ],
               ),
             ),
@@ -194,26 +193,8 @@ class _HomeMainStage extends StatelessWidget {
       width: double.infinity,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          children: [
-            _HomeStoryLoopPreview(),
-            SizedBox(height: 24),
-            _HomeCharacterArea(),
-          ],
-        ),
+        child: _HomeStoryLoopPreview(),
       ),
-    );
-  }
-}
-
-class _HomeCharacterArea extends StatelessWidget {
-  const _HomeCharacterArea();
-
-  @override
-  Widget build(BuildContext context) {
-    return CoupleCharacterAvatar(
-      size: 160,
-      onTap: () => context.go('/home/character'),
     );
   }
 }

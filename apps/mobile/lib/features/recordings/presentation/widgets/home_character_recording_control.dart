@@ -4,16 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../characters/presentation/widgets/couple_character_avatar.dart';
 import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
 import '../../application/recording_capture_controller.dart';
 import '../../application/recording_playback_controller.dart';
 import '../../data/couple_recording.dart';
-import 'recording_control_button.dart';
+import 'character_recording_control.dart';
 
-class HomeRecordingPanel extends ConsumerWidget {
-  const HomeRecordingPanel({super.key});
+class HomeCharacterRecordingControl extends ConsumerWidget {
+  const HomeCharacterRecordingControl({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,10 +90,10 @@ class HomeRecordingPanel extends ConsumerWidget {
     final canRecord = couple?.canEditSharedData ?? false;
 
     return Center(
-      child: RecordingControlButton(
+      child: CharacterRecordingControl(
         capturePhase: captureState.phase,
         recordingProgress: captureState.elapsedMs / recordingMaxDurationMs,
-        hasRecording: currentRecording != null,
+        recordingKey: currentRecording?.recordingId,
         isPlaying: isPlaying,
         isPlaybackBusy: playbackState.isBusy,
         isLoading: coupleAsync.isLoading || overviewAsync.isLoading,
@@ -111,6 +112,7 @@ class HomeRecordingPanel extends ConsumerWidget {
           unawaited(HapticFeedback.lightImpact());
           unawaited(captureController.finishGesture());
         },
+        child: const CoupleCharacterAvatar(size: 160),
       ),
     );
   }

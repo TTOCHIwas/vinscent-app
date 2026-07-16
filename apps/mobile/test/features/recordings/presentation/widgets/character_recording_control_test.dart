@@ -59,11 +59,7 @@ void main() {
   });
 
   testWidgets('재생 중에는 아이콘 없이 캐릭터 맥박 효과만 반복한다', (tester) async {
-    await _pumpControl(
-      tester,
-      recordingKey: 'recording-1',
-      isPlaying: true,
-    );
+    await _pumpControl(tester, recordingKey: 'recording-1', isPlaying: true);
 
     final before = _pulseScale(tester);
     await tester.pump(const Duration(milliseconds: 350));
@@ -165,10 +161,7 @@ Future<void> _pumpControl(
             onPlaybackPressed: onPlaybackPressed,
             onRecordStart: onRecordStart,
             onRecordEnd: onRecordEnd,
-            child: const SizedBox.square(
-              key: _characterKey,
-              dimension: 160,
-            ),
+            child: const SizedBox.square(key: _characterKey, dimension: 160),
           ),
         ),
       ),
@@ -179,9 +172,7 @@ Future<void> _pumpControl(
 
 double _pulseScale(WidgetTester tester) {
   return tester
-      .widget<ScaleTransition>(
-        find.byKey(CharacterRecordingControl.pulseKey),
-      )
+      .widget<ScaleTransition>(find.byKey(CharacterRecordingControl.pulseKey))
       .scale
       .value;
 }
