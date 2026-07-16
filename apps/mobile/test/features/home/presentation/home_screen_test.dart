@@ -95,6 +95,9 @@ void main() {
   testWidgets(
     '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38 \uc704\uc5d0 \ud655\ub300\ub41c \uce74\ub4dc \ubbf8\ub9ac\ubcf4\uae30\ub97c \ubcf4\uc5ec\uc900\ub2e4',
     (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 592));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       await _pumpHome(
         tester,
         couple: _activeCouple,
@@ -127,10 +130,15 @@ void main() {
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
       expect(myCard, findsOneWidget);
       expect(partnerCard, findsOneWidget);
-      expect(tester.getSize(myCard), const Size(112, 140));
+      expect(tester.getSize(myCard), const Size(160, 200));
+      expect(tester.getSize(partnerCard), const Size(160, 200));
       expect(
         tester.getTopLeft(myCard).dx,
         lessThan(tester.getTopLeft(partnerCard).dx),
+      );
+      expect(
+        tester.getTopLeft(partnerCard).dx - tester.getTopRight(myCard).dx,
+        16,
       );
       expect(tester.getTopLeft(myCard).dy, tester.getTopLeft(partnerCard).dy);
       expect(
