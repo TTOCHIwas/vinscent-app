@@ -44,6 +44,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.light,
       routerConfig: router,
     );
   }
