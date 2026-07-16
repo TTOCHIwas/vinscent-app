@@ -3,8 +3,12 @@ param()
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $mobileDir = Join-Path $repoRoot "apps\mobile"
-$expectedPubCache = Join-Path $repoRoot ".toolchains\pub-cache"
-$globalPubCache = Join-Path $env:LOCALAPPDATA "Pub\Cache"
+$expectedPubCache = [System.IO.Path]::GetFullPath(
+  (Join-Path $repoRoot ".toolchains\pub-cache")
+)
+$globalPubCache = [System.IO.Path]::GetFullPath(
+  (Join-Path $env:LOCALAPPDATA "Pub\Cache")
+)
 
 $generatedFiles = @(
   Join-Path $mobileDir ".dart_tool\package_config.json"
@@ -14,46 +18,99 @@ $generatedFiles = @(
 $failures = New-Object System.Collections.Generic.List[string]
 $warnings = New-Object System.Collections.Generic.List[string]
 
-$expectedPatterns = @(
-  $expectedPubCache
-  ($expectedPubCache -replace "\\", "/")
-)
+function Convert-ToNormalizedPath {
+  param([string]$Value)
 
-$unexpectedPatterns = @(
-  $globalPubCache
-  ($globalPubCache -replace "\\", "/")
-)
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    return $null
+  }
+
+  $candidate = $Value
+  $uri = $null
+  if ([Uri]::TryCreate($Value, [UriKind]::Absolute, [ref]$uri) -and $uri.IsFile) {
+    $candidate = $uri.LocalPath
+  }
+
+  try {
+    return [System.IO.Path]::GetFullPath($candidate)
+  } catch {
+    return $null
+  }
+}
+
+function Test-IsPathWithin {
+  param(
+    [string]$Path,
+    [string]$Root
+  )
+
+  $comparison = [StringComparison]::OrdinalIgnoreCase
+  $rootPrefix = $Root.TrimEnd([char[]]"\/") + [System.IO.Path]::DirectorySeparatorChar
+  return $Path.Equals($Root, $comparison) -or $Path.StartsWith($rootPrefix, $comparison)
+}
+
+function Get-DependencyPaths {
+  param([string]$GeneratedFile)
+
+  $config = Get-Content -LiteralPath $GeneratedFile -Raw -Encoding UTF8 | ConvertFrom-Json
+  $pathValues = @()
+
+  if ([System.IO.Path]::GetFileName($GeneratedFile) -eq "package_config.json") {
+    $pathValues += $config.pubCache
+    foreach ($package in @($config.packages)) {
+      $pathValues += $package.rootUri
+    }
+  } else {
+    foreach ($platform in $config.plugins.PSObject.Properties) {
+      foreach ($plugin in @($platform.Value)) {
+        $pathValues += $plugin.path
+      }
+    }
+  }
+
+  foreach ($pathValue in $pathValues) {
+    $normalizedPath = Convert-ToNormalizedPath $pathValue
+    if ($null -ne $normalizedPath) {
+      $normalizedPath
+    }
+  }
+}
 
 foreach ($generatedFile in $generatedFiles) {
   if (-not (Test-Path -LiteralPath $generatedFile)) {
-    $warnings.Add("생성 파일이 아직 없습니다: $generatedFile")
+    $warnings.Add("Generated dependency file not found: $generatedFile")
     continue
   }
 
-  $rawContent = Get-Content -LiteralPath $generatedFile -Raw -Encoding UTF8
+  try {
+    $dependencyPaths = @(Get-DependencyPaths $generatedFile)
+  } catch {
+    $failures.Add("Failed to parse dependency JSON: $generatedFile ($($_.Exception.Message))")
+    continue
+  }
 
-  foreach ($unexpectedPattern in $unexpectedPatterns) {
-    if ($rawContent.Contains($unexpectedPattern)) {
-      $failures.Add("$generatedFile 에 전역 Pub cache 경로가 남아 있습니다: $unexpectedPattern")
+  foreach ($dependencyPath in $dependencyPaths) {
+    if (Test-IsPathWithin $dependencyPath $globalPubCache) {
+      $failures.Add("$generatedFile contains the global Pub cache path: $globalPubCache")
       break
     }
   }
 
-  $containsExpectedPattern = $false
-  foreach ($expectedPattern in $expectedPatterns) {
-    if ($rawContent.Contains($expectedPattern)) {
-      $containsExpectedPattern = $true
+  $containsExpectedPath = $false
+  foreach ($dependencyPath in $dependencyPaths) {
+    if (Test-IsPathWithin $dependencyPath $expectedPubCache) {
+      $containsExpectedPath = $true
       break
     }
   }
 
-  if (-not $containsExpectedPattern) {
-    $failures.Add("$generatedFile 에 기대한 로컬 Pub cache 경로가 없습니다: $expectedPubCache")
+  if (-not $containsExpectedPath) {
+    $failures.Add("$generatedFile does not contain the expected Pub cache path: $expectedPubCache")
   }
 }
 
 if ($failures.Count -gt 0) {
-  Write-Host "Flutter Pub cache 경로 검증 실패" -ForegroundColor Red
+  Write-Host "Flutter Pub cache verification failed" -ForegroundColor Red
   foreach ($failure in $failures) {
     Write-Host "- $failure" -ForegroundColor Red
   }
@@ -61,11 +118,11 @@ if ($failures.Count -gt 0) {
 }
 
 if ($warnings.Count -gt 0) {
-  Write-Host "Flutter Pub cache 경로 검증 경고" -ForegroundColor Yellow
+  Write-Host "Flutter Pub cache verification warnings" -ForegroundColor Yellow
   foreach ($warning in $warnings) {
     Write-Host "- $warning" -ForegroundColor Yellow
   }
 }
 
-Write-Host "Flutter Pub cache 경로 검증 통과" -ForegroundColor Green
-Write-Host "- 기대 경로: $expectedPubCache"
+Write-Host "Flutter Pub cache verification passed" -ForegroundColor Green
+Write-Host "- Expected path: $expectedPubCache"
