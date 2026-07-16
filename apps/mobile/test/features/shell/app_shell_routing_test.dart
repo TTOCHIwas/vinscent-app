@@ -6,11 +6,15 @@ import 'package:vinscent/app/app.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
+import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
+import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_header.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
@@ -24,149 +28,175 @@ import '../../support/question_answer_fixtures.dart';
 import '../../support/story_loop_fixtures.dart';
 
 void main() {
-  testWidgets('인증된 홈 경로에 shell을 보여준다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: pendingAnswerState,
-    );
+  testWidgets(
+    '\uc778\uc99d\ub41c \ud648 \uacbd\ub85c\uc5d0 shell\uacfc \uc9c8\ubb38\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+      );
 
-    expect(find.byType(AppHeader), findsOneWidget);
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('D+2'), findsOneWidget);
-    expect(tester.widget<Text>(find.text('D+2')).style?.fontSize, 24);
-    expect(find.text('앱 이름'), findsNothing);
-    final headerRow = tester.widget<Row>(
-      find.descendant(of: find.byType(AppHeader), matching: find.byType(Row)),
-    );
-    expect(headerRow.mainAxisAlignment, MainAxisAlignment.spaceBetween);
-    expect(find.text('홈'), findsOneWidget);
-    expect(find.text('달력'), findsOneWidget);
-    expect(find.text('AI'), findsOneWidget);
-    expect(find.text('오늘의 스토리'), findsOneWidget);
-  });
+      expect(find.byType(AppHeader), findsOneWidget);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.text('D+2'), findsOneWidget);
+      expect(tester.widget<Text>(find.text('D+2')).style?.fontSize, 24);
+      final headerRow = tester.widget<Row>(
+        find.descendant(of: find.byType(AppHeader), matching: find.byType(Row)),
+      );
+      expect(headerRow.mainAxisAlignment, MainAxisAlignment.spaceBetween);
+      expect(find.byType(ShellTab), findsNWidgets(3));
+      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(find.text('\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac'), findsNothing);
+    },
+  );
 
-  testWidgets('bottom bar와 header로 shell route를 이동한다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: pendingAnswerState,
-    );
+  testWidgets(
+    'bottom bar\uc640 header\ub85c shell route\ub97c \uc774\ub3d9\ud55c\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+      );
 
-    await tester.tap(find.text('달력'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(ShellTab).at(1));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsNothing);
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('2026년 05월'), findsOneWidget);
-    expect(_tabs(tester)[1].isSelected, isTrue);
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.byType(CalendarScreen), findsOneWidget);
+      expect(_tabs(tester)[1].isSelected, isTrue);
 
-    await tester.tap(find.text('AI'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(ShellTab).at(2));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsOneWidget);
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(_tabs(tester)[2].isSelected, isTrue);
+      expect(find.byType(AppHeader), findsOneWidget);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(_tabs(tester)[2].isSelected, isTrue);
 
-    await tester.tap(find.text('설정'));
-    await tester.pumpAndSettle();
+      final settingsControl = find.descendant(
+        of: find.byType(AppHeader),
+        matching: find.byType(InkWell),
+      );
+      await tester.tap(settingsControl);
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsNothing);
-    expect(find.byType(AppBottomBar), findsNothing);
-    expect(find.text('설정'), findsOneWidget);
-  });
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AppBottomBar), findsNothing);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+    },
+  );
 
-  testWidgets('내 답변이 없으면 답변 작성 route로 이동한다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: pendingAnswerState,
-    );
+  testWidgets(
+    '\ub0b4 \ub2f5\ubcc0\uc774 \uc5c6\uc73c\uba74 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \ub2f5\ubcc0 \uc791\uc131 route\ub97c \uc5f0\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+      );
 
-    await tester.ensureVisible(find.text('답변 남기기'));
-    await tester.tap(find.text('답변 남기기'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text(_dailyQuestion.questionText));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsNothing);
-    expect(find.byType(AppBottomBar), findsNothing);
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('내 답변'), findsNothing);
-  });
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AppBottomBar), findsNothing);
+      expect(find.byType(TodayQuestionAnswerEditScreen), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+    },
+  );
 
-  testWidgets('내 답변이 있으면 읽기 전용 질문 route로 이동한다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: myAnswerOnlyState(),
-    );
+  testWidgets(
+    '\ub0b4 \ub2f5\ubcc0\uc774 \uc788\uc73c\uba74 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \uc77d\uae30 \uc804\uc6a9 route\ub97c \uc5f0\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: myAnswerOnlyState(),
+      );
 
-    await tester.ensureVisible(find.text('오늘 질문 보기'));
-    await tester.tap(find.text('오늘 질문 보기'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text(_dailyQuestion.questionText));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsNothing);
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('내 답변'), findsOneWidget);
-    expect(_tabs(tester).first.isSelected, isTrue);
-  });
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(_tabs(tester).first.isSelected, isTrue);
+    },
+  );
 
-  testWidgets('AI placeholder 상태에서도 읽기 전용 질문 route로 이동한다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: completedAnswerState,
-    );
+  testWidgets(
+    '\uc591\ucabd \ub2f5\ubcc0 \uc644\ub8cc \uc0c1\ud0dc\uc5d0\uc11c\ub3c4 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \uc77d\uae30 route\ub97c \uc5f0\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: completedAnswerState,
+      );
 
-    expect(find.text('AI 한 줄 평이 여기에 표시될 예정이에요.'), findsOneWidget);
+      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(
+        find.text(
+          'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.',
+        ),
+        findsNothing,
+      );
 
-    await tester.ensureVisible(find.text('오늘 질문 보기'));
-    await tester.tap(find.text('오늘 질문 보기'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text(_dailyQuestion.questionText));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsNothing);
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('상대방 답변'), findsOneWidget);
-    expect(_tabs(tester).first.isSelected, isTrue);
-  });
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(_tabs(tester).first.isSelected, isTrue);
+    },
+  );
 
-  testWidgets('달력 탭의 날짜 질문 route를 연다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: pendingAnswerState,
-    );
+  testWidgets(
+    '\ub2ec\ub825 \ud0ed\uc758 \ub0a0\uc9dc \uc9c8\ubb38 route\ub97c \uc5f0\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+      );
 
-    GoRouter.of(
-      tester.element(find.text('오늘의 스토리')),
-    ).go('/calendar/question?date=2026-05-30');
-    await tester.pumpAndSettle();
+      GoRouter.of(
+        tester.element(find.byType(AppHeader)),
+      ).go('/calendar/question?date=2026-05-30');
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppHeader), findsNothing);
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('05월 30일'), findsOneWidget);
-    expect(find.text('history question'), findsOneWidget);
-    expect(_tabs(tester)[1].isSelected, isTrue);
-  });
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+      expect(find.text('history question'), findsOneWidget);
+      expect(_tabs(tester)[1].isSelected, isTrue);
+    },
+  );
 
-  testWidgets('기존 캐릭터 경로를 설정 캐릭터 경로로 이동한다', (tester) async {
-    await _pumpApp(
-      tester,
-      question: _dailyQuestion,
-      todayAnswerState: pendingAnswerState,
-    );
+  testWidgets(
+    '\uae30\uc874 \uce90\ub9ad\ud130 \uacbd\ub85c\ub97c \uc124\uc815 \uce90\ub9ad\ud130 \uacbd\ub85c\ub85c \uc774\ub3d9\ud55c\ub2e4',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+      );
 
-    GoRouter.of(tester.element(find.text('오늘의 스토리'))).go('/home/character');
-    await tester.pumpAndSettle();
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go('/home/character');
+      await tester.pumpAndSettle();
 
-    expect(find.text('캐릭터 그리기'), findsOneWidget);
-    final router = GoRouter.of(tester.element(find.text('캐릭터 그리기')));
-    expect(
-      router.routeInformationProvider.value.uri.path,
-      '/settings/character',
-    );
-  });
+      expect(find.byType(CharacterEditorScreen), findsOneWidget);
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/settings/character',
+      );
+    },
+  );
 }
 
 Future<void> _pumpApp(
@@ -248,7 +278,7 @@ final _today = DateTime(2026, 5, 31);
 
 final _profile = UserProfile(
   id: 'user-id',
-  displayName: '연인',
+  displayName: '\uc5f0\uc778',
   birthDate: DateTime(2000),
   onboardingCompletedAt: DateTime(2026),
   createdAt: DateTime(2026),
