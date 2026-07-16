@@ -41,8 +41,8 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         children: [
           _CoupleStatus(),
-          Expanded(flex: 4, child: _HomeMainStage()),
-          Expanded(flex: 5, child: HomeCharacterRecordingControl()),
+          Expanded(child: _HomeMainStage()),
+          Expanded(child: HomeCharacterRecordingControl()),
         ],
       ),
     );
@@ -267,10 +267,10 @@ class _HomeStoryLoopContent extends StatelessWidget {
                 0.0,
                 constraints.maxHeight - _minimumQuestionHeight - _entryGap,
               )
-            : _CompactStoryEntry._preferredCardHeight;
+            : _CompactStoryEntry._maximumCardHeight;
         final cardHeight = hasCard
             ? math.min(
-                _CompactStoryEntry._preferredCardHeight,
+                _CompactStoryEntry._maximumCardHeight,
                 availableCardHeight,
               )
             : 0.0;
@@ -323,11 +323,11 @@ class _CompactStoryEntry extends StatelessWidget {
     required this.onCardTap,
   });
 
-  static const _preferredCardWidth = 112.0;
-  static const _preferredCardHeight =
-      _preferredCardWidth / storyCardCanvasAspectRatio;
   static const _maxContentWidth = 360.0;
   static const _slotGap = 16.0;
+  static const _maximumCardWidth = (_maxContentWidth - _slotGap) / 2;
+  static const _maximumCardHeight =
+      _maximumCardWidth / storyCardCanvasAspectRatio;
 
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
@@ -353,9 +353,9 @@ class _CompactStoryEntry extends StatelessWidget {
         final availableCardWidth = math.max(0.0, (contentWidth - _slotGap) / 2);
         final heightBoundCardWidth = constraints.hasBoundedHeight
             ? math.max(0.0, constraints.maxHeight) * storyCardCanvasAspectRatio
-            : _preferredCardWidth;
+            : _maximumCardWidth;
         final cardWidth = math.min(
-          _preferredCardWidth,
+          _maximumCardWidth,
           math.min(availableCardWidth, heightBoundCardWidth),
         );
         final cardHeight = cardWidth / storyCardCanvasAspectRatio;
