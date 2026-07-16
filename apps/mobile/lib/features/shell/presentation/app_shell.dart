@@ -25,6 +25,7 @@ class AppShell extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      extendBody: showBottomBar,
       body: Column(
         children: [
           SizedBox(height: math.max(topMinHeight, topInset)),
@@ -35,16 +36,17 @@ class AppShell extends StatelessWidget {
               onSettingsPressed: () => context.go('/settings'),
             ),
           Expanded(child: child),
-          if (showBottomBar)
-            AppBottomBar(
+        ],
+      ),
+      bottomNavigationBar: showBottomBar
+          ? AppBottomBar(
               height: bottomBarHeight,
               currentLocation: location,
               onHomePressed: () => context.go('/home'),
               onCalendarPressed: () => context.go('/calendar'),
               onAiPressed: () => context.go('/ai'),
-            ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 

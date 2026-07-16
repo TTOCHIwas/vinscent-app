@@ -25,11 +25,13 @@ class AppBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return SizedBox(
-      height: height,
+      height: height + bottomInset,
       width: double.infinity,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomInset),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(_surfaceRadius),
@@ -56,23 +58,29 @@ class AppBottomBar extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      ShellTab(
-                        label: '\ud648',
-                        icon: Icons.home_rounded,
-                        isSelected: currentLocation.startsWith('/home'),
-                        onPressed: onHomePressed,
+                      Expanded(
+                        child: ShellTab(
+                          label: '\ud648',
+                          icon: Icons.home_rounded,
+                          isSelected: currentLocation.startsWith('/home'),
+                          onPressed: onHomePressed,
+                        ),
                       ),
-                      ShellTab(
-                        label: '\ub2ec\ub825',
-                        icon: Icons.calendar_today_rounded,
-                        isSelected: currentLocation.startsWith('/calendar'),
-                        onPressed: onCalendarPressed,
+                      Expanded(
+                        child: ShellTab(
+                          label: '\ub2ec\ub825',
+                          icon: Icons.calendar_today_rounded,
+                          isSelected: currentLocation.startsWith('/calendar'),
+                          onPressed: onCalendarPressed,
+                        ),
                       ),
-                      ShellTab(
-                        label: 'AI',
-                        icon: Icons.auto_awesome_rounded,
-                        isSelected: currentLocation.startsWith('/ai'),
-                        onPressed: onAiPressed,
+                      Expanded(
+                        child: ShellTab(
+                          label: 'AI',
+                          icon: Icons.auto_awesome_rounded,
+                          isSelected: currentLocation.startsWith('/ai'),
+                          onPressed: onAiPressed,
+                        ),
                       ),
                     ],
                   ),

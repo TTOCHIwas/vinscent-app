@@ -30,29 +30,15 @@ class ShellTab extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onPressed,
-            borderRadius: BorderRadius.circular(24),
-            child: SizedBox(
-              width: 64,
-              height: 48,
+            borderRadius: BorderRadius.circular(32),
+            child: SizedBox.expand(
               child: Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.actionPrimary
-                        : Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 24,
-                    color: isSelected
-                        ? AppColors.textInverse
-                        : AppColors.textMuted,
-                  ),
+                child: Icon(
+                  icon,
+                  size: 30,
+                  color: isSelected
+                      ? AppColors.actionPrimary
+                      : AppColors.textMuted,
                 ),
               ),
             ),
