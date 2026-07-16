@@ -22,273 +22,342 @@ import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
+const _storyAddButtonKey = Key('home-story-add-button');
+const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
+const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
+const _storyEditAction = '\uce74\ub4dc \uc218\uc815';
+const _storyQuestionAction = '\uc624\ub298 \uc9c8\ubb38 \ubcf4\uae30';
+const _storyAnswerAction = '\ub2f5\ubcc0 \ub0a8\uae30\uae30';
+const _storyEmptyMessage =
+    '\uc624\ub298 \uc2a4\ud1a0\ub9ac \uce74\ub4dc\ub97c \uc544\uc9c1 \uc544\ubb34\ub3c4 \uc62c\ub9ac\uc9c0 \uc54a\uc558\uc5b4\uc694.';
+const _storyLoadingMessage =
+    '\uc624\ub298 \uc2a4\ud1a0\ub9ac\ub97c \ubd88\ub7ec\uc624\uace0 \uc788\uc5b4\uc694.';
+const _storyLoadError =
+    '\uc624\ub298 \uc2a4\ud1a0\ub9ac\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694.';
+const _storyGenerating = '\uc9c8\ubb38 \uc0dd\uc131 \uc911';
+const _storyPartnerAnswered =
+    '\uc0c1\ub300\ubc29\uc740 \ub2f5\ubcc0\uc744 \ub0a8\uacbc\uc5b4\uc694.';
+const _storyWaitingAnswer =
+    '\uc0c1\ub300\ubc29\uc758 \ub2f5\ubcc0\uc744 \uae30\ub2e4\ub9ac\uace0 \uc788\uc5b4\uc694.';
+const _storyAiPlaceholder =
+    'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
+
+Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
+
 void main() {
-  testWidgets('홈 본문에 day count를 중복 표시하지 않고 빈 스토리 상태를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _emptyTodaySummary(coupleDate: _today),
-    );
+  testWidgets(
+    '\ube48 \uc2a4\ud1a0\ub9ac\ub294 \uc124\uba85 \ub300\uc2e0 \uc791\uc740 \ucd94\uac00 \ubc84\ud2bc\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: _emptyTodaySummary(coupleDate: _today),
+      );
 
-    expect(find.text('우리'), findsNothing);
-    expect(find.text('D+2', findRichText: true), findsNothing);
-    expect(find.text('오늘의 스토리'), findsOneWidget);
-    expect(find.text('오늘 스토리 카드를 아직 아무도 올리지 않았어요.'), findsOneWidget);
-    expect(find.text('사진, 그림, 글로 오늘의 카드를 만들어 보세요.'), findsOneWidget);
-    expect(find.text('\uce74\ub4dc\u0020\uc791\uc131'), findsOneWidget);
-    expect(find.text('보고싶어'), findsNothing);
-    expect(find.text('고마워'), findsNothing);
-    expect(find.text('우울해'), findsNothing);
-    expect(find.text('힘내'), findsNothing);
-    expect(find.byKey(CharacterRecordingControl.controlKey), findsOneWidget);
-    expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
-    expect(
-      tester
-          .widget<CoupleCharacterAvatar>(find.byType(CoupleCharacterAvatar))
-          .size,
-      240,
-    );
-    expect(
-      tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
-      const Size.square(272),
-    );
-    expect(find.byIcon(Icons.mic_rounded), findsNothing);
-    expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
-    expect(find.byIcon(Icons.pause_rounded), findsNothing);
-    expect(find.text('녹음'), findsNothing);
-    expect(find.text('보기'), findsNothing);
-    expect(find.text('현재 재생할 녹음이 없어요.'), findsNothing);
-    expect(find.text('길게 눌러 최대 15초까지 녹음할 수 있어요.'), findsNothing);
-  });
+      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(_storyAddButtonKey)),
+        const Size.square(56),
+      );
+      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      expect(find.text(_storyLabel), findsNothing);
+      expect(find.text(_storyEmptyMessage), findsNothing);
+      expect(find.text(_storyCreateAction), findsNothing);
+      expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
+        const Size.square(272),
+      );
+    },
+  );
 
-  testWidgets('좁은 화면에서는 확대된 캐릭터 영역을 가용 폭 안으로 축소한다', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(280, 700));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    '\uc9e7\uc740 \ud654\uba74\uc5d0\uc11c\ub3c4 \uc138\ub85c \uc2a4\ud06c\ub864\uacfc \uc624\ubc84\ud50c\ub85c\uc6b0\uac00 \uc5c6\ub2e4',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 520));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _emptyTodaySummary(coupleDate: _today),
-    );
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: _emptyTodaySummary(coupleDate: _today),
+      );
 
-    expect(
-      tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
-      const Size.square(256),
-    );
-    expect(
-      tester
-          .widget<CoupleCharacterAvatar>(find.byType(CoupleCharacterAvatar))
-          .size,
-      224,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byType(Scrollable), findsNothing);
+      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('질문이 생성되면 질문 문구를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: sampleTodaySummary(
-        coupleDate: _today,
-        question: StoryLoopQuestionSummary(
-          question: _dailyQuestion,
-          myAnswerExists: false,
-          partnerAnswerExists: false,
-          answerCount: 0,
+  testWidgets(
+    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38\uacfc \uc791\uc740 \uce74\ub4dc \uc378\ub124\uc77c\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: sampleTodaySummary(
+          coupleDate: _today,
+          cards: [
+            samplePreviewCard(
+              authorUserId: _profile.id,
+              submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+            ),
+            samplePreviewCard(
+              id: 'card-2',
+              authorUserId: 'partner-id',
+              previewPath: 'previews/card-2.png',
+              submittedAt: DateTime.parse('2026-05-31T09:10:00Z'),
+            ),
+          ],
+          question: StoryLoopQuestionSummary(
+            question: _dailyQuestion,
+            myAnswerExists: false,
+            partnerAnswerExists: false,
+            answerCount: 0,
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('오늘의 스토리'), findsOneWidget);
-    expect(find.text(_dailyQuestion.questionText), findsOneWidget);
-    expect(find.text('답변 남기기'), findsOneWidget);
-  });
+      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(find.byKey(_storyThumbnailKey('card-1')), findsOneWidget);
+      expect(find.byKey(_storyThumbnailKey('card-2')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(_storyThumbnailKey('card-1'))).width,
+        lessThanOrEqualTo(72),
+      );
+      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(find.text(_storyLabel), findsNothing);
+      expect(find.text(_storyAnswerAction), findsNothing);
+    },
+  );
 
-  testWidgets('today story summary loading 상태를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      storyLoopRepository: _PendingStoryLoopReadRepository(),
-      settle: false,
-    );
+  testWidgets(
+    '\ub85c\ub529 \uc0c1\ud0dc\ub294 \ubb38\uad6c \uc5c6\uc774 \uc791\uc740 \uc9c4\ud589 \ud45c\uc2dc\ub85c \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        storyLoopRepository: _PendingStoryLoopReadRepository(),
+        settle: false,
+      );
 
-    expect(find.text('오늘의 스토리'), findsOneWidget);
-    expect(find.text('오늘 스토리를 불러오고 있어요.'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
+      expect(find.text(_storyLabel), findsNothing);
+      expect(find.text(_storyLoadingMessage), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    },
+  );
 
-  testWidgets('today story summary error 상태를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      storyLoopRepository: _ThrowingStoryLoopReadRepository(),
-    );
+  testWidgets(
+    '\ub85c\ub4dc \uc2e4\ud328\ub294 \ubb38\uad6c \ub300\uc2e0 \uc7ac\uc2dc\ub3c4 \uc544\uc774\ucf58\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        storyLoopRepository: _ThrowingStoryLoopReadRepository(),
+      );
 
-    expect(find.text('오늘 스토리를 불러오지 못했어요.'), findsOneWidget);
-    expect(find.text('다시 시도'), findsOneWidget);
-  });
+      expect(find.text(_storyLoadError), findsNothing);
+      expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+    },
+  );
 
-  testWidgets('커플 정보가 없으면 상태 메시지를 보여준다', (tester) async {
-    await _pumpHome(tester, couple: null, today: _today);
+  testWidgets(
+    '\ucee4\ud50c \uc815\ubcf4\uac00 \uc5c6\uc73c\uba74 \ubcf5\uad6c\uc5d0 \ud544\uc694\ud55c \uc0c1\ud0dc \ubb38\uad6c\ub9cc \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(tester, couple: null, today: _today);
 
-    expect(find.text('커플 정보를 찾을 수 없어요.'), findsOneWidget);
-    expect(find.text('오늘 스토리를 아직 확인할 수 없어요.'), findsOneWidget);
-  });
+      expect(
+        find.text(
+          '\ucee4\ud50c \uc815\ubcf4\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc5b4\uc694.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(
+        find.text(
+          '\uc624\ub298 \uc2a4\ud1a0\ub9ac\ub97c \uc544\uc9c1 \ud655\uc778\ud560 \uc218 \uc5c6\uc5b4\uc694.',
+        ),
+        findsNothing,
+      );
+    },
+  );
 
-  testWidgets('처음 만난 날이 없으면 시작일 안내를 보여준다', (tester) async {
-    await _pumpHome(tester, couple: _activeCoupleWithoutDate, today: _today);
+  testWidgets(
+    '\uc2dc\uc791\uc77c\uc774 \uc5c6\uc73c\uba74 \ubcf5\uad6c\uc5d0 \ud544\uc694\ud55c \uc0c1\ud0dc \ubb38\uad6c\ub9cc \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(tester, couple: _activeCoupleWithoutDate, today: _today);
 
-    expect(find.text('처음 만난 날을 먼저 입력해 주세요.'), findsOneWidget);
-    expect(find.text('오늘 스토리를 아직 확인할 수 없어요.'), findsOneWidget);
-  });
+      expect(
+        find.text(
+          '\ucc98\uc74c \ub9cc\ub09c \ub0a0\uc744 \uba3c\uc800 \uc785\ub825\ud574 \uc8fc\uc138\uc694.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(_storyAddButtonKey), findsNothing);
+    },
+  );
 
-  testWidgets('내 카드만 있으면 상대 대기 상태를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _summaryWithoutQuestion(
-        coupleDate: _today,
-        loopStatus: StoryLoopStatus.waitingPartnerCard,
-        cardCount: 1,
-        canEditStory: true,
-        canAnswerQuestion: false,
-        storyEditLocked: false,
-        cards: [
-          samplePreviewCard(
-            authorUserId: _profile.id,
-            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
-          ),
-        ],
-      ),
-    );
+  testWidgets(
+    '\ub0b4 \uce74\ub4dc\ub9cc \uc788\uc73c\uba74 \uc791\uc740 \uc378\ub124\uc77c\ub85c \uc218\uc815 \uc9c4\uc785\uc810\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: _summaryWithoutQuestion(
+          coupleDate: _today,
+          loopStatus: StoryLoopStatus.waitingPartnerCard,
+          cardCount: 1,
+          canEditStory: true,
+          canAnswerQuestion: false,
+          storyEditLocked: false,
+          cards: [
+            samplePreviewCard(
+              authorUserId: _profile.id,
+              submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+            ),
+          ],
+        ),
+      );
 
-    expect(find.text('내 스토리 카드가 올라갔어요.'), findsOneWidget);
-    expect(find.text('상대 카드가 오면 오늘 질문이 생성돼요.'), findsOneWidget);
-    expect(find.text('\uce74\ub4dc\u0020\uc218\uc815'), findsOneWidget);
-    expect(find.text('09:00'), findsNothing);
-  });
+      final thumbnail = find.byKey(_storyThumbnailKey('card-1'));
+      expect(thumbnail, findsOneWidget);
+      expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
+      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(find.text(_storyEditAction), findsNothing);
+    },
+  );
 
-  testWidgets('상대 카드만 있으면 내 작성 대기 상태를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _summaryWithoutQuestion(
-        coupleDate: _today,
-        loopStatus: StoryLoopStatus.waitingPartnerCard,
-        cardCount: 1,
-        canEditStory: true,
-        canAnswerQuestion: false,
-        storyEditLocked: false,
-        cards: [
-          samplePreviewCard(
-            authorUserId: 'partner-id',
-            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
-          ),
-        ],
-      ),
-    );
+  testWidgets(
+    '\uc0c1\ub300 \uce74\ub4dc\ub9cc \uc788\uc73c\uba74 \uc378\ub124\uc77c \uc606\uc5d0 \ub0b4 \uce74\ub4dc \ucd94\uac00 \ubc84\ud2bc\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: _summaryWithoutQuestion(
+          coupleDate: _today,
+          loopStatus: StoryLoopStatus.waitingPartnerCard,
+          cardCount: 1,
+          canEditStory: true,
+          canAnswerQuestion: false,
+          storyEditLocked: false,
+          cards: [
+            samplePreviewCard(
+              authorUserId: 'partner-id',
+              submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+            ),
+          ],
+        ),
+      );
 
-    expect(find.text('상대가 스토리 카드를 올렸어요.'), findsOneWidget);
-    expect(find.text('내 카드를 올리면 오늘 질문이 생성돼요.'), findsOneWidget);
-    expect(find.text('\uce74\ub4dc\u0020\uc791\uc131'), findsOneWidget);
-  });
+      expect(find.byKey(_storyThumbnailKey('card-1')), findsOneWidget);
+      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+      expect(find.text(_storyCreateAction), findsNothing);
+    },
+  );
 
-  testWidgets('두 카드가 있고 질문이 없으면 질문 생성 중 상태를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _summaryWithoutQuestion(
-        coupleDate: _today,
-        loopStatus: null,
-        cardCount: 2,
-        storyEditLocked: false,
-        canEditStory: false,
-        canAnswerQuestion: false,
-        cards: [
-          samplePreviewCard(
-            authorUserId: _profile.id,
-            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
-          ),
-          samplePreviewCard(
-            id: 'card-2',
-            authorUserId: 'partner-id',
-            previewPath: 'https://example.com/card-2.png',
-            submittedAt: DateTime.parse('2026-05-31T09:10:00Z'),
-          ),
-        ],
-      ),
-    );
+  testWidgets(
+    '\ub450 \uce74\ub4dc\uac00 \ubaa8\uc774\uba74 \uc0dd\uc131 \uc548\ub0b4 \uc5c6\uc774 \uc791\uc740 \uc378\ub124\uc77c\ub9cc \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: _summaryWithoutQuestion(
+          coupleDate: _today,
+          loopStatus: null,
+          cardCount: 2,
+          storyEditLocked: false,
+          canEditStory: false,
+          canAnswerQuestion: false,
+          cards: [
+            samplePreviewCard(authorUserId: _profile.id),
+            samplePreviewCard(
+              id: 'card-2',
+              authorUserId: 'partner-id',
+              previewPath: 'previews/card-2.png',
+            ),
+          ],
+        ),
+      );
 
-    expect(find.text('질문 생성 중'), findsOneWidget);
-    expect(find.text('두 카드가 모두 도착했어요. 오늘 질문을 준비하고 있어요.'), findsOneWidget);
-  });
+      expect(find.byKey(_storyThumbnailKey('card-1')), findsOneWidget);
+      expect(find.byKey(_storyThumbnailKey('card-2')), findsOneWidget);
+      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(find.text(_storyGenerating), findsNothing);
+    },
+  );
 
-  testWidgets('상대가 먼저 답변을 남기면 안내 문구를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: sampleTodaySummary(
-        coupleDate: _today,
-        question: StoryLoopQuestionSummary(
-          question: _dailyQuestion,
+  for (final scenario
+      in <
+        ({
+          String name,
+          bool myAnswerExists,
+          bool partnerAnswerExists,
+          String removedMessage,
+        })
+      >[
+        (
+          name: '\uc0c1\ub300\ub9cc \ub2f5\ubcc0\ud55c \uc0c1\ud0dc',
           myAnswerExists: false,
           partnerAnswerExists: true,
-          answerCount: 1,
+          removedMessage: _storyPartnerAnswered,
         ),
-      ),
-    );
-
-    expect(find.text('상대방은 답변을 남겼어요.'), findsOneWidget);
-  });
-
-  testWidgets('내가 답변을 남기면 상대 답변 대기 문구를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: sampleTodaySummary(
-        coupleDate: _today,
-        question: StoryLoopQuestionSummary(
-          question: _dailyQuestion,
+        (
+          name: '\ub098\ub9cc \ub2f5\ubcc0\ud55c \uc0c1\ud0dc',
           myAnswerExists: true,
           partnerAnswerExists: false,
-          answerCount: 1,
+          removedMessage: _storyWaitingAnswer,
         ),
-      ),
-    );
-
-    expect(find.text('상대방의 답변을 기다리고 있어요.'), findsOneWidget);
-    expect(find.text('오늘 질문 보기'), findsOneWidget);
-  });
-
-  testWidgets('양쪽 답변이 모두 있으면 AI placeholder 문구를 보여준다', (tester) async {
-    await _pumpHome(
-      tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: sampleTodaySummary(
-        coupleDate: _today,
-        loopStatus: StoryLoopStatus.completed,
-        question: StoryLoopQuestionSummary(
-          question: _dailyQuestion,
+        (
+          name: '\ub458 \ub2e4 \ub2f5\ubcc0\ud55c \uc0c1\ud0dc',
           myAnswerExists: true,
           partnerAnswerExists: true,
-          answerCount: 2,
+          removedMessage: _storyAiPlaceholder,
         ),
-      ),
-    );
+      ]) {
+    testWidgets(
+      '${scenario.name}\uc5d0\uc11c\ub3c4 \uc9c8\ubb38 \ubb38\uad6c\ub97c \uacc4\uc18d \ubcf4\uc5ec\uc900\ub2e4',
+      (tester) async {
+        await _pumpHome(
+          tester,
+          couple: _activeCouple,
+          today: _today,
+          todaySummary: sampleTodaySummary(
+            coupleDate: _today,
+            cards: [
+              samplePreviewCard(authorUserId: _profile.id),
+              samplePreviewCard(
+                id: 'card-2',
+                authorUserId: 'partner-id',
+                previewPath: 'previews/card-2.png',
+              ),
+            ],
+            question: StoryLoopQuestionSummary(
+              question: _dailyQuestion,
+              myAnswerExists: scenario.myAnswerExists,
+              partnerAnswerExists: scenario.partnerAnswerExists,
+              answerCount:
+                  (scenario.myAnswerExists ? 1 : 0) +
+                  (scenario.partnerAnswerExists ? 1 : 0),
+            ),
+          ),
+        );
 
-    expect(find.text('AI 한 줄 평이 여기에 표시될 예정이에요.'), findsOneWidget);
-  });
+        expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+        expect(find.text(scenario.removedMessage), findsNothing);
+        expect(find.text(_storyQuestionAction), findsNothing);
+        expect(find.text(_storyAnswerAction), findsNothing);
+      },
+    );
+  }
 }
 
 Future<void> _pumpHome(
@@ -371,7 +440,7 @@ final _activeCoupleWithoutDate = activeCoupleWithoutDate(currentDate: _today);
 
 final _profile = UserProfile(
   id: 'user-id',
-  displayName: '연인',
+  displayName: '\uc5f0\uc778',
   birthDate: DateTime(2000),
   onboardingCompletedAt: DateTime(2026),
   createdAt: DateTime(2026),
