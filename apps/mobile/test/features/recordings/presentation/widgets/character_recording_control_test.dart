@@ -85,6 +85,45 @@ void main() {
     expect(_pulseScale(tester), 1);
   });
 
+  testWidgets('알림 맥박 중 새 녹음이 도착하면 최신 맥박을 계속 표시한다', (tester) async {
+    final recordingKey = ValueNotifier<String?>('recording-1');
+    addTearDown(recordingKey.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: ValueListenableBuilder<String?>(
+              valueListenable: recordingKey,
+              builder: (context, value, child) {
+                return CharacterRecordingControl(
+                  capturePhase: RecordingCapturePhase.idle,
+                  recordingProgress: 0,
+                  recordingKey: value,
+                  isPlaying: false,
+                  isPlaybackBusy: false,
+                  isLoading: false,
+                  canRecord: true,
+                  child: child!,
+                );
+              },
+              child: const SizedBox.square(key: _characterKey, dimension: 160),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    recordingKey.value = 'recording-2';
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 160));
+
+    expect(_pulseScale(tester), greaterThan(1));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('녹음 중에는 캐릭터 외곽에 빨간 원형 진행률을 표시한다', (tester) async {
     await _pumpControl(
       tester,
