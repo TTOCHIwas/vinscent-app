@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../story_loops/data/story_loop_card_detail.dart';
 import '../../../story_loops/data/story_card_scene.dart';
 
@@ -38,11 +37,7 @@ class CalendarStoryCardStack extends StatelessWidget {
               top: 10,
               child: Transform.rotate(
                 angle: -0.05,
-                child: _StoryCardSurface(
-                  card: visibleCards.first,
-                  width: 170,
-                  backgroundColor: const Color(0xFFF3F0EA),
-                ),
+                child: _StoryCardSurface(card: visibleCards.first, width: 170),
               ),
             ),
             Positioned(
@@ -50,11 +45,7 @@ class CalendarStoryCardStack extends StatelessWidget {
               top: 18,
               child: Transform.rotate(
                 angle: 0.1,
-                child: _StoryCardSurface(
-                  card: visibleCards[1],
-                  width: 170,
-                  backgroundColor: const Color(0xFFEAF2EF),
-                ),
+                child: _StoryCardSurface(card: visibleCards[1], width: 170),
               ),
             ),
           ],
@@ -65,15 +56,10 @@ class CalendarStoryCardStack extends StatelessWidget {
 }
 
 class _StoryCardSurface extends StatelessWidget {
-  const _StoryCardSurface({
-    required this.card,
-    required this.width,
-    this.backgroundColor = Colors.white,
-  });
+  const _StoryCardSurface({required this.card, required this.width});
 
   final StoryLoopCardDetail card;
   final double width;
-  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -88,42 +74,17 @@ class _StoryCardSurface extends StatelessWidget {
       width: width,
       child: AspectRatio(
         aspectRatio: storyCardCanvasAspectRatio,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.wireframeBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 14,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: hasRemotePreview
-                      ? Image.network(
-                          previewUrl!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _StoryCardPlaceholder(card: card);
-                          },
-                        )
-                      : _StoryCardPlaceholder(card: card),
-                ),
-                Positioned(
-                  left: 12,
-                  top: 12,
-                  child: _StoryCardContentKinds(card: card),
-                ),
-              ],
-            ),
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: hasRemotePreview
+              ? Image.network(
+                  previewUrl!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _StoryCardPlaceholder(card: card);
+                  },
+                )
+              : _StoryCardPlaceholder(card: card),
         ),
       ),
     );
@@ -167,39 +128,5 @@ class _StoryCardPlaceholder extends StatelessWidget {
       count += 1;
     }
     return math.max(count, 1);
-  }
-}
-
-class _StoryCardContentKinds extends StatelessWidget {
-  const _StoryCardContentKinds({required this.card});
-
-  final StoryLoopCardDetail card;
-
-  @override
-  Widget build(BuildContext context) {
-    final icons = <IconData>[
-      if (card.hasPhoto) Icons.image_outlined,
-      if (card.hasDrawing) Icons.brush_outlined,
-      if (card.hasText) Icons.text_fields,
-    ];
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xCCFFFFFF),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var index = 0; index < icons.length; index++) ...[
-              Icon(icons[index], size: 14, color: AppColors.textPrimary),
-              if (index < icons.length - 1) const SizedBox(width: 4),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

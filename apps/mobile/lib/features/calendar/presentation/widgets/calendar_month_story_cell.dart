@@ -11,11 +11,13 @@ class CalendarMonthStoryCell extends StatelessWidget {
     super.key,
     required this.date,
     required this.textColor,
+    required this.isSelected,
     required this.summary,
   });
 
   final DateTime date;
   final Color textColor;
+  final bool isSelected;
   final StoryLoopMonthSummaryDay? summary;
 
   @override
@@ -33,12 +35,26 @@ class CalendarMonthStoryCell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${date.day}',
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: textColor,
-              fontSize: 11,
-              height: 1,
+          SizedBox.square(
+            dimension: 16,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.actionPrimary
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '${date.day}',
+                  style: AppTextStyles.homeCharacterLabel.copyWith(
+                    color: isSelected ? AppColors.textInverse : textColor,
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    height: 1,
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -80,12 +96,7 @@ class _MonthStoryPreview extends StatelessWidget {
     if (cards.length == 1) {
       return Align(
         alignment: Alignment.bottomCenter,
-        child: _MonthStorySurface(
-          card: cards.first,
-          width: 15,
-          angle: 0,
-          backgroundColor: const Color(0xFFF3F0EA),
-        ),
+        child: _MonthStorySurface(card: cards.first, width: 15, angle: 0),
       );
     }
 
@@ -104,18 +115,12 @@ class _MonthStoryPreview extends StatelessWidget {
                 card: cards.first,
                 width: 13,
                 angle: -0.12,
-                backgroundColor: const Color(0xFFF3F0EA),
               ),
             ),
             Positioned(
               right: 1,
               bottom: 0,
-              child: _MonthStorySurface(
-                card: cards[1],
-                width: 13,
-                angle: 0.14,
-                backgroundColor: const Color(0xFFEAF2EF),
-              ),
+              child: _MonthStorySurface(card: cards[1], width: 13, angle: 0.14),
             ),
           ],
         ),
@@ -129,13 +134,11 @@ class _MonthStorySurface extends StatelessWidget {
     required this.card,
     required this.width,
     required this.angle,
-    required this.backgroundColor,
   });
 
   final StoryLoopCardPreview card;
   final double width;
   final double angle;
-  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -152,31 +155,17 @@ class _MonthStorySurface extends StatelessWidget {
         width: width,
         child: AspectRatio(
           aspectRatio: storyCardCanvasAspectRatio,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: AppColors.wireframeBorder, width: 0.7),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2.4),
-              child: hasRemotePreview
-                  ? Image.network(
-                      previewUrl!,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _MonthStoryPlaceholder(card: card);
-                      },
-                    )
-                  : _MonthStoryPlaceholder(card: card),
-            ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2.4),
+            child: hasRemotePreview
+                ? Image.network(
+                    previewUrl!,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _MonthStoryPlaceholder(card: card);
+                    },
+                  )
+                : _MonthStoryPlaceholder(card: card),
           ),
         ),
       ),

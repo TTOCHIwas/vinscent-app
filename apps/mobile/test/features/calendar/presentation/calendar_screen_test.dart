@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
@@ -182,8 +183,8 @@ void main() {
         find.byKey(
           const ValueKey('calendar-month-story-cell-empty-2026-05-05'),
         ),
-      ),
-      isNotEmpty,
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
     );
     expect(find.text('history question'), findsOneWidget);
     expect(find.text('my answer'), findsOneWidget);

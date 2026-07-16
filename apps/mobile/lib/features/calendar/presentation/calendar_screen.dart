@@ -360,22 +360,12 @@ class _DateCell extends StatelessWidget {
       label: '${date.day}일',
       child: InkWell(
         onTap: isEnabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF2EEE7) : AppColors.background,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.actionPrimary
-                  : const Color(0xFFE7E2DA),
-            ),
-          ),
-          child: CalendarMonthStoryCell(
-            date: date,
-            textColor: _textColor,
-            summary: isCurrentMonth ? summary : null,
-          ),
+        borderRadius: BorderRadius.circular(999),
+        child: CalendarMonthStoryCell(
+          date: date,
+          textColor: _textColor,
+          isSelected: isSelected,
+          summary: isCurrentMonth ? summary : null,
         ),
       ),
     );
