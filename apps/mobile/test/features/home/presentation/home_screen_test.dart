@@ -43,6 +43,16 @@ void main() {
     expect(find.text('힘내'), findsNothing);
     expect(find.byKey(CharacterRecordingControl.controlKey), findsOneWidget);
     expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+    expect(
+      tester
+          .widget<CoupleCharacterAvatar>(find.byType(CoupleCharacterAvatar))
+          .size,
+      240,
+    );
+    expect(
+      tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
+      const Size.square(272),
+    );
     expect(find.byIcon(Icons.mic_rounded), findsNothing);
     expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
     expect(find.byIcon(Icons.pause_rounded), findsNothing);
@@ -50,6 +60,30 @@ void main() {
     expect(find.text('보기'), findsNothing);
     expect(find.text('현재 재생할 녹음이 없어요.'), findsNothing);
     expect(find.text('길게 눌러 최대 15초까지 녹음할 수 있어요.'), findsNothing);
+  });
+
+  testWidgets('좁은 화면에서는 확대된 캐릭터 영역을 가용 폭 안으로 축소한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(280, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+    );
+
+    expect(
+      tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
+      const Size.square(256),
+    );
+    expect(
+      tester
+          .widget<CoupleCharacterAvatar>(find.byType(CoupleCharacterAvatar))
+          .size,
+      224,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('질문이 생성되면 질문 문구를 보여준다', (tester) async {

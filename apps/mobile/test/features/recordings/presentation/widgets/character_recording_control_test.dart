@@ -22,6 +22,8 @@ void main() {
     expect(find.byType(Icon), findsNothing);
     expect(find.byType(Text), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
 
     await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
     await tester.pump();
@@ -67,6 +69,8 @@ void main() {
 
     expect(find.byType(Icon), findsNothing);
     expect(find.byType(Text), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(_circularBorderCount(tester), 0);
     expect(after, greaterThan(before));
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -124,19 +128,40 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('녹음 중에는 캐릭터 외곽에 빨간 원형 진행률을 표시한다', (tester) async {
+  testWidgets('녹음 준비 중에는 빨간 점과 부정형 상단 진행 효과를 표시한다', (tester) async {
+    await _pumpControl(tester, capturePhase: RecordingCapturePhase.preparing);
+
+    final progress = tester.widget<LinearProgressIndicator>(
+      find.byKey(CharacterRecordingControl.progressKey),
+    );
+
+    expect(progress.value, isNull);
+    expect(progress.color, AppColors.recordingActive);
+    expect(
+      find.byKey(CharacterRecordingControl.recordingDotKey),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('녹음 중에는 캐릭터 상단에 빨간 점과 가로 진행률을 표시한다', (tester) async {
     await _pumpControl(
       tester,
       capturePhase: RecordingCapturePhase.recording,
       recordingProgress: 0.5,
     );
 
-    final progress = tester.widget<CircularProgressIndicator>(
+    final progress = tester.widget<LinearProgressIndicator>(
       find.byKey(CharacterRecordingControl.progressKey),
     );
 
     expect(progress.value, 0.5);
     expect(progress.color, AppColors.recordingActive);
+    expect(
+      find.byKey(CharacterRecordingControl.recordingDotKey),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byKey(_characterKey), findsOneWidget);
     expect(find.byType(Icon), findsNothing);
   });
@@ -155,10 +180,12 @@ void main() {
       onRecordEnd: () => recordEndCount += 1,
     );
 
-    final progress = tester.widget<CircularProgressIndicator>(
+    final progress = tester.widget<LinearProgressIndicator>(
       find.byKey(CharacterRecordingControl.progressKey),
     );
     expect(progress.value, isNull);
+    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
 
     await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
     await tester.longPress(find.byKey(CharacterRecordingControl.controlKey));
@@ -214,4 +241,15 @@ double _pulseScale(WidgetTester tester) {
       .widget<ScaleTransition>(find.byKey(CharacterRecordingControl.pulseKey))
       .scale
       .value;
+}
+
+int _circularBorderCount(WidgetTester tester) {
+  return tester.widgetList<DecoratedBox>(find.byType(DecoratedBox)).where((
+    widget,
+  ) {
+    final decoration = widget.decoration;
+    return decoration is BoxDecoration &&
+        decoration.shape == BoxShape.circle &&
+        decoration.border != null;
+  }).length;
 }
