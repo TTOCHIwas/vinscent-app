@@ -20,7 +20,9 @@ abstract final class AppColors {
   static const wireframeBorder = Color(0xFFB1B1B1);
   static const wireframeIcon = Color(0xFF6C6C6C);
   static const wireframePlaceholder = Color(0xFFBFBFBF);
-  static const shellBottomBarBackground = Color(0xFF989898);
+  static const shellBottomBarGlass = Color(0xBFFFFFFF);
+  static const shellBottomBarBorder = Color(0xE6FFFFFF);
+  static const shellBottomBarShadow = Color(0x24000000);
 
   static const kakaoContainer = Color(0xFFFEE500);
   static const kakaoContent = Color(0xD9000000);

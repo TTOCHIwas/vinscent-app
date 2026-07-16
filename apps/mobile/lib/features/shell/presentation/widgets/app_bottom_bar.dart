@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -13,6 +15,8 @@ class AppBottomBar extends StatelessWidget {
     required this.onAiPressed,
   });
 
+  static const _surfaceRadius = 32.0;
+
   final double height;
   final String currentLocation;
   final VoidCallback onHomePressed;
@@ -21,30 +25,62 @@ class AppBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: height,
       width: double.infinity,
-      color: AppColors.shellBottomBarBackground,
-      padding: const EdgeInsets.fromLTRB(35, 10, 35, 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ShellTab(
-            label: '홈',
-            isSelected: currentLocation.startsWith('/home'),
-            onPressed: onHomePressed,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_surfaceRadius),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shellBottomBarShadow,
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
-          ShellTab(
-            label: '달력',
-            isSelected: currentLocation.startsWith('/calendar'),
-            onPressed: onCalendarPressed,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_surfaceRadius),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.shellBottomBarGlass,
+                  borderRadius: BorderRadius.circular(_surfaceRadius),
+                  border: Border.all(color: AppColors.shellBottomBarBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ShellTab(
+                        label: '\ud648',
+                        icon: Icons.home_rounded,
+                        isSelected: currentLocation.startsWith('/home'),
+                        onPressed: onHomePressed,
+                      ),
+                      ShellTab(
+                        label: '\ub2ec\ub825',
+                        icon: Icons.calendar_today_rounded,
+                        isSelected: currentLocation.startsWith('/calendar'),
+                        onPressed: onCalendarPressed,
+                      ),
+                      ShellTab(
+                        label: 'AI',
+                        icon: Icons.auto_awesome_rounded,
+                        isSelected: currentLocation.startsWith('/ai'),
+                        onPressed: onAiPressed,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-          ShellTab(
-            label: 'AI',
-            isSelected: currentLocation.startsWith('/ai'),
-            onPressed: onAiPressed,
-          ),
-        ],
+        ),
       ),
     );
   }
