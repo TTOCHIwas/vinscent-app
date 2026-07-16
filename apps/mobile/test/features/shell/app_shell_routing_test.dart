@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/app/app.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
@@ -40,6 +41,12 @@ void main() {
 
       expect(find.byType(AppHeader), findsOneWidget);
       expect(find.byType(AppBottomBar), findsOneWidget);
+      final shellScaffoldFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Scaffold && widget.bottomNavigationBar is AppBottomBar,
+      );
+      expect(shellScaffoldFinder, findsOneWidget);
+      expect(tester.widget<Scaffold>(shellScaffoldFinder).extendBody, isTrue);
       expect(
         tester.getSize(find.byType(AppBottomBar)).height,
         AppShell.bottomBarHeight,
@@ -55,6 +62,35 @@ void main() {
       expect(find.byIcon(Icons.home_rounded), findsOneWidget);
       expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
       expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+      final bottomBar = find.byType(AppBottomBar);
+      expect(
+        find.descendant(of: bottomBar, matching: find.byType(Expanded)),
+        findsNWidgets(3),
+      );
+      expect(
+        tester
+            .getSize(
+              find.descendant(of: bottomBar, matching: find.byType(ClipRRect)),
+            )
+            .height,
+        greaterThanOrEqualTo(56),
+      );
+      expect(tester.widget<Icon>(find.byIcon(Icons.home_rounded)).size, 30);
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.home_rounded)).color,
+        AppColors.actionPrimary,
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.calendar_today_rounded)).color,
+        AppColors.textMuted,
+      );
+      expect(
+        find.descendant(
+          of: bottomBar,
+          matching: find.byType(AnimatedContainer),
+        ),
+        findsNothing,
+      );
       expect(find.byTooltip('\ud648'), findsOneWidget);
       expect(find.byTooltip('\ub2ec\ub825'), findsOneWidget);
       expect(find.byTooltip('AI'), findsOneWidget);
