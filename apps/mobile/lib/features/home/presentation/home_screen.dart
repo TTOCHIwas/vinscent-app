@@ -18,7 +18,6 @@ import '../../story_loops/data/story_card_scene.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
-import '../application/day_count.dart';
 
 const _homeStatusLoadError =
     '\ucee4\ud50c\u0020\uc815\ubcf4\ub97c\u0020\ubd88\ub7ec\uc624\uc9c0\u0020\ubabb\ud588\uc5b4\uc694\u002e';
@@ -30,9 +29,6 @@ const _homeStatusMissingStartDate =
     '\ucc98\uc74c\u0020\ub9cc\ub09c\u0020\ub0a0\uc744\u0020\uba3c\uc800\u0020\uc785\ub825\ud574\u0020\uc8fc\uc138\uc694\u002e';
 const _homeStatusArchivedHeadline =
     '\uae30\ub85d\u0020\ubcf4\uad00\u0020\uc911';
-const _homeStatusActiveHeadline = '\uc6b0\ub9ac';
-const _homeStatusArchivedSuffix = '\u0020\ubcf4\uad00\u0020\uc911';
-const _homeStatusDaySuffix = '\uc77c\uc9f8';
 
 const _homeStoryLoading =
     '\uc624\ub298\u0020\uc2a4\ud1a0\ub9ac\ub97c\u0020\ubd88\ub7ec\uc624\uace0\u0020\uc788\uc5b4\uc694\u002e';
@@ -127,78 +123,56 @@ class _CoupleStatus extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final couple = ref.watch(coupleControllerProvider);
-
-    return SizedBox(
+    Widget padded(Widget child) => SizedBox(
       width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: couple.when(
-          loading: () => const Align(
-            alignment: Alignment.centerRight,
-            child: SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+      child: Padding(padding: const EdgeInsets.all(10), child: child),
+    );
+
+    return couple.when(
+      loading: () => padded(
+        const Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          error: (error, stackTrace) =>
-              const _CoupleStatusMessage(_homeStatusLoadError),
-          data: (couple) {
-            if (couple == null) {
-              return const _CoupleStatusMessage(_homeStatusMissingCouple);
-            }
-
-            if (!couple.hasRelationshipStartDate) {
-              return Text(
-                couple.isArchivedReadOnly
-                    ? _homeStatusArchivedNoDate
-                    : _homeStatusMissingStartDate,
-                textAlign: TextAlign.end,
-                style: AppTextStyles.homeBody.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              );
-            }
-
-            final dayCount = calculateRelationshipDayCount(
-              startDate: couple.relationshipStartDate!,
-              today: couple.effectiveCurrentDate,
-            );
-            final headline = couple.isArchivedReadOnly
-                ? _homeStatusArchivedHeadline
-                : _homeStatusActiveHeadline;
-            final suffix = couple.isArchivedReadOnly
-                ? _homeStatusArchivedSuffix
-                : _homeStatusDaySuffix;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(headline, style: AppTextStyles.homeBody),
-                const SizedBox(height: 4),
-                RichText(
-                  textAlign: TextAlign.end,
-                  text: TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'D+',
-                        style: AppTextStyles.homeBodyMedium,
-                      ),
-                      TextSpan(
-                        text: '$dayCount',
-                        style: AppTextStyles.homeDayCount,
-                      ),
-                      TextSpan(
-                        text: suffix,
-                        style: AppTextStyles.homeBodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
         ),
       ),
+      error: (error, stackTrace) =>
+          padded(const _CoupleStatusMessage(_homeStatusLoadError)),
+      data: (couple) {
+        if (couple == null) {
+          return padded(const _CoupleStatusMessage(_homeStatusMissingCouple));
+        }
+
+        if (!couple.hasRelationshipStartDate) {
+          return padded(
+            Text(
+              couple.isArchivedReadOnly
+                  ? _homeStatusArchivedNoDate
+                  : _homeStatusMissingStartDate,
+              textAlign: TextAlign.end,
+              style: AppTextStyles.homeBody.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          );
+        }
+
+        if (couple.isArchivedReadOnly) {
+          return padded(
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                _homeStatusArchivedHeadline,
+                style: AppTextStyles.homeBody,
+              ),
+            ),
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
     );
   }
 }

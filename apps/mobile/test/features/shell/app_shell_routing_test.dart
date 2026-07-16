@@ -33,6 +33,12 @@ void main() {
 
     expect(find.byType(AppHeader), findsOneWidget);
     expect(find.byType(AppBottomBar), findsOneWidget);
+    expect(find.text('D+2'), findsOneWidget);
+    expect(find.text('앱 이름'), findsNothing);
+    final headerRow = tester.widget<Row>(
+      find.descendant(of: find.byType(AppHeader), matching: find.byType(Row)),
+    );
+    expect(headerRow.mainAxisAlignment, MainAxisAlignment.spaceBetween);
     expect(find.text('홈'), findsOneWidget);
     expect(find.text('달력'), findsOneWidget);
     expect(find.text('AI'), findsOneWidget);

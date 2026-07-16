@@ -24,7 +24,7 @@ import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
 void main() {
-  testWidgets('활성 커플의 day count와 빈 스토리 상태를 보여준다', (tester) async {
+  testWidgets('홈 본문에 day count를 중복 표시하지 않고 빈 스토리 상태를 보여준다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
@@ -32,8 +32,8 @@ void main() {
       todaySummary: _emptyTodaySummary(coupleDate: _today),
     );
 
-    expect(find.text('우리'), findsOneWidget);
-    expect(find.text('D+2일째', findRichText: true), findsOneWidget);
+    expect(find.text('우리'), findsNothing);
+    expect(find.text('D+2', findRichText: true), findsNothing);
     expect(find.text('오늘의 스토리'), findsOneWidget);
     expect(find.text('오늘 스토리 카드를 아직 아무도 올리지 않았어요.'), findsOneWidget);
     expect(find.text('사진, 그림, 글로 오늘의 카드를 만들어 보세요.'), findsOneWidget);
