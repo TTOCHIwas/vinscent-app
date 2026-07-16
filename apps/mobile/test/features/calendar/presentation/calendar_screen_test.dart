@@ -140,6 +140,20 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(CalendarMonthStoryCell), findsWidgets);
+
+      final singleCardCell = find.byKey(
+        const ValueKey('calendar-month-story-cell-single-2026-05-05'),
+      );
+      final dateInkWell = find.ancestor(
+        of: singleCardCell,
+        matching: find.byType(InkWell),
+      );
+      expect(dateInkWell, findsOneWidget);
+      expect(
+        tester.widget<InkWell>(dateInkWell).child,
+        isA<CalendarMonthStoryCell>(),
+      );
+      expect(_framedDecorations(tester, singleCardCell), isEmpty);
     },
   );
 
@@ -156,7 +170,21 @@ void main() {
 
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
     expect(find.text('2026년 05월 05일'), findsOneWidget);
-    expect(find.byType(CalendarStoryCardStack), findsOneWidget);
+    final cardStack = find.byType(CalendarStoryCardStack);
+    expect(cardStack, findsOneWidget);
+    expect(_framedDecorations(tester, cardStack), isEmpty);
+    expect(find.byIcon(Icons.image_outlined), findsNothing);
+    expect(find.byIcon(Icons.brush_outlined), findsNothing);
+    expect(find.byIcon(Icons.text_fields), findsNothing);
+    expect(
+      _circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-05'),
+        ),
+      ),
+      isNotEmpty,
+    );
     expect(find.text('history question'), findsOneWidget);
     expect(find.text('my answer'), findsOneWidget);
     expect(find.text('partner answer'), findsOneWidget);
@@ -274,6 +302,32 @@ void main() {
 
     expect(find.text('calendar question edit route'), findsOneWidget);
   });
+}
+
+List<BoxDecoration> _framedDecorations(WidgetTester tester, Finder scope) {
+  return tester
+      .widgetList<DecoratedBox>(
+        find.descendant(of: scope, matching: find.byType(DecoratedBox)),
+      )
+      .map((widget) => widget.decoration)
+      .whereType<BoxDecoration>()
+      .where(
+        (decoration) =>
+            decoration.border != null ||
+            (decoration.boxShadow?.isNotEmpty ?? false),
+      )
+      .toList(growable: false);
+}
+
+List<BoxDecoration> _circularDecorations(WidgetTester tester, Finder scope) {
+  return tester
+      .widgetList<DecoratedBox>(
+        find.descendant(of: scope, matching: find.byType(DecoratedBox)),
+      )
+      .map((widget) => widget.decoration)
+      .whereType<BoxDecoration>()
+      .where((decoration) => decoration.shape == BoxShape.circle)
+      .toList(growable: false);
 }
 
 Future<void> _pumpCalendar(
