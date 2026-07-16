@@ -10,6 +10,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
+import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import '../../story_loops/data/story_card_scene.dart';
@@ -36,9 +37,11 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Column(
+    final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavigationClearance),
+      child: const Column(
         children: [
           _CoupleStatus(),
           Expanded(child: _HomeMainStage()),
@@ -287,20 +290,18 @@ class _HomeStoryLoopContent extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: onQuestionTap,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
+                      child: CharacterSpeechBubble(
+                        key: const Key('home-question-speech-bubble'),
+                        speechText: questionText,
+                        maxWidth: 320,
+                        maxLines: 4,
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 8,
+                          vertical: 9,
                         ),
-                        child: Text(
-                          questionText,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.shellTitle,
-                        ),
+                        tailSize: const Size(16, 8),
                       ),
                     ),
                   ),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
@@ -32,7 +34,7 @@ class CharacterSpeechPrompt extends StatelessWidget {
         _OptionalTap(
           onTap: onSpeechTap,
           borderRadius: BorderRadius.circular(12),
-          child: _SpeechBubble(
+          child: CharacterSpeechBubble(
             speechText: speechText,
             maxWidth: maxSpeechWidth,
           ),
@@ -68,38 +70,64 @@ class _OptionalTap extends StatelessWidget {
   }
 }
 
-class _SpeechBubble extends StatelessWidget {
-  const _SpeechBubble({required this.speechText, required this.maxWidth});
+class CharacterSpeechBubble extends StatelessWidget {
+  const CharacterSpeechBubble({
+    super.key,
+    required this.speechText,
+    this.maxWidth = 300,
+    this.maxLines,
+    this.contentPadding = const EdgeInsets.symmetric(
+      horizontal: 18,
+      vertical: 12,
+    ),
+    this.tailSize = const Size(18, 10),
+  });
 
   final String speechText;
   final double maxWidth;
+  final int? maxLines;
+  final EdgeInsetsGeometry contentPadding;
+  final Size tailSize;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          decoration: BoxDecoration(
-            color: _speechBubbleColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            speechText,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeCharacterLabel.copyWith(height: 1.4),
-          ),
-        ),
-        Transform.translate(
-          offset: const Offset(0, -1),
-          child: CustomPaint(
-            size: const Size(18, 10),
-            painter: const _SpeechBubbleTailPainter(),
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxContentHeight = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight - tailSize.height)
+            : double.infinity;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              constraints: BoxConstraints(
+                maxWidth: maxWidth,
+                maxHeight: maxContentHeight,
+              ),
+              padding: contentPadding,
+              decoration: BoxDecoration(
+                color: _speechBubbleColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                speechText,
+                maxLines: maxLines,
+                overflow: maxLines == null ? null : TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.homeCharacterLabel.copyWith(height: 1.4),
+              ),
+            ),
+            Transform.translate(
+              offset: const Offset(0, -1),
+              child: CustomPaint(
+                size: tailSize,
+                painter: const _SpeechBubbleTailPainter(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
