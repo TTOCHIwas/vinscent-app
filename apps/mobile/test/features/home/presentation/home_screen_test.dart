@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
-import 'package:vinscent/features/recordings/presentation/widgets/recording_control_button.dart';
+import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -40,7 +41,12 @@ void main() {
     expect(find.text('고마워'), findsNothing);
     expect(find.text('우울해'), findsNothing);
     expect(find.text('힘내'), findsNothing);
-    expect(find.byKey(RecordingControlButton.buttonKey), findsOneWidget);
+    expect(
+      find.byKey(CharacterRecordingControl.controlKey),
+      findsOneWidget,
+    );
+    expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+    expect(find.byType(Icon), findsNothing);
     expect(find.text('녹음'), findsNothing);
     expect(find.text('보기'), findsNothing);
     expect(find.text('현재 재생할 녹음이 없어요.'), findsNothing);
