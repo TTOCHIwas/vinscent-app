@@ -51,7 +51,7 @@ void main() {
         tester.getSize(find.byType(AppBottomBar)).height,
         AppShell.bottomBarHeight,
       );
-      expect(AppShell.bottomBarHeight, 88);
+      expect(AppShell.bottomBarHeight, 96);
       expect(
         find.descendant(
           of: find.byType(AppBottomBar),
@@ -73,8 +73,14 @@ void main() {
               find.descendant(of: bottomBar, matching: find.byType(ClipRRect)),
             )
             .height,
-        greaterThanOrEqualTo(56),
+        64,
       );
+      final bottomBarRect = tester.getRect(bottomBar);
+      final surfaceRect = tester.getRect(
+        find.descendant(of: bottomBar, matching: find.byType(ClipRRect)),
+      );
+      expect(surfaceRect.top - bottomBarRect.top, 8);
+      expect(bottomBarRect.bottom - surfaceRect.bottom, 24);
       expect(tester.widget<Icon>(find.byIcon(Icons.home_rounded)).size, 30);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.home_rounded)).color,
