@@ -18,6 +18,7 @@ import 'package:vinscent/features/story_loops/data/story_loop_question_summary.d
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
@@ -329,6 +330,7 @@ void main() {
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
       expect(myCard, findsOneWidget);
       expect(partnerCard, findsOneWidget);
+      expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));
       expect(
         tester.getCenter(myCard).dx,
         lessThan(tester.getCenter(partnerCard).dx),

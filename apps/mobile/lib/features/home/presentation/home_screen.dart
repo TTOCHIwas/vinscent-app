@@ -18,6 +18,7 @@ import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
+import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 const _homeStatusLoadError =
     '\ucee4\ud50c \uc815\ubcf4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694.';
@@ -463,79 +464,12 @@ class _HomeStoryCardThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previewUrl = card.previewUrl;
-    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl);
-    final hasRemotePreview =
-        previewUri != null &&
-        previewUri.hasScheme &&
-        (previewUri.scheme == 'http' || previewUri.scheme == 'https');
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth = (width * pixelRatio).round();
-    final cacheHeight = (width / storyCardCanvasAspectRatio * pixelRatio)
-        .round();
-
-    return Semantics(
-      label: _homeStoryCardSemantics,
-      button: onTap != null,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: Key('home-story-card-${card.id}'),
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          child: SizedBox(
-            width: width,
-            child: AspectRatio(
-              aspectRatio: storyCardCanvasAspectRatio,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.wireframeBorder),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x12000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
-                  child: hasRemotePreview
-                      ? Image.network(
-                          previewUrl!,
-                          fit: BoxFit.contain,
-                          cacheWidth: cacheWidth,
-                          cacheHeight: cacheHeight,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const _HomeStoryCardPreviewPlaceholder(),
-                        )
-                      : const _HomeStoryCardPreviewPlaceholder(),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeStoryCardPreviewPlaceholder extends StatelessWidget {
-  const _HomeStoryCardPreviewPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFF8F8F8),
-      child: Center(
-        child: Icon(
-          Icons.auto_awesome_mosaic_outlined,
-          size: 28,
-          color: AppColors.textMuted,
-        ),
-      ),
+    return StoryCardPreviewSurface(
+      surfaceKey: Key('home-story-card-${card.id}'),
+      previewUrl: card.previewUrl,
+      width: width,
+      onTap: onTap,
+      semanticsLabel: _homeStoryCardSemantics,
     );
   }
 }

@@ -13,15 +13,21 @@ import '../../../story_loops/data/story_loop_detail_state.dart';
 import 'calendar_story_card_stack.dart';
 
 class CalendarStoryLoopDetail extends StatelessWidget {
-  const CalendarStoryLoopDetail({super.key, required this.storyLoopState});
+  const CalendarStoryLoopDetail({
+    super.key,
+    required this.storyLoopState,
+    this.currentUserId,
+  });
 
   final StoryLoopDetailState storyLoopState;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
     return switch (storyLoopState) {
       LoadedStoryLoopDetailState(detail: final detail) => _LoadedDetailSection(
         detail: detail,
+        currentUserId: currentUserId,
       ),
       EmptyStoryLoopDetailState(targetDate: final targetDate) =>
         _EmptyDetailSection(targetDate: targetDate),
@@ -35,9 +41,10 @@ class CalendarStoryLoopDetail extends StatelessWidget {
 }
 
 class _LoadedDetailSection extends StatelessWidget {
-  const _LoadedDetailSection({required this.detail});
+  const _LoadedDetailSection({required this.detail, this.currentUserId});
 
   final StoryLoopDetail detail;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +56,10 @@ class _LoadedDetailSection extends StatelessWidget {
         Text(_formatFullDate(detail.coupleDate), style: _dateTitleStyle),
         if (detail.cards.isNotEmpty) ...[
           const SizedBox(height: 20),
-          CalendarStoryCardStack(cards: detail.cards),
+          CalendarStoryCardStack(
+            cards: detail.cards,
+            currentUserId: currentUserId,
+          ),
         ],
         if (question == null) ...[
           const SizedBox(height: 32),

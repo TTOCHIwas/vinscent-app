@@ -20,6 +20,7 @@ import 'package:vinscent/features/story_loops/data/story_loop_question_detail.da
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
@@ -175,6 +176,13 @@ void main() {
     expect(find.text('2026년 05월 05일'), findsOneWidget);
     final cardStack = find.byType(CalendarStoryCardStack);
     expect(cardStack, findsOneWidget);
+    expect(
+      find.descendant(
+        of: cardStack,
+        matching: find.byType(StoryCardPreviewSurface),
+      ),
+      findsNWidgets(2),
+    );
     expect(_framedDecorations(tester, cardStack), hasLength(2));
     final myCard = find.byKey(const ValueKey('calendar-story-card-card-2'));
     final partnerCard = find.byKey(

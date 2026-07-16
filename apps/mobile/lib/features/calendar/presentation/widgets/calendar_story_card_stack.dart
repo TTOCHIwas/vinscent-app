@@ -3,12 +3,21 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../story_loops/data/story_loop_card_detail.dart';
-import '../../../story_loops/data/story_card_scene.dart';
+import '../../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 class CalendarStoryCardStack extends StatelessWidget {
-  const CalendarStoryCardStack({super.key, required this.cards});
+  const CalendarStoryCardStack({
+    super.key,
+    required this.cards,
+    this.currentUserId,
+  });
+
+  static const _maximumContentWidth = 360.0;
+  static const _slotGap = 16.0;
+  static const _maximumCardWidth = (_maximumContentWidth - _slotGap) / 2;
 
   final List<StoryLoopCardDetail> cards;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -16,117 +25,77 @@ class CalendarStoryCardStack extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final visibleCards = _orderedVisibleCards();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = constraints.hasBoundedWidth
+            ? constraints.maxWidth.clamp(0.0, _maximumContentWidth).toDouble()
+            : _maximumContentWidth;
+
+        if (visibleCards.length == 1) {
+          final cardWidth = math.min(_maximumCardWidth, contentWidth);
+          return Center(
+            child: _CalendarStoryCard(
+              card: visibleCards.first,
+              width: cardWidth,
+            ),
+          );
+        }
+
+        final gap = math.min(_slotGap, contentWidth);
+        final cardWidth = math.min(
+          _maximumCardWidth,
+          math.max(0.0, (contentWidth - gap) / 2),
+        );
+        return Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CalendarStoryCard(card: visibleCards.first, width: cardWidth),
+              SizedBox(width: gap),
+              _CalendarStoryCard(card: visibleCards[1], width: cardWidth),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<StoryLoopCardDetail> _orderedVisibleCards() {
     final sortedCards = [...cards]
       ..sort((left, right) => left.submittedAt.compareTo(right.submittedAt));
-    final visibleCards = sortedCards.take(2).toList(growable: false);
-    if (visibleCards.length == 1) {
-      return Center(
-        child: _StoryCardSurface(card: visibleCards.first, width: 180),
-      );
+    final userId = currentUserId;
+    if (userId == null) {
+      return sortedCards.take(2).toList(growable: false);
     }
 
-    return Center(
-      child: SizedBox(
-        width: 280,
-        height: 330,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 8,
-              top: 10,
-              child: Transform.rotate(
-                angle: -0.05,
-                child: _StoryCardSurface(card: visibleCards.first, width: 170),
-              ),
-            ),
-            Positioned(
-              right: 6,
-              top: 18,
-              child: Transform.rotate(
-                angle: 0.1,
-                child: _StoryCardSurface(card: visibleCards[1], width: 170),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    final orderedCards = <StoryLoopCardDetail>[
+      ...sortedCards.where((card) => card.authorUserId == userId).take(1),
+      ...sortedCards.where((card) => card.authorUserId != userId).take(1),
+    ];
+    if (orderedCards.length < 2) {
+      orderedCards.addAll(
+        sortedCards.where((card) => !orderedCards.contains(card)),
+      );
+    }
+    return orderedCards.take(2).toList(growable: false);
   }
 }
 
-class _StoryCardSurface extends StatelessWidget {
-  const _StoryCardSurface({required this.card, required this.width});
+class _CalendarStoryCard extends StatelessWidget {
+  const _CalendarStoryCard({required this.card, required this.width});
 
   final StoryLoopCardDetail card;
   final double width;
 
   @override
   Widget build(BuildContext context) {
-    final previewUrl = card.previewUrl;
-    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl);
-    final hasRemotePreview =
-        previewUri != null &&
-        previewUri.hasScheme &&
-        (previewUri.scheme == 'http' || previewUri.scheme == 'https');
-
-    return SizedBox(
+    return StoryCardPreviewSurface(
+      surfaceKey: ValueKey('calendar-story-card-${card.id}'),
+      previewUrl: card.previewUrl,
       width: width,
-      child: AspectRatio(
-        aspectRatio: storyCardCanvasAspectRatio,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: hasRemotePreview
-              ? Image.network(
-                  previewUrl!,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _StoryCardPlaceholder(card: card);
-                  },
-                )
-              : _StoryCardPlaceholder(card: card),
-        ),
-      ),
+      semanticsLabel: '스토리 카드',
     );
-  }
-}
-
-class _StoryCardPlaceholder extends StatelessWidget {
-  const _StoryCardPlaceholder({required this.card});
-
-  final StoryLoopCardDetail card;
-
-  @override
-  Widget build(BuildContext context) {
-    final accentColor = switch (_contentCount(card)) {
-      3 => const Color(0xFF6B8E8E),
-      2 => const Color(0xFF8E786B),
-      _ => const Color(0xFF7C7C7C),
-    };
-
-    return ColoredBox(
-      color: const Color(0xFFF8F8F8),
-      child: Center(
-        child: Icon(
-          Icons.auto_awesome_mosaic_outlined,
-          size: 40,
-          color: accentColor,
-        ),
-      ),
-    );
-  }
-
-  int _contentCount(StoryLoopCardDetail card) {
-    var count = 0;
-    if (card.hasPhoto) {
-      count += 1;
-    }
-    if (card.hasDrawing) {
-      count += 1;
-    }
-    if (card.hasText) {
-      count += 1;
-    }
-    return math.max(count, 1);
   }
 }

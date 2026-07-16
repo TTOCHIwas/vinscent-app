@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
+import '../../profile/application/profile_controller.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../../story_loops/application/story_loop_month_summary_provider.dart';
 import '../../story_loops/data/story_loop_month_summary_day.dart';
@@ -395,6 +396,11 @@ class _CalendarDetail extends ConsumerWidget {
       );
     }
 
+    final profile = ref.watch(
+      profileControllerProvider.select(
+        (state) => state.maybeWhen(data: (value) => value, orElse: () => null),
+      ),
+    );
     final detail = ref.watch(storyLoopDetailProvider(selected));
     return detail.when(
       loading: () => const Padding(
@@ -404,8 +410,10 @@ class _CalendarDetail extends ConsumerWidget {
       error: (error, stackTrace) => _CalendarHistoryErrorDetail(
         onRetry: () => ref.invalidate(storyLoopDetailProvider(selected)),
       ),
-      data: (storyLoopState) =>
-          CalendarStoryLoopDetail(storyLoopState: storyLoopState),
+      data: (storyLoopState) => CalendarStoryLoopDetail(
+        storyLoopState: storyLoopState,
+        currentUserId: profile?.id,
+      ),
     );
   }
 }
