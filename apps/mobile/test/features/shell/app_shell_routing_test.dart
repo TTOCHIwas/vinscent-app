@@ -156,7 +156,7 @@ void main() {
     final gesture = await tester.startGesture(
       Offset(tabRect.left + 2, tabRect.center.dy),
     );
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(feedbackDecoration().color, isNot(Colors.transparent));
 

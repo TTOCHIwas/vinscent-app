@@ -23,6 +23,7 @@ abstract final class AppColors {
   static const shellBottomBarGlass = Color(0xBFFFFFFF);
   static const shellBottomBarBorder = Color(0xE6FFFFFF);
   static const shellBottomBarShadow = Color(0x24000000);
+  static const shellBottomBarPressed = Color(0x14171717);
 
   static const kakaoContainer = Color(0xFFFEE500);
   static const kakaoContent = Color(0xD9000000);
