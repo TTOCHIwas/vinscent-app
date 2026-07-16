@@ -9,6 +9,7 @@ import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/recordings/presentation/widgets/recording_control_button.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -39,6 +40,11 @@ void main() {
     expect(find.text('고마워'), findsNothing);
     expect(find.text('우울해'), findsNothing);
     expect(find.text('힘내'), findsNothing);
+    expect(find.byKey(RecordingControlButton.buttonKey), findsOneWidget);
+    expect(find.text('녹음'), findsNothing);
+    expect(find.text('보기'), findsNothing);
+    expect(find.text('현재 재생할 녹음이 없어요.'), findsNothing);
+    expect(find.text('길게 눌러 최대 15초까지 녹음할 수 있어요.'), findsNothing);
   });
 
   testWidgets('질문이 생성되면 질문 문구를 보여준다', (tester) async {

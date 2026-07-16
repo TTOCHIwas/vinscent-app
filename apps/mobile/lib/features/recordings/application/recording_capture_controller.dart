@@ -12,10 +12,12 @@ import '../data/couple_recording_failure.dart';
 import '../data/recording_id_generator.dart';
 import 'couple_recording_overview_controller.dart';
 
-final recordingCaptureControllerProvider = NotifierProvider<
-  RecordingCaptureController,
-  RecordingCaptureState
->(RecordingCaptureController.new);
+final recordingCaptureControllerProvider =
+    NotifierProvider<RecordingCaptureController, RecordingCaptureState>(
+      RecordingCaptureController.new,
+    );
+
+const recordingMaxDurationMs = 15000;
 
 enum RecordingCapturePhase { idle, preparing, recording, uploading }
 
@@ -64,7 +66,6 @@ class RecordingCaptureState {
 }
 
 class RecordingCaptureController extends Notifier<RecordingCaptureState> {
-  static const _maxDurationMs = 15000;
   static const _tickInterval = Duration(milliseconds: 100);
   static const _recordConfig = RecordConfig(encoder: AudioEncoder.aacLc);
 
@@ -133,8 +134,8 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
         }
 
         final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
-        if (elapsedMs >= _maxDurationMs) {
-          state = state.copyWith(elapsedMs: _maxDurationMs);
+        if (elapsedMs >= recordingMaxDurationMs) {
+          state = state.copyWith(elapsedMs: recordingMaxDurationMs);
           unawaited(finishGesture());
           return;
         }
@@ -229,7 +230,9 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
       }
 
       final audioBytes = await File(filePath).readAsBytes();
-      final durationMs = state.elapsedMs.clamp(1, _maxDurationMs).toInt();
+      final durationMs = state.elapsedMs
+          .clamp(1, recordingMaxDurationMs)
+          .toInt();
 
       await ref
           .read(coupleRecordingOverviewControllerProvider.notifier)
