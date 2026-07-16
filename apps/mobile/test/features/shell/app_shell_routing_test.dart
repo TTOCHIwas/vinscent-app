@@ -15,6 +15,7 @@ import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/shell/presentation/app_shell.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
@@ -73,14 +74,21 @@ void main() {
               find.descendant(of: bottomBar, matching: find.byType(ClipRRect)),
             )
             .height,
-        64,
+        70,
       );
       final bottomBarRect = tester.getRect(bottomBar);
       final surfaceRect = tester.getRect(
         find.descendant(of: bottomBar, matching: find.byType(ClipRRect)),
       );
       expect(surfaceRect.top - bottomBarRect.top, 8);
-      expect(bottomBarRect.bottom - surfaceRect.bottom, 24);
+      expect(bottomBarRect.bottom - surfaceRect.bottom, 18);
+      final characterControlRect = tester.getRect(
+        find.byKey(CharacterRecordingControl.controlKey),
+      );
+      expect(
+        surfaceRect.top - characterControlRect.bottom,
+        greaterThanOrEqualTo(20),
+      );
       expect(tester.widget<Icon>(find.byIcon(Icons.home_rounded)).size, 30);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.home_rounded)).color,

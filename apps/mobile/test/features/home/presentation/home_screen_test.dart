@@ -23,6 +23,7 @@ import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
 const _storyAddButtonKey = Key('home-story-add-button');
+const _questionBubbleKey = Key('home-question-speech-bubble');
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
 const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
 const _storyEditAction = '\uce74\ub4dc \uc218\uc815';
@@ -126,6 +127,17 @@ void main() {
       );
 
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      final questionBubble = find.byKey(_questionBubbleKey);
+      final characterControl = find.byKey(CharacterRecordingControl.controlKey);
+      expect(questionBubble, findsOneWidget);
+      expect(
+        find.descendant(of: questionBubble, matching: find.byType(CustomPaint)),
+        findsOneWidget,
+      );
+      expect(
+        tester.getBottomLeft(questionBubble).dy,
+        lessThan(tester.getTopLeft(characterControl).dy),
+      );
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
       expect(myCard, findsOneWidget);
