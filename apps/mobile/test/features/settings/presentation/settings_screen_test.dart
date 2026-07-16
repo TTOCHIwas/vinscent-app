@@ -5,24 +5,7 @@ import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 
 void main() {
   testWidgets('커플 설정 영역에서 캐릭터 편집 화면을 연다', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: GoRouter(
-          initialLocation: '/settings',
-          routes: [
-            GoRoute(
-              path: '/settings',
-              builder: (context, state) => const SettingsScreen(),
-            ),
-            GoRoute(
-              path: '/settings/character',
-              builder: (context, state) => const Text('character editor'),
-            ),
-          ],
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpSettings(tester);
 
     expect(find.text('캐릭터 꾸미기'), findsOneWidget);
 
@@ -31,4 +14,58 @@ void main() {
 
     expect(find.text('character editor'), findsOneWidget);
   });
+
+  testWidgets('작은 화면과 확대 글자에서도 설정 항목을 스크롤해 확인한다', (tester) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpSettings(tester, textScaleFactor: 1.5);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(Scrollable), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('커플 설정'),
+      100,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('커플 설정'), findsOneWidget);
+  });
+}
+
+Future<void> _pumpSettings(
+  WidgetTester tester, {
+  double textScaleFactor = 1,
+}) async {
+  final router = GoRouter(
+    initialLocation: '/settings',
+    routes: [
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/character',
+        builder: (context, state) => const Text('character editor'),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    MaterialApp.router(
+      routerConfig: router,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+          child: child!,
+        );
+      },
+    ),
+  );
+  await tester.pumpAndSettle();
 }
