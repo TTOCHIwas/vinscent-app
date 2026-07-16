@@ -10,6 +10,8 @@ import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_s
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/profile/application/profile_controller.dart';
+import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
@@ -173,7 +175,21 @@ void main() {
     expect(find.text('2026년 05월 05일'), findsOneWidget);
     final cardStack = find.byType(CalendarStoryCardStack);
     expect(cardStack, findsOneWidget);
-    expect(_framedDecorations(tester, cardStack), isEmpty);
+    expect(_framedDecorations(tester, cardStack), hasLength(2));
+    final myCard = find.byKey(const ValueKey('calendar-story-card-card-2'));
+    final partnerCard = find.byKey(
+      const ValueKey('calendar-story-card-card-1'),
+    );
+    expect(myCard, findsOneWidget);
+    expect(partnerCard, findsOneWidget);
+    final myCardRect = tester.getRect(myCard);
+    final partnerCardRect = tester.getRect(partnerCard);
+    expect(myCardRect.right, lessThanOrEqualTo(partnerCardRect.left));
+    expect(myCardRect.top, partnerCardRect.top);
+    expect(
+      find.descendant(of: cardStack, matching: find.byType(Transform)),
+      findsNothing,
+    );
     expect(find.byIcon(Icons.image_outlined), findsNothing);
     expect(find.byIcon(Icons.brush_outlined), findsNothing);
     expect(find.byIcon(Icons.text_fields), findsNothing);
@@ -369,6 +385,9 @@ Future<void> _pumpCalendar(
             currentDate: today ?? DateTime(2026, 5, 10),
           ),
         ),
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _profile,
+        ),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
       ],
       child: MaterialApp.router(routerConfig: router),
@@ -428,6 +447,15 @@ final _historyQuestion = DailyQuestion(
   questionMood: 'warm',
   assignedDate: DateTime(2026, 5, 5),
   status: DailyQuestionStatus.completed,
+);
+
+final _profile = UserProfile(
+  id: 'user-b',
+  displayName: 'current user',
+  birthDate: DateTime(2000),
+  onboardingCompletedAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
 );
 
 final _completedDetail = sampleStoryLoopDetail(
