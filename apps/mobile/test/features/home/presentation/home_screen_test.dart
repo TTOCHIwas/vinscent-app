@@ -103,13 +103,13 @@ void main() {
           coupleDate: _today,
           cards: [
             samplePreviewCard(
-              authorUserId: _profile.id,
-              submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
-            ),
-            samplePreviewCard(
               id: 'card-2',
               authorUserId: 'partner-id',
               previewPath: 'previews/card-2.png',
+              submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+            ),
+            samplePreviewCard(
+              authorUserId: _profile.id,
               submittedAt: DateTime.parse('2026-05-31T09:10:00Z'),
             ),
           ],
@@ -123,11 +123,19 @@ void main() {
       );
 
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
-      expect(find.byKey(_storyThumbnailKey('card-1')), findsOneWidget);
-      expect(find.byKey(_storyThumbnailKey('card-2')), findsOneWidget);
+      final myCard = find.byKey(_storyThumbnailKey('card-1'));
+      final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+      expect(myCard, findsOneWidget);
+      expect(partnerCard, findsOneWidget);
+      expect(tester.getSize(myCard), const Size(112, 140));
       expect(
-        tester.getSize(find.byKey(_storyThumbnailKey('card-1'))).width,
-        lessThanOrEqualTo(72),
+        tester.getTopLeft(myCard).dx,
+        lessThan(tester.getTopLeft(partnerCard).dx),
+      );
+      expect(tester.getTopLeft(myCard).dy, tester.getTopLeft(partnerCard).dy);
+      expect(
+        tester.getBottomLeft(myCard).dy,
+        lessThan(tester.getTopLeft(find.text(_dailyQuestion.questionText)).dy),
       );
       expect(find.byKey(_storyAddButtonKey), findsNothing);
       expect(find.text(_storyLabel), findsNothing);
@@ -229,6 +237,10 @@ void main() {
       final thumbnail = find.byKey(_storyThumbnailKey('card-1'));
       expect(thumbnail, findsOneWidget);
       expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
+      expect(
+        tester.getCenter(thumbnail).dx,
+        lessThan(tester.getSize(find.byType(HomeScreen)).width / 2),
+      );
       expect(find.byKey(_storyAddButtonKey), findsNothing);
       expect(find.text(_storyEditAction), findsNothing);
     },
@@ -257,8 +269,14 @@ void main() {
         ),
       );
 
-      expect(find.byKey(_storyThumbnailKey('card-1')), findsOneWidget);
-      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+      final partnerCard = find.byKey(_storyThumbnailKey('card-1'));
+      final addButton = find.byKey(_storyAddButtonKey);
+      expect(partnerCard, findsOneWidget);
+      expect(addButton, findsOneWidget);
+      expect(
+        tester.getCenter(addButton).dx,
+        lessThan(tester.getCenter(partnerCard).dx),
+      );
       expect(find.text(_storyCreateAction), findsNothing);
     },
   );
@@ -278,18 +296,24 @@ void main() {
           canEditStory: false,
           canAnswerQuestion: false,
           cards: [
-            samplePreviewCard(authorUserId: _profile.id),
             samplePreviewCard(
               id: 'card-2',
               authorUserId: 'partner-id',
               previewPath: 'previews/card-2.png',
             ),
+            samplePreviewCard(authorUserId: _profile.id),
           ],
         ),
       );
 
-      expect(find.byKey(_storyThumbnailKey('card-1')), findsOneWidget);
-      expect(find.byKey(_storyThumbnailKey('card-2')), findsOneWidget);
+      final myCard = find.byKey(_storyThumbnailKey('card-1'));
+      final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+      expect(myCard, findsOneWidget);
+      expect(partnerCard, findsOneWidget);
+      expect(
+        tester.getCenter(myCard).dx,
+        lessThan(tester.getCenter(partnerCard).dx),
+      );
       expect(find.byKey(_storyAddButtonKey), findsNothing);
       expect(find.text(_storyGenerating), findsNothing);
     },
