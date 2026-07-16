@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,9 @@ import 'character_recording_control.dart';
 
 class HomeCharacterRecordingControl extends ConsumerWidget {
   const HomeCharacterRecordingControl({super.key});
+
+  static const _preferredControlSize = 272.0;
+  static const _characterSpacing = 32.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,31 +93,59 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
         playbackState.activeTargetKey == playbackTarget.key;
     final canRecord = couple?.canEditSharedData ?? false;
 
-    return Center(
-      child: CharacterRecordingControl(
-        capturePhase: captureState.phase,
-        recordingProgress: captureState.elapsedMs / recordingMaxDurationMs,
-        recordingKey: currentRecording?.recordingId,
-        isPlaying: isPlaying,
-        isPlaybackBusy: playbackState.isBusy,
-        isLoading: coupleAsync.isLoading || overviewAsync.isLoading,
-        canRecord: canRecord,
-        onPlaybackPressed: playbackTarget == null
-            ? null
-            : () => unawaited(playbackController.toggle(playbackTarget)),
-        onRecordStart: !canRecord || couple == null
-            ? null
-            : () {
-                unawaited(HapticFeedback.mediumImpact());
-                unawaited(playbackController.reset());
-                unawaited(captureController.startRecording(couple));
-              },
-        onRecordEnd: () {
-          unawaited(HapticFeedback.lightImpact());
-          unawaited(captureController.finishGesture());
-        },
-        child: const CoupleCharacterAvatar(size: 160),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : _preferredControlSize;
+        final controlSize = math.min(_preferredControlSize, availableWidth);
+        final characterSize = math.max(0.0, controlSize - _characterSpacing);
+
+        return Center(
+          child: CharacterRecordingControl(
+            size: controlSize,
+            capturePhase: captureState.phase,
+            recordingProgress: captureState.elapsedMs / recordingMaxDurationMs,
+            recordingKey: currentRecording?.recordingId,
+            isPlaying: isPlaying,
+            isPlaybackBusy: playbackState.isBusy,
+            isLoading: coupleAsync.isLoading || overviewAsync.isLoading,
+            canRecord: canRecord,
+            onPlaybackPressed: playbackTarget == null
+                ? null
+                : () => unawaited(playbackController.toggle(playbackTarget)),
+            onRecordStart: !canRecord || couple == null
+                ? null
+                : () {
+                    unawaited(HapticFeedback.mediumImpact());
+                    unawaited(playbackController.reset());
+                    unawaited(captureController.startRecording(couple));
+                  },
+            onRecordEnd: () {
+              unawaited(HapticFeedback.lightImpact());
+              unawaited(captureController.finishGesture());
+            },
+            child: SizedBox.square(
+              dimension: characterSize,
+              child: const _ResponsiveCoupleCharacterAvatar(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ResponsiveCoupleCharacterAvatar extends StatelessWidget {
+  const _ResponsiveCoupleCharacterAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = math.min(constraints.maxWidth, constraints.maxHeight);
+        return CoupleCharacterAvatar(size: size);
+      },
     );
   }
 }

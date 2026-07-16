@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -14,6 +16,7 @@ class CharacterRecordingControl extends StatefulWidget {
     required this.isLoading,
     required this.canRecord,
     required this.child,
+    this.size = 184,
     this.onPlaybackPressed,
     this.onRecordStart,
     this.onRecordEnd,
@@ -24,6 +27,9 @@ class CharacterRecordingControl extends StatefulWidget {
     'character-recording-control-progress',
   );
   static const pulseKey = ValueKey<String>('character-recording-control-pulse');
+  static const recordingDotKey = ValueKey<String>(
+    'character-recording-control-recording-dot',
+  );
 
   final RecordingCapturePhase capturePhase;
   final double recordingProgress;
@@ -33,6 +39,7 @@ class CharacterRecordingControl extends StatefulWidget {
   final bool isLoading;
   final bool canRecord;
   final Widget child;
+  final double size;
   final VoidCallback? onPlaybackPressed;
   final VoidCallback? onRecordStart;
   final VoidCallback? onRecordEnd;
@@ -44,7 +51,6 @@ class CharacterRecordingControl extends StatefulWidget {
 
 class _CharacterRecordingControlState extends State<CharacterRecordingControl>
     with SingleTickerProviderStateMixin {
-  static const _controlSize = 184.0;
   static const _pulseDuration = Duration(milliseconds: 320);
   static const _noticePulsePeriods = 6;
 
@@ -201,6 +207,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
     final progressValue = _isRecording
         ? widget.recordingProgress.clamp(0.0, 1.0)
         : null;
+    final indicatorInset = math.min(16.0, widget.size / 4);
 
     return RepaintBoundary(
       child: Semantics(
@@ -223,7 +230,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
               ? _handleLongPressCancel
               : null,
           child: SizedBox.square(
-            dimension: _controlSize,
+            dimension: widget.size,
             child: ScaleTransition(
               key: CharacterRecordingControl.pulseKey,
               scale: _pulseScale,
@@ -234,27 +241,17 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    if (widget.isPlaying && !_showProgress)
-                      Positioned.fill(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.actionPrimary,
-                              width: 3,
-                            ),
-                          ),
-                        ),
-                      ),
                     if (_showProgress)
-                      Positioned.fill(
-                        child: CircularProgressIndicator(
-                          key: CharacterRecordingControl.progressKey,
-                          value: progressValue,
-                          strokeWidth: 5,
-                          color: progressColor,
-                          backgroundColor: AppColors.actionDisabled,
-                          strokeCap: StrokeCap.round,
+                      Positioned(
+                        top: 0,
+                        left: indicatorInset,
+                        right: indicatorInset,
+                        child: IgnorePointer(
+                          child: _CharacterRecordingProgress(
+                            value: progressValue,
+                            color: progressColor,
+                            showRecordingDot: _isPreparing || _isRecording,
+                          ),
                         ),
                       ),
                     widget.child,
@@ -282,5 +279,53 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
       return '녹음 재생, 길게 눌러 다시 녹음';
     }
     return '길게 눌러 녹음';
+  }
+}
+
+class _CharacterRecordingProgress extends StatelessWidget {
+  const _CharacterRecordingProgress({
+    required this.value,
+    required this.color,
+    required this.showRecordingDot,
+  });
+
+  final double? value;
+  final Color color;
+  final bool showRecordingDot;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 8,
+      child: Row(
+        children: [
+          if (showRecordingDot) ...[
+            const SizedBox.square(
+              key: CharacterRecordingControl.recordingDotKey,
+              dimension: 8,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.recordingActive,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                key: CharacterRecordingControl.progressKey,
+                value: value,
+                minHeight: 4,
+                color: color,
+                backgroundColor: AppColors.actionDisabled,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
