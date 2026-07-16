@@ -15,6 +15,7 @@ import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
+import 'package:vinscent/features/shell/presentation/app_shell.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_header.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
@@ -39,6 +40,25 @@ void main() {
 
       expect(find.byType(AppHeader), findsOneWidget);
       expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(AppBottomBar)).height,
+        AppShell.bottomBarHeight,
+      );
+      expect(AppShell.bottomBarHeight, 88);
+      expect(
+        find.descendant(
+          of: find.byType(AppBottomBar),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.home_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+      expect(find.byTooltip('\ud648'), findsOneWidget);
+      expect(find.byTooltip('\ub2ec\ub825'), findsOneWidget);
+      expect(find.byTooltip('AI'), findsOneWidget);
+      expect(find.text('AI'), findsNothing);
       expect(find.text('D+2'), findsOneWidget);
       expect(tester.widget<Text>(find.text('D+2')).style?.fontSize, 24);
       final headerRow = tester.widget<Row>(
