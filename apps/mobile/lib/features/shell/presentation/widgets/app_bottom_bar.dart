@@ -31,7 +31,7 @@ class AppBottomBar extends StatelessWidget {
       height: height + bottomInset,
       width: double.infinity,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomInset),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + bottomInset),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(_surfaceRadius),
