@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/app/app.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/presentation/login_screen.dart';
 
 void main() {
@@ -25,6 +26,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final context = tester.element(find.byType(LoginScreen));
-    expect(Theme.of(context).brightness, Brightness.light);
+    final theme = Theme.of(context);
+    expect(theme.brightness, Brightness.light);
+    expect(theme.colorScheme.primary, AppColors.actionPrimary);
+    expect(theme.colorScheme.surface, AppColors.background);
+    expect(theme.scaffoldBackgroundColor, AppColors.background);
   });
 }
