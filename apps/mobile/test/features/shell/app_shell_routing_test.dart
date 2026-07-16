@@ -89,7 +89,7 @@ void main() {
           of: bottomBar,
           matching: find.byType(AnimatedContainer),
         ),
-        findsNothing,
+        findsNWidgets(3),
       );
       expect(find.byTooltip('\ud648'), findsOneWidget);
       expect(find.byTooltip('\ub2ec\ub825'), findsOneWidget);
@@ -106,6 +106,66 @@ void main() {
       expect(find.text('\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac'), findsNothing);
     },
   );
+
+  testWidgets('하단바 탭은 넓은 터치 영역과 안쪽 타원형 피드백을 제공한다', (tester) async {
+    var pressed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          child: Center(
+            child: SizedBox(
+              width: 120,
+              height: 64,
+              child: ShellTab(
+                label: '홈',
+                icon: Icons.home_rounded,
+                isSelected: true,
+                onPressed: () => pressed = true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final tab = find.byType(ShellTab);
+    final inkWell = find.descendant(of: tab, matching: find.byType(InkWell));
+    final feedback = find.descendant(
+      of: tab,
+      matching: find.byType(AnimatedContainer),
+    );
+    final tabRect = tester.getRect(tab);
+    final feedbackRect = tester.getRect(feedback);
+
+    expect(tester.getRect(inkWell), tabRect);
+    expect(feedbackRect.left - tabRect.left, 8);
+    expect(tabRect.right - feedbackRect.right, 8);
+    expect(feedbackRect.top - tabRect.top, 8);
+    expect(tabRect.bottom - feedbackRect.bottom, 8);
+
+    BoxDecoration feedbackDecoration() {
+      return tester.widget<AnimatedContainer>(feedback).decoration!
+          as BoxDecoration;
+    }
+
+    final borderRadius = feedbackDecoration().borderRadius! as BorderRadius;
+    expect(borderRadius.topLeft.x, feedbackRect.height / 2);
+    expect(feedbackDecoration().color, Colors.transparent);
+
+    final gesture = await tester.startGesture(
+      Offset(tabRect.left + 2, tabRect.center.dy),
+    );
+    await tester.pump();
+
+    expect(feedbackDecoration().color, isNot(Colors.transparent));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(pressed, isTrue);
+    expect(feedbackDecoration().color, Colors.transparent);
+  });
 
   testWidgets(
     'bottom bar\uc640 header\ub85c shell route\ub97c \uc774\ub3d9\ud55c\ub2e4',
