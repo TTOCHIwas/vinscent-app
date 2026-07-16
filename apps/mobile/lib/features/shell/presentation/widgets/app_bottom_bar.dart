@@ -15,7 +15,7 @@ class AppBottomBar extends StatelessWidget {
     required this.onAiPressed,
   });
 
-  static const _surfaceRadius = 32.0;
+  static const _surfaceRadius = 100.0;
 
   final double height;
   final String currentLocation;
@@ -31,7 +31,7 @@ class AppBottomBar extends StatelessWidget {
       height: height + bottomInset,
       width: double.infinity,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + bottomInset),
+        padding: EdgeInsets.fromLTRB(18, 8, 18, 18 + bottomInset),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(_surfaceRadius),
