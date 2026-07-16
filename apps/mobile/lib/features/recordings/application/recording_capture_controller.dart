@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../../couple/data/couple.dart';
-import 'recording_capture_error_messages.dart';
 import '../data/couple_recording_failure.dart';
 import '../data/recording_id_generator.dart';
 import 'couple_recording_overview_controller.dart';
+import 'recording_capture_error_messages.dart';
+import 'recording_draft_file.dart';
 
 final recordingCaptureControllerProvider =
     NotifierProvider<RecordingCaptureController, RecordingCaptureState>(
@@ -25,20 +25,14 @@ class RecordingCaptureState {
   const RecordingCaptureState({
     required this.phase,
     required this.elapsedMs,
-    required this.isCancelArmed,
     this.errorMessage,
   });
 
   const RecordingCaptureState.idle()
-    : this(
-        phase: RecordingCapturePhase.idle,
-        elapsedMs: 0,
-        isCancelArmed: false,
-      );
+    : this(phase: RecordingCapturePhase.idle, elapsedMs: 0);
 
   final RecordingCapturePhase phase;
   final int elapsedMs;
-  final bool isCancelArmed;
   final String? errorMessage;
 
   bool get isIdle => phase == RecordingCapturePhase.idle;
@@ -52,14 +46,12 @@ class RecordingCaptureState {
   RecordingCaptureState copyWith({
     RecordingCapturePhase? phase,
     int? elapsedMs,
-    bool? isCancelArmed,
     String? errorMessage,
     bool clearError = false,
   }) {
     return RecordingCaptureState(
       phase: phase ?? this.phase,
       elapsedMs: elapsedMs ?? this.elapsedMs,
-      isCancelArmed: isCancelArmed ?? this.isCancelArmed,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
@@ -81,7 +73,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
     _recorder = AudioRecorder();
     ref.onDispose(() {
       _ticker?.cancel();
-      unawaited(_recorder.dispose());
+      unawaited(_disposeRecorderAndDraft(_filePath));
     });
     return const RecordingCaptureState.idle();
   }
@@ -96,7 +88,6 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
     state = const RecordingCaptureState(
       phase: RecordingCapturePhase.preparing,
       elapsedMs: 0,
-      isCancelArmed: false,
     );
 
     try {
@@ -114,17 +105,14 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
           '${tempDirectory.path}${Platform.pathSeparator}'
           '${generateRecordingId().replaceAll('-', '')}.m4a';
 
+      _filePath = filePath;
       await _recorder.start(_recordConfig, path: filePath);
 
       if (_pendingStopAfterPrepare) {
-        _pendingStopAfterPrepare = false;
-        await _recorder.cancel();
-        _clearDraftState();
-        state = const RecordingCaptureState.idle();
+        await _cancelRecording();
         return;
       }
 
-      _filePath = filePath;
       _startedAt = DateTime.now();
       _ticker?.cancel();
       _ticker = Timer.periodic(_tickInterval, (_) {
@@ -146,27 +134,13 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
       state = const RecordingCaptureState(
         phase: RecordingCapturePhase.recording,
         elapsedMs: 0,
-        isCancelArmed: false,
       );
     } catch (error) {
-      _clearDraftState();
+      await _cancelRecording();
       state = const RecordingCaptureState.idle().copyWith(
         errorMessage: recordingCaptureErrorMessage(error),
       );
     }
-  }
-
-  void updateDragOffset(double deltaY) {
-    if (!state.isRecording) {
-      return;
-    }
-
-    final shouldCancel = deltaY <= -48;
-    if (shouldCancel == state.isCancelArmed) {
-      return;
-    }
-
-    state = state.copyWith(isCancelArmed: shouldCancel);
   }
 
   Future<void> finishGesture() async {
@@ -176,11 +150,6 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
     }
 
     if (!state.isRecording) {
-      return;
-    }
-
-    if (state.isCancelArmed) {
-      await _cancelRecording();
       return;
     }
 
@@ -197,6 +166,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
 
   Future<void> _cancelRecording() async {
     _ticker?.cancel();
+    final filePath = _filePath;
 
     try {
       await _recorder.cancel();
@@ -204,21 +174,19 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
 
     _clearDraftState();
     state = const RecordingCaptureState.idle();
+    await deleteRecordingDraftFile(filePath);
   }
 
   Future<void> _stopAndUploadRecording() async {
     final activeCouple = _couple;
     if (activeCouple == null) {
-      _clearDraftState();
-      state = const RecordingCaptureState.idle();
+      await _cancelRecording();
       return;
     }
 
     _ticker?.cancel();
-    state = state.copyWith(
-      phase: RecordingCapturePhase.uploading,
-      isCancelArmed: false,
-    );
+    state = state.copyWith(phase: RecordingCapturePhase.uploading);
+    var cleanupPath = _filePath;
 
     try {
       final stoppedPath = await _recorder.stop();
@@ -228,6 +196,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
           CoupleRecordingFailureReason.storage,
         );
       }
+      cleanupPath = filePath;
 
       final audioBytes = await File(filePath).readAsBytes();
       final durationMs = state.elapsedMs
@@ -238,18 +207,30 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
           .read(coupleRecordingOverviewControllerProvider.notifier)
           .uploadCurrentRecording(
             couple: activeCouple,
-            audioBytes: Uint8List.fromList(audioBytes),
+            audioBytes: audioBytes,
             durationMs: durationMs,
           );
 
       _clearDraftState();
       state = const RecordingCaptureState.idle();
     } catch (error) {
+      try {
+        await _recorder.cancel();
+      } catch (_) {}
       _clearDraftState();
       state = const RecordingCaptureState.idle().copyWith(
         errorMessage: recordingCaptureErrorMessage(error),
       );
+    } finally {
+      await deleteRecordingDraftFile(cleanupPath);
     }
+  }
+
+  Future<void> _disposeRecorderAndDraft(String? filePath) async {
+    try {
+      await _recorder.dispose();
+    } catch (_) {}
+    await deleteRecordingDraftFile(filePath);
   }
 
   void _clearDraftState() {
