@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -234,6 +236,9 @@ class _HomeStoryLoopContent extends StatelessWidget {
   final VoidCallback? onQuestionTap;
   final String? Function(StoryLoopCardPreview card) cardTargetLocation;
 
+  static const _entryGap = 8.0;
+  static const _minimumQuestionHeight = 48.0;
+
   @override
   Widget build(BuildContext context) {
     final storyEntry = _CompactStoryEntry(
@@ -255,35 +260,56 @@ class _HomeStoryLoopContent extends StatelessWidget {
           : Center(child: storyEntry);
     }
 
-    return Column(
-      children: [
-        storyEntry,
-        const SizedBox(height: 8),
-        Expanded(
-          child: Center(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onQuestionTap,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    questionText,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.shellTitle,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableCardHeight = constraints.hasBoundedHeight
+            ? math.max(
+                0.0,
+                constraints.maxHeight - _minimumQuestionHeight - _entryGap,
+              )
+            : _CompactStoryEntry._preferredCardHeight;
+        final cardHeight = hasCard
+            ? math.min(
+                _CompactStoryEntry._preferredCardHeight,
+                availableCardHeight,
+              )
+            : 0.0;
+        final entryGap = cardHeight > 0 ? _entryGap : 0.0;
+
+        return Column(
+          children: [
+            if (cardHeight > 0) SizedBox(height: cardHeight, child: storyEntry),
+            if (entryGap > 0) SizedBox(height: entryGap),
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onQuestionTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          questionText,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.shellTitle,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -298,6 +324,8 @@ class _CompactStoryEntry extends StatelessWidget {
   });
 
   static const _preferredCardWidth = 112.0;
+  static const _preferredCardHeight =
+      _preferredCardWidth / storyCardCanvasAspectRatio;
   static const _maxContentWidth = 360.0;
   static const _slotGap = 16.0;
 
@@ -322,10 +350,14 @@ class _CompactStoryEntry extends StatelessWidget {
         final contentWidth = constraints.maxWidth
             .clamp(0.0, _maxContentWidth)
             .toDouble();
-        final availableCardWidth = ((contentWidth - _slotGap) / 2)
-            .clamp(0.0, _preferredCardWidth)
-            .toDouble();
-        final cardWidth = availableCardWidth;
+        final availableCardWidth = math.max(0.0, (contentWidth - _slotGap) / 2);
+        final heightBoundCardWidth = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight) * storyCardCanvasAspectRatio
+            : _preferredCardWidth;
+        final cardWidth = math.min(
+          _preferredCardWidth,
+          math.min(availableCardWidth, heightBoundCardWidth),
+        );
         final cardHeight = cardWidth / storyCardCanvasAspectRatio;
 
         return Align(
