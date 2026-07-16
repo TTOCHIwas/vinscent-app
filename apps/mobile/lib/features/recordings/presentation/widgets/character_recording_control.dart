@@ -52,6 +52,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
   late final Animation<double> _pulseScale;
   bool _isPressed = false;
   bool _isLongPressActive = false;
+  int _pulseGeneration = 0;
 
   bool get _isPreparing =>
       widget.capturePhase == RecordingCapturePhase.preparing;
@@ -124,11 +125,13 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
 
   @override
   void dispose() {
+    _pulseGeneration += 1;
     _pulseController.dispose();
     super.dispose();
   }
 
   void _syncPulse({bool initial = false, bool notifyRecording = false}) {
+    final pulseGeneration = ++_pulseGeneration;
     _pulseController.stop();
     _pulseController.value = 0;
 
@@ -145,7 +148,12 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
         count: _noticePulsePeriods,
       );
       ticker.whenCompleteOrCancel(() {
-        if (!mounted || widget.isPlaying || _isCaptureBusy) {
+        if (!mounted ||
+            pulseGeneration != _pulseGeneration ||
+            widget.isPlaying ||
+            _isCaptureBusy ||
+            widget.isLoading ||
+            widget.isPlaybackBusy) {
           return;
         }
         _pulseController.value = 0;
