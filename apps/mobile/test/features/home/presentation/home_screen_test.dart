@@ -93,7 +93,7 @@ void main() {
   );
 
   testWidgets(
-    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38\uacfc \uc791\uc740 \uce74\ub4dc \uc378\ub124\uc77c\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38 \uc704\uc5d0 \ud655\ub300\ub41c \uce74\ub4dc \ubbf8\ub9ac\ubcf4\uae30\ub97c \ubcf4\uc5ec\uc900\ub2e4',
     (tester) async {
       await _pumpHome(
         tester,
@@ -212,7 +212,7 @@ void main() {
   );
 
   testWidgets(
-    '\ub0b4 \uce74\ub4dc\ub9cc \uc788\uc73c\uba74 \uc791\uc740 \uc378\ub124\uc77c\ub85c \uc218\uc815 \uc9c4\uc785\uc810\uc744 \ubcf4\uc5ec\uc900\ub2e4',
+    '\ub0b4 \uce74\ub4dc\ub9cc \uc788\uc73c\uba74 \uc67c\ucabd \ubbf8\ub9ac\ubcf4\uae30\ub85c \uc218\uc815 \uc9c4\uc785\uc810\uc744 \ubcf4\uc5ec\uc900\ub2e4',
     (tester) async {
       await _pumpHome(
         tester,
@@ -271,18 +271,17 @@ void main() {
 
       final partnerCard = find.byKey(_storyThumbnailKey('card-1'));
       final addButton = find.byKey(_storyAddButtonKey);
+      final homeCenterX = tester.getCenter(find.byType(HomeScreen)).dx;
       expect(partnerCard, findsOneWidget);
       expect(addButton, findsOneWidget);
-      expect(
-        tester.getCenter(addButton).dx,
-        lessThan(tester.getCenter(partnerCard).dx),
-      );
+      expect(tester.getCenter(addButton).dx, lessThan(homeCenterX));
+      expect(tester.getCenter(partnerCard).dx, greaterThan(homeCenterX));
       expect(find.text(_storyCreateAction), findsNothing);
     },
   );
 
   testWidgets(
-    '\ub450 \uce74\ub4dc\uac00 \ubaa8\uc774\uba74 \uc0dd\uc131 \uc548\ub0b4 \uc5c6\uc774 \uc791\uc740 \uc378\ub124\uc77c\ub9cc \ubcf4\uc5ec\uc900\ub2e4',
+    '\ub450 \uce74\ub4dc\uac00 \ubaa8\uc774\uba74 \ub0b4 \uce74\ub4dc\uc640 \uc0c1\ub300 \uce74\ub4dc\ub97c \uc67c\ucabd\uacfc \uc624\ub978\ucabd\uc5d0 \ubcf4\uc5ec\uc900\ub2e4',
     (tester) async {
       await _pumpHome(
         tester,
@@ -313,6 +312,10 @@ void main() {
       expect(
         tester.getCenter(myCard).dx,
         lessThan(tester.getCenter(partnerCard).dx),
+      );
+      expect(
+        tester.getCenter(myCard).dy,
+        lessThan(tester.getCenter(find.byType(HomeScreen)).dy),
       );
       expect(find.byKey(_storyAddButtonKey), findsNothing);
       expect(find.text(_storyGenerating), findsNothing);

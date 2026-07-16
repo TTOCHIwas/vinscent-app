@@ -200,7 +200,8 @@ class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
     final questionTargetLocation = presentation.questionTargetLocation;
 
     return _HomeStoryLoopContent(
-      cards: presentation.cards,
+      myCard: presentation.myCard,
+      partnerCard: presentation.partnerCard,
       questionText: presentation.questionText,
       canAddCard: presentation.canAddCard,
       onAddCard: presentation.canAddCard
@@ -216,7 +217,8 @@ class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
 
 class _HomeStoryLoopContent extends StatelessWidget {
   const _HomeStoryLoopContent({
-    required this.cards,
+    required this.myCard,
+    required this.partnerCard,
     required this.questionText,
     required this.canAddCard,
     required this.onAddCard,
@@ -224,7 +226,8 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.cardTargetLocation,
   });
 
-  final List<StoryLoopCardPreview> cards;
+  final StoryLoopCardPreview? myCard;
+  final StoryLoopCardPreview? partnerCard;
   final String? questionText;
   final bool canAddCard;
   final VoidCallback? onAddCard;
@@ -234,7 +237,8 @@ class _HomeStoryLoopContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final storyEntry = _CompactStoryEntry(
-      cards: cards,
+      myCard: myCard,
+      partnerCard: partnerCard,
       canAddCard: canAddCard,
       onAddCard: onAddCard,
       onCardTap: (card) {
@@ -243,13 +247,18 @@ class _HomeStoryLoopContent extends StatelessWidget {
       },
     );
     final questionText = this.questionText;
+    final hasCard = myCard != null || partnerCard != null;
 
     if (questionText == null) {
-      return Center(child: storyEntry);
+      return hasCard
+          ? Align(alignment: Alignment.topCenter, child: storyEntry)
+          : Center(child: storyEntry);
     }
 
     return Column(
       children: [
+        storyEntry,
+        const SizedBox(height: 8),
         Expanded(
           child: Center(
             child: Material(
@@ -274,8 +283,6 @@ class _HomeStoryLoopContent extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        storyEntry,
       ],
     );
   }
@@ -283,39 +290,107 @@ class _HomeStoryLoopContent extends StatelessWidget {
 
 class _CompactStoryEntry extends StatelessWidget {
   const _CompactStoryEntry({
-    required this.cards,
+    required this.myCard,
+    required this.partnerCard,
     required this.canAddCard,
     required this.onAddCard,
     required this.onCardTap,
   });
 
-  final List<StoryLoopCardPreview> cards;
+  static const _preferredCardWidth = 112.0;
+  static const _maxContentWidth = 360.0;
+  static const _slotGap = 16.0;
+
+  final StoryLoopCardPreview? myCard;
+  final StoryLoopCardPreview? partnerCard;
   final bool canAddCard;
   final VoidCallback? onAddCard;
   final VoidCallback? Function(StoryLoopCardPreview card) onCardTap;
 
   @override
   Widget build(BuildContext context) {
-    final visibleCards = cards.take(2).toList(growable: false);
-    final entries = <Widget>[
-      for (final card in visibleCards)
-        _HomeStoryCardThumbnail(card: card, onTap: onCardTap(card)),
-      if (canAddCard) _HomeStoryAddButton(onPressed: onAddCard),
-    ];
+    final myCard = this.myCard;
+    final partnerCard = this.partnerCard;
+    if (myCard == null && partnerCard == null) {
+      return canAddCard
+          ? _HomeStoryAddButton(onPressed: onAddCard)
+          : const SizedBox.shrink();
+    }
 
-    if (entries.isEmpty) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = constraints.maxWidth
+            .clamp(0.0, _maxContentWidth)
+            .toDouble();
+        final availableCardWidth = ((contentWidth - _slotGap) / 2)
+            .clamp(0.0, _preferredCardWidth)
+            .toDouble();
+        final cardWidth = availableCardWidth;
+        final cardHeight = cardWidth / storyCardCanvasAspectRatio;
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: contentWidth,
+            height: cardHeight,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _HomeStorySlot(
+                  width: cardWidth,
+                  height: cardHeight,
+                  child: myCard == null
+                      ? canAddCard
+                            ? _HomeStoryAddButton(onPressed: onAddCard)
+                            : null
+                      : _HomeStoryCardThumbnail(
+                          card: myCard,
+                          width: cardWidth,
+                          onTap: onCardTap(myCard),
+                        ),
+                ),
+                _HomeStorySlot(
+                  width: cardWidth,
+                  height: cardHeight,
+                  child: partnerCard == null
+                      ? null
+                      : _HomeStoryCardThumbnail(
+                          card: partnerCard,
+                          width: cardWidth,
+                          onTap: onCardTap(partnerCard),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HomeStorySlot extends StatelessWidget {
+  const _HomeStorySlot({
+    required this.width,
+    required this.height,
+    required this.child,
+  });
+
+  final double width;
+  final double height;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = this.child;
+    if (child == null) {
       return const SizedBox.shrink();
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        for (var index = 0; index < entries.length; index++) ...[
-          if (index > 0) const SizedBox(width: 12),
-          entries[index],
-        ],
-      ],
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Center(child: child),
     );
   }
 }
@@ -343,11 +418,14 @@ class _HomeStoryAddButton extends StatelessWidget {
 }
 
 class _HomeStoryCardThumbnail extends StatelessWidget {
-  const _HomeStoryCardThumbnail({required this.card, required this.onTap});
-
-  static const _width = 64.0;
+  const _HomeStoryCardThumbnail({
+    required this.card,
+    required this.width,
+    required this.onTap,
+  });
 
   final StoryLoopCardPreview card;
+  final double width;
   final VoidCallback? onTap;
 
   @override
@@ -358,6 +436,10 @@ class _HomeStoryCardThumbnail extends StatelessWidget {
         previewUri != null &&
         previewUri.hasScheme &&
         (previewUri.scheme == 'http' || previewUri.scheme == 'https');
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = (width * pixelRatio).round();
+    final cacheHeight = (width / storyCardCanvasAspectRatio * pixelRatio)
+        .round();
 
     return Semantics(
       label: _homeStoryCardSemantics,
@@ -369,7 +451,7 @@ class _HomeStoryCardThumbnail extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(6),
           child: SizedBox(
-            width: _width,
+            width: width,
             child: AspectRatio(
               aspectRatio: storyCardCanvasAspectRatio,
               child: DecoratedBox(
@@ -391,6 +473,8 @@ class _HomeStoryCardThumbnail extends StatelessWidget {
                       ? Image.network(
                           previewUrl!,
                           fit: BoxFit.contain,
+                          cacheWidth: cacheWidth,
+                          cacheHeight: cacheHeight,
                           errorBuilder: (context, error, stackTrace) =>
                               const _HomeStoryCardPreviewPlaceholder(),
                         )
@@ -415,7 +499,7 @@ class _HomeStoryCardPreviewPlaceholder extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.auto_awesome_mosaic_outlined,
-          size: 20,
+          size: 28,
           color: AppColors.textMuted,
         ),
       ),
@@ -425,14 +509,16 @@ class _HomeStoryCardPreviewPlaceholder extends StatelessWidget {
 
 class _HomeStoryLoopPresentation {
   const _HomeStoryLoopPresentation({
-    required this.cards,
+    required this.myCard,
+    required this.partnerCard,
     required this.questionText,
     required this.canAddCard,
     required this.questionTargetLocation,
     required this.editableCardId,
   });
 
-  final List<StoryLoopCardPreview> cards;
+  final StoryLoopCardPreview? myCard;
+  final StoryLoopCardPreview? partnerCard;
   final String? questionText;
   final bool canAddCard;
   final String? questionTargetLocation;
@@ -446,12 +532,17 @@ class _HomeStoryLoopPresentation {
       ..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
     final question = summary.question;
     final isArchived = summary.accessMode == CoupleAccessMode.archivedReadOnly;
-    final myCard = currentUserId == null
-        ? null
-        : sortedCards.cast<StoryLoopCardPreview?>().firstWhere(
-            (card) => card?.authorUserId == currentUserId,
-            orElse: () => null,
-          );
+    StoryLoopCardPreview? myCard;
+    StoryLoopCardPreview? partnerCard;
+    if (currentUserId != null) {
+      for (final card in sortedCards) {
+        if (card.authorUserId == currentUserId) {
+          myCard ??= card;
+        } else {
+          partnerCard ??= card;
+        }
+      }
+    }
     final canAddCard =
         !isArchived &&
         currentUserId != null &&
@@ -459,7 +550,8 @@ class _HomeStoryLoopPresentation {
         myCard == null;
 
     return _HomeStoryLoopPresentation(
-      cards: sortedCards,
+      myCard: myCard,
+      partnerCard: partnerCard,
       questionText: question?.question.questionText,
       canAddCard: canAddCard,
       questionTargetLocation: question == null
