@@ -24,8 +24,6 @@ Deno.serve(async (request) => {
     !verifyWebhookSecret(request, {
       envName: 'COUPLE_WEBHOOK_SECRET',
       headerName: 'x-couple-webhook-secret',
-      fallbackEnvName: 'EXPRESSION_WEBHOOK_SECRET',
-      fallbackHeaderName: 'x-expression-webhook-secret',
     })
   ) {
     return jsonResponse({ error: 'unauthorized' }, 401);

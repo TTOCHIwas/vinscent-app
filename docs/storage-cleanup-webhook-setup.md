@@ -35,7 +35,7 @@ PowerShell에서 난수를 만들려면:
 npx supabase secrets set STORAGE_CLEANUP_WEBHOOK_SECRET=<YOUR_SECRET>
 ```
 
-현재 함수 코드는 롤아웃 편의를 위해 `EXPRESSION_WEBHOOK_SECRET`도 fallback으로 받지만, 운영에서는 `STORAGE_CLEANUP_WEBHOOK_SECRET`를 따로 두는 쪽을 기준으로 잡는다.
+스토리지 정리 Webhook은 `STORAGE_CLEANUP_WEBHOOK_SECRET`만 사용한다.
 
 ## 4. 마이그레이션 배포
 

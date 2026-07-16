@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 
 export type NotificationType =
-  | 'couple_expression'
   | 'partner_answer_completed'
   | 'daily_question_delivery'
   | 'unanswered_reminder'
@@ -17,7 +16,6 @@ export type DeliveryStatus =
   | 'skipped';
 
 export type PreferenceColumn =
-  | 'expression_enabled'
   | 'partner_answer_enabled'
   | 'daily_question_enabled'
   | 'reminder_enabled'
@@ -61,7 +59,7 @@ export type NotificationDispatchResult = {
 };
 
 type SendPushNotificationParams = {
-  supabase: ReturnType<typeof createClient>;
+  supabase: ReturnType<typeof createServiceRoleClient>;
   notificationType: NotificationType;
   sourceId: string;
   receiverUserId: string;
@@ -72,7 +70,7 @@ type SendPushNotificationParams = {
   accessToken?: string;
 };
 
-const defaultAndroidChannelId = 'couple_expression_notifications';
+const defaultAndroidChannelId = 'vinscent_notifications';
 
 export function createServiceRoleClient() {
   return createClient(
@@ -307,7 +305,7 @@ export async function sendPushNotification(
 }
 
 async function isNotificationEnabled(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   receiverUserId: string,
   preferenceColumn: PreferenceColumn,
 ) {
@@ -321,15 +319,15 @@ async function isNotificationEnabled(
     throw new Error(`notification_preference_query_failed:${error.message}`);
   }
 
-  if (!data) {
+  if (!isRecord(data)) {
     return true;
   }
 
-  return data[preferenceColumn] !== false;
+  return Reflect.get(data, preferenceColumn) !== false;
 }
 
 async function claimNotificationDispatch(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   params: {
     notificationType: NotificationType;
     sourceId: string;
@@ -356,7 +354,7 @@ async function claimNotificationDispatch(
 }
 
 async function recordDeliveryAndCompleteDispatch(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   params: {
     notificationType: NotificationType;
     sourceId: string;
@@ -379,7 +377,7 @@ async function recordDeliveryAndCompleteDispatch(
 }
 
 async function logDelivery(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   params: {
     notificationType: NotificationType;
     sourceId: string;
@@ -404,7 +402,7 @@ async function logDelivery(
 }
 
 async function completeNotificationDispatch(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   params: {
     notificationType: NotificationType;
     sourceId: string;
