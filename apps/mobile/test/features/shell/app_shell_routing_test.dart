@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/app/app.dart';
@@ -249,6 +250,109 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('shell roots claim Android back handling before the gesture', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    final platformCalls = <MethodCall>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      platformCalls.add(call);
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    platformCalls.clear();
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+    expect(_lastFrameworkHandlesBack(platformCalls), isTrue);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    platformCalls.clear();
+    await tester.tap(find.byType(ShellTab).at(2));
+    await tester.pumpAndSettle();
+    expect(_lastFrameworkHandlesBack(platformCalls), isTrue);
+  });
+
+  testWidgets(
+    'home exits only after a second back within the confirmation window',
+    (tester) async {
+      await _usePhoneSurface(tester);
+      final platformCalls = <MethodCall>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        platformCalls.add(call);
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+      );
+      expect(_lastFrameworkHandlesBack(platformCalls), isTrue);
+
+      platformCalls.clear();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+
+      expect(find.text('종료하려면 다시 누르세요.'), findsOneWidget);
+      expect(_systemPopCalls(platformCalls), isEmpty);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(_systemPopCalls(platformCalls), hasLength(1));
+    },
+  );
+
+  testWidgets('home exit confirmation expires after two seconds', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    final platformCalls = <MethodCall>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      platformCalls.add(call);
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    platformCalls.clear();
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(_systemPopCalls(platformCalls), isEmpty);
+    expect(find.text('종료하려면 다시 누르세요.'), findsOneWidget);
   });
 
   testWidgets('system back returns from settings to previous shell page', (
@@ -559,6 +663,17 @@ double _scrollBottomPadding(WidgetTester tester, Finder screen) {
 
 List<ShellTab> _tabs(WidgetTester tester) {
   return tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
+}
+
+bool? _lastFrameworkHandlesBack(List<MethodCall> calls) {
+  final matchingCalls = calls.where(
+    (call) => call.method == 'SystemNavigator.setFrameworkHandlesBack',
+  );
+  return matchingCalls.isEmpty ? null : matchingCalls.last.arguments as bool;
+}
+
+Iterable<MethodCall> _systemPopCalls(List<MethodCall> calls) {
+  return calls.where((call) => call.method == 'SystemNavigator.pop');
 }
 
 final _today = DateTime(2026, 5, 31);
