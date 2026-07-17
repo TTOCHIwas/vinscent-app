@@ -18,7 +18,9 @@ import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
 import '../../story_loops/presentation/widgets/story_card_pair_layout.dart';
+import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
+import 'widgets/home_completed_story_cards.dart';
 
 const _homeStatusLoadError =
     '\ucee4\ud50c \uc815\ubcf4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694.';
@@ -209,6 +211,7 @@ class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
       myCard: presentation.myCard,
       partnerCard: presentation.partnerCard,
       questionText: presentation.questionText,
+      cardsAreCompleted: presentation.cardsAreCompleted,
       canAddCard: presentation.canAddCard,
       onAddCard: presentation.canAddCard
           ? () => context.go('/home/story')
@@ -216,7 +219,18 @@ class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
       onQuestionTap: questionTargetLocation == null
           ? null
           : () => context.go(questionTargetLocation),
-      cardTargetLocation: presentation.targetLocationForCard,
+      onCardTap: (card) {
+        final editTargetLocation = presentation.editTargetLocationForCard(card);
+        if (editTargetLocation != null) {
+          context.go(editTargetLocation);
+          return;
+        }
+        showStoryCardDetailOverlay(
+          context: context,
+          cardId: card.id,
+          previewUrl: card.previewUrl,
+        );
+      },
     );
   }
 }
@@ -226,19 +240,21 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.myCard,
     required this.partnerCard,
     required this.questionText,
+    required this.cardsAreCompleted,
     required this.canAddCard,
     required this.onAddCard,
     required this.onQuestionTap,
-    required this.cardTargetLocation,
+    required this.onCardTap,
   });
 
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
+  final bool cardsAreCompleted;
   final bool canAddCard;
   final VoidCallback? onAddCard;
   final VoidCallback? onQuestionTap;
-  final String? Function(StoryLoopCardPreview card) cardTargetLocation;
+  final ValueChanged<StoryLoopCardPreview> onCardTap;
 
   static const _entryGap = 8.0;
   static const _minimumQuestionHeight = 48.0;
@@ -250,10 +266,8 @@ class _HomeStoryLoopContent extends StatelessWidget {
       partnerCard: partnerCard,
       canAddCard: canAddCard,
       onAddCard: onAddCard,
-      onCardTap: (card) {
-        final targetLocation = cardTargetLocation(card);
-        return targetLocation == null ? null : () => context.go(targetLocation);
-      },
+      cardsAreCompleted: cardsAreCompleted,
+      onCardTap: onCardTap,
     );
     final questionText = this.questionText;
     final hasCard = myCard != null || partnerCard != null;
@@ -266,23 +280,30 @@ class _HomeStoryLoopContent extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final maximumCardHeight = cardsAreCompleted
+            ? HomeCompletedStoryCards.maximumHeight
+            : StoryCardPairLayout.maximumCardHeight;
         final availableCardHeight = constraints.hasBoundedHeight
             ? math.max(
                 0.0,
                 constraints.maxHeight - _minimumQuestionHeight - _entryGap,
               )
-            : StoryCardPairLayout.maximumCardHeight;
+            : maximumCardHeight;
         final cardHeight = hasCard
-            ? math.min(
-                StoryCardPairLayout.maximumCardHeight,
-                availableCardHeight,
-              )
+            ? math.min(maximumCardHeight, availableCardHeight)
             : 0.0;
         final entryGap = cardHeight > 0 ? _entryGap : 0.0;
 
         return Column(
           children: [
-            if (cardHeight > 0) SizedBox(height: cardHeight, child: storyEntry),
+            if (cardHeight > 0)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
+                height: cardHeight,
+                alignment: Alignment.topCenter,
+                child: storyEntry,
+              ),
             if (entryGap > 0) SizedBox(height: entryGap),
             Expanded(
               child: SizedBox(
@@ -324,6 +345,7 @@ class _CompactStoryEntry extends StatelessWidget {
     required this.partnerCard,
     required this.canAddCard,
     required this.onAddCard,
+    required this.cardsAreCompleted,
     required this.onCardTap,
   });
 
@@ -331,7 +353,8 @@ class _CompactStoryEntry extends StatelessWidget {
   final StoryLoopCardPreview? partnerCard;
   final bool canAddCard;
   final VoidCallback? onAddCard;
-  final VoidCallback? Function(StoryLoopCardPreview card) onCardTap;
+  final bool cardsAreCompleted;
+  final ValueChanged<StoryLoopCardPreview> onCardTap;
 
   @override
   Widget build(BuildContext context) {
@@ -343,24 +366,71 @@ class _CompactStoryEntry extends StatelessWidget {
           : const SizedBox.shrink();
     }
 
-    return StoryCardPairLayout(
-      leftCardBuilder: myCard == null
-          ? canAddCard
-                ? (context, cardWidth) =>
-                      _HomeStoryAddButton(onPressed: onAddCard)
-                : null
-          : (context, cardWidth) => _HomeStoryCardThumbnail(
-              card: myCard,
-              width: cardWidth,
-              onTap: onCardTap(myCard),
+    final Widget content;
+    if (cardsAreCompleted && myCard != null && partnerCard != null) {
+      content = HomeCompletedStoryCards(
+        key: const Key('home-completed-story-line'),
+        leftCardBuilder: (context, cardWidth) => _HomeStoryCardThumbnail(
+          card: myCard,
+          width: cardWidth,
+          onTap: () => onCardTap(myCard),
+        ),
+        rightCardBuilder: (context, cardWidth) => _HomeStoryCardThumbnail(
+          card: partnerCard,
+          width: cardWidth,
+          onTap: () => onCardTap(partnerCard),
+        ),
+      );
+    } else {
+      content = StoryCardPairLayout(
+        key: const ValueKey('home-story-card-pair'),
+        leftCardBuilder: myCard == null
+            ? canAddCard
+                  ? (context, cardWidth) =>
+                        _HomeStoryAddButton(onPressed: onAddCard)
+                  : null
+            : (context, cardWidth) => _HomeStoryCardThumbnail(
+                card: myCard,
+                width: cardWidth,
+                onTap: () => onCardTap(myCard),
+              ),
+        rightCardBuilder: partnerCard == null
+            ? null
+            : (context, cardWidth) => _HomeStoryCardThumbnail(
+                card: partnerCard,
+                width: cardWidth,
+                onTap: () => onCardTap(partnerCard),
+              ),
+      );
+    }
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
+      alignment: Alignment.topCenter,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        layoutBuilder: (currentChild, previousChildren) {
+          return Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [...previousChildren, ?currentChild],
+          );
+        },
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              alignment: Alignment.topCenter,
+              scale: Tween<double>(begin: 0.94, end: 1).animate(animation),
+              child: child,
             ),
-      rightCardBuilder: partnerCard == null
-          ? null
-          : (context, cardWidth) => _HomeStoryCardThumbnail(
-              card: partnerCard,
-              width: cardWidth,
-              onTap: onCardTap(partnerCard),
-            ),
+          );
+        },
+        child: content,
+      ),
     );
   }
 }
@@ -415,6 +485,7 @@ class _HomeStoryLoopPresentation {
     required this.myCard,
     required this.partnerCard,
     required this.questionText,
+    required this.cardsAreCompleted,
     required this.canAddCard,
     required this.questionTargetLocation,
     required this.editableCardId,
@@ -423,6 +494,7 @@ class _HomeStoryLoopPresentation {
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
+  final bool cardsAreCompleted;
   final bool canAddCard;
   final String? questionTargetLocation;
   final String? editableCardId;
@@ -456,6 +528,11 @@ class _HomeStoryLoopPresentation {
       myCard: myCard,
       partnerCard: partnerCard,
       questionText: question?.question.questionText,
+      cardsAreCompleted:
+          myCard != null &&
+          partnerCard != null &&
+          question?.myAnswerExists == true &&
+          question?.partnerAnswerExists == true,
       canAddCard: canAddCard,
       questionTargetLocation: question == null
           ? null
@@ -466,11 +543,7 @@ class _HomeStoryLoopPresentation {
     );
   }
 
-  String? targetLocationForCard(StoryLoopCardPreview card) {
-    final questionTargetLocation = this.questionTargetLocation;
-    if (questionTargetLocation != null) {
-      return questionTargetLocation;
-    }
+  String? editTargetLocationForCard(StoryLoopCardPreview card) {
     return card.id == editableCardId ? '/home/story' : null;
   }
 

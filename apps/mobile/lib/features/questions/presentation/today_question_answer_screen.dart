@@ -11,6 +11,7 @@ import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../../story_loops/data/story_loop_card_detail.dart';
 import '../../story_loops/data/story_loop_detail_state.dart';
 import '../../story_loops/presentation/widgets/story_card_pair_layout.dart';
+import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../application/question_answer_submit_controller.dart';
 import '../data/daily_question.dart';
@@ -671,6 +672,11 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
       surfaceKey: ValueKey('question-answer-card-${card.id}'),
       previewUrl: card.previewUrl,
       width: width,
+      onTap: () => showStoryCardDetailOverlay(
+        context: context,
+        cardId: card.id,
+        previewUrl: card.previewUrl,
+      ),
       semanticsLabel: '스토리 카드',
     );
   }
