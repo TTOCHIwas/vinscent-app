@@ -5,14 +5,20 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../profile/application/profile_controller.dart';
 import '../../story_loops/application/story_loop_detail_navigation_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
+import '../../story_loops/data/story_loop_card_detail.dart';
+import '../../story_loops/data/story_loop_detail_state.dart';
+import '../../story_loops/presentation/widgets/story_card_pair_layout.dart';
+import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../application/question_answer_submit_controller.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
 import '../data/question_detail_state.dart';
 import 'question_route_context.dart';
 import 'story_loop_question_view_model.dart';
+import 'widgets/question_answer_prompt_row.dart';
 import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
 import 'widgets/question_prompt_character.dart';
@@ -224,6 +230,12 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(storyLoopDetailProvider(routeContext.targetDate));
+    final currentUserId = ref.watch(
+      profileControllerProvider.select(
+        (state) =>
+            state.maybeWhen(data: (profile) => profile?.id, orElse: () => null),
+      ),
+    );
 
     return detail.when(
       loading: () => _QuestionPageFrame(
@@ -239,6 +251,10 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
       ),
       data: (state) {
         final questionState = toQuestionDetailState(state);
+        final cards = switch (state) {
+          LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
+          _ => const <StoryLoopCardDetail>[],
+        };
         return switch (questionState) {
           LoadedQuestionDetailState() when questionState.canEdit =>
             _QuestionPageFrame(
@@ -251,6 +267,8 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
                 question: questionState.question,
                 answerState: questionState.answerState,
                 routeContext: routeContext,
+                cards: cards,
+                currentUserId: currentUserId,
               ),
             ),
           LoadedQuestionDetailState() => _QuestionPageFrame(
@@ -355,11 +373,15 @@ class _AnswerForm extends ConsumerStatefulWidget {
     required this.question,
     required this.answerState,
     required this.routeContext,
+    required this.cards,
+    required this.currentUserId,
   });
 
   final DailyQuestion question;
   final DailyQuestionAnswerState? answerState;
   final QuestionRouteContext routeContext;
+  final List<StoryLoopCardDetail> cards;
+  final String? currentUserId;
 
   @override
   ConsumerState<_AnswerForm> createState() => _AnswerFormState();
@@ -367,6 +389,7 @@ class _AnswerForm extends ConsumerStatefulWidget {
 
 class _AnswerFormState extends ConsumerState<_AnswerForm> {
   static const _maxAnswerLength = 500;
+  static const _compactLayoutHeight = 480.0;
   static const _submitFailureMessage = '답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   late final TextEditingController _controller;
@@ -414,70 +437,129 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: _QuestionContent(
-            question: widget.question,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _controller,
-                  minLines: 10,
-                  maxLines: 14,
-                  keyboardType: TextInputType.multiline,
-                  textInputAction: TextInputAction.newline,
-                  style: AppTextStyles.homeBody.copyWith(height: 1.5),
-                  decoration: InputDecoration(
-                    hintText: '답변 입력',
-                    hintStyle: AppTextStyles.homeBody.copyWith(
-                      color: AppColors.textPlaceholder,
-                    ),
-                    filled: true,
-                    fillColor: AppColors.background,
-                    contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        color: AppColors.textPlaceholder,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        color: AppColors.textPlaceholder,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
+    final cardPair = _QuestionAnswerCardPair.fromCards(
+      widget.cards,
+      currentUserId: widget.currentUserId,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactLayout =
+            constraints.hasBoundedHeight &&
+            constraints.maxHeight < _compactLayoutHeight;
+
+        return Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  12,
+                  compactLayout ? 8 : 16,
+                  12,
+                  12,
                 ),
-                if (_submitErrorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _submitErrorMessage!,
-                    style: AppTextStyles.homeCharacterLabel.copyWith(
-                      color: Colors.redAccent,
+                child: Column(
+                  children: [
+                    if (!compactLayout && cardPair.hasCard) ...[
+                      StoryCardPairLayout(
+                        leftCardBuilder: cardPair.myCard == null
+                            ? null
+                            : (context, cardWidth) => _QuestionAnswerStoryCard(
+                                card: cardPair.myCard!,
+                                width: cardWidth,
+                              ),
+                        rightCardBuilder: cardPair.partnerCard == null
+                            ? null
+                            : (context, cardWidth) => _QuestionAnswerStoryCard(
+                                card: cardPair.partnerCard!,
+                                width: cardWidth,
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    QuestionAnswerPromptRow(
+                      questionText: widget.question.questionText,
+                      compact: compactLayout,
                     ),
-                  ),
-                ],
-              ],
+                    SizedBox(height: compactLayout ? 8 : 16),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                expands: true,
+                                minLines: null,
+                                maxLines: null,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.newline,
+                                textAlignVertical: TextAlignVertical.top,
+                                style: AppTextStyles.homeBody.copyWith(
+                                  height: 1.5,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '답변 입력',
+                                  hintStyle: AppTextStyles.homeBody.copyWith(
+                                    color: AppColors.textPlaceholder,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.background,
+                                  contentPadding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    20,
+                                    24,
+                                    24,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.textPlaceholder,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.textPlaceholder,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (_submitErrorMessage != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                _submitErrorMessage!,
+                                style: AppTextStyles.homeCharacterLabel
+                                    .copyWith(color: Colors.redAccent),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        _AnswerSaveBar(
-          characterCount: _characterCount,
-          maxAnswerLength: _maxAnswerLength,
-          canSave: _canSubmit,
-          isLoading: _isSubmitting,
-          onSave: _submit,
-        ),
-      ],
+            _AnswerSaveBar(
+              characterCount: _characterCount,
+              maxAnswerLength: _maxAnswerLength,
+              canSave: _canSubmit,
+              isLoading: _isSubmitting,
+              onSave: _submit,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -524,6 +606,58 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       _submitErrorMessage = submitErrorMessage;
     });
   }
+}
+
+class _QuestionAnswerStoryCard extends StatelessWidget {
+  const _QuestionAnswerStoryCard({required this.card, required this.width});
+
+  final StoryLoopCardDetail card;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return StoryCardPreviewSurface(
+      surfaceKey: ValueKey('question-answer-card-${card.id}'),
+      previewUrl: card.previewUrl,
+      width: width,
+      semanticsLabel: '스토리 카드',
+    );
+  }
+}
+
+class _QuestionAnswerCardPair {
+  const _QuestionAnswerCardPair({this.myCard, this.partnerCard});
+
+  factory _QuestionAnswerCardPair.fromCards(
+    List<StoryLoopCardDetail> cards, {
+    required String? currentUserId,
+  }) {
+    final sortedCards = [...cards]
+      ..sort((left, right) => left.submittedAt.compareTo(right.submittedAt));
+    if (currentUserId == null) {
+      return _QuestionAnswerCardPair(
+        myCard: sortedCards.isEmpty ? null : sortedCards.first,
+        partnerCard: sortedCards.length < 2 ? null : sortedCards[1],
+      );
+    }
+
+    StoryLoopCardDetail? myCard;
+    StoryLoopCardDetail? partnerCard;
+    for (final card in sortedCards) {
+      if (card.authorUserId == currentUserId) {
+        myCard ??= card;
+      } else {
+        partnerCard ??= card;
+      }
+    }
+
+    return _QuestionAnswerCardPair(myCard: myCard, partnerCard: partnerCard);
+  }
+
+  final StoryLoopCardDetail? myCard;
+  final StoryLoopCardDetail? partnerCard;
+
+  bool get hasCard => myCard != null || partnerCard != null;
 }
 
 class _AnswerSaveBar extends StatelessWidget {

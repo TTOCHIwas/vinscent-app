@@ -5,16 +5,21 @@ import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/profile/application/profile_controller.dart';
+import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/question_route_context.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
 import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_pair_layout.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
@@ -306,6 +311,104 @@ void main() {
   });
 
   group('TodayQuestionAnswerEditScreen', () {
+    testWidgets(
+      'shows home-sized cards above the horizontal question prompt without page scrolling',
+      (tester) async {
+        final repository = _FakeDailyQuestionAnswerRepository(
+          _emptyAnswerState,
+        );
+        final targetDate = DateTime(2026, 5, 31);
+
+        await _pumpRouter(
+          tester,
+          repository: repository,
+          initialLocation: '/home/question/edit',
+          storyLoopDetails: {
+            targetDate: _storyLoopDetailFor(
+              date: targetDate,
+              question: _dailyQuestion,
+              answerState: _emptyAnswerState,
+              canAnswerQuestion: true,
+              cards: [
+                sampleDetailCard(
+                  id: 'partner-card',
+                  authorUserId: 'partner-id',
+                  submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+                ),
+                sampleDetailCard(
+                  id: 'my-card',
+                  authorUserId: _profile.id,
+                  submittedAt: DateTime.parse('2026-05-31T09:10:00Z'),
+                ),
+              ],
+            ),
+          },
+        );
+
+        final myCard = find.byKey(
+          const ValueKey('question-answer-card-my-card'),
+        );
+        final partnerCard = find.byKey(
+          const ValueKey('question-answer-card-partner-card'),
+        );
+        final character = find.byKey(const Key('question-answer-character'));
+        final question = find.byKey(const Key('question-answer-prompt'));
+
+        expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));
+        expect(
+          tester.getSize(myCard).width,
+          StoryCardPairLayout.maximumCardWidth,
+        );
+        expect(
+          tester.getSize(myCard).height,
+          StoryCardPairLayout.maximumCardHeight,
+        );
+        expect(
+          tester.getCenter(myCard).dx,
+          lessThan(tester.getCenter(partnerCard).dx),
+        );
+        expect(
+          tester.getBottomLeft(myCard).dy,
+          lessThan(tester.getTopLeft(character).dy),
+        );
+        expect(
+          tester.getCenter(character).dx,
+          lessThan(tester.getCenter(question).dx),
+        );
+        expect(
+          find.descendant(
+            of: find.byType(TodayQuestionAnswerEditScreen),
+            matching: find.byType(SingleChildScrollView),
+          ),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('collapses cards while the keyboard is visible', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+        viewInsetsBottom: 300,
+      );
+
+      expect(find.byType(StoryCardPreviewSurface), findsNothing);
+      expect(
+        find.byKey(const Key('question-answer-character')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('저장'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('disables submit for blank answer', (tester) async {
       final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
 
@@ -522,6 +625,7 @@ Future<GoRouter> _pumpRouter(
   Map<DateTime, StoryLoopDetail?> storyLoopDetails = const {},
   StoryLoopReadRepository? storyLoopRepository,
   DateTime? relationshipStartDate,
+  double viewInsetsBottom = 0,
 }) async {
   final today = DateTime(2026, 5, 31);
   final normalizedDetails = <DateTime, StoryLoopDetail?>{
@@ -586,12 +690,23 @@ Future<GoRouter> _pumpRouter(
           (ref, notifier) async =>
               _activeCoupleFor(relationshipStartDate: relationshipStartDate),
         ),
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _profile,
+        ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
         storyLoopReadRepositoryProvider.overrideWithValue(
           resolvedStoryLoopRepository,
         ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(viewInsets: EdgeInsets.only(bottom: viewInsetsBottom)),
+          child: child!,
+        ),
+      ),
     ),
   );
 
@@ -743,16 +858,27 @@ StoryLoopDetail _storyLoopDetailFor({
   required DailyQuestion question,
   required DailyQuestionAnswerState answerState,
   required bool canAnswerQuestion,
+  List<StoryLoopCardDetail>? cards,
 }) {
   return sampleStoryLoopDetail(
     coupleDate: date,
     canAnswerQuestion: canAnswerQuestion,
+    cards: cards,
     question: StoryLoopQuestionDetail(
       question: question,
       answerState: answerState,
     ),
   );
 }
+
+final _profile = UserProfile(
+  id: 'user-a',
+  displayName: '연인',
+  birthDate: DateTime(2000),
+  onboardingCompletedAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 StoryLoopDetail _historyDetailFor({
   required DateTime date,
