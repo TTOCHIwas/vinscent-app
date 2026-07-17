@@ -93,9 +93,9 @@ class _RecordingSlotArtworkEditorScreenState
             .fetchSlotArtworkDrawingData(
               drawingDataPath: artwork.drawingDataPath,
             );
-        strokes = const RecordingSlotArtworkCodec()
-            .decodeDrawingData(bytes)
-            .strokes;
+        strokes = (await const RecordingSlotArtworkCodec().decodeDrawingData(
+          bytes,
+        )).strokes;
       }
 
       if (!mounted) {
