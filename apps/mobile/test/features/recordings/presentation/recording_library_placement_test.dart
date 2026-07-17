@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
+import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
@@ -136,11 +137,37 @@ void main() {
 
     expect(find.text('슬롯 제목'), findsOneWidget);
   });
+
+  testWidgets('a read-only library exposes artwork viewing only', (
+    tester,
+  ) async {
+    final overview = CoupleRecordingOverview(
+      slotLimit: 1,
+      currentRecording: _currentRecording(),
+      savedSlots: [_slot()],
+    );
+    await _pumpLibrary(
+      tester,
+      overview: overview,
+      couple: archivedReadOnlyCouple(),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('recording-library-slot-menu-slot-1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('그림 보기'), findsOneWidget);
+    expect(find.text('홈에 배치'), findsNothing);
+    expect(find.text('현재 녹음으로 교체'), findsNothing);
+    expect(find.text('삭제'), findsNothing);
+  });
 }
 
 Future<_LibraryHarness> _pumpLibrary(
   WidgetTester tester, {
   required CoupleRecordingOverview overview,
+  Couple? couple,
 }) async {
   final repository = _FakeRecordingRepository(overview);
   final playbackController = _FakePlaybackController();
@@ -164,7 +191,7 @@ Future<_LibraryHarness> _pumpLibrary(
     ProviderScope(
       overrides: [
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => activeCouple(),
+          (ref, notifier) async => couple ?? activeCouple(),
         ),
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
