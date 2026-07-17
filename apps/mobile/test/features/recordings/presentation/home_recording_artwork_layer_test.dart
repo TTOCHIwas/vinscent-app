@@ -15,6 +15,107 @@ import 'package:vinscent/features/recordings/presentation/widgets/home_recording
 import '../../../support/couple_fixtures.dart';
 
 void main() {
+  testWidgets('uses a larger artwork and preserves an upper-stage position', (
+    tester,
+  ) async {
+    final repository = _FakeRecordingRepository(
+      _overview(
+        slot: _slot(
+          placement: const CoupleRecordingSlotPlacement(
+            normalizedX: 0.5,
+            normalizedY: 0.1,
+            revision: 1,
+          ),
+        ),
+      ),
+    );
+    await _pumpLayer(tester, repository);
+
+    final layer = find.byType(HomeRecordingArtworkLayer);
+    final artwork = find.byKey(const ValueKey('home-recording-artwork-slot-1'));
+    final localCenter = tester.getCenter(artwork) - tester.getTopLeft(layer);
+
+    expect(tester.getSize(artwork).width, greaterThanOrEqualTo(72));
+    expect(localCenter.dx, closeTo(168, 0.1));
+    expect(localCenter.dy, closeTo(62, 0.1));
+  });
+
+  testWidgets('lets a protected foreground control receive overlap taps', (
+    tester,
+  ) async {
+    var foregroundTapCount = 0;
+    final repository = _FakeRecordingRepository(
+      _overview(
+        slot: _slot(
+          placement: const CoupleRecordingSlotPlacement(
+            normalizedX: 0.5,
+            normalizedY: 0.5,
+            revision: 1,
+          ),
+        ),
+      ),
+    );
+    await _pumpLayer(
+      tester,
+      repository,
+      foregroundRects: const [Rect.fromLTWH(120, 270, 96, 80)],
+      behind: GestureDetector(
+        key: const ValueKey('protected-foreground-control'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => foregroundTapCount += 1,
+      ),
+    );
+
+    await tester.tapAt(
+      tester.getTopLeft(find.byType(HomeRecordingArtworkLayer)) +
+          const Offset(168, 310),
+    );
+    await tester.pump();
+
+    expect(foregroundTapCount, 1);
+  });
+
+  testWidgets('uses the character pulse instead of a flashing border', (
+    tester,
+  ) async {
+    final repository = _FakeRecordingRepository(
+      _overview(
+        slot: _slot(
+          placement: const CoupleRecordingSlotPlacement(
+            normalizedX: 0.5,
+            normalizedY: 0.5,
+            revision: 1,
+          ),
+        ),
+      ),
+    );
+    final container = await _pumpLayer(tester, repository);
+
+    container
+        .read(recordingSlotPlacementSessionProvider.notifier)
+        .begin('slot-1');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    final pulse = tester.widget<ScaleTransition>(
+      find.byKey(const ValueKey('home-recording-artwork-pulse-slot-1')),
+    );
+    expect(pulse.scale.value, greaterThan(1));
+
+    final artwork = find.byKey(const ValueKey('home-recording-artwork-slot-1'));
+    final hasBorder = tester
+        .widgetList<AnimatedContainer>(
+          find.descendant(
+            of: artwork,
+            matching: find.byType(AnimatedContainer),
+          ),
+        )
+        .map((widget) => widget.decoration)
+        .whereType<BoxDecoration>()
+        .any((decoration) => decoration.border != null);
+    expect(hasBorder, isFalse);
+  });
+
   testWidgets('consumes a library session and creates one valid placement', (
     tester,
   ) async {
@@ -165,8 +266,10 @@ void main() {
 
 Future<ProviderContainer> _pumpLayer(
   WidgetTester tester,
-  _FakeRecordingRepository repository,
-) async {
+  _FakeRecordingRepository repository, {
+  List<Rect> foregroundRects = const [],
+  Widget? behind,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -178,15 +281,18 @@ Future<ProviderContainer> _pumpLayer(
           (ref, notifier) => repository.currentOverview,
         ),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: Scaffold(
           body: Center(
             child: SizedBox(
               width: 336,
               height: 620,
-              child: HomeRecordingArtworkLayer(
-                topForbiddenHeight: 340,
-                characterRect: Rect.fromLTWH(59, 356, 218, 218),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (behind != null) behind,
+                  HomeRecordingArtworkLayer(foregroundRects: foregroundRects),
+                ],
               ),
             ),
           ),

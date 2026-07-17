@@ -39,16 +39,47 @@ void main() {
 
     expect(overview.placedSlots, [placedSlot]);
   });
+
+  test('overview orders placed slots from back to front by z-index', () {
+    final frontSlot = _slot(
+      slotId: 'front',
+      slotIndex: 1,
+      placement: const CoupleRecordingSlotPlacement(
+        normalizedX: 0.5,
+        normalizedY: 0.5,
+        revision: 1,
+        zIndex: 3,
+      ),
+    );
+    final backSlot = _slot(
+      slotId: 'back',
+      slotIndex: 2,
+      placement: const CoupleRecordingSlotPlacement(
+        normalizedX: 0.5,
+        normalizedY: 0.5,
+        revision: 1,
+        zIndex: 1,
+      ),
+    );
+    final overview = CoupleRecordingOverview(
+      slotLimit: 2,
+      currentRecording: null,
+      savedSlots: [frontSlot, backSlot],
+    );
+
+    expect(overview.placedSlots, [backSlot, frontSlot]);
+  });
 }
 
 CoupleRecordingSlot _slot({
   required String slotId,
+  int slotIndex = 1,
   CoupleRecordingSlotPlacement? placement,
 }) {
   final timestamp = DateTime.utc(2026, 7, 18);
   return CoupleRecordingSlot(
     slotId: slotId,
-    slotIndex: 1,
+    slotIndex: slotIndex,
     title: 'slot',
     recordingId: 'recording',
     senderUserId: 'sender',
