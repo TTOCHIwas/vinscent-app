@@ -26,6 +26,7 @@ import '../../../support/story_loop_fixtures.dart';
 
 const _storyAddButtonKey = Key('home-story-add-button');
 const _questionBubbleKey = Key('home-question-speech-bubble');
+const _questionActionKey = Key('home-question-action');
 const _completedStoryLineKey = Key('home-completed-story-line');
 const _completedStoryClotheslineKey = Key('home-completed-story-clothesline');
 const _storyDetailOverlayKey = Key('story-card-detail-overlay');
@@ -76,7 +77,7 @@ void main() {
       expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
       expect(
         tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
-        const Size.square(272),
+        const Size.square(250),
       );
     },
   );
@@ -135,20 +136,24 @@ void main() {
 
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
       final questionBubble = find.byKey(_questionBubbleKey);
+      final questionAction = find.byKey(_questionActionKey);
       final characterControl = find.byKey(CharacterRecordingControl.controlKey);
       expect(questionBubble, findsOneWidget);
+      expect(questionAction, findsOneWidget);
       expect(
         find.descendant(of: questionBubble, matching: find.byType(CustomPaint)),
         findsOneWidget,
       );
+      expect(tester.getSize(questionAction), tester.getSize(questionBubble));
       expect(
-        tester.getBottomLeft(questionBubble).dy,
-        lessThan(tester.getTopLeft(characterControl).dy),
+        tester.getTopLeft(characterControl).dy -
+            tester.getBottomLeft(questionBubble).dy,
+        closeTo(8, 0.1),
       );
       final questionText = tester.widget<Text>(
         find.text(_dailyQuestion.questionText),
       );
-      expect(questionText.style?.fontSize, 22);
+      expect(questionText.style?.fontSize, 16);
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
       expect(myCard, findsOneWidget);

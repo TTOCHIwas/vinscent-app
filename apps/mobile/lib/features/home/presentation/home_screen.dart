@@ -47,10 +47,40 @@ class HomeScreen extends StatelessWidget {
       child: const Column(
         children: [
           _CoupleStatus(),
-          Expanded(child: _HomeMainStage()),
-          Expanded(child: HomeCharacterRecordingControl()),
+          Expanded(child: _HomeStageLayout()),
         ],
       ),
+    );
+  }
+}
+
+class _HomeStageLayout extends StatelessWidget {
+  const _HomeStageLayout();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final halfHeight = constraints.maxHeight / 2;
+        final availableWidth = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : HomeCharacterRecordingControl.preferredControlSize;
+        final controlSize = math.min(
+          HomeCharacterRecordingControl.preferredControlSize,
+          math.min(availableWidth, halfHeight),
+        );
+        final characterOffset = (halfHeight - controlSize) / 2;
+
+        return Column(
+          children: [
+            SizedBox(
+              height: halfHeight + characterOffset,
+              child: const _HomeMainStage(),
+            ),
+            const Expanded(child: HomeCharacterRecordingControl()),
+          ],
+        );
+      },
     );
   }
 }
@@ -306,27 +336,25 @@ class _HomeStoryLoopContent extends StatelessWidget {
               ),
             if (entryGap > 0) SizedBox(height: entryGap),
             Expanded(
-              child: SizedBox(
-                width: double.infinity,
+              child: Align(
+                alignment: Alignment.bottomCenter,
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
+                    key: const Key('home-question-action'),
                     onTap: onQuestionTap,
                     borderRadius: BorderRadius.circular(12),
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: CharacterSpeechBubble(
-                        key: const Key('home-question-speech-bubble'),
-                        speechText: questionText,
-                        maxWidth: 320,
-                        maxLines: 4,
-                        textStyle: AppTextStyles.homeQuestionBubble,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 9,
-                        ),
-                        tailSize: const Size(16, 8),
+                    child: CharacterSpeechBubble(
+                      key: const Key('home-question-speech-bubble'),
+                      speechText: questionText,
+                      maxWidth: 320,
+                      maxLines: 4,
+                      textStyle: AppTextStyles.homeQuestionBubble,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 9,
                       ),
+                      tailSize: const Size(16, 8),
                     ),
                   ),
                 ),

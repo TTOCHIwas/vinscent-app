@@ -17,7 +17,7 @@ import 'character_recording_control.dart';
 class HomeCharacterRecordingControl extends ConsumerWidget {
   const HomeCharacterRecordingControl({super.key});
 
-  static const _preferredControlSize = 272.0;
+  static const preferredControlSize = 250.0;
   static const _characterSpacing = 32.0;
 
   @override
@@ -97,12 +97,12 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
       builder: (context, constraints) {
         final availableWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth
-            : _preferredControlSize;
+            : preferredControlSize;
         final availableHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
-            : _preferredControlSize;
+            : preferredControlSize;
         final controlSize = math.min(
-          _preferredControlSize,
+          preferredControlSize,
           math.min(availableWidth, availableHeight),
         );
         final characterSize = math.max(0.0, controlSize - _characterSpacing);
