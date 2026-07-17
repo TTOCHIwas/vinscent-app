@@ -333,8 +333,10 @@ class _QuestionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(32, 32, 32, 40),
+      padding: EdgeInsets.fromLTRB(32, 32, 32, 40 + bottomNavigationClearance),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

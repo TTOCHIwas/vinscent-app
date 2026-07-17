@@ -52,6 +52,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final today = ref.watch(coupleCurrentDateProvider);
     final couple = ref.watch(coupleControllerProvider);
+    final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
 
     return couple.when(
       loading: () => const _CenteredLoader(),
@@ -91,21 +92,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 40),
-                  child: Column(
-                    children: [
-                      _CalendarGrid(
-                        visibleMonth: _visibleMonth,
-                        today: today,
-                        relationshipStartDate: couple.relationshipStartDate!,
-                        selectedDate: _selectedDate,
-                        onDatePressed: _handleDatePressed,
-                      ),
-                      const SizedBox(height: 48),
-                      _CalendarDetail(selectedDate: _selectedDate),
-                    ],
-                  ),
+                padding: EdgeInsets.fromLTRB(
+                  32,
+                  32,
+                  32,
+                  40 + bottomNavigationClearance,
+                ),
+                child: Column(
+                  children: [
+                    _CalendarGrid(
+                      visibleMonth: _visibleMonth,
+                      today: today,
+                      relationshipStartDate: couple.relationshipStartDate!,
+                      selectedDate: _selectedDate,
+                      onDatePressed: _handleDatePressed,
+                    ),
+                    const SizedBox(height: 48),
+                    _CalendarDetail(selectedDate: _selectedDate),
+                  ],
                 ),
               ),
             ),
