@@ -316,6 +316,15 @@ void main() {
 
       expect(find.text('종료하려면 다시 누르세요.'), findsOneWidget);
       expect(_systemPopCalls(platformCalls), isEmpty);
+      final exitSnackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(exitSnackBar.behavior, SnackBarBehavior.floating);
+      expect(exitSnackBar.width, 280);
+      expect(exitSnackBar.shape, isA<StadiumBorder>());
+      expect(
+        exitSnackBar.backgroundColor,
+        AppColors.logoBackground.withAlpha(230),
+      );
+      expect((exitSnackBar.content as Text).textAlign, TextAlign.center);
 
       await tester.binding.handlePopRoute();
       await tester.pump();
