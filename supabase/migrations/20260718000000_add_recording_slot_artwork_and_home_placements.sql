@@ -539,6 +539,12 @@ begin
     perform private.raise_app_error('recording_placement_conflict');
   end if;
 
+  update public.couple_recording_slot_placements
+  set
+    updated_by_user_id = current_user_id,
+    revision = revision + 1
+  where slot_id = target_placement.slot_id;
+
   delete from public.couple_recording_slot_placements
   where slot_id = target_placement.slot_id;
 end;
@@ -633,6 +639,12 @@ begin
     );
   end if;
 
+  update public.couple_recording_slots
+  set
+    updated_by_user_id = current_user_id,
+    revision = revision + 1
+  where id = target_slot.id;
+
   delete from public.couple_recording_slots
   where id = target_slot.id;
 
@@ -697,6 +709,36 @@ $$;
 
 do $$
 begin
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'couple_current_recordings'
+  ) then
+    alter publication supabase_realtime
+      add table public.couple_current_recordings;
+  end if;
+
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'couple_recording_slot_settings'
+  ) then
+    alter publication supabase_realtime
+      add table public.couple_recording_slot_settings;
+  end if;
+
   if exists (
     select 1
     from pg_publication

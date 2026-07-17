@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../recording_debug_log.dart';
 import '../data/couple_recording.dart';
+import '../data/couple_recording_overview_change_source.dart';
 import '../data/couple_recording_repository.dart';
 
 final coupleRecordingOverviewControllerProvider =
@@ -18,19 +20,114 @@ final coupleRecordingOverviewControllerProvider =
 
 class CoupleRecordingOverviewController
     extends AsyncNotifier<CoupleRecordingOverview?> {
+  static const _realtimeRefreshDebounce = Duration(milliseconds: 160);
+
+  StreamSubscription<void>? _overviewChangesSubscription;
+  Timer? _realtimeRefreshTimer;
+  Future<void>? _pendingSubscriptionCancellation;
+  Future<void>? _refreshLoop;
+  bool _refreshQueued = false;
+  bool _showLoadingOnNextRefresh = false;
+
   @override
   Future<CoupleRecordingOverview?> build() async {
+    _registerRealtimeLifecycle();
     final authStatus = ref.watch(authControllerProvider);
+    final repository = ref.watch(coupleRecordingRepositoryProvider);
+    final coupleFuture = authStatus == AuthStatus.authenticated
+        ? ref.watch(coupleControllerProvider.future)
+        : null;
+    await _stopWatchingOverviewChanges();
+    if (!ref.mounted) {
+      return null;
+    }
+
     if (authStatus != AuthStatus.authenticated) {
       return null;
     }
 
-    final couple = await ref.watch(coupleControllerProvider.future);
+    final couple = await coupleFuture!;
+    if (!ref.mounted) {
+      return null;
+    }
     if (couple == null || !couple.canReadSharedData) {
       return null;
     }
 
-    return ref.watch(coupleRecordingRepositoryProvider).fetchOverview();
+    _watchOverviewChanges(couple.id);
+    return repository.fetchOverview();
+  }
+
+  void _registerRealtimeLifecycle() {
+    ref.onDispose(() {
+      _realtimeRefreshTimer?.cancel();
+      _realtimeRefreshTimer = null;
+      _refreshQueued = false;
+      _showLoadingOnNextRefresh = false;
+      final subscription = _overviewChangesSubscription;
+      _overviewChangesSubscription = null;
+      _pendingSubscriptionCancellation = _cancelSubscription(subscription);
+    });
+  }
+
+  void _watchOverviewChanges(String coupleId) {
+    _overviewChangesSubscription = ref
+        .read(coupleRecordingOverviewChangeSourceProvider)
+        .watch(coupleId: coupleId)
+        .listen(
+          (_) => _scheduleRealtimeRefresh(),
+          onError: (Object error, StackTrace stackTrace) {
+            debugRecordingLog('Overview realtime stream failed: $error');
+          },
+        );
+  }
+
+  Future<void> _stopWatchingOverviewChanges() async {
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = null;
+    final pendingCancellation = _pendingSubscriptionCancellation;
+    _pendingSubscriptionCancellation = null;
+    await pendingCancellation;
+    final subscription = _overviewChangesSubscription;
+    _overviewChangesSubscription = null;
+    await _cancelSubscription(subscription);
+  }
+
+  Future<void> _cancelSubscription(
+    StreamSubscription<void>? subscription,
+  ) async {
+    if (subscription == null) {
+      return;
+    }
+    try {
+      await subscription.cancel();
+    } catch (error) {
+      debugRecordingLog('Overview realtime cancellation failed: $error');
+    }
+  }
+
+  void _scheduleRealtimeRefresh() {
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(_realtimeRefreshDebounce, () {
+      _realtimeRefreshTimer = null;
+      unawaited(_refreshFromRealtime());
+    });
+  }
+
+  Future<void> _refreshFromRealtime() async {
+    if (!ref.mounted) {
+      return;
+    }
+    if (state.isLoading) {
+      _scheduleRealtimeRefresh();
+      return;
+    }
+
+    try {
+      await _refresh(showLoading: false);
+    } catch (error) {
+      debugRecordingLog('Overview realtime refresh failed: $error');
+    }
   }
 
   Future<void> refresh() async {
@@ -41,8 +138,31 @@ class CoupleRecordingOverviewController
     await _refresh(showLoading: false);
   }
 
-  Future<void> _refresh({required bool showLoading}) async {
-    final couple = await ref.read(coupleControllerProvider.future);
+  Future<void> _refresh({required bool showLoading}) {
+    _refreshQueued = true;
+    _showLoadingOnNextRefresh |= showLoading;
+    return _refreshLoop ??= _drainRefreshQueue();
+  }
+
+  Future<void> _drainRefreshQueue() async {
+    try {
+      while (_refreshQueued) {
+        _refreshQueued = false;
+        final showLoading = _showLoadingOnNextRefresh;
+        _showLoadingOnNextRefresh = false;
+        await _performRefresh(showLoading: showLoading);
+      }
+    } finally {
+      _refreshLoop = null;
+    }
+  }
+
+  Future<void> _performRefresh({required bool showLoading}) async {
+    final requestRef = ref;
+    final couple = await requestRef.read(coupleControllerProvider.future);
+    if (!requestRef.mounted) {
+      return;
+    }
     if (couple == null || !couple.canReadSharedData) {
       debugRecordingLog('Overview refresh skipped: no readable couple');
       state = const AsyncValue.data(null);
@@ -57,16 +177,20 @@ class CoupleRecordingOverviewController
     if (showLoading) {
       state = const AsyncValue.loading();
     }
-    state = await AsyncValue.guard(
-      () => ref.read(coupleRecordingRepositoryProvider).fetchOverview(),
+    final nextState = await AsyncValue.guard(
+      () => requestRef.read(coupleRecordingRepositoryProvider).fetchOverview(),
     );
-    final overview = switch (state) {
+    if (!requestRef.mounted) {
+      return;
+    }
+    state = nextState;
+    final overview = switch (nextState) {
       AsyncData<CoupleRecordingOverview?> value => value.value,
       _ => null,
     };
     debugRecordingLog(
       'Overview refresh completed: '
-      'hasError=${state.hasError}, slotLimit=${overview?.slotLimit}, '
+      'hasError=${nextState.hasError}, slotLimit=${overview?.slotLimit}, '
       'savedSlotCount=${overview?.savedSlots.length}, '
       'hasCurrentRecording=${overview?.currentRecording != null}',
     );
