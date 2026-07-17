@@ -2,23 +2,14 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-const storyCardColorPalette = [
-  Color(0xFF111111),
-  Color(0xFFFFFFFF),
-  Color(0xFFE94B5F),
-  Color(0xFFF4932F),
-  Color(0xFFF7D748),
-  Color(0xFF39B871),
-  Color(0xFF3E8EDE),
-  Color(0xFF8C5BEA),
-  Color(0xFFE56BAA),
-];
+import '../../../core/drawing/app_drawing_style.dart';
 
-const storyCardThinStrokeWidth = 0.012;
-const storyCardNormalStrokeWidth = 0.022;
-const storyCardThickStrokeWidth = 0.08;
-const storyCardMinStrokeWidth = storyCardThinStrokeWidth;
-const storyCardMaxStrokeWidth = storyCardThickStrokeWidth;
+const storyCardColorPalette = AppDrawingStyle.colorPalette;
+const storyCardThinStrokeWidth = AppDrawingStyle.thinStrokeWidth;
+const storyCardNormalStrokeWidth = AppDrawingStyle.normalStrokeWidth;
+const storyCardThickStrokeWidth = AppDrawingStyle.thickStrokeWidth;
+const storyCardMinStrokeWidth = AppDrawingStyle.minStrokeWidth;
+const storyCardMaxStrokeWidth = AppDrawingStyle.maxStrokeWidth;
 const storyCardMaxTextLayers = 10;
 const storyCardMaxTextCharactersPerLayer = 500;
 const storyCardMaxTextCharacters = 5000;

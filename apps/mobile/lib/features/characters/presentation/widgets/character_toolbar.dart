@@ -1,28 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/assets/app_icons.dart';
+import '../../../../core/drawing/app_drawing_style.dart';
 import '../../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/character_drawing.dart';
 
-const characterColorPalette = [
-  Color(0xFF111111),
-  Color(0xFF6F737C),
-  Color(0xFFFFFFFF),
-  Color(0xFFE94B5F),
-  Color(0xFFF4932F),
-  Color(0xFFF7D748),
-  Color(0xFF39B871),
-  Color(0xFF3E8EDE),
-  Color(0xFF8C5BEA),
-  Color(0xFFE56BAA),
-];
-
-const characterThinStrokeWidth = 0.012;
-const characterNormalStrokeWidth = 0.022;
-const characterThickStrokeWidth = 0.038;
-const characterMinStrokeWidth = characterThinStrokeWidth;
-const characterMaxStrokeWidth = characterThickStrokeWidth;
+const characterColorPalette = AppDrawingStyle.colorPalette;
+const characterThinStrokeWidth = AppDrawingStyle.thinStrokeWidth;
+const characterNormalStrokeWidth = AppDrawingStyle.normalStrokeWidth;
+const characterThickStrokeWidth = AppDrawingStyle.thickStrokeWidth;
+const characterMinStrokeWidth = AppDrawingStyle.minStrokeWidth;
+const characterMaxStrokeWidth = AppDrawingStyle.maxStrokeWidth;
 
 class CharacterToolbar extends StatelessWidget {
   const CharacterToolbar({

@@ -201,11 +201,12 @@ void main() {
   ) async {
     await _pumpEditor(tester, draft: _existingEmptyDraft());
     const selectedColor = Color(0xFFE94B5F);
+    final selectedColorIndex = storyCardColorPalette.indexOf(selectedColor);
 
     await _openTextInput(tester);
     await tester.enterText(find.byType(TextField), 'new text');
     await tester.tap(
-      find.byKey(const ValueKey('story-card-text-input-color-2')),
+      find.byKey(ValueKey('story-card-text-input-color-$selectedColorIndex')),
     );
     await tester.pump();
 
