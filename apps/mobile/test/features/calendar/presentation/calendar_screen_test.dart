@@ -148,6 +148,9 @@ void main() {
       final singleCardCell = find.byKey(
         const ValueKey('calendar-month-story-cell-single-2026-05-05'),
       );
+      final stackedCardCell = find.byKey(
+        const ValueKey('calendar-month-story-cell-stacked-2026-05-06'),
+      );
       final dateInkWell = find.ancestor(
         of: singleCardCell,
         matching: find.byType(InkWell),
@@ -157,7 +160,20 @@ void main() {
         tester.widget<InkWell>(dateInkWell).child,
         isA<CalendarMonthStoryCell>(),
       );
-      expect(_framedDecorations(tester, singleCardCell), isEmpty);
+      final singleCardDecorations = _framedDecorations(tester, singleCardCell);
+      final stackedCardDecorations = _framedDecorations(
+        tester,
+        stackedCardCell,
+      );
+      expect(singleCardDecorations, hasLength(1));
+      expect(stackedCardDecorations, hasLength(2));
+      for (final decoration in [
+        ...singleCardDecorations,
+        ...stackedCardDecorations,
+      ]) {
+        expect(decoration.border, isNull);
+        expect(decoration.boxShadow, hasLength(1));
+      }
     },
   );
 
