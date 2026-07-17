@@ -12,6 +12,7 @@ import 'package:vinscent/features/questions/data/daily_question_answer_repositor
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/question_route_context.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/questions/presentation/widgets/character_speech_prompt.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -355,6 +356,9 @@ void main() {
         final question = find.byKey(const Key('question-answer-prompt'));
 
         expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));
+        final speechBubble = tester.widget<CharacterSpeechBubble>(question);
+        expect(speechBubble.tailPosition, SpeechBubbleTailPosition.left);
+        expect(speechBubble.tailSize, const Size(10, 18));
         expect(
           tester.getSize(myCard).width,
           StoryCardPairLayout.maximumCardWidth,

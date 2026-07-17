@@ -16,16 +16,16 @@ class QuestionAnswerPromptRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final characterSize = compact ? 64.0 : 96.0;
+    const characterSize = 96.0;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        const SizedBox(width: 24),
         CoupleCharacterAvatar(
           key: const Key('question-answer-character'),
           size: characterSize,
         ),
-        SizedBox(width: compact ? 12 : 16),
         Expanded(
           child: Semantics(
             label: '질문',
@@ -38,7 +38,8 @@ class QuestionAnswerPromptRow extends StatelessWidget {
                 horizontal: compact ? 14 : 16,
                 vertical: compact ? 8 : 12,
               ),
-              tailSize: Size.zero,
+              tailSize: const Size(10, 18),
+              tailPosition: SpeechBubbleTailPosition.left,
               textStyle: AppTextStyles.homeQuestionBubble,
             ),
           ),
