@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -25,6 +26,10 @@ import '../../../support/story_loop_fixtures.dart';
 
 const _storyAddButtonKey = Key('home-story-add-button');
 const _questionBubbleKey = Key('home-question-speech-bubble');
+const _completedStoryLineKey = Key('home-completed-story-line');
+const _completedStoryClotheslineKey = Key('home-completed-story-clothesline');
+const _storyDetailOverlayKey = Key('home-story-card-detail-overlay');
+const _storyDetailCloseButtonKey = Key('home-story-card-detail-close');
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
 const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
 const _storyEditAction = '\uce74\ub4dc \uc218\uc815';
@@ -45,6 +50,7 @@ const _storyAiPlaceholder =
     'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
+Key _storyDetailCardKey(String cardId) => Key('home-story-card-detail-$cardId');
 
 void main() {
   testWidgets(
@@ -173,6 +179,186 @@ void main() {
       expect(find.text(_storyLabel), findsNothing);
       expect(find.text(_storyAnswerAction), findsNothing);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    '\uc9c8\ubb38 \uc0dd\uc131 \uc804 \ub0b4 \uce74\ub4dc\ub294 \uc218\uc815 \ud654\uba74\uc744 \uc5f0\ub2e4',
+    (tester) async {
+      final router = await _pumpRoutedHome(
+        tester,
+        todaySummary: _summaryWithoutQuestion(
+          coupleDate: _today,
+          loopStatus: StoryLoopStatus.waitingPartnerCard,
+          cardCount: 1,
+          storyEditLocked: false,
+          canEditStory: true,
+          canAnswerQuestion: false,
+          cards: [samplePreviewCard(authorUserId: _profile.id)],
+        ),
+      );
+
+      await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
+      await tester.pumpAndSettle();
+
+      expect(router.routeInformationProvider.value.uri.path, '/home/story');
+      expect(find.text('story editor route'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '\uc9c8\ubb38 \uc0dd\uc131 \uc804 \uc0c1\ub300 \uce74\ub4dc\ub294 \uc0c1\uc138 \uc624\ubc84\ub808\uc774\ub97c \uc5f0\ub2e4',
+    (tester) async {
+      final router = await _pumpRoutedHome(
+        tester,
+        todaySummary: _summaryWithoutQuestion(
+          coupleDate: _today,
+          loopStatus: StoryLoopStatus.waitingPartnerCard,
+          cardCount: 1,
+          storyEditLocked: false,
+          canEditStory: true,
+          canAnswerQuestion: false,
+          cards: [samplePreviewCard(authorUserId: 'partner-id')],
+        ),
+      );
+
+      await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
+      await tester.pumpAndSettle();
+
+      expect(router.routeInformationProvider.value.uri.path, '/home');
+      expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+      expect(find.byKey(_storyDetailCardKey('card-1')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '\uc9c8\ubb38 \uc0dd\uc131 \ud6c4 \uce74\ub4dc\uc640 \uc9c8\ubb38\uc758 \uc120\ud0dd \ub3d9\uc791\uc744 \ubd84\ub9ac\ud55c\ub2e4',
+    (tester) async {
+      final router = await _pumpRoutedHome(
+        tester,
+        todaySummary: sampleTodaySummary(
+          coupleDate: _today,
+          cards: [
+            samplePreviewCard(authorUserId: _profile.id),
+            samplePreviewCard(
+              id: 'card-2',
+              authorUserId: 'partner-id',
+              previewPath: 'previews/card-2.png',
+            ),
+          ],
+          question: StoryLoopQuestionSummary(
+            question: _dailyQuestion,
+            myAnswerExists: false,
+            partnerAnswerExists: false,
+            answerCount: 0,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
+      await tester.pumpAndSettle();
+
+      expect(router.routeInformationProvider.value.uri.path, '/home');
+      expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+
+      await tester.tap(find.byKey(_storyDetailCloseButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_dailyQuestion.questionText));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/home/question/edit',
+      );
+      expect(find.text('question edit route'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '\uc591\ucabd \ub2f5\ubcc0\uc774 \uc644\ub8cc\ub418\uba74 \uce74\ub4dc\ub97c \ucd95\uc18c\ud574 \uc904\uc5d0 \uac78\uc5b4 \ubcf4\uc5ec\uc900\ub2e4',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 592));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: sampleTodaySummary(
+          coupleDate: _today,
+          cards: [
+            samplePreviewCard(authorUserId: _profile.id),
+            samplePreviewCard(
+              id: 'card-2',
+              authorUserId: 'partner-id',
+              previewPath: 'previews/card-2.png',
+            ),
+          ],
+          question: StoryLoopQuestionSummary(
+            question: _dailyQuestion,
+            myAnswerExists: true,
+            partnerAnswerExists: true,
+            answerCount: 2,
+          ),
+        ),
+      );
+
+      final myCard = find.byKey(_storyThumbnailKey('card-1'));
+      final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+      expect(find.byKey(_completedStoryLineKey), findsOneWidget);
+      expect(find.byKey(_completedStoryClotheslineKey), findsOneWidget);
+      expect(tester.getSize(myCard).width, lessThan(160));
+      expect(tester.getSize(partnerCard).width, lessThan(160));
+      expect(
+        tester.getCenter(myCard).dx,
+        lessThan(tester.getCenter(partnerCard).dx),
+      );
+      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    '\uce74\ub4dc \uc0c1\uc138\ub294 \uc911\uc559\uc5d0 \ud45c\uc2dc\ub418\uba70 \uce74\ub4dc \uc678\ubd80\uc640 \ub2eb\uae30 \ubc84\ud2bc\uc73c\ub85c \ub2eb\ud78c\ub2e4',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final router = await _pumpRoutedHome(
+        tester,
+        todaySummary: sampleTodaySummary(
+          coupleDate: _today,
+          question: StoryLoopQuestionSummary(
+            question: _dailyQuestion,
+            myAnswerExists: false,
+            partnerAnswerExists: false,
+            answerCount: 0,
+          ),
+        ),
+      );
+
+      final thumbnail = find.byKey(_storyThumbnailKey('card-1'));
+      await tester.tap(thumbnail);
+      await tester.pumpAndSettle();
+
+      final detailCard = find.byKey(_storyDetailCardKey('card-1'));
+      expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+      expect(tester.getSize(detailCard).width, greaterThanOrEqualTo(320));
+      expect(tester.getCenter(detailCard).dx, closeTo(180, 0.5));
+
+      await tester.tap(detailCard);
+      await tester.pumpAndSettle();
+      expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+
+      await tester.tapAt(const Offset(4, 320));
+      await tester.pumpAndSettle();
+      expect(find.byKey(_storyDetailOverlayKey), findsNothing);
+      expect(router.routeInformationProvider.value.uri.path, '/home');
+
+      await tester.tap(thumbnail);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(_storyDetailCloseButtonKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(_storyDetailOverlayKey), findsNothing);
     },
   );
 
@@ -419,6 +605,57 @@ void main() {
       },
     );
   }
+}
+
+Future<GoRouter> _pumpRoutedHome(
+  WidgetTester tester, {
+  required TodayStoryLoopSummary todaySummary,
+}) async {
+  final router = GoRouter(
+    initialLocation: '/home',
+    routes: [
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => const Scaffold(body: HomeScreen()),
+      ),
+      GoRoute(
+        path: '/home/story',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('story editor route'))),
+      ),
+      GoRoute(
+        path: '/home/question',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('question detail route'))),
+      ),
+      GoRoute(
+        path: '/home/question/edit',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('question edit route'))),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _activeCouple,
+        ),
+        todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _profile,
+        ),
+        storyLoopReadRepositoryProvider.overrideWithValue(
+          FakeStoryLoopReadRepository(todaySummary: todaySummary),
+        ),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return router;
 }
 
 Future<void> _pumpHome(
