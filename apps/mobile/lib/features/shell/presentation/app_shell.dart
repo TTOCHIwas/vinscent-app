@@ -22,31 +22,40 @@ class AppShell extends StatelessWidget {
     final topInset = MediaQuery.paddingOf(context).top;
     final showHeader = !_hidesMainHeader;
     final showBottomBar = !_hidesBottomBar;
+    final canPop = context.canPop();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBody: showBottomBar,
-      body: Column(
-        children: [
-          SizedBox(height: math.max(topMinHeight, topInset)),
-          if (showHeader)
-            AppHeader(
-              height: headerHeight,
-              showRelationshipDayCount: location == '/home',
-              onSettingsPressed: () => context.push('/settings'),
-            ),
-          Expanded(child: child),
-        ],
+    return PopScope(
+      canPop: canPop || location == '/home',
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && location != '/home') {
+          context.go('/home');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        extendBody: showBottomBar,
+        body: Column(
+          children: [
+            SizedBox(height: math.max(topMinHeight, topInset)),
+            if (showHeader)
+              AppHeader(
+                height: headerHeight,
+                showRelationshipDayCount: location == '/home',
+                onSettingsPressed: () => context.push('/settings'),
+              ),
+            Expanded(child: child),
+          ],
+        ),
+        bottomNavigationBar: showBottomBar
+            ? AppBottomBar(
+                height: bottomBarHeight,
+                currentLocation: location,
+                onHomePressed: () => context.go('/home'),
+                onCalendarPressed: () => context.go('/calendar'),
+                onAiPressed: () => context.go('/ai'),
+              )
+            : null,
       ),
-      bottomNavigationBar: showBottomBar
-          ? AppBottomBar(
-              height: bottomBarHeight,
-              currentLocation: location,
-              onHomePressed: () => context.go('/home'),
-              onCalendarPressed: () => context.go('/calendar'),
-              onAiPressed: () => context.go('/ai'),
-            )
-          : null,
     );
   }
 
