@@ -199,13 +199,19 @@ void main() {
         _completedAnswerState,
       );
 
-      await _pumpRouter(tester, repository: repository);
+      final router = await _pumpRouter(tester, repository: repository);
 
       expect(find.text('수정'), findsNothing);
       expect(find.text('내 답변'), findsOneWidget);
       expect(find.text('상대방 답변'), findsOneWidget);
       expect(find.text('hello'), findsOneWidget);
       expect(find.text('partner answer'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+
+      await tester.tap(find.text('내 답변'));
+      await tester.pumpAndSettle();
+
+      expect(router.routeInformationProvider.value.uri.path, '/home/question');
       expect(find.byType(TextField), findsNothing);
     });
 
@@ -703,12 +709,11 @@ void main() {
       expect(find.text('상대방 답변'), findsNothing);
     });
 
-    testWidgets('updates answer and returns with partner answer visible', (
+    testWidgets('blocks direct edit route after both answers are completed', (
       tester,
     ) async {
       final repository = _FakeDailyQuestionAnswerRepository(
         _completedAnswerState,
-        submittedState: _editedCompletedAnswerState,
       );
 
       await _pumpRouter(
@@ -717,17 +722,10 @@ void main() {
         initialLocation: '/home/question/edit',
       );
 
-      await tester.enterText(find.byType(TextField), 'edited answer');
-      await tester.pump();
-
-      await tester.tap(find.text('저장'));
-      await tester.pumpAndSettle();
-
-      expect(repository.submitCallCount, 1);
-      expect(repository.submittedAnswers, ['edited answer']);
       expect(find.byType(TextField), findsNothing);
-      expect(find.text('edited answer'), findsOneWidget);
-      expect(find.text('partner answer'), findsOneWidget);
+      expect(find.byKey(const Key('answer-save-action')), findsNothing);
+      expect(find.text('답변을 작성할 수 없어요'), findsOneWidget);
+      expect(repository.submitCallCount, 0);
     });
 
     testWidgets('returns to calendar detail when leaving edit with pop stack', (
@@ -1122,17 +1120,6 @@ const _completedAnswerState = DailyQuestionAnswerState(
   status: DailyQuestionStatus.completed,
   myAnswerId: 'answer-id',
   myAnswerText: 'hello',
-  partnerAnswerExists: true,
-  partnerAnswerId: 'partner-answer-id',
-  partnerAnswerText: 'partner answer',
-  answerCount: 2,
-);
-
-const _editedCompletedAnswerState = DailyQuestionAnswerState(
-  dailyQuestionId: 'daily-question-id',
-  status: DailyQuestionStatus.completed,
-  myAnswerId: 'answer-id',
-  myAnswerText: 'edited answer',
   partnerAnswerExists: true,
   partnerAnswerId: 'partner-answer-id',
   partnerAnswerText: 'partner answer',

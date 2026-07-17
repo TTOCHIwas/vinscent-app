@@ -8,6 +8,7 @@ import 'package:vinscent/features/questions/data/daily_question_answer_failure.d
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
 
 import '../../../support/couple_fixtures.dart';
@@ -23,7 +24,13 @@ void main() {
       final container = _container(
         today: today,
         repository: repository,
-        detail: sampleStoryLoopDetail(coupleDate: today),
+        detail: sampleStoryLoopDetail(
+          coupleDate: today,
+          question: StoryLoopQuestionDetail(
+            question: sampleDailyQuestion(),
+            answerState: _emptyState,
+          ),
+        ),
       );
       addTearDown(container.dispose);
 
@@ -67,6 +74,38 @@ void main() {
       expect(repository.submittedQuestionIds, isEmpty);
     },
   );
+
+  test('rejects submission after both partners have answered', () async {
+    final repository = _FakeDailyQuestionAnswerRepository(_submittedState);
+    final container = _container(
+      today: today,
+      repository: repository,
+      detail: sampleStoryLoopDetail(
+        coupleDate: today,
+        question: StoryLoopQuestionDetail(
+          question: sampleDailyQuestion(status: DailyQuestionStatus.completed),
+          answerState: _completedState,
+        ),
+      ),
+    );
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container
+          .read(questionAnswerSubmitControllerProvider.notifier)
+          .submit(targetDate: today, answerText: 'edited answer'),
+      throwsA(
+        isA<DailyQuestionAnswerRepositoryException>().having(
+          (error) => error.reason,
+          'reason',
+          DailyQuestionAnswerFailureReason.questionNotReady,
+        ),
+      ),
+    );
+
+    expect(repository.submittedQuestionIds, isEmpty);
+    expect(repository.submittedAnswers, isEmpty);
+  });
 }
 
 ProviderContainer _container({
@@ -114,4 +153,22 @@ const _submittedState = DailyQuestionAnswerState(
   myAnswerText: 'answer',
   partnerAnswerExists: false,
   answerCount: 1,
+);
+
+const _emptyState = DailyQuestionAnswerState(
+  dailyQuestionId: 'daily-question-id',
+  status: DailyQuestionStatus.pending,
+  partnerAnswerExists: false,
+  answerCount: 0,
+);
+
+const _completedState = DailyQuestionAnswerState(
+  dailyQuestionId: 'daily-question-id',
+  status: DailyQuestionStatus.completed,
+  myAnswerId: 'my-answer-id',
+  myAnswerText: 'my answer',
+  partnerAnswerExists: true,
+  partnerAnswerId: 'partner-answer-id',
+  partnerAnswerText: 'partner answer',
+  answerCount: 2,
 );

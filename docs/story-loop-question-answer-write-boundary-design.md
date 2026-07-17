@@ -5,8 +5,9 @@
 Move question-answer submission from the legacy daily-question-first path to
 the daily story loop that already owns the current day's question.
 
-This design preserves the existing answer text, overwrite behavior, answer
-state response shape, and read-only behavior for archived couples.
+This design preserves the existing answer text, answer-state response shape,
+and read-only behavior for archived couples. An answer can be overwritten only
+until both partners have answered; a completed pair of answers is immutable.
 
 ## Verified Current Problem
 
@@ -27,7 +28,7 @@ can also assign a question when no question-generating story loop exists.
   invalidation.
 - Before submitting, it resolves `storyLoopDetailProvider(targetDate)` and
   requires a loaded detail with `canAnswerQuestion == true` and a linked
-  question.
+  question whose answer state is not complete for both partners.
 - It sends the linked `daily_question_id` with the answer text.
 - After success it invalidates the requested detail, today's detail, today's
   summary, and the month summary for the detail's server-resolved couple date.
@@ -44,12 +45,15 @@ can also assign a question when no question-generating story loop exists.
   couple date on the server.
 - It locks the `(couple_id, couple_date)` answer scope, then locks the current
   `daily_story_loops` row and its uniquely linked `daily_questions` row.
-- Submission is allowed only when the loop status is `question_generated`,
-  `answered_by_one`, or `completed`, and when the linked question id equals
-  `expected_daily_question_id`.
+- Submission is allowed only while the linked question has fewer than two
+  answers and when the linked question id equals `expected_daily_question_id`.
 - Missing loops, waiting-for-card loops, missing linked questions, and stale
   question ids fail with `question_not_ready`.
-- The answer upsert remains keyed by `(daily_question_id, user_id)`.
+- The answer upsert remains keyed by `(daily_question_id, user_id)`, allowing
+  edits before the partner answers.
+- A database trigger rejects inserts and updates once the linked question is
+  `completed`, so legacy clients and stale edit screens cannot change either
+  answer after both partners have answered.
 - The transaction recalculates the answer count and updates both
   `daily_questions.status` and `daily_story_loops.status` to
   `answered_by_one` or `completed`.
@@ -95,6 +99,6 @@ daily loop.
 - Flutter unit and widget tests cover successful submit, rejected submission
   when no writable loop question exists, retry after repository failure, and
   the expected daily-question id passed to the repository.
-- After applying the migration, verify the server with one first answer, one
-  second answer, an overwrite, a waiting-for-card loop, and a stale expected
-  question id.
+- After applying the migration, verify the server with one first answer, an
+  overwrite before the second answer, one second answer, a rejected overwrite
+  after completion, a waiting-for-card loop, and a stale expected question id.

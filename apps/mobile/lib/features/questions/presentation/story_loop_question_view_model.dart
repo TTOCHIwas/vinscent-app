@@ -15,7 +15,9 @@ QuestionDetailState toQuestionDetailState(StoryLoopDetailState state) {
           : LoadedQuestionDetailState(
               question: detail.question!.question,
               answerState: detail.question!.answerState,
-              canEdit: detail.canAnswerQuestion,
+              canEdit:
+                  detail.canAnswerQuestion &&
+                  !detail.question!.answerState.hasBothAnswers,
             ),
     EmptyStoryLoopDetailState(targetDate: final targetDate) =>
       UnavailableQuestionDetailState(

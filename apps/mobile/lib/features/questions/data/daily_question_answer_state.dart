@@ -54,6 +54,8 @@ class DailyQuestionAnswerState {
 
   bool get hasPartnerAnswer => partnerAnswerId != null;
 
+  bool get hasBothAnswers => hasMyAnswer && partnerAnswerExists;
+
   bool get canRevealPartnerAnswer => hasMyAnswer && hasPartnerAnswer;
 }
 

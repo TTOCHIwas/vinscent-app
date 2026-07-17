@@ -44,7 +44,7 @@ class QuestionAnswerSubmitController
       }
 
       final question = detail.question;
-      if (question == null) {
+      if (question == null || question.answerState.hasBothAnswers) {
         throw const DailyQuestionAnswerRepositoryException(
           DailyQuestionAnswerFailureReason.questionNotReady,
         );

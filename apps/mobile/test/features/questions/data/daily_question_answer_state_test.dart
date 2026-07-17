@@ -29,6 +29,7 @@ void main() {
     expect(state.answerCount, 0);
     expect(state.hasMyAnswer, isFalse);
     expect(state.hasPartnerAnswer, isFalse);
+    expect(state.hasBothAnswers, isFalse);
     expect(state.canRevealPartnerAnswer, isFalse);
   });
 
@@ -67,6 +68,7 @@ void main() {
     expect(state.answerCount, 2);
     expect(state.hasMyAnswer, isTrue);
     expect(state.hasPartnerAnswer, isTrue);
+    expect(state.hasBothAnswers, isTrue);
     expect(state.canRevealPartnerAnswer, isTrue);
   });
 
@@ -82,6 +84,7 @@ void main() {
 
     expect(state.hasMyAnswer, isFalse);
     expect(state.hasPartnerAnswer, isTrue);
+    expect(state.hasBothAnswers, isFalse);
     expect(state.canRevealPartnerAnswer, isFalse);
   });
 }
