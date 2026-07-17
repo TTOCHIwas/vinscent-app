@@ -4,68 +4,86 @@ import 'package:flutter/material.dart';
 
 import '../../../story_loops/data/story_card_scene.dart';
 
-typedef HomeCompletedStoryCardBuilder =
+typedef HomeHangingStoryCardBuilder =
     Widget Function(BuildContext context, double cardWidth);
 
-class HomeCompletedStoryCards extends StatelessWidget {
-  const HomeCompletedStoryCards({
+enum HomeHangingStoryCardSize { standard, compact }
+
+class HomeHangingStoryCards extends StatelessWidget {
+  const HomeHangingStoryCards({
     super.key,
-    required this.leftCardBuilder,
-    required this.rightCardBuilder,
+    required this.size,
+    this.leftCardBuilder,
+    this.rightCardBuilder,
   });
 
   static const maximumContentWidth = 360.0;
-  static const maximumCardWidth = 80.0;
-  static const maximumHeight = 148.0;
+  static const slotGap = 16.0;
+  static const maximumStandardCardWidth = (maximumContentWidth - slotGap) / 2;
+  static const maximumCompactCardWidth = 80.0;
+  static const maximumStandardHeight =
+      _cardTop + (maximumStandardCardWidth / storyCardCanvasAspectRatio);
+  static const maximumCompactHeight = 148.0;
 
   static const _lineEdgeY = 10.0;
   static const _lineControlY = 36.0;
-  static const _cardTopGap = 10.0;
-  static const _bottomClearance = 14.0;
-  static const _leftAnchor = 0.27;
-  static const _rightAnchor = 0.73;
+  static const _cardTop = 36.0;
+  static const _compactBottomClearance = 12.0;
   static const _leftRotation = -0.055;
   static const _rightRotation = 0.055;
 
-  final HomeCompletedStoryCardBuilder leftCardBuilder;
-  final HomeCompletedStoryCardBuilder rightCardBuilder;
+  final HomeHangingStoryCardSize size;
+  final HomeHangingStoryCardBuilder? leftCardBuilder;
+  final HomeHangingStoryCardBuilder? rightCardBuilder;
 
   @override
   Widget build(BuildContext context) {
+    if (leftCardBuilder == null && rightCardBuilder == null) {
+      return const SizedBox.shrink();
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final contentWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth.clamp(0.0, maximumContentWidth).toDouble()
             : maximumContentWidth;
-        final leftAnchorX = contentWidth * _leftAnchor;
-        final rightAnchorX = contentWidth * _rightAnchor;
-        final maximumAnchorY = math.max(
-          _lineY(_leftAnchor),
-          _lineY(_rightAnchor),
-        );
-        final availableCardWidth = math.max(
-          0.0,
-          (contentWidth * (_rightAnchor - _leftAnchor)) - 20,
-        );
+        final slotWidth = math.max(0.0, (contentWidth - slotGap) / 2);
+        final leftAnchorX = slotWidth / 2;
+        final rightAnchorX = contentWidth - (slotWidth / 2);
+        final maximumCardWidth = switch (size) {
+          HomeHangingStoryCardSize.standard => maximumStandardCardWidth,
+          HomeHangingStoryCardSize.compact => maximumCompactCardWidth,
+        };
+        final bottomClearance = switch (size) {
+          HomeHangingStoryCardSize.standard => 0.0,
+          HomeHangingStoryCardSize.compact => _compactBottomClearance,
+        };
         final heightBoundCardWidth = constraints.hasBoundedHeight
             ? math.max(
                     0.0,
-                    constraints.maxHeight -
-                        maximumAnchorY -
-                        _cardTopGap -
-                        _bottomClearance,
+                    constraints.maxHeight - _cardTop - bottomClearance,
                   ) *
                   storyCardCanvasAspectRatio
             : maximumCardWidth;
         final cardWidth = math.min(
           maximumCardWidth,
-          math.min(availableCardWidth, heightBoundCardWidth),
+          math.min(slotWidth, heightBoundCardWidth),
         );
         final cardHeight = cardWidth / storyCardCanvasAspectRatio;
-        final contentHeight = math.min(
-          maximumHeight,
-          maximumAnchorY + _cardTopGap + cardHeight + _bottomClearance,
-        );
+        final preferredHeight = _cardTop + cardHeight + bottomClearance;
+        final maximumHeight = switch (size) {
+          HomeHangingStoryCardSize.standard => maximumStandardHeight,
+          HomeHangingStoryCardSize.compact => maximumCompactHeight,
+        };
+        final contentHeight = constraints.hasBoundedHeight
+            ? math.min(preferredHeight, constraints.maxHeight)
+            : math.min(preferredHeight, maximumHeight);
+        final leftRotation = size == HomeHangingStoryCardSize.compact
+            ? _leftRotation
+            : 0.0;
+        final rightRotation = size == HomeHangingStoryCardSize.compact
+            ? _rightRotation
+            : 0.0;
 
         return Align(
           alignment: Alignment.topCenter,
@@ -77,27 +95,29 @@ class HomeCompletedStoryCards extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: CustomPaint(
-                    key: const Key('home-completed-story-clothesline'),
+                    key: const Key('home-story-clothesline'),
                     painter: const _ClotheslinePainter(
                       edgeY: _lineEdgeY,
                       controlY: _lineControlY,
                     ),
                   ),
                 ),
-                _HangingStoryCard(
-                  anchorX: leftAnchorX,
-                  anchorY: _lineY(_leftAnchor),
-                  cardWidth: cardWidth,
-                  rotation: _leftRotation,
-                  builder: leftCardBuilder,
-                ),
-                _HangingStoryCard(
-                  anchorX: rightAnchorX,
-                  anchorY: _lineY(_rightAnchor),
-                  cardWidth: cardWidth,
-                  rotation: _rightRotation,
-                  builder: rightCardBuilder,
-                ),
+                if (leftCardBuilder case final builder?)
+                  _HangingStoryCard(
+                    anchorX: leftAnchorX,
+                    anchorY: _lineY(leftAnchorX, contentWidth),
+                    cardWidth: cardWidth,
+                    rotation: leftRotation,
+                    builder: builder,
+                  ),
+                if (rightCardBuilder case final builder?)
+                  _HangingStoryCard(
+                    anchorX: rightAnchorX,
+                    anchorY: _lineY(rightAnchorX, contentWidth),
+                    cardWidth: cardWidth,
+                    rotation: rightRotation,
+                    builder: builder,
+                  ),
               ],
             ),
           ),
@@ -106,7 +126,12 @@ class HomeCompletedStoryCards extends StatelessWidget {
     );
   }
 
-  static double _lineY(double t) {
+  static double _lineY(double x, double width) {
+    if (width <= 0) {
+      return _lineEdgeY;
+    }
+
+    final t = x / width;
     final inverseT = 1 - t;
     return (inverseT * inverseT * _lineEdgeY) +
         (2 * inverseT * t * _lineControlY) +
@@ -127,27 +152,33 @@ class _HangingStoryCard extends StatelessWidget {
   final double anchorY;
   final double cardWidth;
   final double rotation;
-  final HomeCompletedStoryCardBuilder builder;
+  final HomeHangingStoryCardBuilder builder;
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
       left: anchorX - (cardWidth / 2),
-      top: anchorY - 4,
+      top: 0,
       width: cardWidth,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 14),
+            padding: const EdgeInsets.only(top: HomeHangingStoryCards._cardTop),
             child: Transform.rotate(
               angle: rotation,
               alignment: Alignment.topCenter,
               child: builder(context, cardWidth),
             ),
           ),
-          Transform.rotate(angle: rotation * 0.35, child: const _Clothespin()),
+          Positioned(
+            top: anchorY - 4,
+            child: Transform.rotate(
+              angle: rotation * 0.35,
+              child: const _Clothespin(),
+            ),
+          ),
         ],
       ),
     );

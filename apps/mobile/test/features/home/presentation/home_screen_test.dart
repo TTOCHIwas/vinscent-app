@@ -27,8 +27,8 @@ import '../../../support/story_loop_fixtures.dart';
 const _storyAddButtonKey = Key('home-story-add-button');
 const _questionBubbleKey = Key('home-question-speech-bubble');
 const _questionActionKey = Key('home-question-action');
-const _completedStoryLineKey = Key('home-completed-story-line');
-const _completedStoryClotheslineKey = Key('home-completed-story-clothesline');
+const _storyLineKey = Key('home-story-line');
+const _storyClotheslineKey = Key('home-story-clothesline');
 const _storyDetailOverlayKey = Key('story-card-detail-overlay');
 const _storyDetailCloseButtonKey = Key('story-card-detail-close');
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
@@ -65,12 +65,18 @@ void main() {
       );
 
       expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(find.byKey(_storyLineKey), findsOneWidget);
+      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(find.byKey(_storyAddButtonKey), findsOneWidget);
       expect(
         tester.getSize(find.byKey(_storyAddButtonKey)),
         const Size.square(56),
       );
       expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      expect(
+        tester.getCenter(find.byKey(_storyAddButtonKey)).dx,
+        lessThan(tester.getCenter(find.byType(HomeScreen)).dx),
+      );
       expect(find.text(_storyLabel), findsNothing);
       expect(find.text(_storyEmptyMessage), findsNothing);
       expect(find.text(_storyCreateAction), findsNothing);
@@ -156,6 +162,8 @@ void main() {
       expect(questionText.style?.fontSize, 16);
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+      expect(find.byKey(_storyLineKey), findsOneWidget);
+      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(myCard, findsOneWidget);
       expect(partnerCard, findsOneWidget);
       expect(tester.getSize(myCard), const Size(160, 200));
@@ -310,12 +318,12 @@ void main() {
 
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
-      expect(find.byKey(_completedStoryLineKey), findsOneWidget);
-      expect(find.byKey(_completedStoryClotheslineKey), findsOneWidget);
+      expect(find.byKey(_storyLineKey), findsOneWidget);
+      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(tester.getSize(myCard).width, closeTo(80, 0.1));
       expect(tester.getSize(partnerCard).width, closeTo(80, 0.1));
       expect(
-        tester.getSize(find.byKey(_completedStoryLineKey)).height,
+        tester.getSize(find.byKey(_storyLineKey)).height,
         closeTo(148, 0.1),
       );
       expect(
@@ -324,6 +332,55 @@ void main() {
       );
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    '\ube48 \uc0c1\ud0dc\uc640 \ub2f5\ubcc0 \uc804\ud6c4\uc5d0 \uac19\uc740 \uc704\uce58\uc758 \uc904\uc744 \uc0ac\uc6a9\ud55c\ub2e4',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 592));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      Future<double> lineTopFor(TodayStoryLoopSummary summary) async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await _pumpHome(
+          tester,
+          couple: _activeCouple,
+          today: _today,
+          todaySummary: summary,
+        );
+        return tester.getTopLeft(find.byKey(_storyClotheslineKey)).dy;
+      }
+
+      final emptyLineTop = await lineTopFor(
+        _emptyTodaySummary(coupleDate: _today),
+      );
+      final unansweredLineTop = await lineTopFor(
+        sampleTodaySummary(
+          coupleDate: _today,
+          question: StoryLoopQuestionSummary(
+            question: _dailyQuestion,
+            myAnswerExists: false,
+            partnerAnswerExists: false,
+            answerCount: 0,
+          ),
+        ),
+      );
+      final completedLineTop = await lineTopFor(
+        sampleTodaySummary(
+          coupleDate: _today,
+          question: StoryLoopQuestionSummary(
+            question: _dailyQuestion,
+            myAnswerExists: true,
+            partnerAnswerExists: true,
+            answerCount: 2,
+          ),
+        ),
+      );
+
+      expect(unansweredLineTop, closeTo(emptyLineTop, 0.1));
+      expect(completedLineTop, closeTo(emptyLineTop, 0.1));
     },
   );
 
@@ -463,6 +520,8 @@ void main() {
       );
 
       final thumbnail = find.byKey(_storyThumbnailKey('card-1'));
+      expect(find.byKey(_storyLineKey), findsOneWidget);
+      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(thumbnail, findsOneWidget);
       expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
       expect(
@@ -500,6 +559,8 @@ void main() {
       final partnerCard = find.byKey(_storyThumbnailKey('card-1'));
       final addButton = find.byKey(_storyAddButtonKey);
       final homeCenterX = tester.getCenter(find.byType(HomeScreen)).dx;
+      expect(find.byKey(_storyLineKey), findsOneWidget);
+      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(partnerCard, findsOneWidget);
       expect(addButton, findsOneWidget);
       expect(tester.getCenter(addButton).dx, lessThan(homeCenterX));
@@ -535,6 +596,8 @@ void main() {
 
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+      expect(find.byKey(_storyLineKey), findsOneWidget);
+      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(myCard, findsOneWidget);
       expect(partnerCard, findsOneWidget);
       expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));

@@ -17,10 +17,9 @@ import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
-import '../../story_loops/presentation/widgets/story_card_pair_layout.dart';
 import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
-import 'widgets/home_completed_story_cards.dart';
+import 'widgets/home_hanging_story_cards.dart';
 
 const _homeStatusLoadError =
     '\ucee4\ud50c \uc815\ubcf4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694.';
@@ -169,7 +168,7 @@ class _HomeMainStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.only(bottom: 8),
       child: _HomeStoryLoopPreview(),
     );
   }
@@ -291,7 +290,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final storyEntry = _CompactStoryEntry(
+    final storyEntry = _HomeStoryEntry(
       myCard: myCard,
       partnerCard: partnerCard,
       canAddCard: canAddCard,
@@ -300,26 +299,24 @@ class _HomeStoryLoopContent extends StatelessWidget {
       onCardTap: onCardTap,
     );
     final questionText = this.questionText;
-    final hasCard = myCard != null || partnerCard != null;
+    final hasStoryEntry = myCard != null || partnerCard != null || canAddCard;
 
     if (questionText == null) {
-      return hasCard
-          ? Align(alignment: Alignment.topCenter, child: storyEntry)
-          : Center(child: storyEntry);
+      return Align(alignment: Alignment.topCenter, child: storyEntry);
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final maximumCardHeight = cardsAreCompleted
-            ? HomeCompletedStoryCards.maximumHeight
-            : StoryCardPairLayout.maximumCardHeight;
+            ? HomeHangingStoryCards.maximumCompactHeight
+            : HomeHangingStoryCards.maximumStandardHeight;
         final availableCardHeight = constraints.hasBoundedHeight
             ? math.max(
                 0.0,
                 constraints.maxHeight - _minimumQuestionHeight - _entryGap,
               )
             : maximumCardHeight;
-        final cardHeight = hasCard
+        final cardHeight = hasStoryEntry
             ? math.min(maximumCardHeight, availableCardHeight)
             : 0.0;
         final entryGap = cardHeight > 0 ? _entryGap : 0.0;
@@ -367,8 +364,8 @@ class _HomeStoryLoopContent extends StatelessWidget {
   }
 }
 
-class _CompactStoryEntry extends StatelessWidget {
-  const _CompactStoryEntry({
+class _HomeStoryEntry extends StatelessWidget {
+  const _HomeStoryEntry({
     required this.myCard,
     required this.partnerCard,
     required this.canAddCard,
@@ -388,77 +385,40 @@ class _CompactStoryEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     final myCard = this.myCard;
     final partnerCard = this.partnerCard;
-    if (myCard == null && partnerCard == null) {
-      return canAddCard
-          ? _HomeStoryAddButton(onPressed: onAddCard)
-          : const SizedBox.shrink();
+    if (myCard == null && partnerCard == null && !canAddCard) {
+      return const SizedBox.shrink();
     }
 
-    final Widget content;
-    if (cardsAreCompleted && myCard != null && partnerCard != null) {
-      content = HomeCompletedStoryCards(
-        key: const Key('home-completed-story-line'),
-        leftCardBuilder: (context, cardWidth) => _HomeStoryCardThumbnail(
-          card: myCard,
-          width: cardWidth,
-          onTap: () => onCardTap(myCard),
-        ),
-        rightCardBuilder: (context, cardWidth) => _HomeStoryCardThumbnail(
-          card: partnerCard,
-          width: cardWidth,
-          onTap: () => onCardTap(partnerCard),
-        ),
-      );
-    } else {
-      content = StoryCardPairLayout(
-        key: const ValueKey('home-story-card-pair'),
-        leftCardBuilder: myCard == null
-            ? canAddCard
-                  ? (context, cardWidth) =>
-                        _HomeStoryAddButton(onPressed: onAddCard)
-                  : null
-            : (context, cardWidth) => _HomeStoryCardThumbnail(
-                card: myCard,
-                width: cardWidth,
-                onTap: () => onCardTap(myCard),
-              ),
-        rightCardBuilder: partnerCard == null
-            ? null
-            : (context, cardWidth) => _HomeStoryCardThumbnail(
-                card: partnerCard,
-                width: cardWidth,
-                onTap: () => onCardTap(partnerCard),
-              ),
-      );
-    }
+    final size = cardsAreCompleted && myCard != null && partnerCard != null
+        ? HomeHangingStoryCardSize.compact
+        : HomeHangingStoryCardSize.standard;
+    final content = HomeHangingStoryCards(
+      key: const Key('home-story-line'),
+      size: size,
+      leftCardBuilder: myCard == null
+          ? canAddCard
+                ? (context, cardWidth) =>
+                      _HomeStoryAddButton(onPressed: onAddCard)
+                : null
+          : (context, cardWidth) => _HomeStoryCardThumbnail(
+              card: myCard,
+              width: cardWidth,
+              onTap: () => onCardTap(myCard),
+            ),
+      rightCardBuilder: partnerCard == null
+          ? null
+          : (context, cardWidth) => _HomeStoryCardThumbnail(
+              card: partnerCard,
+              width: cardWidth,
+              onTap: () => onCardTap(partnerCard),
+            ),
+    );
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeInOutCubic,
       alignment: Alignment.topCenter,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        layoutBuilder: (currentChild, previousChildren) {
-          return Stack(
-            alignment: Alignment.topCenter,
-            clipBehavior: Clip.none,
-            children: [...previousChildren, ?currentChild],
-          );
-        },
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              alignment: Alignment.topCenter,
-              scale: Tween<double>(begin: 0.94, end: 1).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: content,
-      ),
+      child: content,
     );
   }
 }
