@@ -13,11 +13,11 @@ import '../../questions/presentation/question_route_context.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
-import '../../story_loops/data/story_card_scene.dart';
 import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
+import '../../story_loops/presentation/widgets/story_card_pair_layout.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 const _homeStatusLoadError =
@@ -271,10 +271,10 @@ class _HomeStoryLoopContent extends StatelessWidget {
                 0.0,
                 constraints.maxHeight - _minimumQuestionHeight - _entryGap,
               )
-            : _CompactStoryEntry._maximumCardHeight;
+            : StoryCardPairLayout.maximumCardHeight;
         final cardHeight = hasCard
             ? math.min(
-                _CompactStoryEntry._maximumCardHeight,
+                StoryCardPairLayout.maximumCardHeight,
                 availableCardHeight,
               )
             : 0.0;
@@ -327,12 +327,6 @@ class _CompactStoryEntry extends StatelessWidget {
     required this.onCardTap,
   });
 
-  static const _maxContentWidth = 360.0;
-  static const _slotGap = 16.0;
-  static const _maximumCardWidth = (_maxContentWidth - _slotGap) / 2;
-  static const _maximumCardHeight =
-      _maximumCardWidth / storyCardCanvasAspectRatio;
-
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
   final bool canAddCard;
@@ -349,84 +343,24 @@ class _CompactStoryEntry extends StatelessWidget {
           : const SizedBox.shrink();
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final contentWidth = constraints.maxWidth
-            .clamp(0.0, _maxContentWidth)
-            .toDouble();
-        final availableCardWidth = math.max(0.0, (contentWidth - _slotGap) / 2);
-        final heightBoundCardWidth = constraints.hasBoundedHeight
-            ? math.max(0.0, constraints.maxHeight) * storyCardCanvasAspectRatio
-            : _maximumCardWidth;
-        final cardWidth = math.min(
-          _maximumCardWidth,
-          math.min(availableCardWidth, heightBoundCardWidth),
-        );
-        final cardHeight = cardWidth / storyCardCanvasAspectRatio;
-
-        return Align(
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            width: contentWidth,
-            height: cardHeight,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _HomeStorySlot(
-                  width: cardWidth,
-                  height: cardHeight,
-                  child: myCard == null
-                      ? canAddCard
-                            ? _HomeStoryAddButton(onPressed: onAddCard)
-                            : null
-                      : _HomeStoryCardThumbnail(
-                          card: myCard,
-                          width: cardWidth,
-                          onTap: onCardTap(myCard),
-                        ),
-                ),
-                _HomeStorySlot(
-                  width: cardWidth,
-                  height: cardHeight,
-                  child: partnerCard == null
-                      ? null
-                      : _HomeStoryCardThumbnail(
-                          card: partnerCard,
-                          width: cardWidth,
-                          onTap: onCardTap(partnerCard),
-                        ),
-                ),
-              ],
+    return StoryCardPairLayout(
+      leftCardBuilder: myCard == null
+          ? canAddCard
+                ? (context, cardWidth) =>
+                      _HomeStoryAddButton(onPressed: onAddCard)
+                : null
+          : (context, cardWidth) => _HomeStoryCardThumbnail(
+              card: myCard,
+              width: cardWidth,
+              onTap: onCardTap(myCard),
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _HomeStorySlot extends StatelessWidget {
-  const _HomeStorySlot({
-    required this.width,
-    required this.height,
-    required this.child,
-  });
-
-  final double width;
-  final double height;
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    final child = this.child;
-    if (child == null) {
-      return const SizedBox.shrink();
-    }
-
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Center(child: child),
+      rightCardBuilder: partnerCard == null
+          ? null
+          : (context, cardWidth) => _HomeStoryCardThumbnail(
+              card: partnerCard,
+              width: cardWidth,
+              onTap: onCardTap(partnerCard),
+            ),
     );
   }
 }
