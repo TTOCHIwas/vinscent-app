@@ -17,9 +17,11 @@ import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/presentation/recording_library_screen.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
+import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
 import 'package:vinscent/features/shell/presentation/app_shell.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_header.dart';
@@ -147,9 +149,13 @@ void main() {
     expect(find.byType(AppHeader), findsNothing);
     expect(find.byType(AppBottomBar), findsNothing);
     expect(
-      GoRouter.of(
+      tester.getTopLeft(find.byType(SettingsPageHeader)).dy,
+      AppShell.topMinHeight,
+    );
+    expect(
+      GoRouterState.of(
         tester.element(find.byType(RecordingLibraryScreen)),
-      ).routeInformationProvider.value.uri.path,
+      ).uri.path,
       '/home/recordings',
     );
 
@@ -667,6 +673,9 @@ Future<void> _pumpApp(
         ),
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => _activeCouple,
+        ),
+        coupleRecordingOverviewControllerProvider.overrideWithBuild(
+          (ref, notifier) async => null,
         ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
         storyLoopReadRepositoryProvider.overrideWithValue(storyLoopRepository),
