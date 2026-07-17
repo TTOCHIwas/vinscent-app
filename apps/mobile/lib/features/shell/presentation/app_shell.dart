@@ -22,7 +22,8 @@ class AppShell extends StatelessWidget {
     final topInset = MediaQuery.paddingOf(context).top;
     final showHeader = !_hidesMainHeader;
     final showBottomBar = !_hidesBottomBar;
-    final canPop = context.canPop();
+    final canPop =
+        GoRouter.maybeOf(context)?.canPop() ?? Navigator.of(context).canPop();
 
     return PopScope(
       canPop: canPop || location == '/home',
