@@ -76,6 +76,24 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('재생 시작 상태가 겹쳐도 캐릭터 바운스를 유지한다', (tester) async {
+    await _pumpControl(
+      tester,
+      recordingKey: 'recording-1',
+      isPlaying: true,
+      isPlaybackBusy: true,
+    );
+
+    final before = _pulseScale(tester);
+    await tester.pump(const Duration(milliseconds: 350));
+    final after = _pulseScale(tester);
+
+    expect(after, greaterThan(before));
+    expect(find.byKey(_playbackProgressKey), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('재생 준비가 길어지면 캐릭터 아래에 진행 효과를 표시한다', (tester) async {
     await _pumpControl(
       tester,
