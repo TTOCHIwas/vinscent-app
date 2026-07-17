@@ -303,57 +303,13 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         Expanded(
           child: SafeArea(
             top: false,
-            child: Stack(
-              fit: StackFit.expand,
+            child: Column(
               children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    isArchivedReadOnly ? 84 : 16,
-                    16,
-                    16,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: _exportSize.toDouble(),
-                        maxHeight: _exportSize.toDouble(),
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
-                            border: Border.all(
-                              color: AppColors.wireframeBorder,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: _isLoadingDrawing
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : CharacterCanvas(
-                                  strokes: _visibleStrokes,
-                                  isReadOnly: isReadOnly,
-                                  onStrokeStart: _startStroke,
-                                  onStrokeUpdate: _updateStroke,
-                                  onStrokeEnd: _endStroke,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 if (isArchivedReadOnly)
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    right: 16,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     child: Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: AppColors.white,
@@ -368,38 +324,75 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                       ),
                     ),
                   ),
-                Align(
-                  alignment: Alignment.bottomCenter,
+                Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 520),
-                      child: CharacterToolbar(
-                        selectedTool: _selectedTool,
-                        selectedColor: _selectedColor,
-                        selectedStrokeWidth: _selectedStrokeWidth,
-                        isReadOnly: isReadOnly,
-                        canUndo: _canUndo,
-                        canClear: _canClear,
-                        onToolChanged: (tool) {
-                          setState(() {
-                            _selectedTool = tool;
-                          });
-                        },
-                        onColorChanged: (color) {
-                          setState(() {
-                            _selectedColor = color;
-                            _selectedTool = CharacterDrawingTool.pen;
-                          });
-                        },
-                        onStrokeWidthChanged: (width) {
-                          setState(() {
-                            _selectedStrokeWidth = width;
-                          });
-                        },
-                        onUndoPressed: _undoLastStroke,
-                        onClearPressed: _confirmClearCanvas,
+                    key: const ValueKey('character-drawing-canvas-region'),
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: _exportSize.toDouble(),
+                          maxHeight: _exportSize.toDouble(),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              border: Border.all(
+                                color: AppColors.wireframeBorder,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: _isLoadingDrawing
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : CharacterCanvas(
+                                    strokes: _visibleStrokes,
+                                    isReadOnly: isReadOnly,
+                                    onStrokeStart: _startStroke,
+                                    onStrokeUpdate: _updateStroke,
+                                    onStrokeEnd: _endStroke,
+                                  ),
+                          ),
+                        ),
                       ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: CharacterToolbar(
+                      selectedTool: _selectedTool,
+                      selectedColor: _selectedColor,
+                      selectedStrokeWidth: _selectedStrokeWidth,
+                      isReadOnly: isReadOnly,
+                      canUndo: _canUndo,
+                      canClear: _canClear,
+                      onToolChanged: (tool) {
+                        setState(() {
+                          _selectedTool = tool;
+                        });
+                      },
+                      onColorChanged: (color) {
+                        setState(() {
+                          _selectedColor = color;
+                          _selectedTool = CharacterDrawingTool.pen;
+                        });
+                      },
+                      onStrokeWidthChanged: (width) {
+                        setState(() {
+                          _selectedStrokeWidth = width;
+                        });
+                      },
+                      onUndoPressed: _undoLastStroke,
+                      onClearPressed: _confirmClearCanvas,
                     ),
                   ),
                 ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/assets/app_icons.dart';
+import '../../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/character_drawing.dart';
 
@@ -70,7 +72,7 @@ class CharacterToolbar extends StatelessWidget {
                   _ToolbarIconButton(
                     buttonKey: const ValueKey('character-drawing-pen'),
                     tooltip: '펜',
-                    icon: Icons.edit,
+                    icon: const Icon(Icons.edit),
                     isSelected: selectedTool == CharacterDrawingTool.pen,
                     onPressed: isReadOnly
                         ? null
@@ -80,7 +82,7 @@ class CharacterToolbar extends StatelessWidget {
                   _ToolbarIconButton(
                     buttonKey: const ValueKey('character-drawing-eraser'),
                     tooltip: '지우개',
-                    icon: Icons.cleaning_services_outlined,
+                    icon: const AppSvgIcon(AppIcons.eraser),
                     isSelected: selectedTool == CharacterDrawingTool.eraser,
                     onPressed: isReadOnly
                         ? null
@@ -90,14 +92,14 @@ class CharacterToolbar extends StatelessWidget {
                   _ToolbarIconButton(
                     buttonKey: const ValueKey('character-drawing-undo'),
                     tooltip: '되돌리기',
-                    icon: Icons.undo,
+                    icon: const Icon(Icons.undo),
                     onPressed: canUndo ? onUndoPressed : null,
                   ),
                   const Spacer(),
                   _ToolbarIconButton(
                     buttonKey: const ValueKey('character-drawing-clear'),
                     tooltip: '전체 삭제',
-                    icon: Icons.delete_outline,
+                    icon: const Icon(Icons.delete_outline),
                     onPressed: canClear ? onClearPressed : null,
                   ),
                 ],
@@ -150,7 +152,7 @@ class _ToolbarIconButton extends StatelessWidget {
 
   final Key buttonKey;
   final String tooltip;
-  final IconData icon;
+  final Widget icon;
   final VoidCallback? onPressed;
   final bool isSelected;
 
@@ -160,7 +162,7 @@ class _ToolbarIconButton extends StatelessWidget {
       key: buttonKey,
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon),
+      icon: icon,
       color: Colors.white,
       disabledColor: Colors.white38,
       style: IconButton.styleFrom(

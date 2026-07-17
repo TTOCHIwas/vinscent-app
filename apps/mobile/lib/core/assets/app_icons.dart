@@ -7,6 +7,7 @@ abstract final class AppIcons {
   static const camera = 'assets/icons/camera_black.svg';
   static const cart = 'assets/icons/cart_black.svg';
   static const chat = 'assets/icons/chat_black.svg';
+  static const eraser = 'assets/icons/eraser_black.svg';
   static const heart = 'assets/icons/heart_black.svg';
   static const home = 'assets/icons/home_black.svg';
   static const locate = 'assets/icons/locate_black.svg';

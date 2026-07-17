@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image;
 import 'package:uuid/uuid.dart';
 
+import '../../../core/assets/app_icons.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
+import '../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/story_card_editor_controller.dart';
@@ -1861,13 +1863,16 @@ class _EditorIconButton extends StatelessWidget {
   const _EditorIconButton({
     super.key,
     required this.tooltip,
-    required this.icon,
     required this.onPressed,
+    this.icon,
+    this.iconWidget,
     this.isSelected = false,
-  });
+  }) : assert(icon != null || iconWidget != null),
+       assert(icon == null || iconWidget == null);
 
   final String tooltip;
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final VoidCallback? onPressed;
   final bool isSelected;
 
@@ -1876,7 +1881,7 @@ class _EditorIconButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon),
+      icon: iconWidget ?? Icon(icon),
       color: Colors.white,
       style: IconButton.styleFrom(
         backgroundColor: isSelected
@@ -1935,7 +1940,7 @@ class _StoryCardDrawingControls extends StatelessWidget {
                 _EditorIconButton(
                   key: const ValueKey('story-card-drawing-eraser'),
                   tooltip: '지우개',
-                  icon: Icons.cleaning_services_outlined,
+                  iconWidget: const AppSvgIcon(AppIcons.eraser),
                   isSelected: selectedTool == StoryCardDrawingTool.eraser,
                   onPressed: () => onToolChanged(StoryCardDrawingTool.eraser),
                 ),
