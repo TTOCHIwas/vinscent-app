@@ -9,6 +9,7 @@ import '../recording_debug_log.dart';
 import 'couple_recording.dart';
 import 'couple_recording_failure.dart';
 import 'recording_id_generator.dart';
+import 'recording_slot_artwork_path.dart';
 import 'recording_upload_failure_policy.dart';
 
 final coupleRecordingRepositoryProvider = Provider<CoupleRecordingRepository>((
@@ -38,6 +39,30 @@ abstract interface class CoupleRecordingRepository {
   });
 
   Future<void> openNextSlot();
+
+  Future<Uint8List> fetchSlotArtworkDrawingData({
+    required String drawingDataPath,
+  });
+
+  Future<void> saveSlotArtwork({
+    required String coupleId,
+    required String slotId,
+    required int expectedSlotRevision,
+    required Uint8List previewBytes,
+    required Uint8List drawingDataBytes,
+  });
+
+  Future<void> upsertSlotPlacement({
+    required String slotId,
+    required double normalizedX,
+    required double normalizedY,
+    required int? expectedPlacementRevision,
+  });
+
+  Future<void> deleteSlotPlacement({
+    required String slotId,
+    required int expectedPlacementRevision,
+  });
 }
 
 class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
@@ -45,6 +70,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
 
   static const _bucketId = 'couple-recordings';
   static const _signedUrlExpiresInSeconds = 60 * 60;
+  static const _maxArtworkObjectBytes = 256 * 1024;
 
   @override
   Future<CoupleRecordingOverview> fetchOverview() async {
@@ -67,9 +93,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
       final slotRows = _asRows(slotData);
 
       final currentRecording = await _parseCurrentRecording(currentRow);
-      final savedSlots = await Future.wait(
-        slotRows.map(_parseSavedSlot),
-      );
+      final savedSlots = await Future.wait(slotRows.map(_parseSavedSlot));
 
       return CoupleRecordingOverview(
         slotLimit: currentRow['slot_limit'] as int,
@@ -256,7 +280,179 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     }
   }
 
-  StorageFileApi get _bucket => Supabase.instance.client.storage.from(_bucketId);
+  @override
+  Future<Uint8List> fetchSlotArtworkDrawingData({
+    required String drawingDataPath,
+  }) async {
+    _ensureSupabaseConfigured();
+
+    try {
+      return await _artworkBucket
+          .download(drawingDataPath)
+          .timeout(AppConfig.supabaseRpcTimeout);
+    } on TimeoutException {
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.requestTimeout,
+      );
+    } on StorageException catch (error) {
+      throw _mapStorageError(error);
+    }
+  }
+
+  @override
+  Future<void> saveSlotArtwork({
+    required String coupleId,
+    required String slotId,
+    required int expectedSlotRevision,
+    required Uint8List previewBytes,
+    required Uint8List drawingDataBytes,
+  }) async {
+    _ensureSupabaseConfigured();
+    if (previewBytes.isEmpty ||
+        drawingDataBytes.isEmpty ||
+        previewBytes.length > _maxArtworkObjectBytes ||
+        drawingDataBytes.length > _maxArtworkObjectBytes) {
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.invalidRecordingArtwork,
+      );
+    }
+
+    final artifactId = generateRecordingId();
+    final paths = RecordingSlotArtworkPath(
+      coupleId: coupleId,
+      slotId: slotId,
+      artifactId: artifactId,
+    );
+    var uploadAttempted = false;
+
+    try {
+      uploadAttempted = true;
+      await _artworkBucket
+          .uploadBinary(
+            paths.previewPath,
+            previewBytes,
+            fileOptions: const FileOptions(
+              upsert: false,
+              contentType: 'image/webp',
+              cacheControl: '31536000',
+            ),
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+      await _artworkBucket
+          .uploadBinary(
+            paths.drawingDataPath,
+            drawingDataBytes,
+            fileOptions: const FileOptions(
+              upsert: false,
+              contentType: 'application/gzip',
+              cacheControl: '31536000',
+            ),
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+      await Supabase.instance.client
+          .rpc(
+            'save_couple_recording_slot_artwork',
+            params: {
+              'requested_slot_id': slotId,
+              'requested_artifact_id': artifactId,
+              'expected_slot_revision': expectedSlotRevision,
+            },
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+    } on TimeoutException {
+      await _discardUploadedSlotArtwork(
+        uploadAttempted: uploadAttempted,
+        slotId: slotId,
+        artifactId: artifactId,
+      );
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.requestTimeout,
+      );
+    } on PostgrestException catch (error) {
+      await _discardUploadedSlotArtwork(
+        uploadAttempted: uploadAttempted,
+        slotId: slotId,
+        artifactId: artifactId,
+      );
+      throw _mapPostgrestError(error);
+    } on StorageException catch (error) {
+      await _discardUploadedSlotArtwork(
+        uploadAttempted: uploadAttempted,
+        slotId: slotId,
+        artifactId: artifactId,
+      );
+      throw _mapStorageError(error);
+    } catch (_) {
+      await _discardUploadedSlotArtwork(
+        uploadAttempted: uploadAttempted,
+        slotId: slotId,
+        artifactId: artifactId,
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> upsertSlotPlacement({
+    required String slotId,
+    required double normalizedX,
+    required double normalizedY,
+    required int? expectedPlacementRevision,
+  }) async {
+    _ensureSupabaseConfigured();
+
+    try {
+      await Supabase.instance.client
+          .rpc(
+            'upsert_couple_recording_slot_placement',
+            params: {
+              'requested_slot_id': slotId,
+              'requested_normalized_x': normalizedX,
+              'requested_normalized_y': normalizedY,
+              'expected_placement_revision': expectedPlacementRevision,
+            },
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+    } on TimeoutException {
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.requestTimeout,
+      );
+    } on PostgrestException catch (error) {
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  @override
+  Future<void> deleteSlotPlacement({
+    required String slotId,
+    required int expectedPlacementRevision,
+  }) async {
+    _ensureSupabaseConfigured();
+
+    try {
+      await Supabase.instance.client
+          .rpc(
+            'delete_couple_recording_slot_placement',
+            params: {
+              'requested_slot_id': slotId,
+              'expected_placement_revision': expectedPlacementRevision,
+            },
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+    } on TimeoutException {
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.requestTimeout,
+      );
+    } on PostgrestException catch (error) {
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  StorageFileApi get _bucket =>
+      Supabase.instance.client.storage.from(_bucketId);
+
+  StorageFileApi get _artworkBucket =>
+      Supabase.instance.client.storage.from(RecordingSlotArtworkPath.bucketId);
 
   void _ensureSupabaseConfigured() {
     if (!AppConfig.isSupabaseConfigured) {
@@ -289,7 +485,18 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
   }
 
   Future<CoupleRecordingSlot> _parseSavedSlot(Map<String, dynamic> row) async {
-    final audioUrl = await _createSignedUrl(row['recording_path'] as String);
+    final artworkPreviewPath = row['artwork_preview_path'] as String?;
+    final urlFutures = <Future<String>>[
+      _createSignedUrl(row['recording_path'] as String),
+      if (artworkPreviewPath != null)
+        _createArtworkSignedUrl(artworkPreviewPath),
+    ];
+    final urls = await Future.wait(urlFutures);
+    final artworkDataPath = row['artwork_data_path'] as String?;
+    final artworkRevision = row['artwork_revision'] as int?;
+    final placementX = row['placement_normalized_x'] as num?;
+    final placementY = row['placement_normalized_y'] as num?;
+    final placementRevision = row['placement_revision'] as int?;
 
     return CoupleRecordingSlot(
       slotId: row['slot_id'] as String,
@@ -304,7 +511,26 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
       updatedByUserId: row['updated_by_user_id'] as String?,
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
-      audioUrl: audioUrl,
+      audioUrl: urls.first,
+      artwork:
+          artworkPreviewPath != null &&
+              artworkDataPath != null &&
+              artworkRevision != null
+          ? CoupleRecordingSlotArtwork(
+              previewPath: artworkPreviewPath,
+              previewUrl: urls[1],
+              drawingDataPath: artworkDataPath,
+              revision: artworkRevision,
+            )
+          : null,
+      placement:
+          placementX != null && placementY != null && placementRevision != null
+          ? CoupleRecordingSlotPlacement(
+              normalizedX: placementX.toDouble(),
+              normalizedY: placementY.toDouble(),
+              revision: placementRevision,
+            )
+          : null,
     );
   }
 
@@ -312,6 +538,36 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     return _bucket
         .createSignedUrl(path, _signedUrlExpiresInSeconds)
         .timeout(AppConfig.supabaseRpcTimeout);
+  }
+
+  Future<String> _createArtworkSignedUrl(String path) {
+    return _artworkBucket
+        .createSignedUrl(path, _signedUrlExpiresInSeconds)
+        .timeout(AppConfig.supabaseRpcTimeout);
+  }
+
+  Future<void> _discardUploadedSlotArtwork({
+    required bool uploadAttempted,
+    required String slotId,
+    required String artifactId,
+  }) async {
+    if (!uploadAttempted) {
+      return;
+    }
+
+    try {
+      await Supabase.instance.client
+          .rpc(
+            'discard_uploaded_couple_recording_slot_artwork',
+            params: {
+              'requested_slot_id': slotId,
+              'requested_artifact_id': artifactId,
+            },
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+    } catch (error) {
+      debugRecordingLog('Slot artwork cleanup failed: $error');
+    }
   }
 
   Map<String, dynamic>? _asSingleRow(Object? data) {
@@ -437,8 +693,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
         CoupleRecordingFailureReason.activeCoupleRequired,
       'readable_couple_required' =>
         CoupleRecordingFailureReason.readableCoupleRequired,
-      'invalid_recording_id' =>
-        CoupleRecordingFailureReason.invalidRecordingId,
+      'invalid_recording_id' => CoupleRecordingFailureReason.invalidRecordingId,
       'invalid_recording_duration' =>
         CoupleRecordingFailureReason.invalidRecordingDuration,
       'invalid_recording_path' =>
@@ -459,6 +714,18 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
         CoupleRecordingFailureReason.recordingSlotConflict,
       'recording_slot_limit_reached' =>
         CoupleRecordingFailureReason.recordingSlotLimitReached,
+      'invalid_recording_artwork' =>
+        CoupleRecordingFailureReason.invalidRecordingArtwork,
+      'recording_artwork_file_missing' =>
+        CoupleRecordingFailureReason.recordingArtworkFileMissing,
+      'recording_artwork_required' =>
+        CoupleRecordingFailureReason.recordingArtworkRequired,
+      'invalid_recording_placement' =>
+        CoupleRecordingFailureReason.invalidRecordingPlacement,
+      'recording_placement_conflict' =>
+        CoupleRecordingFailureReason.recordingPlacementConflict,
+      'recording_placement_limit_reached' =>
+        CoupleRecordingFailureReason.recordingPlacementLimitReached,
       _ => CoupleRecordingFailureReason.unknown,
     };
   }

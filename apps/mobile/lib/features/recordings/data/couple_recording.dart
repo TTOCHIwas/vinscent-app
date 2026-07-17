@@ -10,6 +10,10 @@ class CoupleRecordingOverview {
   final List<CoupleRecordingSlot> savedSlots;
 
   bool get hasUnlockedEmptySlot => savedSlots.length < slotLimit;
+
+  List<CoupleRecordingSlot> get placedSlots => savedSlots
+      .where((slot) => slot.placement != null)
+      .toList(growable: false);
 }
 
 class CurrentCoupleRecording {
@@ -49,6 +53,8 @@ class CoupleRecordingSlot {
     required this.createdAt,
     required this.updatedAt,
     required this.audioUrl,
+    this.artwork,
+    this.placement,
   });
 
   final String slotId;
@@ -64,6 +70,34 @@ class CoupleRecordingSlot {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String audioUrl;
+  final CoupleRecordingSlotArtwork? artwork;
+  final CoupleRecordingSlotPlacement? placement;
 
   Duration get duration => Duration(milliseconds: durationMs);
+}
+
+class CoupleRecordingSlotArtwork {
+  const CoupleRecordingSlotArtwork({
+    required this.previewPath,
+    required this.previewUrl,
+    required this.drawingDataPath,
+    required this.revision,
+  });
+
+  final String previewPath;
+  final String previewUrl;
+  final String drawingDataPath;
+  final int revision;
+}
+
+class CoupleRecordingSlotPlacement {
+  const CoupleRecordingSlotPlacement({
+    required this.normalizedX,
+    required this.normalizedY,
+    required this.revision,
+  });
+
+  final double normalizedX;
+  final double normalizedY;
+  final int revision;
 }

@@ -10,10 +10,11 @@ import '../recording_debug_log.dart';
 import '../data/couple_recording.dart';
 import '../data/couple_recording_repository.dart';
 
-final coupleRecordingOverviewControllerProvider = AsyncNotifierProvider<
-  CoupleRecordingOverviewController,
-  CoupleRecordingOverview?
->(CoupleRecordingOverviewController.new);
+final coupleRecordingOverviewControllerProvider =
+    AsyncNotifierProvider<
+      CoupleRecordingOverviewController,
+      CoupleRecordingOverview?
+    >(CoupleRecordingOverviewController.new);
 
 class CoupleRecordingOverviewController
     extends AsyncNotifier<CoupleRecordingOverview?> {
@@ -106,10 +107,58 @@ class CoupleRecordingOverviewController
     required String slotId,
     required int expectedSlotRevision,
   }) async {
-    await ref.read(coupleRecordingRepositoryProvider).deleteSlot(
-      slotId: slotId,
-      expectedSlotRevision: expectedSlotRevision,
-    );
+    await ref
+        .read(coupleRecordingRepositoryProvider)
+        .deleteSlot(slotId: slotId, expectedSlotRevision: expectedSlotRevision);
+    await refresh();
+  }
+
+  Future<void> saveSlotArtwork({
+    required Couple couple,
+    required String slotId,
+    required int expectedSlotRevision,
+    required Uint8List previewBytes,
+    required Uint8List drawingDataBytes,
+  }) async {
+    await ref
+        .read(coupleRecordingRepositoryProvider)
+        .saveSlotArtwork(
+          coupleId: couple.id,
+          slotId: slotId,
+          expectedSlotRevision: expectedSlotRevision,
+          previewBytes: previewBytes,
+          drawingDataBytes: drawingDataBytes,
+        );
+    await refresh();
+  }
+
+  Future<void> upsertSlotPlacement({
+    required String slotId,
+    required double normalizedX,
+    required double normalizedY,
+    required int? expectedPlacementRevision,
+  }) async {
+    await ref
+        .read(coupleRecordingRepositoryProvider)
+        .upsertSlotPlacement(
+          slotId: slotId,
+          normalizedX: normalizedX,
+          normalizedY: normalizedY,
+          expectedPlacementRevision: expectedPlacementRevision,
+        );
+    await refresh();
+  }
+
+  Future<void> deleteSlotPlacement({
+    required String slotId,
+    required int expectedPlacementRevision,
+  }) async {
+    await ref
+        .read(coupleRecordingRepositoryProvider)
+        .deleteSlotPlacement(
+          slotId: slotId,
+          expectedPlacementRevision: expectedPlacementRevision,
+        );
     await refresh();
   }
 }

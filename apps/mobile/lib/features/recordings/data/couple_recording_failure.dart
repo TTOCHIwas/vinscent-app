@@ -15,6 +15,12 @@ enum CoupleRecordingFailureReason {
   recordingSlotLocked,
   recordingSlotConflict,
   recordingSlotLimitReached,
+  invalidRecordingArtwork,
+  recordingArtworkFileMissing,
+  recordingArtworkRequired,
+  invalidRecordingPlacement,
+  recordingPlacementConflict,
+  recordingPlacementLimitReached,
   storage,
   unknown,
 }
