@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/app/app.dart';
+import 'package:vinscent/core/assets/app_icons.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
@@ -126,6 +128,14 @@ void main() {
         find.byKey(const Key('app-header-recording-library')),
         findsOneWidget,
       );
+      final recordingLibraryIcon = tester.widget<AppSvgIcon>(
+        find.descendant(
+          of: find.byKey(const Key('app-header-recording-library')),
+          matching: find.byType(AppSvgIcon),
+        ),
+      );
+      expect(recordingLibraryIcon.assetName, AppIcons.cassetteTape);
+      expect(recordingLibraryIcon.color, Colors.black);
       expect(find.byTooltip('\ub179\uc74c \ubcf4\uad00\ud568'), findsOneWidget);
       expect(find.byKey(const Key('app-header-settings')), findsOneWidget);
       expect(find.byType(ShellTab), findsNWidgets(3));
