@@ -319,6 +319,36 @@ void main() {
     expect(find.byType(CalendarScreen), findsOneWidget);
   });
 
+  testWidgets('system back restores calendar-sourced answer edit route', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(
+      tester.element(find.byType(AppHeader)),
+    ).go('/home/question/edit?source=calendar&date=2026-05-31');
+    await tester.pumpAndSettle();
+    expect(find.byType(TodayQuestionAnswerEditScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    final questionScreen = find.byType(TodayQuestionAnswerScreen);
+    expect(questionScreen, findsOneWidget);
+    expect(
+      GoRouter.of(
+        tester.element(questionScreen),
+      ).routeInformationProvider.value.uri.path,
+      '/calendar/question',
+    );
+    expect(_tabs(tester)[1].isSelected, isTrue);
+  });
+
   testWidgets(
     '\ub0b4 \ub2f5\ubcc0\uc774 \uc5c6\uc73c\uba74 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \ub2f5\ubcc0 \uc791\uc131 route\ub97c \uc5f0\ub2e4',
     (tester) async {
