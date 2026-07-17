@@ -722,36 +722,48 @@ class _AnswerSaveBar extends StatelessWidget {
         : AppColors.textMuted;
     final saveColor = canSave ? AppColors.textPrimary : AppColors.textMuted;
 
-    return Container(
-      height: 82,
-      width: double.infinity,
+    return ColoredBox(
       color: AppColors.actionDisabled,
-      padding: const EdgeInsets.fromLTRB(32, 10, 32, 34),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Semantics(
-            button: true,
-            label: '저장',
-            child: InkWell(
-              onTap: canSave ? onSave : null,
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(
-                  isLoading ? '저장 중' : '저장',
-                  style: AppTextStyles.homeCharacterLabel.copyWith(
-                    color: saveColor,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.symmetric(horizontal: 32),
+        child: SizedBox(
+          key: const Key('answer-save-bar'),
+          height: 52,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$characterCount / $maxAnswerLength',
+                key: const Key('answer-character-count'),
+                style: AppTextStyles.homeCharacterLabel.copyWith(
+                  color: countColor,
+                ),
+              ),
+              Semantics(
+                key: const Key('answer-save-action'),
+                button: true,
+                label: '저장',
+                child: SizedBox(
+                  width: 48,
+                  height: 44,
+                  child: InkWell(
+                    onTap: canSave ? onSave : null,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Center(
+                      child: Text(
+                        isLoading ? '저장 중' : '저장',
+                        style: AppTextStyles.homeCharacterLabel.copyWith(
+                          color: saveColor,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-          Text(
-            '$characterCount / $maxAnswerLength',
-            style: AppTextStyles.homeCharacterLabel.copyWith(color: countColor),
-          ),
-        ],
+        ),
       ),
     );
   }
