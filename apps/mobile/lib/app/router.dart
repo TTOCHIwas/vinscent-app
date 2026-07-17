@@ -23,6 +23,7 @@ import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/shell/presentation/app_shell.dart';
+import '../features/shell/presentation/widgets/shell_root_back_scope.dart';
 import '../features/story_loops/presentation/story_card_editor_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -141,7 +142,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home',
             name: 'home',
-            builder: (context, state) => const HomeScreen(),
+            builder: (context, state) =>
+                const ShellRootBackScope.home(child: HomeScreen()),
             routes: [
               GoRoute(
                 path: 'character',
@@ -180,7 +182,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/calendar',
             name: 'calendar',
-            builder: (context, state) => const CalendarScreen(),
+            builder: (context, state) =>
+                const ShellRootBackScope.secondaryTab(child: CalendarScreen()),
             routes: [
               GoRoute(
                 path: 'question',
@@ -202,7 +205,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/ai',
             name: 'ai',
-            builder: (context, state) => const AiScreen(),
+            builder: (context, state) =>
+                const ShellRootBackScope.secondaryTab(child: AiScreen()),
           ),
           GoRoute(
             path: '/settings',
