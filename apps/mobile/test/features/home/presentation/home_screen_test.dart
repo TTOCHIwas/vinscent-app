@@ -139,6 +139,10 @@ void main() {
         tester.getBottomLeft(questionBubble).dy,
         lessThan(tester.getTopLeft(characterControl).dy),
       );
+      final questionText = tester.widget<Text>(
+        find.text(_dailyQuestion.questionText),
+      );
+      expect(questionText.style?.fontSize, 22);
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
       expect(myCard, findsOneWidget);
@@ -158,9 +162,17 @@ void main() {
         tester.getBottomLeft(myCard).dy,
         lessThan(tester.getTopLeft(find.text(_dailyQuestion.questionText)).dy),
       );
+      final cardToBubbleGap =
+          tester.getTopLeft(questionBubble).dy -
+          tester.getBottomLeft(myCard).dy;
+      final bubbleToCharacterGap =
+          tester.getTopLeft(characterControl).dy -
+          tester.getBottomLeft(questionBubble).dy;
+      expect(bubbleToCharacterGap, lessThan(cardToBubbleGap));
       expect(find.byKey(_storyAddButtonKey), findsNothing);
       expect(find.text(_storyLabel), findsNothing);
       expect(find.text(_storyAnswerAction), findsNothing);
+      expect(tester.takeException(), isNull);
     },
   );
 
