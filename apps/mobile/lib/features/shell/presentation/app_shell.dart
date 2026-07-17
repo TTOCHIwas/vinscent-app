@@ -22,9 +22,12 @@ class AppShell extends StatelessWidget {
     final topInset = MediaQuery.paddingOf(context).top;
     final showHeader = !_hidesMainHeader;
     final showBottomBar = !_hidesBottomBar;
+    final backgroundColor = _usesSettingsBackground
+        ? AppColors.settingsBackground
+        : AppColors.background;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: backgroundColor,
       extendBody: showBottomBar,
       body: Column(
         children: [
@@ -63,5 +66,10 @@ class AppShell extends StatelessWidget {
     return location == '/home/recordings' ||
         location == '/home/question/edit' ||
         location.startsWith('/settings');
+  }
+
+  bool get _usesSettingsBackground {
+    return location.startsWith('/settings') &&
+        !location.startsWith('/settings/character');
   }
 }

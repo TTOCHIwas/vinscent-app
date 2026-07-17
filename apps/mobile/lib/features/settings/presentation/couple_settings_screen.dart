@@ -7,7 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
-import 'widgets/settings_page_header.dart';
+import 'widgets/settings_page_layout.dart';
 
 class CoupleSettingsScreen extends ConsumerStatefulWidget {
   const CoupleSettingsScreen({super.key});
@@ -24,59 +24,45 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
   Widget build(BuildContext context) {
     final couple = ref.watch(coupleControllerProvider);
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SettingsPageHeader(
-              title: '커플 설정',
-              onBackPressed: () => context.pop(),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: couple.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                error: (error, stackTrace) => const _CoupleSettingsMessage(
-                  title: '커플 정보를 불러오지 못했어요.',
-                  message: '잠시 후 다시 시도해 주세요.',
-                ),
-                data: (couple) {
-                  if (couple == null) {
-                    return const _CoupleSettingsMessage(
-                      title: '연결된 커플이 없어요.',
-                      message: '커플 연결을 먼저 완료해 주세요.',
-                    );
-                  }
-
-                  if (couple.isArchivedReadOnly) {
-                    return _ArchivedCoupleSettingsContent(
-                      couple: couple,
-                      isProcessing: _isProcessing,
-                      onReconnectPressed: _reconnectCouple,
-                      onDeletePressed: _deleteArchiveNow,
-                    );
-                  }
-
-                  if (!couple.isActive) {
-                    return const _CoupleSettingsMessage(
-                      title: '지금은 사용할 수 없어요.',
-                      message: '커플 연결 상태를 다시 확인해 주세요.',
-                    );
-                  }
-
-                  return _ActiveCoupleSettingsContent(
-                    isProcessing: _isProcessing,
-                    onDisconnectPressed: _disconnectCouple,
-                  );
-                },
-              ),
-            ),
-          ],
+    return SettingsPageLayout(
+      title: '커플 설정',
+      onBackPressed: () => context.pop(),
+      child: couple.when(
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        error: (error, stackTrace) => const _CoupleSettingsMessage(
+          title: '커플 정보를 불러오지 못했어요.',
+          message: '잠시 후 다시 시도해 주세요.',
         ),
+        data: (couple) {
+          if (couple == null) {
+            return const _CoupleSettingsMessage(
+              title: '연결된 커플이 없어요.',
+              message: '커플 연결을 먼저 완료해 주세요.',
+            );
+          }
+
+          if (couple.isArchivedReadOnly) {
+            return _ArchivedCoupleSettingsContent(
+              couple: couple,
+              isProcessing: _isProcessing,
+              onReconnectPressed: _reconnectCouple,
+              onDeletePressed: _deleteArchiveNow,
+            );
+          }
+
+          if (!couple.isActive) {
+            return const _CoupleSettingsMessage(
+              title: '지금은 사용할 수 없어요.',
+              message: '커플 연결 상태를 다시 확인해 주세요.',
+            );
+          }
+
+          return _ActiveCoupleSettingsContent(
+            isProcessing: _isProcessing,
+            onDisconnectPressed: _disconnectCouple,
+          );
+        },
       ),
     );
   }

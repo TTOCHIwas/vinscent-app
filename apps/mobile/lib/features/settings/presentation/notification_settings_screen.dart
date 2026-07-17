@@ -6,7 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/notification_preferences_controller.dart';
 import '../data/notification_preferences.dart';
-import 'widgets/settings_page_header.dart';
+import 'widgets/settings_group.dart';
+import 'widgets/settings_page_layout.dart';
 
 class NotificationSettingsScreen extends ConsumerWidget {
   const NotificationSettingsScreen({super.key});
@@ -15,33 +16,19 @@ class NotificationSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(notificationPreferencesControllerProvider);
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SettingsPageHeader(
-              title: '알림 설정',
-              onBackPressed: () => context.pop(),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: preferences.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                error: (error, stackTrace) => _SettingsLoadError(
-                  onRetry: () => ref
-                      .read(notificationPreferencesControllerProvider.notifier)
-                      .refresh(),
-                ),
-                data: (preferences) =>
-                    _NotificationSettingsContent(preferences: preferences),
-              ),
-            ),
-          ],
+    return SettingsPageLayout(
+      title: '알림 설정',
+      onBackPressed: () => context.pop(),
+      child: preferences.when(
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        error: (error, stackTrace) => _SettingsLoadError(
+          onRetry: () => ref
+              .read(notificationPreferencesControllerProvider.notifier)
+              .refresh(),
         ),
+        data: (preferences) =>
+            _NotificationSettingsContent(preferences: preferences),
       ),
     );
   }
@@ -59,66 +46,72 @@ class _NotificationSettingsContent extends ConsumerWidget {
     );
 
     return ListView(
+      padding: EdgeInsets.zero,
       children: [
-        _PreferenceToggleTile(
-          title: '상대 답변 완료',
-          value: preferences.partnerAnswerEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(partnerAnswerEnabled: value),
+        SettingsGroup(
+          key: const Key('notification-settings-group'),
+          children: [
+            SettingsToggleRow(
+              title: '상대 답변 완료',
+              value: preferences.partnerAnswerEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(partnerAnswerEnabled: value),
+                ),
+              ),
             ),
-          ),
-        ),
-        _PreferenceToggleTile(
-          title: '질문 생성 완료',
-          value: preferences.dailyQuestionEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(dailyQuestionEnabled: value),
+            SettingsToggleRow(
+              title: '질문 생성 완료',
+              value: preferences.dailyQuestionEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(dailyQuestionEnabled: value),
+                ),
+              ),
             ),
-          ),
-        ),
-        _PreferenceToggleTile(
-          title: '상대 스토리 카드 업로드',
-          value: preferences.partnerStoryCardEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(partnerStoryCardEnabled: value),
+            SettingsToggleRow(
+              title: '상대 스토리 카드 업로드',
+              value: preferences.partnerStoryCardEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(partnerStoryCardEnabled: value),
+                ),
+              ),
             ),
-          ),
-        ),
-        _PreferenceToggleTile(
-          title: '미답변 리마인드',
-          value: preferences.reminderEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(reminderEnabled: value),
+            SettingsToggleRow(
+              title: '미답변 리마인드',
+              value: preferences.reminderEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(reminderEnabled: value),
+                ),
+              ),
             ),
-          ),
-        ),
-        _PreferenceToggleTile(
-          title: '커플 연결 해제 알림',
-          value: preferences.coupleDisconnectEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(coupleDisconnectEnabled: value),
+            SettingsToggleRow(
+              title: '커플 연결 해제 알림',
+              value: preferences.coupleDisconnectEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(coupleDisconnectEnabled: value),
+                ),
+              ),
             ),
-          ),
-        ),
-        _PreferenceToggleTile(
-          title: '녹음 알림',
-          value: preferences.recordingEnabled,
-          onChanged: (value) => _updatePreferences(
-            context: context,
-            update: controller.updatePreferences(
-              preferences.copyWith(recordingEnabled: value),
+            SettingsToggleRow(
+              title: '녹음 알림',
+              value: preferences.recordingEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(recordingEnabled: value),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -139,33 +132,6 @@ class _NotificationSettingsContent extends ConsumerWidget {
         context,
       ).showSnackBar(const SnackBar(content: Text('알림 설정을 저장하지 못했어요.')));
     }
-  }
-}
-
-class _PreferenceToggleTile extends StatelessWidget {
-  const _PreferenceToggleTile({
-    required this.title,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String title;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.wireframeBorder)),
-      ),
-      child: SwitchListTile.adaptive(
-        contentPadding: EdgeInsets.zero,
-        title: Text(title, style: AppTextStyles.homeBody),
-        value: value,
-        onChanged: onChanged,
-      ),
-    );
   }
 }
 
