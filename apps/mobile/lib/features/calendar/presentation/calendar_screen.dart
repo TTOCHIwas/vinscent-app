@@ -259,8 +259,11 @@ class _CalendarGrid extends ConsumerWidget {
   });
 
   static const _weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
-  static const _gridHeight = 308.0;
-  static const _gridGap = 10.0;
+  static const _weekdayRowHeight = 20.0;
+  static const _dayRowHeight = 49.0;
+  static const _columnGap = 6.0;
+  static const _rowGap = 8.0;
+  static const _dateGridHeight = (_dayRowHeight * 6) + (_rowGap * 5);
 
   final DateTime visibleMonth;
   final DateTime today;
@@ -278,33 +281,48 @@ class _CalendarGrid extends ConsumerWidget {
       },
       orElse: () => const <DateTime, StoryLoopMonthSummaryDay>{},
     );
-    final cells = <Widget>[
-      for (final label in _weekdayLabels) _WeekdayCell(label: label),
-      for (final date in days)
-        _DateCell(
-          date: date,
-          isCurrentMonth: _isSameMonth(date, visibleMonth),
-          isEnabled: _isEnabled(date),
-          isSelected: selectedDate != null && _isSameDate(date, selectedDate!),
-          summary: summaryByDate[calendarDateOnly(date)],
-          onPressed: () => onDatePressed(date),
+    return Column(
+      children: [
+        SizedBox(
+          height: _weekdayRowHeight,
+          child: Row(
+            children: [
+              for (var index = 0; index < _weekdayLabels.length; index++) ...[
+                Expanded(child: _WeekdayCell(label: _weekdayLabels[index])),
+                if (index < _weekdayLabels.length - 1)
+                  const SizedBox(width: _columnGap),
+              ],
+            ],
+          ),
         ),
-    ];
-
-    return SizedBox(
-      height: _gridHeight,
-      child: GridView.builder(
-        padding: EdgeInsets.zero,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: cells.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 7,
-          crossAxisSpacing: _gridGap,
-          mainAxisSpacing: _gridGap,
-          mainAxisExtent: (_gridHeight - (_gridGap * 6)) / 7,
+        const SizedBox(height: _rowGap),
+        SizedBox(
+          height: _dateGridHeight,
+          child: GridView.builder(
+            padding: EdgeInsets.zero,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              crossAxisSpacing: _columnGap,
+              mainAxisSpacing: _rowGap,
+              mainAxisExtent: _dayRowHeight,
+            ),
+            itemBuilder: (context, index) {
+              final date = days[index];
+              return _DateCell(
+                date: date,
+                isCurrentMonth: _isSameMonth(date, visibleMonth),
+                isEnabled: _isEnabled(date),
+                isSelected:
+                    selectedDate != null && _isSameDate(date, selectedDate!),
+                summary: summaryByDate[calendarDateOnly(date)],
+                onPressed: () => onDatePressed(date),
+              );
+            },
+          ),
         ),
-        itemBuilder: (context, index) => cells[index],
-      ),
+      ],
     );
   }
 

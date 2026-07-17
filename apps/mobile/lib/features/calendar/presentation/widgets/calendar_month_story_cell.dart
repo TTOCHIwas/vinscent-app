@@ -85,6 +85,9 @@ class CalendarMonthStoryCell extends StatelessWidget {
 class _MonthStoryPreview extends StatelessWidget {
   const _MonthStoryPreview({required this.cards});
 
+  static const _preferredCardWidth = 18.0;
+  static const _stackWidthFactor = 1.55;
+
   final List<StoryLoopCardPreview> cards;
 
   @override
@@ -93,38 +96,66 @@ class _MonthStoryPreview extends StatelessWidget {
       return const SizedBox.expand();
     }
 
-    if (cards.length == 1) {
-      return Align(
-        alignment: Alignment.bottomCenter,
-        child: _MonthStorySurface(card: cards.first, width: 15, angle: 0),
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final preferredCardHeight =
+            _preferredCardWidth / storyCardCanvasAspectRatio;
+        final cardHeight =
+            constraints.hasBoundedHeight &&
+                constraints.maxHeight < preferredCardHeight
+            ? constraints.maxHeight
+            : preferredCardHeight;
+        final cardWidth = cardHeight * storyCardCanvasAspectRatio;
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SizedBox(
-        width: 22,
-        height: 24,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 1,
-              bottom: 0,
-              child: _MonthStorySurface(
-                card: cards.first,
-                width: 13,
-                angle: -0.12,
-              ),
+        if (cards.length == 1) {
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: _MonthStorySurface(
+              card: cards.first,
+              width: cardWidth,
+              angle: 0,
             ),
-            Positioned(
-              right: 1,
-              bottom: 0,
-              child: _MonthStorySurface(card: cards[1], width: 13, angle: 0.14),
+          );
+        }
+
+        final preferredStackWidth = cardWidth * _stackWidthFactor;
+        final stackWidth =
+            constraints.hasBoundedWidth &&
+                constraints.maxWidth < preferredStackWidth
+            ? constraints.maxWidth
+            : preferredStackWidth;
+
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: SizedBox(
+            width: stackWidth,
+            height: cardHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  child: _MonthStorySurface(
+                    card: cards.first,
+                    width: cardWidth,
+                    angle: -0.12,
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: _MonthStorySurface(
+                    card: cards[1],
+                    width: cardWidth,
+                    angle: 0.14,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -156,6 +187,7 @@ class _MonthStorySurface extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: storyCardCanvasAspectRatio,
           child: DecoratedBox(
+            key: ValueKey('calendar-month-story-card-${card.id}'),
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(2.4),
