@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
+import '../../settings/presentation/widgets/settings_group.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/couple_recording_overview_controller.dart';
 import '../application/recording_playback_controller.dart';
@@ -138,106 +138,81 @@ class _RecordingLibraryScreenState
     };
 
     return ListView(
+      key: const ValueKey('recording-library-list'),
+      padding: EdgeInsets.zero,
       children: [
-        _SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('현재 녹음', style: AppTextStyles.homeBodyMedium),
-              const SizedBox(height: 10),
-              if (currentRecording == null)
-                Text(
-                  '아직 저장된 현재 녹음이 없어요.',
-                  style: AppTextStyles.homeCharacterLabel.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                )
-              else
-                _CurrentRecordingPreview(
-                  recording: currentRecording,
-                  isMine: currentRecording.senderUserId == currentUserId,
-                  isPlaying:
-                      playbackState.isPlaying &&
-                      playbackState.activeTargetKey ==
-                          currentPlaybackTarget!.key,
-                  onPlayPressed: () => unawaited(
-                    playbackController.toggle(currentPlaybackTarget!),
-                  ),
+        SettingsGroup(
+          label: '현재 녹음',
+          children: [
+            if (currentRecording == null)
+              const _LibraryEmptyRow(message: '아직 저장된 현재 녹음이 없어요.')
+            else
+              _CurrentRecordingPreview(
+                recording: currentRecording,
+                isMine: currentRecording.senderUserId == currentUserId,
+                isPlaying:
+                    playbackState.isPlaying &&
+                    playbackState.activeTargetKey == currentPlaybackTarget!.key,
+                onPlayPressed: () => unawaited(
+                  playbackController.toggle(currentPlaybackTarget!),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '열린 슬롯 ${overview.slotLimit}/10',
-                      style: AppTextStyles.homeBodyMedium,
-                    ),
-                  ),
-                  if (canEdit && overview.slotLimit < 10)
-                    TextButton(
-                      onPressed: _isProcessing ? null : _openNextSlot,
-                      child: const Text('슬롯 추가'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                canEdit
-                    ? '현재 녹음을 선택한 슬롯에 저장하거나 교체할 수 있어요.'
-                    : '보관 중인 저장 녹음은 재생만 할 수 있어요.',
-                style: AppTextStyles.homeCharacterLabel.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 16),
-              for (var index = 1; index <= overview.slotLimit; index++) ...[
-                _RecordingSlotTile(
-                  slotIndex: index,
+        const SizedBox(height: 24),
+        _LibrarySectionHeader(
+          title: '보관 슬롯 ${overview.slotLimit}/10',
+          actionLabel: canEdit && overview.slotLimit < 10 ? '슬롯 추가' : null,
+          onAction: canEdit && overview.slotLimit < 10 && !_isProcessing
+              ? _openNextSlot
+              : null,
+        ),
+        const SizedBox(height: 8),
+        SettingsGroup(
+          dividerIndent: 84,
+          children: [
+            for (var index = 1; index <= overview.slotLimit; index++)
+              _RecordingSlotTile(
+                slotIndex: index,
+                slot: slotsByIndex[index],
+                currentRecording: currentRecording,
+                canEdit: canEdit,
+                isPlaying: _isSlotPlaying(
                   slot: slotsByIndex[index],
-                  currentRecording: currentRecording,
-                  canEdit: canEdit,
-                  isPlaying: _isSlotPlaying(
-                    slot: slotsByIndex[index],
-                    playbackState: playbackState,
-                  ),
-                  currentUserId: currentUserId,
-                  onPlayPressed: _buildSlotPlayCallback(
-                    slot: slotsByIndex[index],
-                    playbackController: playbackController,
-                  ),
-                  onSavePressed: currentRecording == null || _isProcessing
-                      ? null
-                      : () => _saveSlot(
-                          slotIndex: index,
-                          slot: slotsByIndex[index],
-                        ),
-                  onDeletePressed: slotsByIndex[index] == null || _isProcessing
-                      ? null
-                      : () => _deleteSlot(slotsByIndex[index]!),
-                  onArtworkPressed: slotsByIndex[index] == null
-                      ? null
-                      : () => context.push(
-                          '/home/recordings/${slotsByIndex[index]!.slotId}/artwork',
-                        ),
-                  onArtworkLongPress:
-                      !canEdit || slotsByIndex[index]?.artwork == null
-                      ? null
-                      : () => _startHomePlacement(
-                          slot: slotsByIndex[index]!,
-                          overview: overview,
-                        ),
+                  playbackState: playbackState,
                 ),
-                if (index < overview.slotLimit) const SizedBox(height: 12),
-              ],
-            ],
-          ),
+                currentUserId: currentUserId,
+                onPlayPressed: _buildSlotPlayCallback(
+                  slot: slotsByIndex[index],
+                  playbackController: playbackController,
+                ),
+                onSavePressed:
+                    !canEdit || currentRecording == null || _isProcessing
+                    ? null
+                    : () => _saveSlot(
+                        slotIndex: index,
+                        slot: slotsByIndex[index],
+                      ),
+                onDeletePressed:
+                    !canEdit || slotsByIndex[index] == null || _isProcessing
+                    ? null
+                    : () => _deleteSlot(slotsByIndex[index]!),
+                onArtworkPressed:
+                    slotsByIndex[index] == null ||
+                        (!canEdit && slotsByIndex[index]!.artwork == null)
+                    ? null
+                    : () => context.push(
+                        '/home/recordings/${slotsByIndex[index]!.slotId}/artwork',
+                      ),
+                onHomePlacementPressed:
+                    !canEdit || slotsByIndex[index]?.artwork == null
+                    ? null
+                    : () => _startHomePlacement(
+                        slot: slotsByIndex[index]!,
+                        overview: overview,
+                      ),
+              ),
+          ],
         ),
       ],
     );
@@ -548,20 +523,62 @@ class _RecordingLibraryScreenState
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.child});
+class _LibrarySectionHeader extends StatelessWidget {
+  const _LibrarySectionHeader({
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
 
-  final Widget child;
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.wireframeBorder),
-        borderRadius: BorderRadius.circular(8),
+    final actionLabel = this.actionLabel;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              title,
+              style: AppTextStyles.homeCharacterLabel.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+        ),
+        if (actionLabel != null)
+          TextButton(onPressed: onAction, child: Text(actionLabel)),
+      ],
+    );
+  }
+}
+
+class _LibraryEmptyRow extends StatelessWidget {
+  const _LibraryEmptyRow({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 60),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            message,
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+        ),
       ),
-      child: child,
     );
   }
 }
@@ -581,46 +598,52 @@ class _CurrentRecordingPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 44,
-          height: 44,
-          child: OutlinedButton(
-            onPressed: onPlayPressed,
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.zero,
-              side: const BorderSide(color: AppColors.wireframeBorder),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Icon(
-              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isMine ? '내가 남긴 녹음' : '상대가 남긴 녹음',
-                style: AppTextStyles.homeBody,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${_formatRecordedAt(recording.recordedAt)} · ${_formatDuration(recording.duration)}',
-                style: AppTextStyles.homeCharacterLabel.copyWith(
-                  color: AppColors.textMuted,
+    return Semantics(
+      button: true,
+      label: isPlaying ? '현재 녹음 일시정지' : '현재 녹음 재생',
+      child: InkWell(
+        key: const ValueKey('recording-library-current-row'),
+        onTap: onPlayPressed,
+        splashColor: AppColors.settingsPressed,
+        highlightColor: AppColors.settingsPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 68),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  isPlaying
+                      ? Icons.pause_circle_filled_rounded
+                      : Icons.play_circle_outline_rounded,
+                  color: AppColors.textPrimary,
+                  size: 30,
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        isMine ? '내가 남긴 녹음' : '상대가 남긴 녹음',
+                        style: AppTextStyles.homeBody,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_formatRecordedAt(recording.recordedAt)} · ${_formatDuration(recording.duration)}',
+                        style: AppTextStyles.homeCharacterLabel.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -637,7 +660,7 @@ class _RecordingSlotTile extends StatelessWidget {
     this.onSavePressed,
     this.onDeletePressed,
     this.onArtworkPressed,
-    this.onArtworkLongPress,
+    this.onHomePlacementPressed,
   });
 
   final int slotIndex;
@@ -650,43 +673,30 @@ class _RecordingSlotTile extends StatelessWidget {
   final VoidCallback? onSavePressed;
   final VoidCallback? onDeletePressed;
   final VoidCallback? onArtworkPressed;
-  final VoidCallback? onArtworkLongPress;
+  final VoidCallback? onHomePlacementPressed;
 
   @override
   Widget build(BuildContext context) {
     final slot = this.slot;
 
-    return GestureDetector(
-      key: slot == null
-          ? null
-          : ValueKey('recording-library-slot-${slot.slotId}'),
-      behavior: HitTestBehavior.opaque,
-      onLongPress: onArtworkLongPress,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.wireframeBorder),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: slot == null
-            ? _EmptySlotContent(
-                slotIndex: slotIndex,
-                canEdit: canEdit,
-                hasCurrentRecording: currentRecording != null,
-                onSavePressed: onSavePressed,
-              )
-            : _FilledSlotContent(
-                slot: slot,
-                canEdit: canEdit,
-                isPlaying: isPlaying,
-                currentUserId: currentUserId,
-                onPlayPressed: onPlayPressed,
-                onSavePressed: onSavePressed,
-                onDeletePressed: onDeletePressed,
-                onArtworkPressed: onArtworkPressed,
-              ),
-      ),
-    );
+    return slot == null
+        ? _EmptySlotContent(
+            slotIndex: slotIndex,
+            canEdit: canEdit,
+            hasCurrentRecording: currentRecording != null,
+            onSavePressed: onSavePressed,
+          )
+        : _FilledSlotContent(
+            slot: slot,
+            canEdit: canEdit,
+            isPlaying: isPlaying,
+            currentUserId: currentUserId,
+            onPlayPressed: onPlayPressed,
+            onSavePressed: onSavePressed,
+            onDeletePressed: onDeletePressed,
+            onArtworkPressed: onArtworkPressed,
+            onHomePlacementPressed: onHomePlacementPressed,
+          );
   }
 }
 
@@ -705,26 +715,109 @@ class _EmptySlotContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('슬롯 $slotIndex', style: AppTextStyles.homeBody),
-        const SizedBox(height: 4),
-        Text(
-          hasCurrentRecording ? '현재 녹음을 이 슬롯에 저장할 수 있어요.' : '현재 저장할 녹음이 없어요.',
-          style: AppTextStyles.homeCharacterLabel.copyWith(
-            color: AppColors.textMuted,
-          ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 76),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            const SizedBox.square(
+              dimension: 56,
+              child: Icon(
+                Icons.mic_none_rounded,
+                color: AppColors.textMuted,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('슬롯 $slotIndex', style: AppTextStyles.homeBody),
+                  const SizedBox(height: 4),
+                  Text(
+                    hasCurrentRecording ? '비어 있음' : '저장할 현재 녹음이 없어요.',
+                    style: AppTextStyles.homeCharacterLabel.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (canEdit)
+              IconButton(
+                key: ValueKey('recording-library-empty-slot-save-$slotIndex'),
+                tooltip: '현재 녹음 저장',
+                onPressed: hasCurrentRecording ? onSavePressed : null,
+                icon: const Icon(Icons.add_rounded),
+              ),
+          ],
         ),
-        if (canEdit) ...[
-          const SizedBox(height: 12),
-          AppActionButton(
-            label: '현재 녹음 저장',
-            enabled: hasCurrentRecording,
-            onPressed: onSavePressed,
-          ),
-        ],
+      ),
+    );
+  }
+}
+
+enum _RecordingSlotMenuAction { artwork, homePlacement, replace, delete }
+
+class _RecordingSlotMenuItem extends StatelessWidget {
+  const _RecordingSlotMenuItem({
+    required this.icon,
+    required this.label,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive
+        ? AppColors.recordingActive
+        : AppColors.textPrimary;
+
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: color)),
       ],
+    );
+  }
+}
+
+class _SlotArtworkThumbnail extends StatelessWidget {
+  const _SlotArtworkThumbnail({required this.slot});
+
+  final CoupleRecordingSlot slot;
+
+  @override
+  Widget build(BuildContext context) {
+    final artwork = slot.artwork;
+
+    return SizedBox.square(
+      key: artwork == null
+          ? null
+          : ValueKey('recording-slot-artwork-${slot.slotId}'),
+      dimension: 56,
+      child: artwork == null
+          ? const Icon(
+              Icons.mic_none_rounded,
+              color: AppColors.textMuted,
+              size: 28,
+            )
+          : Image.network(
+              artwork.previewUrl,
+              fit: BoxFit.contain,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.broken_image_outlined,
+                color: AppColors.textMuted,
+              ),
+            ),
     );
   }
 }
@@ -739,6 +832,7 @@ class _FilledSlotContent extends StatelessWidget {
     this.onSavePressed,
     this.onDeletePressed,
     this.onArtworkPressed,
+    this.onHomePlacementPressed,
   });
 
   final CoupleRecordingSlot slot;
@@ -749,140 +843,122 @@ class _FilledSlotContent extends StatelessWidget {
   final VoidCallback? onSavePressed;
   final VoidCallback? onDeletePressed;
   final VoidCallback? onArtworkPressed;
+  final VoidCallback? onHomePlacementPressed;
 
   @override
   Widget build(BuildContext context) {
     final isMine = slot.senderUserId == currentUserId;
+    final artworkLabel = slot.artwork == null
+        ? '그림 추가'
+        : canEdit
+        ? '그림 수정'
+        : '그림 보기';
+    final hasMenu =
+        onArtworkPressed != null ||
+        onHomePlacementPressed != null ||
+        onSavePressed != null ||
+        onDeletePressed != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(slot.title, style: AppTextStyles.homeBodyMedium),
-            ),
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: OutlinedButton(
-                onPressed: onPlayPressed,
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  side: const BorderSide(color: AppColors.wireframeBorder),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+    return Semantics(
+      button: true,
+      label: isPlaying ? '${slot.title} 일시정지' : '${slot.title} 재생',
+      child: InkWell(
+        key: ValueKey('recording-library-slot-${slot.slotId}'),
+        onTap: onPlayPressed,
+        onLongPress: onHomePlacementPressed,
+        splashColor: AppColors.settingsPressed,
+        highlightColor: AppColors.settingsPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 76),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                _SlotArtworkThumbnail(slot: slot),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(slot.title, style: AppTextStyles.homeBodyMedium),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${isMine ? '내가 남김' : '상대가 남김'} · ${_formatRecordedAt(slot.recordedAt)} · ${_formatDuration(slot.duration)}',
+                        style: AppTextStyles.homeCharacterLabel.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Icon(
+                const SizedBox(width: 8),
+                Icon(
                   isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textMuted,
+                  size: 22,
                 ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '${isMine ? '내가 남김' : '상대가 남김'} · ${_formatRecordedAt(slot.recordedAt)} · ${_formatDuration(slot.duration)}',
-          style: AppTextStyles.homeCharacterLabel.copyWith(
-            color: AppColors.textMuted,
-          ),
-        ),
-        if (slot.artwork != null || canEdit) ...[
-          const SizedBox(height: 12),
-          _SlotArtworkControl(
-            slot: slot,
-            canEdit: canEdit,
-            onPressed: onArtworkPressed,
-          ),
-        ],
-        if (canEdit) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AppActionButton(
-                  label: '현재 녹음으로 교체',
-                  enabled: true,
-                  onPressed: onSavePressed,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: AppActionButton(
-                  label: '삭제',
-                  enabled: true,
-                  isSecondary: true,
-                  onPressed: onDeletePressed,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _SlotArtworkControl extends StatelessWidget {
-  const _SlotArtworkControl({
-    required this.slot,
-    required this.canEdit,
-    required this.onPressed,
-  });
-
-  final CoupleRecordingSlot slot;
-  final bool canEdit;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final artwork = slot.artwork;
-
-    return Row(
-      children: [
-        if (artwork != null) ...[
-          Material(
-            color: const Color(0xFFF0F0F0),
-            borderRadius: BorderRadius.circular(8),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              key: ValueKey('recording-slot-artwork-${slot.slotId}'),
-              onTap: onPressed,
-              child: SizedBox.square(
-                dimension: 68,
-                child: Image.network(
-                  artwork.previewUrl,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.textMuted,
+                if (hasMenu)
+                  PopupMenuButton<_RecordingSlotMenuAction>(
+                    key: ValueKey('recording-library-slot-menu-${slot.slotId}'),
+                    tooltip: '더보기',
+                    onSelected: (action) {
+                      switch (action) {
+                        case _RecordingSlotMenuAction.artwork:
+                          onArtworkPressed?.call();
+                        case _RecordingSlotMenuAction.homePlacement:
+                          onHomePlacementPressed?.call();
+                        case _RecordingSlotMenuAction.replace:
+                          onSavePressed?.call();
+                        case _RecordingSlotMenuAction.delete:
+                          onDeletePressed?.call();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (onArtworkPressed != null)
+                        PopupMenuItem(
+                          value: _RecordingSlotMenuAction.artwork,
+                          child: _RecordingSlotMenuItem(
+                            icon: slot.artwork == null
+                                ? Icons.draw_outlined
+                                : canEdit
+                                ? Icons.edit_outlined
+                                : Icons.visibility_outlined,
+                            label: artworkLabel,
+                          ),
+                        ),
+                      if (onHomePlacementPressed != null)
+                        const PopupMenuItem(
+                          value: _RecordingSlotMenuAction.homePlacement,
+                          child: _RecordingSlotMenuItem(
+                            icon: Icons.add_to_home_screen_outlined,
+                            label: '홈에 배치',
+                          ),
+                        ),
+                      if (onSavePressed != null)
+                        const PopupMenuItem(
+                          value: _RecordingSlotMenuAction.replace,
+                          child: _RecordingSlotMenuItem(
+                            icon: Icons.swap_horiz_rounded,
+                            label: '현재 녹음으로 교체',
+                          ),
+                        ),
+                      if (onDeletePressed != null)
+                        const PopupMenuItem(
+                          value: _RecordingSlotMenuAction.delete,
+                          child: _RecordingSlotMenuItem(
+                            icon: Icons.delete_outline_rounded,
+                            label: '삭제',
+                            isDestructive: true,
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onPressed,
-            icon: Icon(
-              artwork == null ? Icons.draw_outlined : Icons.edit_outlined,
-              size: 20,
-            ),
-            label: Text(
-              artwork == null
-                  ? '그림 추가'
-                  : canEdit
-                  ? '그림 수정'
-                  : '그림 보기',
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
