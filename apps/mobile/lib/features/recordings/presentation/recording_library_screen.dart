@@ -10,7 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
-import '../../settings/presentation/widgets/settings_page_header.dart';
+import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/couple_recording_overview_controller.dart';
 import '../application/recording_playback_controller.dart';
 import '../recording_debug_log.dart';
@@ -72,47 +72,36 @@ class _RecordingLibraryScreenState
       ).notifier,
     );
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SettingsPageHeader(
-              title: '녹음 보관함',
-              onBackPressed: () => context.pop(),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: coupleAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                error: (_, _) => const _LibraryMessage(
-                  title: '녹음 보관함을 불러오지 못했어요.',
-                ),
-                data: (couple) => overviewAsync.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  error: (_, _) => _LibraryMessage(
-                    title: '녹음 정보를 불러오지 못했어요.',
-                    actionLabel: '다시 시도',
-                    onAction: () => ref
-                        .read(coupleRecordingOverviewControllerProvider.notifier)
-                        .refresh(),
-                  ),
-                  data: (overview) => _buildContent(
-                    context: context,
-                    couple: couple,
-                    overview: overview,
-                    playbackState: playbackState,
-                    playbackController: playbackController,
-                  ),
-                ),
-              ),
-            ),
-          ],
+    return SettingsPageLayout(
+      title: '녹음 보관함',
+      onBackPressed: () {
+        if (context.canPop()) {
+          context.pop();
+          return;
+        }
+        context.go('/home');
+      },
+      child: coupleAsync.when(
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        error: (_, _) => const _LibraryMessage(title: '녹음 보관함을 불러오지 못했어요.'),
+        data: (couple) => overviewAsync.when(
+          loading: () =>
+              const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          error: (_, _) => _LibraryMessage(
+            title: '녹음 정보를 불러오지 못했어요.',
+            actionLabel: '다시 시도',
+            onAction: () => ref
+                .read(coupleRecordingOverviewControllerProvider.notifier)
+                .refresh(),
+          ),
+          data: (overview) => _buildContent(
+            context: context,
+            couple: couple,
+            overview: overview,
+            playbackState: playbackState,
+            playbackController: playbackController,
+          ),
         ),
       ),
     );

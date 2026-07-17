@@ -136,10 +136,12 @@ void main() {
   testWidgets('header recording shortcut opens the existing library route', (
     tester,
   ) async {
+    await _usePhoneSurface(tester);
     await _pumpApp(
       tester,
       question: _dailyQuestion,
       todayAnswerState: pendingAnswerState,
+      stubRecordingOverview: true,
     );
 
     await tester.tap(find.byKey(const Key('app-header-recording-library')));
@@ -629,6 +631,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   required DailyQuestion question,
   required DailyQuestionAnswerState todayAnswerState,
+  bool stubRecordingOverview = false,
 }) async {
   final storyLoopRepository = FakeStoryLoopReadRepository(
     todaySummary: sampleTodaySummary(
@@ -674,9 +677,10 @@ Future<void> _pumpApp(
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => _activeCouple,
         ),
-        coupleRecordingOverviewControllerProvider.overrideWithBuild(
-          (ref, notifier) async => null,
-        ),
+        if (stubRecordingOverview)
+          coupleRecordingOverviewControllerProvider.overrideWithBuild(
+            (ref, notifier) => null,
+          ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
         storyLoopReadRepositoryProvider.overrideWithValue(storyLoopRepository),
       ],

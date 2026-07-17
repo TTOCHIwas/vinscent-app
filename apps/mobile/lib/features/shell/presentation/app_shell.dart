@@ -42,6 +42,8 @@ class AppShell extends StatelessWidget {
               AppHeader(
                 height: headerHeight,
                 showRelationshipDayCount: location == '/home',
+                onRecordingLibraryPressed: () =>
+                    context.push('/home/recordings'),
                 onSettingsPressed: () => context.push('/settings'),
               ),
             Expanded(child: child),

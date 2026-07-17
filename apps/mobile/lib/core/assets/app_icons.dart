@@ -6,6 +6,7 @@ abstract final class AppIcons {
   static const calendar = 'assets/icons/calendar_black.svg';
   static const camera = 'assets/icons/camera_black.svg';
   static const cart = 'assets/icons/cart_black.svg';
+  static const cassetteTape = 'assets/icons/cassette_tape_black.svg';
   static const chat = 'assets/icons/chat_black.svg';
   static const eraser = 'assets/icons/eraser_black.svg';
   static const heart = 'assets/icons/heart_black.svg';
