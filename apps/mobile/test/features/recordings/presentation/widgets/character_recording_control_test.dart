@@ -76,6 +76,18 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('재생 준비 중에는 캐릭터 위 진행 효과를 표시하지 않는다', (tester) async {
+    await _pumpControl(
+      tester,
+      recordingKey: 'recording-1',
+      isPlaybackBusy: true,
+    );
+
+    expect(find.byKey(_characterKey), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+  });
+
   testWidgets('새 녹음을 확인하는 맥박 효과는 제한된 횟수 뒤 종료된다', (tester) async {
     await _pumpControl(tester, recordingKey: 'recording-1');
 
