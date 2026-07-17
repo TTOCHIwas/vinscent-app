@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
+import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
@@ -322,6 +323,16 @@ void main() {
     expect(find.byKey(const ValueKey('story-card-drawing-undo')), findsOne);
     expect(find.byKey(const ValueKey('story-card-drawing-done')), findsOne);
     expect(find.byIcon(Icons.crop), findsNothing);
+
+    final eraserIcon = find.descendant(
+      of: find.byKey(const ValueKey('story-card-drawing-eraser')),
+      matching: find.byType(AppSvgIcon),
+    );
+    expect(eraserIcon, findsOneWidget);
+    expect(
+      tester.widget<AppSvgIcon>(eraserIcon).assetName,
+      'assets/icons/eraser_black.svg',
+    );
   });
 
   testWidgets('undo removes the last completed drawing stroke', (tester) async {

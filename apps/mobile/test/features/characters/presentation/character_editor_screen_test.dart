@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_repository.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
@@ -79,7 +80,7 @@ void main() {
     expect(tester.widget<IconButton>(undoButton).onPressed, isNull);
   });
 
-  testWidgets('shows drawing controls as a fixed canvas overlay', (
+  testWidgets('centers the canvas in the area above fixed drawing controls', (
     tester,
   ) async {
     final repository = _FakeCoupleCharacterRepository();
@@ -90,19 +91,42 @@ void main() {
 
     await _pumpCharacterEditor(tester, repository);
 
+    final canvas = find.byType(CharacterCanvas);
+    final canvasRegion = find.byKey(
+      const ValueKey('character-drawing-canvas-region'),
+    );
     final toolbar = find.byKey(const ValueKey('character-drawing-toolbar'));
 
     expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(canvasRegion, findsOneWidget);
     expect(toolbar, findsOneWidget);
     expect(
-      find.ancestor(of: toolbar, matching: find.byType(Stack)),
-      findsOneWidget,
+      tester.getCenter(canvas).dy,
+      closeTo(tester.getCenter(canvasRegion).dy, 0.01),
     );
     expect(
       find.byKey(const ValueKey('character-drawing-clear')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses the shared rectangular eraser icon', (tester) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    final eraserButton = find.byKey(const ValueKey('character-drawing-eraser'));
+    final eraserIcon = find.descendant(
+      of: eraserButton,
+      matching: find.byType(AppSvgIcon),
+    );
+
+    expect(eraserIcon, findsOneWidget);
+    expect(
+      tester.widget<AppSvgIcon>(eraserIcon).assetName,
+      'assets/icons/eraser_black.svg',
+    );
   });
 
   testWidgets('clears current drawing after confirmation', (tester) async {
