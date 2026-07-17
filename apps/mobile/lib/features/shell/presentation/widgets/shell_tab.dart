@@ -66,7 +66,7 @@ class _ShellTabState extends State<ShellTab> {
                   child: Center(
                     child: Icon(
                       widget.icon,
-                      size: 30,
+                      size: 24,
                       color: widget.isSelected
                           ? AppColors.actionPrimary
                           : AppColors.textMuted,

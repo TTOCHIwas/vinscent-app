@@ -383,7 +383,7 @@ class _DateCell extends StatelessWidget {
       label: '${date.day}일',
       child: InkWell(
         onTap: isEnabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(4),
         child: CalendarMonthStoryCell(
           date: date,
           textColor: _textColor,

@@ -12,7 +12,7 @@ class AppShell extends StatelessWidget {
 
   static const topMinHeight = 56.0;
   static const headerHeight = 56.0;
-  static const bottomBarHeight = 96.0;
+  static const bottomBarHeight = 90.0;
 
   final Widget child;
   final String location;

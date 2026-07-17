@@ -190,7 +190,7 @@ class _MonthStorySurface extends StatelessWidget {
             key: ValueKey('calendar-month-story-card-${card.id}'),
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(2.4),
+              borderRadius: BorderRadius.circular(0),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x28000000),

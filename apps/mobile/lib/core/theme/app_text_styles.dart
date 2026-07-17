@@ -37,7 +37,7 @@ abstract final class AppTextStyles {
 
   static const homeQuestionBubble = TextStyle(
     color: AppColors.textPrimary,
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: FontWeight.w500,
     height: 30 / 22,
     letterSpacing: 0,

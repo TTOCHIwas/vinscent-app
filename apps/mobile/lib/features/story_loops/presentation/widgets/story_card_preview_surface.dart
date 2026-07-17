@@ -47,7 +47,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.white,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(1),
                   border: Border.all(color: AppColors.wireframeBorder),
                   boxShadow: const [
                     BoxShadow(
@@ -58,7 +58,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(1),
                   child: hasRemotePreview
                       ? Image.network(
                           previewUrl!,
