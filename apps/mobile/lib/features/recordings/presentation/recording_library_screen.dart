@@ -149,7 +149,8 @@ class _RecordingLibraryScreenState
                   isMine: currentRecording.senderUserId == currentUserId,
                   isPlaying:
                       playbackState.isPlaying &&
-                      playbackState.activeTargetKey == currentPlaybackTarget!.key,
+                      playbackState.activeTargetKey ==
+                          currentPlaybackTarget!.key,
                   onPlayPressed: () => unawaited(
                     playbackController.toggle(currentPlaybackTarget!),
                   ),
@@ -210,6 +211,11 @@ class _RecordingLibraryScreenState
                   onDeletePressed: slotsByIndex[index] == null || _isProcessing
                       ? null
                       : () => _deleteSlot(slotsByIndex[index]!),
+                  onArtworkPressed: slotsByIndex[index] == null
+                      ? null
+                      : () => context.push(
+                          '/home/recordings/${slotsByIndex[index]!.slotId}/artwork',
+                        ),
                 ),
                 if (index < overview.slotLimit) const SizedBox(height: 12),
               ],
@@ -321,9 +327,7 @@ class _RecordingLibraryScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            slot == null ? '슬롯에 녹음을 저장했어요.' : '슬롯 녹음을 교체했어요.',
-          ),
+          content: Text(slot == null ? '슬롯에 녹음을 저장했어요.' : '슬롯 녹음을 교체했어요.'),
         ),
       );
     } catch (error) {
@@ -406,9 +410,7 @@ class _RecordingLibraryScreenState
               controller: controller,
               autofocus: true,
               maxLength: 20,
-              decoration: const InputDecoration(
-                hintText: '제목을 입력해 주세요.',
-              ),
+              decoration: const InputDecoration(hintText: '제목을 입력해 주세요.'),
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.isEmpty) {
@@ -484,12 +486,21 @@ class _RecordingLibraryScreenState
           '보관함 정보를 불러온 뒤 다시 시도해 주세요.',
         CoupleRecordingFailureReason.recordingSlotConflict =>
           '보관함이 다른 기기에서 변경됐어요. 화면을 새로고침한 뒤 다시 시도해 주세요.',
-        CoupleRecordingFailureReason.recordingSlotLocked =>
-          '아직 열리지 않은 슬롯이에요.',
+        CoupleRecordingFailureReason.recordingSlotLocked => '아직 열리지 않은 슬롯이에요.',
         CoupleRecordingFailureReason.recordingSlotLimitReached =>
           '더 이상 열 수 있는 슬롯이 없어요.',
         CoupleRecordingFailureReason.currentRecordingRequired =>
           '먼저 현재 녹음을 남겨 주세요.',
+        CoupleRecordingFailureReason.invalidRecordingArtwork =>
+          '그림을 저장할 수 있는 크기로 줄여 주세요.',
+        CoupleRecordingFailureReason.recordingArtworkFileMissing =>
+          '그림 파일 업로드를 완료하지 못했어요.',
+        CoupleRecordingFailureReason.recordingArtworkRequired =>
+          '먼저 슬롯 그림을 만들어 주세요.',
+        CoupleRecordingFailureReason.recordingPlacementConflict =>
+          '홈 배치가 다른 기기에서 변경됐어요. 다시 시도해 주세요.',
+        CoupleRecordingFailureReason.recordingPlacementLimitReached =>
+          '홈에는 슬롯 그림을 최대 4개까지 둘 수 있어요.',
         CoupleRecordingFailureReason.invalidRecordingSlotTitle =>
           '제목은 1자 이상 20자 이하로 입력해 주세요.',
         CoupleRecordingFailureReason.requestTimeout =>
@@ -589,6 +600,7 @@ class _RecordingSlotTile extends StatelessWidget {
     this.onPlayPressed,
     this.onSavePressed,
     this.onDeletePressed,
+    this.onArtworkPressed,
   });
 
   final int slotIndex;
@@ -599,6 +611,7 @@ class _RecordingSlotTile extends StatelessWidget {
   final VoidCallback? onPlayPressed;
   final VoidCallback? onSavePressed;
   final VoidCallback? onDeletePressed;
+  final VoidCallback? onArtworkPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -624,6 +637,7 @@ class _RecordingSlotTile extends StatelessWidget {
               onPlayPressed: onPlayPressed,
               onSavePressed: onSavePressed,
               onDeletePressed: onDeletePressed,
+              onArtworkPressed: onArtworkPressed,
             ),
     );
   }
@@ -650,9 +664,7 @@ class _EmptySlotContent extends StatelessWidget {
         Text('슬롯 $slotIndex', style: AppTextStyles.homeBody),
         const SizedBox(height: 4),
         Text(
-          hasCurrentRecording
-              ? '현재 녹음을 이 슬롯에 저장할 수 있어요.'
-              : '현재 저장할 녹음이 없어요.',
+          hasCurrentRecording ? '현재 녹음을 이 슬롯에 저장할 수 있어요.' : '현재 저장할 녹음이 없어요.',
           style: AppTextStyles.homeCharacterLabel.copyWith(
             color: AppColors.textMuted,
           ),
@@ -678,6 +690,7 @@ class _FilledSlotContent extends StatelessWidget {
     this.onPlayPressed,
     this.onSavePressed,
     this.onDeletePressed,
+    this.onArtworkPressed,
   });
 
   final CoupleRecordingSlot slot;
@@ -686,6 +699,7 @@ class _FilledSlotContent extends StatelessWidget {
   final VoidCallback? onPlayPressed;
   final VoidCallback? onSavePressed;
   final VoidCallback? onDeletePressed;
+  final VoidCallback? onArtworkPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -727,6 +741,14 @@ class _FilledSlotContent extends StatelessWidget {
             color: AppColors.textMuted,
           ),
         ),
+        if (slot.artwork != null || canEdit) ...[
+          const SizedBox(height: 12),
+          _SlotArtworkControl(
+            slot: slot,
+            canEdit: canEdit,
+            onPressed: onArtworkPressed,
+          ),
+        ],
         if (canEdit) ...[
           const SizedBox(height: 12),
           Row(
@@ -755,12 +777,70 @@ class _FilledSlotContent extends StatelessWidget {
   }
 }
 
-class _LibraryMessage extends StatelessWidget {
-  const _LibraryMessage({
-    required this.title,
-    this.actionLabel,
-    this.onAction,
+class _SlotArtworkControl extends StatelessWidget {
+  const _SlotArtworkControl({
+    required this.slot,
+    required this.canEdit,
+    required this.onPressed,
   });
+
+  final CoupleRecordingSlot slot;
+  final bool canEdit;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final artwork = slot.artwork;
+
+    return Row(
+      children: [
+        if (artwork != null) ...[
+          Material(
+            color: const Color(0xFFF0F0F0),
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: ValueKey('recording-slot-artwork-${slot.slotId}'),
+              onTap: onPressed,
+              child: SizedBox.square(
+                dimension: 68,
+                child: Image.network(
+                  artwork.previewUrl,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onPressed,
+            icon: Icon(
+              artwork == null ? Icons.draw_outlined : Icons.edit_outlined,
+              size: 20,
+            ),
+            label: Text(
+              artwork == null
+                  ? '그림 추가'
+                  : canEdit
+                  ? '그림 수정'
+                  : '그림 보기',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LibraryMessage extends StatelessWidget {
+  const _LibraryMessage({required this.title, this.actionLabel, this.onAction});
 
   final String title;
   final String? actionLabel;

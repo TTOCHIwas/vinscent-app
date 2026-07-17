@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/features/characters/presentation/widgets/character_canvas.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
+import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/data/couple_recording_repository.dart';
 import 'package:vinscent/features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
@@ -14,16 +15,17 @@ import 'package:vinscent/features/recordings/presentation/recording_slot_artwork
 import '../../../support/couple_fixtures.dart';
 
 void main() {
-  testWidgets('saves a slot drawing as WebP and gzip artifacts', (tester) async {
+  testWidgets('saves a slot drawing as WebP and gzip artifacts', (
+    tester,
+  ) async {
     final repository = _FakeRecordingRepository();
     final router = GoRouter(
       initialLocation: '/home/recordings/slot-1/artwork',
       routes: [
         GoRoute(
           path: '/home/recordings/slot-1/artwork',
-          builder: (context, state) => const RecordingSlotArtworkEditorScreen(
-            slotId: 'slot-1',
-          ),
+          builder: (context, state) =>
+              const RecordingSlotArtworkEditorScreen(slotId: 'slot-1'),
         ),
         GoRoute(
           path: '/home/recordings',
@@ -39,6 +41,9 @@ void main() {
             (ref, notifier) async => activeCouple(),
           ),
           coupleRecordingRepositoryProvider.overrideWithValue(repository),
+          coupleRecordingOverviewControllerProvider.overrideWithBuild(
+            (ref, notifier) => repository.overview,
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -54,9 +59,9 @@ void main() {
 
     await tester.runAsync(() async {
       await tester.tap(find.text('저장'));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     });
-    await tester.pumpAndSettle();
+    await _waitForRoute(tester, router, '/home/recordings');
 
     expect(repository.savedSlotId, 'slot-1');
     expect(repository.savedSlotRevision, 4);
@@ -64,6 +69,21 @@ void main() {
     expect(gzip.decode(repository.savedDrawingDataBytes!), isNotEmpty);
     expect(router.routeInformationProvider.value.uri.path, '/home/recordings');
   });
+}
+
+Future<void> _waitForRoute(
+  WidgetTester tester,
+  GoRouter router,
+  String path,
+) async {
+  final timeoutAt = DateTime.now().add(const Duration(seconds: 3));
+  while (router.routeInformationProvider.value.uri.path != path &&
+      DateTime.now().isBefore(timeoutAt)) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump();
+  }
 }
 
 TextButton _saveButton(WidgetTester tester) {

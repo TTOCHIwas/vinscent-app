@@ -65,14 +65,14 @@ class AppShell extends StatelessWidget {
   bool get _hidesMainHeader {
     return location == '/calendar' ||
         location == '/calendar/question' ||
-        location == '/home/recordings' ||
+        location.startsWith('/home/recordings') ||
         location == '/home/question' ||
         location == '/home/question/edit' ||
         location.startsWith('/settings');
   }
 
   bool get _hidesBottomBar {
-    return location == '/home/recordings' ||
+    return location.startsWith('/home/recordings') ||
         location == '/home/question/edit' ||
         location.startsWith('/settings');
   }

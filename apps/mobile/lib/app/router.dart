@@ -19,6 +19,7 @@ import '../features/profile/application/profile_controller.dart';
 import '../features/questions/presentation/today_question_answer_screen.dart';
 import '../features/questions/presentation/question_route_context.dart';
 import '../features/recordings/presentation/recording_library_screen.dart';
+import '../features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -176,6 +177,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'recordings',
                 name: 'recordingLibrary',
                 builder: (context, state) => const RecordingLibraryScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':slotId/artwork',
+                    name: 'recordingSlotArtworkEditor',
+                    builder: (context, state) =>
+                        RecordingSlotArtworkEditorScreen(
+                          slotId: state.pathParameters['slotId']!,
+                        ),
+                  ),
+                ],
               ),
             ],
           ),
