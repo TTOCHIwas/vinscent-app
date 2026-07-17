@@ -33,7 +33,7 @@ void main() {
       await _pumpRouter(tester, repository: repository);
 
       expect(find.text('05월 31일'), findsOneWidget);
-      expect(find.text('질문'), findsOneWidget);
+      expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
       expect(find.text('today question'), findsOneWidget);
       expect(find.text('캐릭터'), findsOneWidget);
       expect(find.text('답변하기'), findsNothing);
@@ -44,6 +44,81 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.text('저장'), findsNothing);
     });
+
+    testWidgets(
+      'shows cards above the horizontal prompt in a scrollable detail layout',
+      (tester) async {
+        final repository = _FakeDailyQuestionAnswerRepository(
+          _completedAnswerState,
+        );
+        final targetDate = DateTime(2026, 5, 31);
+
+        await _pumpRouter(
+          tester,
+          repository: repository,
+          storyLoopDetails: {
+            targetDate: _storyLoopDetailFor(
+              date: targetDate,
+              question: _dailyQuestion,
+              answerState: _completedAnswerState,
+              canAnswerQuestion: true,
+              cards: [
+                sampleDetailCard(
+                  id: 'partner-detail-card',
+                  authorUserId: 'partner-id',
+                  submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+                ),
+                sampleDetailCard(
+                  id: 'my-detail-card',
+                  authorUserId: _profile.id,
+                  submittedAt: DateTime.parse('2026-05-31T09:10:00Z'),
+                ),
+              ],
+            ),
+          },
+        );
+
+        final myCard = find.byKey(
+          const ValueKey('question-answer-card-my-detail-card'),
+        );
+        final partnerCard = find.byKey(
+          const ValueKey('question-answer-card-partner-detail-card'),
+        );
+        final character = find.byKey(const Key('question-answer-character'));
+        final question = find.byKey(const Key('question-answer-prompt'));
+        final scrollView = find.byType(SingleChildScrollView);
+
+        expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));
+        expect(
+          tester.getSize(myCard).width,
+          StoryCardPairLayout.maximumCardWidth,
+        );
+        expect(
+          tester.getSize(myCard).height,
+          StoryCardPairLayout.maximumCardHeight,
+        );
+        expect(
+          tester.getCenter(myCard).dx,
+          lessThan(tester.getCenter(partnerCard).dx),
+        );
+        expect(
+          tester.getBottomLeft(myCard).dy,
+          lessThan(tester.getTopLeft(character).dy),
+        );
+        expect(
+          tester.getCenter(character).dx,
+          lessThan(tester.getCenter(question).dx),
+        );
+        expect(scrollView, findsOneWidget);
+
+        final initialCardTop = tester.getTopLeft(myCard).dy;
+        await tester.drag(scrollView, const Offset(0, -120));
+        await tester.pumpAndSettle();
+
+        expect(tester.getTopLeft(myCard).dy, lessThan(initialCardTop));
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('shows readonly submitted answer state', (tester) async {
       final repository = _FakeDailyQuestionAnswerRepository(

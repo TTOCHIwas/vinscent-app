@@ -21,7 +21,6 @@ import 'story_loop_question_view_model.dart';
 import 'widgets/question_answer_prompt_row.dart';
 import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
-import 'widgets/question_prompt_character.dart';
 
 class TodayQuestionAnswerScreen extends ConsumerWidget {
   const TodayQuestionAnswerScreen({
@@ -54,6 +53,12 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
           data: (state) => state,
         );
     final detail = ref.watch(storyLoopDetailProvider(targetDate));
+    final currentUserId = ref.watch(
+      profileControllerProvider.select(
+        (state) =>
+            state.maybeWhen(data: (profile) => profile?.id, orElse: () => null),
+      ),
+    );
     final routeContext = QuestionRouteContext.fromQuestionScreen(
       backLocation: backLocation,
       targetDate: targetDate,
@@ -70,12 +75,18 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
       ),
       data: (state) {
         final questionState = toQuestionDetailState(state);
+        final cards = switch (state) {
+          LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
+          _ => const <StoryLoopCardDetail>[],
+        };
         return switch (questionState) {
           LoadedQuestionDetailState() => _QuestionPageFrame(
             question: questionState.question,
             onBackPressed: () => _goBack(context, backLocation),
-            child: _QuestionContent(
+            child: _QuestionDetailContent(
               question: questionState.question,
+              cards: cards,
+              currentUserId: currentUserId,
               child: QuestionAnswerOverview(
                 answerState: questionState.answerState,
                 myEmptyMessage: questionState.canEdit
@@ -343,24 +354,42 @@ class _QuestionPageFrame extends StatelessWidget {
   }
 }
 
-class _QuestionContent extends StatelessWidget {
-  const _QuestionContent({required this.question, required this.child});
+class _QuestionDetailContent extends StatelessWidget {
+  const _QuestionDetailContent({
+    required this.question,
+    required this.cards,
+    required this.currentUserId,
+    required this.child,
+  });
 
   final DailyQuestion question;
+  final List<StoryLoopCardDetail> cards;
+  final String? currentUserId;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
+    final cardPair = _QuestionAnswerCardPair.fromCards(
+      cards,
+      currentUserId: currentUserId,
+    );
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(32, 32, 32, 40 + bottomNavigationClearance),
+      padding: EdgeInsets.fromLTRB(12, 16, 12, 40 + bottomNavigationClearance),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          QuestionPromptCharacter(questionText: question.questionText),
-          const SizedBox(height: 28),
-          child,
+          if (cardPair.hasCard) ...[
+            _QuestionAnswerCards(cardPair: cardPair),
+            const SizedBox(height: 16),
+          ],
+          QuestionAnswerPromptRow(questionText: question.questionText),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: child,
+          ),
         ],
       ),
     );
@@ -461,20 +490,7 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
                 child: Column(
                   children: [
                     if (!compactLayout && cardPair.hasCard) ...[
-                      StoryCardPairLayout(
-                        leftCardBuilder: cardPair.myCard == null
-                            ? null
-                            : (context, cardWidth) => _QuestionAnswerStoryCard(
-                                card: cardPair.myCard!,
-                                width: cardWidth,
-                              ),
-                        rightCardBuilder: cardPair.partnerCard == null
-                            ? null
-                            : (context, cardWidth) => _QuestionAnswerStoryCard(
-                                card: cardPair.partnerCard!,
-                                width: cardWidth,
-                              ),
-                      ),
+                      _QuestionAnswerCards(cardPair: cardPair),
                       const SizedBox(height: 16),
                     ],
                     QuestionAnswerPromptRow(
@@ -605,6 +621,30 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       _isSubmitting = false;
       _submitErrorMessage = submitErrorMessage;
     });
+  }
+}
+
+class _QuestionAnswerCards extends StatelessWidget {
+  const _QuestionAnswerCards({required this.cardPair});
+
+  final _QuestionAnswerCardPair cardPair;
+
+  @override
+  Widget build(BuildContext context) {
+    return StoryCardPairLayout(
+      leftCardBuilder: cardPair.myCard == null
+          ? null
+          : (context, cardWidth) => _QuestionAnswerStoryCard(
+              card: cardPair.myCard!,
+              width: cardWidth,
+            ),
+      rightCardBuilder: cardPair.partnerCard == null
+          ? null
+          : (context, cardWidth) => _QuestionAnswerStoryCard(
+              card: cardPair.partnerCard!,
+              width: cardWidth,
+            ),
+    );
   }
 }
 
