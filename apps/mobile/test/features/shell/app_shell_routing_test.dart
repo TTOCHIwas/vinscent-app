@@ -17,6 +17,7 @@ import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/recordings/presentation/recording_library_screen.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/shell/presentation/app_shell.dart';
@@ -115,14 +116,48 @@ void main() {
       expect(find.text('D+2'), findsOneWidget);
       expect(tester.widget<Text>(find.text('D+2')).style?.fontSize, 24);
       final headerRow = tester.widget<Row>(
-        find.descendant(of: find.byType(AppHeader), matching: find.byType(Row)),
+        find.byKey(const Key('app-header-layout')),
       );
       expect(headerRow.mainAxisAlignment, MainAxisAlignment.spaceBetween);
+      expect(
+        find.byKey(const Key('app-header-recording-library')),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('\ub179\uc74c \ubcf4\uad00\ud568'), findsOneWidget);
+      expect(find.byKey(const Key('app-header-settings')), findsOneWidget);
       expect(find.byType(ShellTab), findsNWidgets(3));
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
       expect(find.text('\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac'), findsNothing);
     },
   );
+
+  testWidgets('header recording shortcut opens the existing library route', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    await tester.tap(find.byKey(const Key('app-header-recording-library')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RecordingLibraryScreen), findsOneWidget);
+    expect(find.byType(AppHeader), findsNothing);
+    expect(find.byType(AppBottomBar), findsNothing);
+    expect(
+      GoRouter.of(
+        tester.element(find.byType(RecordingLibraryScreen)),
+      ).routeInformationProvider.value.uri.path,
+      '/home/recordings',
+    );
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
 
   testWidgets('하단바 탭은 넓은 터치 영역과 안쪽 타원형 피드백을 제공한다', (tester) async {
     var pressed = false;
@@ -212,10 +247,7 @@ void main() {
       expect(find.byType(AppBottomBar), findsOneWidget);
       expect(_tabs(tester)[2].isSelected, isTrue);
 
-      final settingsControl = find.descendant(
-        of: find.byType(AppHeader),
-        matching: find.byType(InkWell),
-      );
+      final settingsControl = find.byKey(const Key('app-header-settings'));
       await tester.tap(settingsControl);
       await tester.pumpAndSettle();
 
@@ -379,10 +411,7 @@ void main() {
       todayAnswerState: pendingAnswerState,
     );
 
-    final settingsControl = find.descendant(
-      of: find.byType(AppHeader),
-      matching: find.byType(InkWell),
-    );
+    final settingsControl = find.byKey(const Key('app-header-settings'));
     await tester.tap(settingsControl);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
