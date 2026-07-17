@@ -60,6 +60,7 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(AppColors.shellBottomBarGlass, const Color(0x8CFFFFFF));
       expect(find.byIcon(Icons.home_rounded), findsOneWidget);
       expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
       expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
@@ -197,6 +198,10 @@ void main() {
       expect(find.byType(AppBottomBar), findsOneWidget);
       expect(find.byType(CalendarScreen), findsOneWidget);
       expect(_tabs(tester)[1].isSelected, isTrue);
+      expect(
+        _scrollBottomPadding(tester, find.byType(CalendarScreen)),
+        40 + tester.getSize(find.byType(AppBottomBar)).height,
+      );
 
       await tester.tap(find.byType(ShellTab).at(2));
       await tester.pumpAndSettle();
@@ -257,6 +262,10 @@ void main() {
       expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
       expect(_tabs(tester).first.isSelected, isTrue);
+      expect(
+        _scrollBottomPadding(tester, find.byType(TodayQuestionAnswerScreen)),
+        40 + tester.getSize(find.byType(AppBottomBar)).height,
+      );
     },
   );
 
@@ -401,6 +410,20 @@ StoryLoopStatus _summaryStatusFor(DailyQuestionAnswerState state) {
   }
 
   return StoryLoopStatus.questionGenerated;
+}
+
+double _scrollBottomPadding(WidgetTester tester, Finder screen) {
+  final scrollView = find.descendant(
+    of: screen,
+    matching: find.byType(SingleChildScrollView),
+  );
+  expect(scrollView, findsOneWidget);
+  return tester
+          .widget<SingleChildScrollView>(scrollView)
+          .padding
+          ?.resolve(TextDirection.ltr)
+          .bottom ??
+      0;
 }
 
 List<ShellTab> _tabs(WidgetTester tester) {
