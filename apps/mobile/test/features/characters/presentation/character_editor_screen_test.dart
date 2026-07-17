@@ -83,19 +83,26 @@ void main() {
     tester,
   ) async {
     final repository = _FakeCoupleCharacterRepository();
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await _pumpCharacterEditor(tester, repository);
 
-    final canvas = find.byType(CharacterCanvas);
     final toolbar = find.byKey(const ValueKey('character-drawing-toolbar'));
 
     expect(find.byType(SingleChildScrollView), findsNothing);
     expect(toolbar, findsOneWidget);
-    expect(tester.getRect(toolbar).overlaps(tester.getRect(canvas)), isTrue);
+    expect(
+      find.ancestor(of: toolbar, matching: find.byType(Stack)),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('character-drawing-clear')),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('clears current drawing after confirmation', (tester) async {

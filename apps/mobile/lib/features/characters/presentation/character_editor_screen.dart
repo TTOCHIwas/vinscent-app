@@ -33,7 +33,6 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   double _selectedStrokeWidth = characterNormalStrokeWidth;
   bool _isLoadingDrawing = true;
   bool _isSaving = false;
-  bool _isDrawing = false;
 
   List<CharacterDrawingStroke> get _visibleStrokes {
     return [..._strokes, ?_activeStroke];
@@ -57,6 +56,14 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
         !_isSaving &&
+        _strokes.isNotEmpty;
+  }
+
+  bool get _canUndo {
+    return !_isReadOnly &&
+        !_isLoadingDrawing &&
+        !_isSaving &&
+        _activeStroke == null &&
         _strokes.isNotEmpty;
   }
 
@@ -105,7 +112,6 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     }
 
     setState(() {
-      _isDrawing = true;
       _activeStroke = CharacterDrawingStroke(
         tool: _selectedTool,
         color: _selectedColor,
@@ -139,18 +145,22 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
 
     final activeStroke = _activeStroke;
     if (activeStroke == null) {
-      if (_isDrawing) {
-        setState(() {
-          _isDrawing = false;
-        });
-      }
       return;
     }
 
     setState(() {
       _strokes = [..._strokes, activeStroke];
       _activeStroke = null;
-      _isDrawing = false;
+    });
+  }
+
+  void _undoLastStroke() {
+    if (!_canUndo) {
+      return;
+    }
+
+    setState(() {
+      _strokes = _strokes.sublist(0, _strokes.length - 1);
     });
   }
 
@@ -186,7 +196,6 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     setState(() {
       _strokes = [];
       _activeStroke = null;
-      _isDrawing = false;
     });
   }
 
@@ -292,74 +301,107 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
           onSavePressed: _save,
         ),
         Expanded(
-          child: SingleChildScrollView(
-            physics: _isDrawing ? const NeverScrollableScrollPhysics() : null,
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-            child: Column(
+          child: SafeArea(
+            top: false,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                if (isArchivedReadOnly) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      border: Border.all(color: AppColors.wireframeBorder),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
-                      style: AppTextStyles.homeCharacterLabel.copyWith(
-                        color: AppColors.textMuted,
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    isArchivedReadOnly ? 84 : 16,
+                    16,
+                    16,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: _exportSize.toDouble(),
+                        maxHeight: _exportSize.toDouble(),
+                      ),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            border: Border.all(
+                              color: AppColors.wireframeBorder,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: _isLoadingDrawing
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : CharacterCanvas(
+                                  strokes: _visibleStrokes,
+                                  isReadOnly: isReadOnly,
+                                  onStrokeStart: _startStroke,
+                                  onStrokeUpdate: _updateStroke,
+                                  onStrokeEnd: _endStroke,
+                                ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.wireframeBorder),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: _isLoadingDrawing
-                        ? const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : CharacterCanvas(
-                            strokes: _visibleStrokes,
-                            isReadOnly: isReadOnly,
-                            onStrokeStart: _startStroke,
-                            onStrokeUpdate: _updateStroke,
-                            onStrokeEnd: _endStroke,
-                          ),
-                  ),
                 ),
-                const SizedBox(height: 24),
-                CharacterToolbar(
-                  selectedTool: _selectedTool,
-                  selectedColor: _selectedColor,
-                  selectedStrokeWidth: _selectedStrokeWidth,
-                  isReadOnly: isReadOnly,
-                  canClear: _canClear,
-                  onToolChanged: (tool) {
-                    setState(() {
-                      _selectedTool = tool;
-                    });
-                  },
-                  onColorChanged: (color) {
-                    setState(() {
-                      _selectedColor = color;
-                      _selectedTool = CharacterDrawingTool.pen;
-                    });
-                  },
-                  onStrokeWidthChanged: (width) {
-                    setState(() {
-                      _selectedStrokeWidth = width;
-                    });
-                  },
-                  onClearPressed: _confirmClearCanvas,
+                if (isArchivedReadOnly)
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        border: Border.all(color: AppColors.wireframeBorder),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
+                        style: AppTextStyles.homeCharacterLabel.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: CharacterToolbar(
+                        selectedTool: _selectedTool,
+                        selectedColor: _selectedColor,
+                        selectedStrokeWidth: _selectedStrokeWidth,
+                        isReadOnly: isReadOnly,
+                        canUndo: _canUndo,
+                        canClear: _canClear,
+                        onToolChanged: (tool) {
+                          setState(() {
+                            _selectedTool = tool;
+                          });
+                        },
+                        onColorChanged: (color) {
+                          setState(() {
+                            _selectedColor = color;
+                            _selectedTool = CharacterDrawingTool.pen;
+                          });
+                        },
+                        onStrokeWidthChanged: (width) {
+                          setState(() {
+                            _selectedStrokeWidth = width;
+                          });
+                        },
+                        onUndoPressed: _undoLastStroke,
+                        onClearPressed: _confirmClearCanvas,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
