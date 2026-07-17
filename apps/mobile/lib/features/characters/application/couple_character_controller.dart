@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../couple/application/couple_controller.dart';
+import '../character_debug_log.dart';
 import '../data/couple_character.dart';
 import '../data/couple_character_failure.dart';
 import '../data/couple_character_repository.dart';
@@ -20,7 +21,24 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
       return null;
     }
 
-    return ref.watch(coupleCharacterRepositoryProvider).fetchCurrentCharacter();
+    try {
+      return await ref
+          .watch(coupleCharacterRepositoryProvider)
+          .fetchCurrentCharacter();
+    } on CoupleCharacterRepositoryException catch (error) {
+      if (error.reason != CoupleCharacterFailureReason.configMissing) {
+        debugCharacterLog(
+          'load failed: accessMode=${couple.accessMode.name}, '
+          'reason=${error.reason.name}, message=${error.message}',
+        );
+      }
+      rethrow;
+    } catch (error) {
+      debugCharacterLog(
+        'load failed: accessMode=${couple.accessMode.name}, error=$error',
+      );
+      rethrow;
+    }
   }
 
   Future<CoupleCharacter> saveCharacter({
