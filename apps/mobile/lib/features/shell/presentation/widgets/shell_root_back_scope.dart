@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../../core/theme/app_colors.dart';
 
 enum _ShellRootBackAction { confirmExit, returnHome }
 
@@ -68,11 +71,27 @@ class _ShellRootBackScopeState extends State<ShellRootBackScope> {
       ShellRootBackScope.exitConfirmationWindow,
       _resetExitConfirmation,
     );
+    final toastWidth = math.min(280.0, MediaQuery.sizeOf(context).width - 48.0);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
-          content: Text(ShellRootBackScope.exitConfirmationMessage),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          width: toastWidth,
+          backgroundColor: AppColors.logoBackground.withAlpha(230),
+          elevation: 4,
+          shape: const StadiumBorder(),
+          content: const Text(
+            ShellRootBackScope.exitConfirmationMessage,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textInverse,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 20 / 14,
+              letterSpacing: 0,
+            ),
+          ),
           duration: ShellRootBackScope.exitConfirmationWindow,
         ),
       );
