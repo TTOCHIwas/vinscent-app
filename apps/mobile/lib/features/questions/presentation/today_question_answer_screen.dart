@@ -248,47 +248,59 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
             state.maybeWhen(data: (profile) => profile?.id, orElse: () => null),
       ),
     );
+    final canPopToQuestion =
+        routeContext.source == QuestionRouteSource.home && context.canPop();
 
-    return detail.when(
-      loading: () => _QuestionPageFrame(
-        onBackPressed: () => _goBackToQuestion(context, routeContext),
-        child: const _CenteredLoader(),
-      ),
-      error: (error, stackTrace) => _QuestionPageFrame(
-        onBackPressed: () => _goBackToQuestion(context, routeContext),
-        child: _QuestionLoadError(
-          onRetry: () =>
-              ref.invalidate(storyLoopDetailProvider(routeContext.targetDate)),
-        ),
-      ),
-      data: (state) {
-        final questionState = toQuestionDetailState(state);
-        final cards = switch (state) {
-          LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
-          _ => const <StoryLoopCardDetail>[],
-        };
-        return switch (questionState) {
-          LoadedQuestionDetailState() when questionState.canEdit => _AnswerForm(
-            key: ValueKey(
-              questionState.answerState?.myAnswerId ?? 'empty-answer',
-            ),
-            question: questionState.question,
-            answerState: questionState.answerState,
-            routeContext: routeContext,
-            cards: cards,
-            currentUserId: currentUserId,
-          ),
-          LoadedQuestionDetailState() => _QuestionPageFrame(
-            question: questionState.question,
-            onBackPressed: () => _goBackToQuestion(context, routeContext),
-            child: const _QuestionEditUnavailableMessage(),
-          ),
-          UnavailableQuestionDetailState() => _QuestionPageFrame(
-            onBackPressed: () => _goBackToQuestion(context, routeContext),
-            child: _QuestionUnavailableMessage(reason: questionState.reason),
-          ),
-        };
+    return PopScope(
+      canPop: canPopToQuestion,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _goBackToQuestion(context, routeContext);
+        }
       },
+      child: detail.when(
+        loading: () => _QuestionPageFrame(
+          onBackPressed: () => _goBackToQuestion(context, routeContext),
+          child: const _CenteredLoader(),
+        ),
+        error: (error, stackTrace) => _QuestionPageFrame(
+          onBackPressed: () => _goBackToQuestion(context, routeContext),
+          child: _QuestionLoadError(
+            onRetry: () => ref.invalidate(
+              storyLoopDetailProvider(routeContext.targetDate),
+            ),
+          ),
+        ),
+        data: (state) {
+          final questionState = toQuestionDetailState(state);
+          final cards = switch (state) {
+            LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
+            _ => const <StoryLoopCardDetail>[],
+          };
+          return switch (questionState) {
+            LoadedQuestionDetailState() when questionState.canEdit =>
+              _AnswerForm(
+                key: ValueKey(
+                  questionState.answerState?.myAnswerId ?? 'empty-answer',
+                ),
+                question: questionState.question,
+                answerState: questionState.answerState,
+                routeContext: routeContext,
+                cards: cards,
+                currentUserId: currentUserId,
+              ),
+            LoadedQuestionDetailState() => _QuestionPageFrame(
+              question: questionState.question,
+              onBackPressed: () => _goBackToQuestion(context, routeContext),
+              child: const _QuestionEditUnavailableMessage(),
+            ),
+            UnavailableQuestionDetailState() => _QuestionPageFrame(
+              onBackPressed: () => _goBackToQuestion(context, routeContext),
+              child: _QuestionUnavailableMessage(reason: questionState.reason),
+            ),
+          };
+        },
+      ),
     );
   }
 }
@@ -297,7 +309,7 @@ void _goBackToQuestion(
   BuildContext context,
   QuestionRouteContext routeContext,
 ) {
-  if (context.canPop()) {
+  if (routeContext.source == QuestionRouteSource.home && context.canPop()) {
     context.pop();
     return;
   }
