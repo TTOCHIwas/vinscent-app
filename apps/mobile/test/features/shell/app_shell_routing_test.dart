@@ -318,13 +318,18 @@ void main() {
       expect(_systemPopCalls(platformCalls), isEmpty);
       final exitSnackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(exitSnackBar.behavior, SnackBarBehavior.floating);
-      expect(exitSnackBar.width, 280);
       expect(exitSnackBar.shape, isA<StadiumBorder>());
+      expect(exitSnackBar.backgroundColor, Colors.black);
       expect(
-        exitSnackBar.backgroundColor,
-        AppColors.logoBackground.withAlpha(230),
+        exitSnackBar.padding,
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       );
-      expect((exitSnackBar.content as Text).textAlign, TextAlign.center);
+      final exitText = exitSnackBar.content as Text;
+      expect(exitText.textAlign, TextAlign.center);
+      expect(
+        exitSnackBar.width,
+        closeTo(tester.getSize(find.text(exitText.data!)).width + 24, 0.1),
+      );
 
       await tester.binding.handlePopRoute();
       await tester.pump();
