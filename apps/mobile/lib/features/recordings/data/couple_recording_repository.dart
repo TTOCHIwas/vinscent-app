@@ -376,6 +376,11 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
       );
       throw _mapPostgrestError(error);
     } on StorageException catch (error) {
+      debugRecordingLog(
+        'Slot artwork storage request failed: '
+        'statusCode=${error.statusCode}, error=${error.error}, '
+        'message=${error.message}',
+      );
       await _discardUploadedSlotArtwork(
         uploadAttempted: uploadAttempted,
         slotId: slotId,
