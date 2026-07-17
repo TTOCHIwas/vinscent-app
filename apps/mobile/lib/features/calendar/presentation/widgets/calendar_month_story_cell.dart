@@ -155,17 +155,30 @@ class _MonthStorySurface extends StatelessWidget {
         width: width,
         child: AspectRatio(
           aspectRatio: storyCardCanvasAspectRatio,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2.4),
-            child: hasRemotePreview
-                ? Image.network(
-                    previewUrl!,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _MonthStoryPlaceholder(card: card);
-                    },
-                  )
-                : _MonthStoryPlaceholder(card: card),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(2.4),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x28000000),
+                  blurRadius: 3,
+                  offset: Offset(0, 1.5),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2.4),
+              child: hasRemotePreview
+                  ? Image.network(
+                      previewUrl!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _MonthStoryPlaceholder(card: card);
+                      },
+                    )
+                  : _MonthStoryPlaceholder(card: card),
+            ),
           ),
         ),
       ),
