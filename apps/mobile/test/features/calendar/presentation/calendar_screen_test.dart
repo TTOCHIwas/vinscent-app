@@ -14,6 +14,7 @@ import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
@@ -90,6 +91,11 @@ void main() {
   testWidgets(
     'renders month summary cells for empty single and stacked cards',
     (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final repository = FakeStoryLoopReadRepository(
         monthSummaries: {
           DateTime(2026, 5): [
@@ -151,6 +157,29 @@ void main() {
       final stackedCardCell = find.byKey(
         const ValueKey('calendar-month-story-cell-stacked-2026-05-06'),
       );
+      expect(tester.getSize(singleCardCell).width, greaterThanOrEqualTo(36));
+      expect(tester.getSize(singleCardCell).height, greaterThanOrEqualTo(48));
+
+      final singleCard = find.byKey(
+        const ValueKey('calendar-month-story-card-month-card-1'),
+      );
+      final firstStackedCard = find.byKey(
+        const ValueKey('calendar-month-story-card-month-card-2'),
+      );
+      final secondStackedCard = find.byKey(
+        const ValueKey('calendar-month-story-card-month-card-3'),
+      );
+      expect(singleCard, findsOneWidget);
+      expect(firstStackedCard, findsOneWidget);
+      expect(secondStackedCard, findsOneWidget);
+      final cardSize = tester.getSize(singleCard);
+      expect(tester.getSize(firstStackedCard), cardSize);
+      expect(tester.getSize(secondStackedCard), cardSize);
+      expect(
+        cardSize.width / cardSize.height,
+        closeTo(storyCardCanvasAspectRatio, 0.001),
+      );
+
       final dateInkWell = find.ancestor(
         of: singleCardCell,
         matching: find.byType(InkWell),
