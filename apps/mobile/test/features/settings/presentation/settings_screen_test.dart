@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
+import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
+import 'package:vinscent/features/shell/presentation/app_shell.dart';
 
 void main() {
   testWidgets('커플 설정 영역에서 캐릭터 편집 화면을 연다', (tester) async {
@@ -32,6 +34,56 @@ void main() {
       scrollable: find.byType(Scrollable),
     );
     expect(find.text('커플 설정'), findsOneWidget);
+  });
+
+  testWidgets('설정 헤더는 shell 상단 여백 바로 아래에 배치된다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(padding: EdgeInsets.only(top: 32)),
+          child: const AppShell(location: '/settings', child: SettingsScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.byType(SettingsPageHeader)).dy,
+      AppShell.topMinHeight,
+    );
+  });
+
+  testWidgets('설정 항목은 섹션별 그룹 목록으로 이어서 보여준다', (tester) async {
+    await _pumpSettings(tester);
+
+    final notificationGroup = find.byKey(
+      const Key('settings-group-notifications'),
+    );
+    final coupleGroup = find.byKey(const Key('settings-group-couple'));
+
+    expect(notificationGroup, findsOneWidget);
+    expect(coupleGroup, findsOneWidget);
+    expect(
+      find.descendant(
+        of: notificationGroup,
+        matching: find.byKey(const Key('settings-row-notifications')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: coupleGroup,
+        matching: find.byKey(const Key('settings-row-character')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: coupleGroup,
+        matching: find.byKey(const Key('settings-row-couple')),
+      ),
+      findsOneWidget,
+    );
   });
 }
 
