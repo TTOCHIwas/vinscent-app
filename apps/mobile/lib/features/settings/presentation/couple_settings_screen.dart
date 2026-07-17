@@ -113,7 +113,7 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
   Future<void> _deleteArchiveNow() async {
     final shouldProceed = await _confirmAction(
       title: '보관 데이터를 지금 삭제할까요?',
-      content: '삭제하면 커플, 답변, 캐릭터 데이터가 모두 영구 삭제되고 복구할 수 없어요.',
+      content: '삭제하면 커플, 카드, 답변, 녹음, 캐릭터 데이터가 모두 영구 삭제되고 복구할 수 없어요.',
       confirmLabel: '즉시 삭제',
     );
 
@@ -137,7 +137,9 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text('보관 데이터를 삭제했어요.')));
       context.go('/couple');
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('[couple] Failed to delete archived couple data: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) {
         return;
       }
