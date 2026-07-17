@@ -1731,7 +1731,7 @@ class _StoryCardPainter extends CustomPainter {
         text: value,
         style: TextStyle(
           color: const Color(0xFF222222),
-          fontSize: size.width * 0.055,
+          fontSize: size.width * storyCardCaptionFontSizeRatio,
           fontWeight: FontWeight.w500,
           height: 1.3,
           letterSpacing: 0,
@@ -1741,7 +1741,7 @@ class _StoryCardPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
       maxLines: storyCardMaxCaptionLines,
       ellipsis: '…',
-    )..layout(maxWidth: captionRect.width);
+    )..layout(minWidth: captionRect.width, maxWidth: captionRect.width);
     painter.paint(
       canvas,
       Offset(

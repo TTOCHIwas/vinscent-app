@@ -24,6 +24,7 @@ const storyCardMaxTextCharactersPerLayer = 500;
 const storyCardMaxTextCharacters = 5000;
 const storyCardMaxCaptionCharacters = 50;
 const storyCardMaxCaptionLines = 2;
+const storyCardCaptionFontSizeRatio = 0.06;
 const storyCardCanvasAspectRatio = 4 / 5;
 const storyCardPhotoAspectRatio = 1.0;
 const storyCardPreviewWidth = 800;
