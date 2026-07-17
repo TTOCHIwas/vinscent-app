@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../application/recording_capture_controller.dart';
+import 'recording_pulse.dart';
 
 class CharacterRecordingControl extends StatefulWidget {
   const CharacterRecordingControl({
@@ -49,16 +50,9 @@ class CharacterRecordingControl extends StatefulWidget {
       _CharacterRecordingControlState();
 }
 
-class _CharacterRecordingControlState extends State<CharacterRecordingControl>
-    with SingleTickerProviderStateMixin {
-  static const _pulseDuration = Duration(milliseconds: 320);
-  static const _noticePulsePeriods = 6;
-
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseScale;
+class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
   bool _isPressed = false;
   bool _isLongPressActive = false;
-  int _pulseGeneration = 0;
 
   bool get _isPreparing =>
       widget.capturePhase == RecordingCapturePhase.preparing;
@@ -97,75 +91,6 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
       _isUploading;
 
   bool get _canPress => _canPlay || _canStartRecording;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: _pulseDuration,
-    );
-    _pulseScale = Tween<double>(begin: 1, end: 1.04).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-    _syncPulse(initial: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant CharacterRecordingControl oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final recordingChanged = oldWidget.recordingKey != widget.recordingKey;
-    final playbackChanged = oldWidget.isPlaying != widget.isPlaying;
-    final busyChanged =
-        oldWidget.capturePhase != widget.capturePhase ||
-        oldWidget.isLoading != widget.isLoading ||
-        oldWidget.isPlaybackBusy != widget.isPlaybackBusy;
-
-    if (recordingChanged || playbackChanged || busyChanged) {
-      _syncPulse(
-        notifyRecording: recordingChanged && widget.recordingKey != null,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulseGeneration += 1;
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  void _syncPulse({bool initial = false, bool notifyRecording = false}) {
-    final pulseGeneration = ++_pulseGeneration;
-    _pulseController.stop();
-    _pulseController.value = 0;
-
-    if (_isCaptureBusy || widget.isLoading || widget.isPlaybackBusy) {
-      return;
-    }
-    if (widget.isPlaying) {
-      _pulseController.repeat(reverse: true);
-      return;
-    }
-    if ((initial || notifyRecording) && widget.recordingKey != null) {
-      final ticker = _pulseController.repeat(
-        reverse: true,
-        count: _noticePulsePeriods,
-      );
-      ticker.whenCompleteOrCancel(() {
-        if (!mounted ||
-            pulseGeneration != _pulseGeneration ||
-            widget.isPlaying ||
-            _isCaptureBusy ||
-            widget.isLoading ||
-            widget.isPlaybackBusy) {
-          return;
-        }
-        _pulseController.value = 0;
-      });
-    }
-  }
 
   void _setPressed(bool value) {
     if (_isPressed == value || !mounted) {
@@ -231,9 +156,12 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl>
               : null,
           child: SizedBox.square(
             dimension: widget.size,
-            child: ScaleTransition(
-              key: CharacterRecordingControl.pulseKey,
-              scale: _pulseScale,
+            child: RecordingPulse(
+              noticeKey: widget.recordingKey,
+              isRepeating: widget.isPlaying,
+              isDisabled:
+                  _isCaptureBusy || widget.isLoading || widget.isPlaybackBusy,
+              transitionKey: CharacterRecordingControl.pulseKey,
               child: AnimatedScale(
                 scale: _isPressed ? 0.96 : 1,
                 duration: const Duration(milliseconds: 100),

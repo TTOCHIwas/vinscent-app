@@ -502,6 +502,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     final placementX = row['placement_normalized_x'] as num?;
     final placementY = row['placement_normalized_y'] as num?;
     final placementRevision = row['placement_revision'] as int?;
+    final placementZIndex = row['placement_z_index'] as int?;
 
     return CoupleRecordingSlot(
       slotId: row['slot_id'] as String,
@@ -534,6 +535,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
               normalizedX: placementX.toDouble(),
               normalizedY: placementY.toDouble(),
               revision: placementRevision,
+              zIndex: placementZIndex ?? 0,
             )
           : null,
     );

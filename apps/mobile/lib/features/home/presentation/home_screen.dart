@@ -71,17 +71,6 @@ class _HomeStageLayout extends StatelessWidget {
         );
         final characterOffset = (halfHeight - controlSize) / 2;
         final mainStageHeight = halfHeight + characterOffset;
-        final characterSize = math.max(
-          0.0,
-          controlSize - HomeCharacterRecordingControl.characterSpacing,
-        );
-        final characterRect = Rect.fromLTWH(
-          (availableWidth - characterSize) / 2,
-          mainStageHeight + (controlSize - characterSize) / 2,
-          characterSize,
-          characterSize,
-        );
-
         return Stack(
           children: [
             Column(
@@ -93,12 +82,7 @@ class _HomeStageLayout extends StatelessWidget {
                 const Expanded(child: HomeCharacterRecordingControl()),
               ],
             ),
-            Positioned.fill(
-              child: HomeRecordingArtworkLayer(
-                topForbiddenHeight: mainStageHeight,
-                characterRect: characterRect,
-              ),
-            ),
+            const Positioned.fill(child: HomeRecordingArtworkLayer()),
           ],
         );
       },
@@ -357,25 +341,9 @@ class _HomeStoryLoopContent extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    key: const Key('home-question-action'),
-                    onTap: onQuestionTap,
-                    borderRadius: BorderRadius.circular(12),
-                    child: CharacterSpeechBubble(
-                      key: const Key('home-question-speech-bubble'),
-                      speechText: questionText,
-                      maxWidth: 320,
-                      maxLines: 4,
-                      textStyle: AppTextStyles.homeQuestionBubble,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 9,
-                      ),
-                      tailSize: const Size(16, 8),
-                    ),
-                  ),
+                child: _HomeQuestionAction(
+                  questionText: questionText,
+                  onTap: onQuestionTap,
                 ),
               ),
             ),
@@ -452,17 +420,174 @@ class _HomeStoryAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      key: const Key('home-story-add-button'),
-      onPressed: onPressed,
-      tooltip: _homeStoryCreateTooltip,
-      style: IconButton.styleFrom(
-        fixedSize: const Size.square(56),
-        backgroundColor: AppColors.actionPrimary,
-        foregroundColor: AppColors.textInverse,
-        shape: const CircleBorder(),
+    return _HomeForegroundPortal(
+      portalKey: const Key('home-story-add-foreground'),
+      placeholder: const SizedBox.square(dimension: 56),
+      child: IconButton(
+        key: const Key('home-story-add-button'),
+        onPressed: onPressed,
+        tooltip: _homeStoryCreateTooltip,
+        style: IconButton.styleFrom(
+          fixedSize: const Size.square(56),
+          backgroundColor: AppColors.actionPrimary,
+          foregroundColor: AppColors.textInverse,
+          shape: const CircleBorder(),
+        ),
+        icon: const Icon(Icons.add_rounded, size: 28),
       ),
-      icon: const Icon(Icons.add_rounded, size: 28),
+    );
+  }
+}
+
+class _HomeQuestionAction extends StatelessWidget {
+  const _HomeQuestionAction({required this.questionText, required this.onTap});
+
+  final String questionText;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeForegroundPortal(
+      portalKey: const Key('home-question-foreground'),
+      layoutKey: questionText,
+      placeholder: IgnorePointer(
+        child: Opacity(
+          opacity: 0,
+          child: _HomeQuestionBubble(questionText: questionText),
+        ),
+      ),
+      child: _HomeQuestionBubble(
+        questionText: questionText,
+        onTap: onTap,
+        actionKey: const Key('home-question-action'),
+        bubbleKey: const Key('home-question-speech-bubble'),
+      ),
+    );
+  }
+}
+
+class _HomeQuestionBubble extends StatelessWidget {
+  const _HomeQuestionBubble({
+    required this.questionText,
+    this.onTap,
+    this.actionKey,
+    this.bubbleKey,
+  });
+
+  final String questionText;
+  final VoidCallback? onTap;
+  final Key? actionKey;
+  final Key? bubbleKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: actionKey,
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: CharacterSpeechBubble(
+          key: bubbleKey,
+          speechText: questionText,
+          maxWidth: 320,
+          maxLines: 4,
+          textStyle: AppTextStyles.homeQuestionBubble,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 9,
+          ),
+          tailSize: const Size(16, 8),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeForegroundPortal extends StatefulWidget {
+  const _HomeForegroundPortal({
+    required this.portalKey,
+    required this.placeholder,
+    required this.child,
+    this.layoutKey,
+  });
+
+  final Key portalKey;
+  final Widget placeholder;
+  final Widget child;
+  final Object? layoutKey;
+
+  @override
+  State<_HomeForegroundPortal> createState() => _HomeForegroundPortalState();
+}
+
+class _HomeForegroundPortalState extends State<_HomeForegroundPortal> {
+  late final OverlayPortalController _controller = OverlayPortalController()
+    ..show();
+  final GlobalKey _placeholderKey = GlobalKey();
+  Size? _placeholderSize;
+  bool _measurementScheduled = false;
+
+  @override
+  void didUpdateWidget(covariant _HomeForegroundPortal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.layoutKey != widget.layoutKey) {
+      _placeholderSize = null;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _placeholderSize = null;
+  }
+
+  void _schedulePlaceholderMeasurement() {
+    if (_measurementScheduled) {
+      return;
+    }
+    _measurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measurementScheduled = false;
+      if (!mounted || _placeholderSize != null) {
+        return;
+      }
+      final renderObject = _placeholderKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) {
+        return;
+      }
+      setState(() {
+        _placeholderSize = renderObject.size;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholderSize = _placeholderSize;
+    if (placeholderSize == null) {
+      _schedulePlaceholderMeasurement();
+    }
+
+    return OverlayPortal.overlayChildLayoutBuilder(
+      key: widget.portalKey,
+      controller: _controller,
+      overlayChildBuilder: (context, info) {
+        final offset = MatrixUtils.transformPoint(
+          info.childPaintTransform,
+          Offset.zero,
+        );
+        return Positioned(
+          left: offset.dx,
+          top: offset.dy,
+          width: info.childSize.width,
+          height: info.childSize.height,
+          child: widget.child,
+        );
+      },
+      child: placeholderSize == null
+          ? KeyedSubtree(key: _placeholderKey, child: widget.placeholder)
+          : SizedBox.fromSize(size: placeholderSize),
     );
   }
 }

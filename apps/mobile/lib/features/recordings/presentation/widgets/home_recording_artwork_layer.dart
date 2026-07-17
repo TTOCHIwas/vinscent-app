@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,16 +13,10 @@ import '../../application/recording_playback_controller.dart';
 import '../../application/recording_slot_placement_session.dart';
 import '../../data/couple_recording.dart';
 import '../../data/couple_recording_failure.dart';
+import 'recording_pulse.dart';
 
 class HomeRecordingArtworkLayer extends ConsumerStatefulWidget {
-  const HomeRecordingArtworkLayer({
-    super.key,
-    required this.topForbiddenHeight,
-    required this.characterRect,
-  });
-
-  final double topForbiddenHeight;
-  final Rect characterRect;
+  const HomeRecordingArtworkLayer({super.key});
 
   @override
   ConsumerState<HomeRecordingArtworkLayer> createState() =>
@@ -34,21 +27,15 @@ class _HomeRecordingArtworkLayerState
     extends ConsumerState<HomeRecordingArtworkLayer> {
   final Map<String, Offset> _pendingPositions = {};
   final Map<String, int> _pendingBaseRevisions = {};
+  final Map<String, int> _pulseTokens = {};
   final Set<String> _hiddenSlotIds = {};
   final Set<String> _busySlotIds = {};
-  Timer? _highlightTimer;
-  String? _highlightedSlotId;
+  String? _frontSlotId;
   String? _draggingSlotId;
   Offset? _dragPosition;
   bool _isOverTrash = false;
   bool _isPlacementSessionRunning = false;
   String? _pendingNewSlotId;
-
-  @override
-  void dispose() {
-    _highlightTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,10 +70,7 @@ class _HomeRecordingArtworkLayerState
         final geometry = HomeRecordingPlacementGeometry(
           canvasSize: canvasSize,
           itemSize: itemSize,
-          forbiddenRects: [
-            Rect.fromLTWH(0, 0, canvasSize.width, widget.topForbiddenHeight),
-            widget.characterRect,
-          ],
+          forbiddenRects: const [],
         );
         _synchronizePendingPositions(overview);
 
@@ -103,7 +87,7 @@ class _HomeRecordingArtworkLayerState
           canEdit: canEdit,
         );
 
-        final displayedSlots = <CoupleRecordingSlot>[
+        final displayedSlots = _bringFront(<CoupleRecordingSlot>[
           ...overview.placedSlots,
           if (_pendingNewSlotId case final pendingId?)
             if (slotsById[pendingId] case final pendingSlot?)
@@ -111,7 +95,7 @@ class _HomeRecordingArtworkLayerState
                 (slot) => slot.slotId == pendingSlot.slotId,
               ))
                 pendingSlot,
-        ];
+        ]);
         final trashRect = _trashRect(canvasSize);
 
         return Stack(
@@ -121,6 +105,9 @@ class _HomeRecordingArtworkLayerState
               if (!_hiddenSlotIds.contains(slot.slotId))
                 if (_positionFor(slot, geometry) case final position?)
                   Positioned(
+                    key: ValueKey(
+                      'home-recording-artwork-positioned-${slot.slotId}',
+                    ),
                     left: position.dx - itemSize / 2,
                     top: position.dy - itemSize / 2,
                     width: itemSize,
@@ -129,7 +116,8 @@ class _HomeRecordingArtworkLayerState
                       slot: slot,
                       size: itemSize,
                       isBusy: _busySlotIds.contains(slot.slotId),
-                      isHighlighted: _highlightedSlotId == slot.slotId,
+                      isDragging: _draggingSlotId == slot.slotId,
+                      pulseToken: _pulseTokens[slot.slotId],
                       isPlaying:
                           playbackState.isPlaying &&
                           playbackState.activeTargetKey ==
@@ -168,10 +156,22 @@ class _HomeRecordingArtworkLayerState
   }
 
   double _itemSizeFor(double canvasWidth) {
-    final leftLaneWidth = widget.characterRect.left;
-    final rightLaneWidth = canvasWidth - widget.characterRect.right;
-    final narrowLane = math.min(leftLaneWidth, rightLaneWidth);
-    return (narrowLane - 8).clamp(28.0, 48.0);
+    final minimumSize = canvasWidth < 72 ? canvasWidth : 72.0;
+    final maximumSize = canvasWidth < 104 ? canvasWidth : 104.0;
+    return (canvasWidth * 0.24).clamp(minimumSize, maximumSize);
+  }
+
+  List<CoupleRecordingSlot> _bringFront(List<CoupleRecordingSlot> slots) {
+    final frontSlotId = _frontSlotId;
+    if (frontSlotId == null) {
+      return slots;
+    }
+    final index = slots.indexWhere((slot) => slot.slotId == frontSlotId);
+    if (index < 0 || index == slots.length - 1) {
+      return slots;
+    }
+    final frontSlot = slots.removeAt(index);
+    return [...slots, frontSlot];
   }
 
   void _synchronizePendingPositions(CoupleRecordingOverview overview) {
@@ -245,7 +245,7 @@ class _HomeRecordingArtworkLayerState
       }
       if (slot.placement != null) {
         ref.read(recordingSlotPlacementSessionProvider.notifier).consume();
-        _highlight(slot.slotId);
+        _pulse(slot.slotId);
         return;
       }
 
@@ -287,7 +287,7 @@ class _HomeRecordingArtworkLayerState
             expectedPlacementRevision: null,
           );
       if (mounted) {
-        _highlight(slot.slotId);
+        _pulse(slot.slotId);
       }
     } catch (error) {
       _showMessage(_messageForError(error));
@@ -308,6 +308,7 @@ class _HomeRecordingArtworkLayerState
       return;
     }
     setState(() {
+      _frontSlotId = slot.slotId;
       _draggingSlotId = slot.slotId;
       _dragPosition = position;
       _isOverTrash = false;
@@ -357,10 +358,16 @@ class _HomeRecordingArtworkLayerState
       return;
     }
     if (dragPosition == null) {
+      setState(() {
+        _frontSlotId = null;
+      });
       return;
     }
     final resolved = geometry.resolve(dragPosition);
     if (resolved == null) {
+      setState(() {
+        _frontSlotId = null;
+      });
       _showMessage('그림을 둘 수 있는 위치에 놓아 주세요.');
       return;
     }
@@ -372,6 +379,7 @@ class _HomeRecordingArtworkLayerState
       return;
     }
     setState(() {
+      _frontSlotId = null;
       _draggingSlotId = null;
       _dragPosition = null;
       _isOverTrash = false;
@@ -408,6 +416,7 @@ class _HomeRecordingArtworkLayerState
     } finally {
       if (mounted) {
         setState(() {
+          _frontSlotId = null;
           _pendingPositions.remove(slot.slotId);
           _pendingBaseRevisions.remove(slot.slotId);
           _busySlotIds.remove(slot.slotId);
@@ -423,6 +432,9 @@ class _HomeRecordingArtworkLayerState
     }
 
     setState(() {
+      if (_frontSlotId == slot.slotId) {
+        _frontSlotId = null;
+      }
       _hiddenSlotIds.add(slot.slotId);
       _busySlotIds.add(slot.slotId);
     });
@@ -513,19 +525,13 @@ class _HomeRecordingArtworkLayerState
     }
   }
 
-  void _highlight(String slotId) {
-    _highlightTimer?.cancel();
-    if (mounted) {
-      setState(() {
-        _highlightedSlotId = slotId;
-      });
+  void _pulse(String slotId) {
+    if (!mounted) {
+      return;
     }
-    _highlightTimer = Timer(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        setState(() {
-          _highlightedSlotId = null;
-        });
-      }
+    setState(() {
+      _pulseTokens[slotId] = (_pulseTokens[slotId] ?? 0) + 1;
+      _frontSlotId = slotId;
     });
   }
 
@@ -572,7 +578,8 @@ class _HomeRecordingArtworkItem extends StatelessWidget {
     required this.slot,
     required this.size,
     required this.isBusy,
-    required this.isHighlighted,
+    required this.isDragging,
+    required this.pulseToken,
     required this.isPlaying,
     required this.onTap,
     this.onLongPress,
@@ -585,7 +592,8 @@ class _HomeRecordingArtworkItem extends StatelessWidget {
   final CoupleRecordingSlot slot;
   final double size;
   final bool isBusy;
-  final bool isHighlighted;
+  final bool isDragging;
+  final int? pulseToken;
   final bool isPlaying;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -614,33 +622,23 @@ class _HomeRecordingArtworkItem extends StatelessWidget {
           onPanUpdate: isBusy ? null : onPanUpdate,
           onPanEnd: isBusy ? null : onPanEnd,
           onPanCancel: isBusy ? null : onPanCancel,
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 140),
-            scale: isPlaying ? 1.08 : 1,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: isHighlighted
-                    ? Border.all(color: AppColors.actionPrimary, width: 2)
-                    : null,
-                boxShadow: isHighlighted
-                    ? const [
-                        BoxShadow(
-                          color: Color(0x26000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ]
-                    : null,
-              ),
+          child: RecordingPulse(
+            noticeKey: pulseToken,
+            isRepeating: isPlaying,
+            isDisabled: isBusy,
+            transitionKey: ValueKey(
+              'home-recording-artwork-pulse-${slot.slotId}',
+            ),
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              scale: isDragging ? 1.06 : 1,
               child: Opacity(
                 opacity: isBusy ? 0.55 : 1,
                 child: Image.network(
                   artwork.previewUrl,
-                  width: size - 4,
-                  height: size - 4,
+                  width: size,
+                  height: size,
                   fit: BoxFit.contain,
                   gaplessPlayback: true,
                   errorBuilder: (context, error, stackTrace) => const Icon(

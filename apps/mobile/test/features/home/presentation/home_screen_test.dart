@@ -25,8 +25,10 @@ import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
 const _storyAddButtonKey = Key('home-story-add-button');
+const _storyAddForegroundKey = Key('home-story-add-foreground');
 const _questionBubbleKey = Key('home-question-speech-bubble');
 const _questionActionKey = Key('home-question-action');
+const _questionForegroundKey = Key('home-question-foreground');
 const _storyLineKey = Key('home-story-line');
 const _storyClotheslineKey = Key('home-story-clothesline');
 const _storyDetailOverlayKey = Key('story-card-detail-overlay');
@@ -68,6 +70,7 @@ void main() {
       expect(find.byKey(_storyLineKey), findsOneWidget);
       expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+      expect(find.byKey(_storyAddForegroundKey), findsOneWidget);
       expect(
         tester.getSize(find.byKey(_storyAddButtonKey)),
         const Size.square(56),
@@ -146,6 +149,7 @@ void main() {
       final characterControl = find.byKey(CharacterRecordingControl.controlKey);
       expect(questionBubble, findsOneWidget);
       expect(questionAction, findsOneWidget);
+      expect(find.byKey(_questionForegroundKey), findsOneWidget);
       expect(
         find.descendant(of: questionBubble, matching: find.byType(CustomPaint)),
         findsOneWidget,

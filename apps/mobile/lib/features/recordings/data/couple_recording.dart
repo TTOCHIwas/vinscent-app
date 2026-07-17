@@ -11,9 +11,16 @@ class CoupleRecordingOverview {
 
   bool get hasUnlockedEmptySlot => savedSlots.length < slotLimit;
 
-  List<CoupleRecordingSlot> get placedSlots => savedSlots
-      .where((slot) => slot.placement != null)
-      .toList(growable: false);
+  List<CoupleRecordingSlot> get placedSlots {
+    final slots = savedSlots
+        .where((slot) => slot.placement != null)
+        .toList(growable: true);
+    slots.sort((left, right) {
+      final zOrder = left.placement!.zIndex.compareTo(right.placement!.zIndex);
+      return zOrder != 0 ? zOrder : left.slotIndex.compareTo(right.slotIndex);
+    });
+    return List.unmodifiable(slots);
+  }
 }
 
 class CurrentCoupleRecording {
@@ -95,9 +102,11 @@ class CoupleRecordingSlotPlacement {
     required this.normalizedX,
     required this.normalizedY,
     required this.revision,
+    this.zIndex = 0,
   });
 
   final double normalizedX;
   final double normalizedY;
   final int revision;
+  final int zIndex;
 }

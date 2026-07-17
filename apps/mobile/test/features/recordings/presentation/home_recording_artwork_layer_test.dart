@@ -37,42 +37,7 @@ void main() {
 
     expect(tester.getSize(artwork).width, greaterThanOrEqualTo(72));
     expect(localCenter.dx, closeTo(168, 0.1));
-    expect(localCenter.dy, closeTo(62, 0.1));
-  });
-
-  testWidgets('lets a protected foreground control receive overlap taps', (
-    tester,
-  ) async {
-    var foregroundTapCount = 0;
-    final repository = _FakeRecordingRepository(
-      _overview(
-        slot: _slot(
-          placement: const CoupleRecordingSlotPlacement(
-            normalizedX: 0.5,
-            normalizedY: 0.5,
-            revision: 1,
-          ),
-        ),
-      ),
-    );
-    await _pumpLayer(
-      tester,
-      repository,
-      foregroundRects: const [Rect.fromLTWH(120, 270, 96, 80)],
-      behind: GestureDetector(
-        key: const ValueKey('protected-foreground-control'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => foregroundTapCount += 1,
-      ),
-    );
-
-    await tester.tapAt(
-      tester.getTopLeft(find.byType(HomeRecordingArtworkLayer)) +
-          const Offset(168, 310),
-    );
-    await tester.pump();
-
-    expect(foregroundTapCount, 1);
+    expect(localCenter.dy, closeTo(tester.getSize(layer).height * 0.1, 0.1));
   });
 
   testWidgets('uses the character pulse instead of a flashing border', (
@@ -96,6 +61,7 @@ void main() {
         .begin('slot-1');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 160));
 
     final pulse = tester.widget<ScaleTransition>(
       find.byKey(const ValueKey('home-recording-artwork-pulse-slot-1')),
@@ -262,14 +228,52 @@ void main() {
     expect(repository.savedSlotTitle, '첫 녹음');
     expect(repository.savedSlotRevision, 4);
   });
+
+  testWidgets('overlapping artwork routes gestures to the highest z-index', (
+    tester,
+  ) async {
+    final repository = _FakeRecordingRepository(
+      _overviewWithSlots(
+        currentRecording: _currentRecording(),
+        slots: [
+          _slot(
+            slotId: 'front-slot',
+            slotIndex: 2,
+            placement: const CoupleRecordingSlotPlacement(
+              normalizedX: 0.5,
+              normalizedY: 0.5,
+              revision: 1,
+              zIndex: 4,
+            ),
+          ),
+          _slot(
+            slotId: 'back-slot',
+            slotIndex: 1,
+            placement: const CoupleRecordingSlotPlacement(
+              normalizedX: 0.5,
+              normalizedY: 0.5,
+              revision: 1,
+              zIndex: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+    await _pumpLayer(tester, repository);
+
+    await tester.longPress(
+      find.byKey(const ValueKey('home-recording-artwork-front-slot')),
+    );
+    await _waitUntil(tester, () => repository.savedSlotIndex != null);
+
+    expect(repository.savedSlotIndex, 2);
+  });
 }
 
 Future<ProviderContainer> _pumpLayer(
   WidgetTester tester,
-  _FakeRecordingRepository repository, {
-  List<Rect> foregroundRects = const [],
-  Widget? behind,
-}) async {
+  _FakeRecordingRepository repository,
+) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -287,13 +291,7 @@ Future<ProviderContainer> _pumpLayer(
             child: SizedBox(
               width: 336,
               height: 620,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (behind != null) behind,
-                  HomeRecordingArtworkLayer(foregroundRects: foregroundRects),
-                ],
-              ),
+              child: HomeRecordingArtworkLayer(),
             ),
           ),
         ),
@@ -441,14 +439,27 @@ CoupleRecordingOverview _overview({
   );
 }
 
+CoupleRecordingOverview _overviewWithSlots({
+  required List<CoupleRecordingSlot> slots,
+  CurrentCoupleRecording? currentRecording,
+}) {
+  return CoupleRecordingOverview(
+    slotLimit: slots.length,
+    currentRecording: currentRecording,
+    savedSlots: slots,
+  );
+}
+
 CoupleRecordingSlot _slot({
+  String slotId = 'slot-1',
+  int slotIndex = 1,
   String recordingId = 'saved-recording',
   required CoupleRecordingSlotPlacement? placement,
 }) {
   final timestamp = DateTime.utc(2026, 7, 18);
   return CoupleRecordingSlot(
-    slotId: 'slot-1',
-    slotIndex: 1,
+    slotId: slotId,
+    slotIndex: slotIndex,
     title: '첫 녹음',
     recordingId: recordingId,
     senderUserId: 'user-id',
