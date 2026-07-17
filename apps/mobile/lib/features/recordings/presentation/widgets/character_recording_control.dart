@@ -212,7 +212,9 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
               noticeKey: widget.recordingKey,
               isRepeating: widget.isPlaying,
               isDisabled:
-                  _isCaptureBusy || widget.isLoading || widget.isPlaybackBusy,
+                  _isCaptureBusy ||
+                  widget.isLoading ||
+                  (widget.isPlaybackBusy && !widget.isPlaying),
               transitionKey: CharacterRecordingControl.pulseKey,
               child: AnimatedScale(
                 scale: _isPressed ? 0.96 : 1,

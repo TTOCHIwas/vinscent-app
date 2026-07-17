@@ -5,6 +5,77 @@ import 'package:just_audio/just_audio.dart';
 
 import '../data/couple_recording.dart';
 
+class RecordingAudioPlayerState {
+  const RecordingAudioPlayerState({
+    required this.playing,
+    required this.completed,
+  });
+
+  final bool playing;
+  final bool completed;
+
+  bool get isPlaying => playing && !completed;
+}
+
+abstract interface class RecordingAudioPlayer {
+  Stream<RecordingAudioPlayerState> get stateStream;
+  bool get playing;
+  bool get completed;
+
+  Future<void> load(String audioUrl);
+  Future<void> play();
+  Future<void> pause();
+  Future<void> seek(Duration position);
+  Future<void> stop();
+  Future<void> dispose();
+}
+
+typedef RecordingAudioPlayerFactory = RecordingAudioPlayer Function();
+
+final recordingAudioPlayerFactoryProvider =
+    Provider<RecordingAudioPlayerFactory>(
+      (_) => _JustAudioRecordingAudioPlayer.new,
+    );
+
+class _JustAudioRecordingAudioPlayer implements RecordingAudioPlayer {
+  final AudioPlayer _player = AudioPlayer();
+
+  @override
+  Stream<RecordingAudioPlayerState> get stateStream =>
+      _player.playerStateStream.map(
+        (state) => RecordingAudioPlayerState(
+          playing: state.playing,
+          completed: state.processingState == ProcessingState.completed,
+        ),
+      );
+
+  @override
+  bool get playing => _player.playing;
+
+  @override
+  bool get completed => _player.processingState == ProcessingState.completed;
+
+  @override
+  Future<void> load(String audioUrl) async {
+    await _player.setUrl(audioUrl);
+  }
+
+  @override
+  Future<void> play() => _player.play();
+
+  @override
+  Future<void> pause() => _player.pause();
+
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
+  Future<void> stop() => _player.stop();
+
+  @override
+  Future<void> dispose() => _player.dispose();
+}
+
 enum RecordingPlaybackSurface { home, library }
 
 class RecordingPlaybackTarget {
@@ -84,14 +155,14 @@ final recordingPlaybackControllerProvider = NotifierProvider.autoDispose
     >((_) => RecordingPlaybackController());
 
 class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
-  late final AudioPlayer _player;
-  StreamSubscription<PlayerState>? _playerStateSubscription;
+  late final RecordingAudioPlayer _player;
+  StreamSubscription<RecordingAudioPlayerState>? _playerStateSubscription;
   bool _isHandlingToggle = false;
 
   @override
   RecordingPlaybackState build() {
-    _player = AudioPlayer();
-    _playerStateSubscription = _player.playerStateStream.listen(
+    _player = ref.read(recordingAudioPlayerFactoryProvider)();
+    _playerStateSubscription = _player.stateStream.listen(
       _handlePlayerStateChanged,
     );
     ref.onDispose(() {
@@ -112,19 +183,19 @@ class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
     try {
       if (state.activeTargetKey != target.key) {
         await _player.stop();
-        await _player.setUrl(target.audioUrl);
+        await _player.load(target.audioUrl);
         if (!ref.mounted) {
           return;
         }
 
         state = state.copyWith(activeTargetKey: target.key);
-        await _player.play();
+        await _startPlayback();
         return;
       }
 
-      if (_player.processingState == ProcessingState.completed) {
+      if (_player.completed) {
         await _player.seek(Duration.zero);
-        await _player.play();
+        await _startPlayback();
         return;
       }
 
@@ -133,7 +204,7 @@ class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
         return;
       }
 
-      await _player.play();
+      await _startPlayback();
     } finally {
       _isHandlingToggle = false;
       if (ref.mounted) {
@@ -160,14 +231,21 @@ class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
     state = const RecordingPlaybackState.idle();
   }
 
-  void _handlePlayerStateChanged(PlayerState playerState) {
+  Future<void> _startPlayback() async {
+    final playbackStarted = _player.stateStream
+        .firstWhere((playerState) => playerState.isPlaying)
+        .then<void>((_) {});
+    final playbackCompleted = _player.play();
+
+    await Future.any<void>([playbackStarted, playbackCompleted]);
+  }
+
+  void _handlePlayerStateChanged(RecordingAudioPlayerState playerState) {
     if (!ref.mounted) {
       return;
     }
 
-    final isPlaying =
-        playerState.playing &&
-        playerState.processingState != ProcessingState.completed;
+    final isPlaying = playerState.isPlaying;
     if (state.isPlaying == isPlaying) {
       return;
     }
