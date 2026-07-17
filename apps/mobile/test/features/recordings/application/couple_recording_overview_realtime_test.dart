@@ -116,6 +116,37 @@ void main() {
       expect(repository.maxConcurrentFetchCount, 1);
     },
   );
+
+  test(
+    'keeps a failed initial fetch settled without automatic retries',
+    () async {
+      final repository = _FakeRecordingRepository()
+        ..fetchError = Exception('fetch failed');
+      final changeSource = _FakeOverviewChangeSource();
+      final container = _buildContainer(
+        repository: repository,
+        changeSource: changeSource,
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        coupleRecordingOverviewControllerProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await expectLater(
+        container.read(coupleRecordingOverviewControllerProvider.future),
+        throwsA(isA<Exception>()),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      expect(repository.fetchCount, 1);
+      expect(
+        container.read(coupleRecordingOverviewControllerProvider),
+        isA<AsyncError<CoupleRecordingOverview?>>(),
+      );
+    },
+  );
 }
 
 ProviderContainer _buildContainer({
@@ -176,6 +207,7 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
   int activeFetchCount = 0;
   int maxConcurrentFetchCount = 0;
   Completer<void>? fetchBarrier;
+  Object? fetchError;
 
   @override
   Future<CoupleRecordingOverview> fetchOverview() async {
@@ -187,6 +219,9 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
     final barrier = fetchBarrier;
     try {
       await barrier?.future;
+      if (fetchError case final error?) {
+        throw error;
+      }
       completedFetchCount += 1;
       return const CoupleRecordingOverview(
         slotLimit: 0,

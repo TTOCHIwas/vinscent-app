@@ -9,6 +9,7 @@ import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
+import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
@@ -676,6 +677,9 @@ Future<void> _pumpApp(
         ),
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => _activeCouple,
+        ),
+        coupleCharacterControllerProvider.overrideWithBuild(
+          (ref, notifier) async => null,
         ),
         if (stubRecordingOverview)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(

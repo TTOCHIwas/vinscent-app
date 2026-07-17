@@ -16,7 +16,7 @@ final coupleRecordingOverviewControllerProvider =
     AsyncNotifierProvider<
       CoupleRecordingOverviewController,
       CoupleRecordingOverview?
-    >(CoupleRecordingOverviewController.new);
+    >(CoupleRecordingOverviewController.new, retry: (_, _) => null);
 
 class CoupleRecordingOverviewController
     extends AsyncNotifier<CoupleRecordingOverview?> {
