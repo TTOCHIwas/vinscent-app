@@ -15,8 +15,8 @@ class HomeCompletedStoryCards extends StatelessWidget {
   });
 
   static const maximumContentWidth = 360.0;
-  static const maximumCardWidth = 94.0;
-  static const maximumHeight = 164.0;
+  static const maximumCardWidth = 80.0;
+  static const maximumHeight = 148.0;
 
   static const _lineEdgeY = 10.0;
   static const _lineControlY = 36.0;
