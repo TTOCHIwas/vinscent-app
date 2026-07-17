@@ -307,8 +307,12 @@ void main() {
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
       expect(find.byKey(_completedStoryLineKey), findsOneWidget);
       expect(find.byKey(_completedStoryClotheslineKey), findsOneWidget);
-      expect(tester.getSize(myCard).width, lessThan(160));
-      expect(tester.getSize(partnerCard).width, lessThan(160));
+      expect(tester.getSize(myCard).width, closeTo(80, 0.1));
+      expect(tester.getSize(partnerCard).width, closeTo(80, 0.1));
+      expect(
+        tester.getSize(find.byKey(_completedStoryLineKey)).height,
+        closeTo(148, 0.1),
+      );
       expect(
         tester.getCenter(myCard).dx,
         lessThan(tester.getCenter(partnerCard).dx),
