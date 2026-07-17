@@ -9,12 +9,14 @@ class QuestionDetailHeader extends StatelessWidget {
     super.key,
     required this.onBackPressed,
     this.assignedDate,
+    this.action,
   });
 
   static const height = 56.0;
 
   final DateTime? assignedDate;
   final VoidCallback onBackPressed;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,13 @@ class QuestionDetailHeader extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
+            ),
+          if (action case final action?)
+            Positioned(
+              right: 20,
+              top: 0,
+              bottom: 0,
+              child: Center(child: action),
             ),
         ],
       ),

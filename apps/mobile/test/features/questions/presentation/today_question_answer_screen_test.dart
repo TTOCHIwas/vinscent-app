@@ -487,14 +487,10 @@ void main() {
       expect(find.text('저장'), findsOneWidget);
       final characterCount = find.byKey(const Key('answer-character-count'));
       final saveAction = find.byKey(const Key('answer-save-action'));
-      expect(
-        tester.getCenter(characterCount).dx,
-        lessThan(tester.getCenter(saveAction).dx),
-      );
-      expect(
-        tester.getSize(find.byKey(const Key('answer-save-bar'))).height,
-        52,
-      );
+      final textFieldRect = tester.getRect(find.byType(TextField));
+      expect(textFieldRect.contains(tester.getCenter(characterCount)), isTrue);
+      expect(tester.getCenter(saveAction).dy, lessThan(textFieldRect.top));
+      expect(find.byKey(const Key('answer-save-bar')), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

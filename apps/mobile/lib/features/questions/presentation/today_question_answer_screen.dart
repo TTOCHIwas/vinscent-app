@@ -267,21 +267,16 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
           _ => const <StoryLoopCardDetail>[],
         };
         return switch (questionState) {
-          LoadedQuestionDetailState() when questionState.canEdit =>
-            _QuestionPageFrame(
-              question: questionState.question,
-              onBackPressed: () => _goBackToQuestion(context, routeContext),
-              child: _AnswerForm(
-                key: ValueKey(
-                  questionState.answerState?.myAnswerId ?? 'empty-answer',
-                ),
-                question: questionState.question,
-                answerState: questionState.answerState,
-                routeContext: routeContext,
-                cards: cards,
-                currentUserId: currentUserId,
-              ),
+          LoadedQuestionDetailState() when questionState.canEdit => _AnswerForm(
+            key: ValueKey(
+              questionState.answerState?.myAnswerId ?? 'empty-answer',
             ),
+            question: questionState.question,
+            answerState: questionState.answerState,
+            routeContext: routeContext,
+            cards: cards,
+            currentUserId: currentUserId,
+          ),
           LoadedQuestionDetailState() => _QuestionPageFrame(
             question: questionState.question,
             onBackPressed: () => _goBackToQuestion(context, routeContext),
@@ -334,11 +329,13 @@ class _QuestionPageFrame extends StatelessWidget {
     required this.onBackPressed,
     required this.child,
     this.question,
+    this.headerAction,
   });
 
   final DailyQuestion? question;
   final VoidCallback onBackPressed;
   final Widget child;
+  final Widget? headerAction;
 
   @override
   Widget build(BuildContext context) {
@@ -347,6 +344,7 @@ class _QuestionPageFrame extends StatelessWidget {
         QuestionDetailHeader(
           assignedDate: question?.assignedDate,
           onBackPressed: onBackPressed,
+          action: headerAction,
         ),
         Expanded(child: child),
       ],
@@ -470,112 +468,125 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       widget.cards,
       currentUserId: widget.currentUserId,
     );
+    final countColor = _characterCount > _maxAnswerLength
+        ? Colors.redAccent
+        : AppColors.textMuted;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compactLayout =
-            constraints.hasBoundedHeight &&
-            constraints.maxHeight < _compactLayoutHeight;
+    return _QuestionPageFrame(
+      question: widget.question,
+      onBackPressed: () => _goBackToQuestion(context, widget.routeContext),
+      headerAction: _AnswerHeaderSaveAction(
+        canSave: _canSubmit,
+        isLoading: _isSubmitting,
+        onSave: _submit,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compactLayout =
+              constraints.hasBoundedHeight &&
+              constraints.maxHeight < _compactLayoutHeight;
 
-        return Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  12,
-                  compactLayout ? 8 : 16,
-                  12,
-                  12,
+          return Padding(
+            padding: EdgeInsets.fromLTRB(12, compactLayout ? 8 : 16, 12, 12),
+            child: Column(
+              children: [
+                if (!compactLayout && cardPair.hasCard) ...[
+                  _QuestionAnswerCards(cardPair: cardPair),
+                  const SizedBox(height: 16),
+                ],
+                QuestionAnswerPromptRow(
+                  questionText: widget.question.questionText,
+                  compact: compactLayout,
                 ),
-                child: Column(
-                  children: [
-                    if (!compactLayout && cardPair.hasCard) ...[
-                      _QuestionAnswerCards(cardPair: cardPair),
-                      const SizedBox(height: 16),
-                    ],
-                    QuestionAnswerPromptRow(
-                      questionText: widget.question.questionText,
-                      compact: compactLayout,
-                    ),
-                    SizedBox(height: compactLayout ? 8 : 16),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _controller,
-                                expands: true,
-                                minLines: null,
-                                maxLines: null,
-                                keyboardType: TextInputType.multiline,
-                                textInputAction: TextInputAction.newline,
-                                textAlignVertical: TextAlignVertical.top,
-                                style: AppTextStyles.homeBody.copyWith(
-                                  height: 1.5,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: '답변 입력',
-                                  hintStyle: AppTextStyles.homeBody.copyWith(
-                                    color: AppColors.textPlaceholder,
+                SizedBox(height: compactLayout ? 8 : 16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: TextField(
+                                  controller: _controller,
+                                  expands: true,
+                                  minLines: null,
+                                  maxLines: null,
+                                  keyboardType: TextInputType.multiline,
+                                  textInputAction: TextInputAction.newline,
+                                  textAlignVertical: TextAlignVertical.top,
+                                  style: AppTextStyles.homeBody.copyWith(
+                                    height: 1.5,
                                   ),
-                                  filled: true,
-                                  fillColor: AppColors.background,
-                                  contentPadding: const EdgeInsets.fromLTRB(
-                                    24,
-                                    20,
-                                    24,
-                                    24,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                    borderSide: const BorderSide(
+                                  decoration: InputDecoration(
+                                    hintText: '답변 입력',
+                                    hintStyle: AppTextStyles.homeBody.copyWith(
                                       color: AppColors.textPlaceholder,
                                     ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.textPlaceholder,
+                                    filled: true,
+                                    fillColor: AppColors.background,
+                                    contentPadding: const EdgeInsets.fromLTRB(
+                                      24,
+                                      20,
+                                      24,
+                                      44,
                                     ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.textPrimary,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                      borderSide: const BorderSide(
+                                        color: AppColors.textPlaceholder,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                      borderSide: const BorderSide(
+                                        color: AppColors.textPlaceholder,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                      borderSide: const BorderSide(
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            if (_submitErrorMessage != null) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                _submitErrorMessage!,
-                                style: AppTextStyles.homeCharacterLabel
-                                    .copyWith(color: Colors.redAccent),
+                              Positioned(
+                                right: 14,
+                                bottom: 10,
+                                child: IgnorePointer(
+                                  child: Text(
+                                    '$_characterCount / $_maxAnswerLength',
+                                    key: const Key('answer-character-count'),
+                                    style: AppTextStyles.homeCharacterLabel
+                                        .copyWith(color: countColor),
+                                  ),
+                                ),
                               ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
+                        if (_submitErrorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _submitErrorMessage!,
+                            style: AppTextStyles.homeCharacterLabel.copyWith(
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            _AnswerSaveBar(
-              characterCount: _characterCount,
-              maxAnswerLength: _maxAnswerLength,
-              canSave: _canSubmit,
-              isLoading: _isSubmitting,
-              onSave: _submit,
-            ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -700,69 +711,43 @@ class _QuestionAnswerCardPair {
   bool get hasCard => myCard != null || partnerCard != null;
 }
 
-class _AnswerSaveBar extends StatelessWidget {
-  const _AnswerSaveBar({
-    required this.characterCount,
-    required this.maxAnswerLength,
+class _AnswerHeaderSaveAction extends StatelessWidget {
+  const _AnswerHeaderSaveAction({
     required this.canSave,
     required this.isLoading,
     required this.onSave,
   });
 
-  final int characterCount;
-  final int maxAnswerLength;
   final bool canSave;
   final bool isLoading;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
-    final countColor = characterCount > maxAnswerLength
-        ? Colors.redAccent
-        : AppColors.textMuted;
-    final saveColor = canSave ? AppColors.textPrimary : AppColors.textMuted;
-
-    return ColoredBox(
-      color: AppColors.actionDisabled,
-      child: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.symmetric(horizontal: 32),
-        child: SizedBox(
-          key: const Key('answer-save-bar'),
-          height: 52,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$characterCount / $maxAnswerLength',
-                key: const Key('answer-character-count'),
-                style: AppTextStyles.homeCharacterLabel.copyWith(
-                  color: countColor,
-                ),
-              ),
-              Semantics(
-                key: const Key('answer-save-action'),
-                button: true,
-                label: '저장',
-                child: SizedBox(
-                  width: 48,
-                  height: 44,
-                  child: InkWell(
-                    onTap: canSave ? onSave : null,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Center(
-                      child: Text(
-                        isLoading ? '저장 중' : '저장',
-                        style: AppTextStyles.homeCharacterLabel.copyWith(
-                          color: saveColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+    return Semantics(
+      key: const Key('answer-save-action'),
+      button: true,
+      enabled: canSave,
+      label: isLoading ? '저장 중' : '저장',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: 72,
+        height: 44,
+        child: TextButton(
+          onPressed: canSave ? onSave : null,
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.textPrimary,
+            disabledForegroundColor: AppColors.textPlaceholder,
           ),
+          child: isLoading
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(
+                    color: AppColors.textPrimary,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text('저장'),
         ),
       ),
     );
