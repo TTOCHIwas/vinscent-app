@@ -68,7 +68,11 @@ class AppHeader extends ConsumerWidget {
                     width: 48,
                     height: 48,
                   ),
-                  icon: const AppSvgIcon(AppIcons.cassetteTape, size: 24),
+                  icon: const AppSvgIcon(
+                    AppIcons.cassetteTape,
+                    size: 24,
+                    color: Colors.black,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Semantics(
