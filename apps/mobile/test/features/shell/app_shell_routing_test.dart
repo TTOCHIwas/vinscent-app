@@ -10,6 +10,7 @@ import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
+import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
@@ -223,6 +224,101 @@ void main() {
     },
   );
 
+  testWidgets('system back returns from secondary tabs to home', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    await tester.tap(find.byType(ShellTab).at(2));
+    await tester.pumpAndSettle();
+    expect(_tabs(tester)[2].isSelected, isTrue);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('system back returns from settings to previous shell page', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    final settingsControl = find.descendant(
+      of: find.byType(AppHeader),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(settingsControl);
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('system back unwinds answer edit, question detail, and home', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    await tester.tap(find.text(_dailyQuestion.questionText));
+    await tester.pumpAndSettle();
+    expect(find.byType(TodayQuestionAnswerEditScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('system back returns from calendar question to calendar', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(
+      tester.element(find.byType(AppHeader)),
+    ).go('/calendar/question?date=2026-05-30');
+    await tester.pumpAndSettle();
+    expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarScreen), findsOneWidget);
+  });
+
   testWidgets(
     '\ub0b4 \ub2f5\ubcc0\uc774 \uc5c6\uc73c\uba74 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \ub2f5\ubcc0 \uc791\uc131 route\ub97c \uc5f0\ub2e4',
     (tester) async {
@@ -339,6 +435,11 @@ void main() {
       );
     },
   );
+}
+
+Future<void> _usePhoneSurface(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(360, 780));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
 }
 
 Future<void> _pumpApp(
