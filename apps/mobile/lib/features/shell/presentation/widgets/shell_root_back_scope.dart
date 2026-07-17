@@ -18,6 +18,14 @@ class ShellRootBackScope extends StatefulWidget {
 
   static const exitConfirmationMessage = '종료하려면 다시 누르세요.';
   static const exitConfirmationWindow = Duration(seconds: 2);
+  static const _exitToastHorizontalPadding = 12.0;
+  static const _exitToastTextStyle = TextStyle(
+    color: AppColors.textInverse,
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 20 / 14,
+    letterSpacing: 0,
+  );
 
   final Widget child;
   final _ShellRootBackAction _action;
@@ -71,26 +79,38 @@ class _ShellRootBackScopeState extends State<ShellRootBackScope> {
       ShellRootBackScope.exitConfirmationWindow,
       _resetExitConfirmation,
     );
-    final toastWidth = math.min(280.0, MediaQuery.sizeOf(context).width - 48.0);
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: ShellRootBackScope.exitConfirmationMessage,
+        style: ShellRootBackScope._exitToastTextStyle,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final textWidth = textPainter.width;
+    textPainter.dispose();
+    final toastWidth = math.min(
+      MediaQuery.sizeOf(context).width - 48.0,
+      textWidth + ShellRootBackScope._exitToastHorizontalPadding * 2,
+    );
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
           width: toastWidth,
-          backgroundColor: AppColors.logoBackground.withAlpha(230),
+          padding: const EdgeInsets.symmetric(
+            horizontal: ShellRootBackScope._exitToastHorizontalPadding,
+            vertical: 12,
+          ),
+          backgroundColor: Colors.black,
           elevation: 4,
           shape: const StadiumBorder(),
           content: const Text(
             ShellRootBackScope.exitConfirmationMessage,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textInverse,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              height: 20 / 14,
-              letterSpacing: 0,
-            ),
+            style: ShellRootBackScope._exitToastTextStyle,
           ),
           duration: ShellRootBackScope.exitConfirmationWindow,
         ),
