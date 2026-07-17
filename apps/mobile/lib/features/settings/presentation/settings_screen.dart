@@ -12,7 +12,13 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SettingsPageLayout(
       title: '설정',
-      onBackPressed: () => context.go('/home'),
+      onBackPressed: () {
+        if (context.canPop()) {
+          context.pop();
+          return;
+        }
+        context.go('/home');
+      },
       child: ListView(
         padding: EdgeInsets.zero,
         children: [

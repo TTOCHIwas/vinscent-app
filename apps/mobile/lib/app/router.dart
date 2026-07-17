@@ -142,52 +142,62 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/home',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
-          ),
-          GoRoute(
-            path: '/home/character',
-            redirect: (context, state) => '/settings/character',
-          ),
-          GoRoute(
-            path: '/home/question',
-            name: 'todayQuestionAnswer',
-            builder: (context, state) {
-              final dateQuery = state.uri.queryParameters['date'];
-              final targetDate = parseQuestionRouteDate(dateQuery);
-              return TodayQuestionAnswerScreen(
-                targetDate: targetDate,
-                hasInvalidTargetDate: hasInvalidQuestionRouteDate(dateQuery),
-              );
-            },
-          ),
-          GoRoute(
-            path: '/home/question/edit',
-            name: 'todayQuestionAnswerEdit',
-            builder: (context, state) => TodayQuestionAnswerEditScreen(
-              routeContext: QuestionRouteContext.fromEditUri(state.uri),
-            ),
-          ),
-          GoRoute(
-            path: '/home/recordings',
-            name: 'recordingLibrary',
-            builder: (context, state) => const RecordingLibraryScreen(),
+            routes: [
+              GoRoute(
+                path: 'character',
+                redirect: (context, state) => '/settings/character',
+              ),
+              GoRoute(
+                path: 'question',
+                name: 'todayQuestionAnswer',
+                builder: (context, state) {
+                  final dateQuery = state.uri.queryParameters['date'];
+                  final targetDate = parseQuestionRouteDate(dateQuery);
+                  return TodayQuestionAnswerScreen(
+                    targetDate: targetDate,
+                    hasInvalidTargetDate: hasInvalidQuestionRouteDate(
+                      dateQuery,
+                    ),
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: 'todayQuestionAnswerEdit',
+                    builder: (context, state) => TodayQuestionAnswerEditScreen(
+                      routeContext: QuestionRouteContext.fromEditUri(state.uri),
+                    ),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'recordings',
+                name: 'recordingLibrary',
+                builder: (context, state) => const RecordingLibraryScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/calendar',
             name: 'calendar',
             builder: (context, state) => const CalendarScreen(),
-          ),
-          GoRoute(
-            path: '/calendar/question',
-            name: 'calendarQuestionAnswer',
-            builder: (context, state) {
-              final dateQuery = state.uri.queryParameters['date'];
-              final targetDate = parseQuestionRouteDate(dateQuery);
-              return TodayQuestionAnswerScreen(
-                targetDate: targetDate,
-                hasInvalidTargetDate: hasInvalidQuestionRouteDate(dateQuery),
-                backLocation: '/calendar',
-              );
-            },
+            routes: [
+              GoRoute(
+                path: 'question',
+                name: 'calendarQuestionAnswer',
+                builder: (context, state) {
+                  final dateQuery = state.uri.queryParameters['date'];
+                  final targetDate = parseQuestionRouteDate(dateQuery);
+                  return TodayQuestionAnswerScreen(
+                    targetDate: targetDate,
+                    hasInvalidTargetDate: hasInvalidQuestionRouteDate(
+                      dateQuery,
+                    ),
+                    backLocation: '/calendar',
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/ai',
@@ -198,21 +208,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
-          ),
-          GoRoute(
-            path: '/settings/notifications',
-            name: 'notificationSettings',
-            builder: (context, state) => const NotificationSettingsScreen(),
-          ),
-          GoRoute(
-            path: '/settings/character',
-            name: 'characterEditor',
-            builder: (context, state) => const CharacterEditorScreen(),
-          ),
-          GoRoute(
-            path: '/settings/couple',
-            name: 'coupleSettings',
-            builder: (context, state) => const CoupleSettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'notifications',
+                name: 'notificationSettings',
+                builder: (context, state) => const NotificationSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'character',
+                name: 'characterEditor',
+                builder: (context, state) => const CharacterEditorScreen(),
+              ),
+              GoRoute(
+                path: 'couple',
+                name: 'coupleSettings',
+                builder: (context, state) => const CoupleSettingsScreen(),
+              ),
+            ],
           ),
         ],
       ),

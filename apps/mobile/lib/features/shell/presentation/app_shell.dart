@@ -33,7 +33,7 @@ class AppShell extends StatelessWidget {
             AppHeader(
               height: headerHeight,
               showRelationshipDayCount: location == '/home',
-              onSettingsPressed: () => context.go('/settings'),
+              onSettingsPressed: () => context.push('/settings'),
             ),
           Expanded(child: child),
         ],
