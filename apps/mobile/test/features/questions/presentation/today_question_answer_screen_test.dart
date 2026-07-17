@@ -25,6 +25,11 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_pr
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
+const _storyDetailOverlayKey = Key('story-card-detail-overlay');
+const _storyDetailCloseButtonKey = Key('story-card-detail-close');
+
+Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
+
 void main() {
   group('TodayQuestionAnswerScreen', () {
     testWidgets('shows readonly empty answer state', (tester) async {
@@ -132,6 +137,46 @@ void main() {
       expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
       expect(find.text('저장'), findsNothing);
+    });
+
+    testWidgets('opens both cards in the shared detail overlay', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+      final targetDate = DateTime(2026, 5, 31);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        storyLoopDetails: {
+          targetDate: _storyLoopDetailFor(
+            date: targetDate,
+            question: _dailyQuestion,
+            answerState: _completedAnswerState,
+            canAnswerQuestion: true,
+            cards: [
+              sampleDetailCard(
+                id: 'partner-detail-card',
+                authorUserId: 'partner-id',
+              ),
+              sampleDetailCard(id: 'my-detail-card', authorUserId: _profile.id),
+            ],
+          ),
+        },
+      );
+
+      for (final cardId in ['my-detail-card', 'partner-detail-card']) {
+        await tester.tap(find.byKey(ValueKey('question-answer-card-$cardId')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+        expect(find.byKey(_storyDetailCardKey(cardId)), findsOneWidget);
+
+        await tester.tap(find.byKey(_storyDetailCloseButtonKey));
+        await tester.pumpAndSettle();
+      }
     });
 
     testWidgets('hides partner answer before my answer is saved', (
@@ -492,6 +537,40 @@ void main() {
       expect(tester.getCenter(saveAction).dy, lessThan(textFieldRect.top));
       expect(find.byKey(const Key('answer-save-bar')), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('opens cards in the shared detail overlay while answering', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+      final targetDate = DateTime(2026, 5, 31);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        initialLocation: '/home/question/edit',
+        storyLoopDetails: {
+          targetDate: _storyLoopDetailFor(
+            date: targetDate,
+            question: _dailyQuestion,
+            answerState: _emptyAnswerState,
+            canAnswerQuestion: true,
+            cards: [
+              sampleDetailCard(id: 'partner-card', authorUserId: 'partner-id'),
+              sampleDetailCard(id: 'my-card', authorUserId: _profile.id),
+            ],
+          ),
+        },
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('question-answer-card-my-card')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+      expect(find.byKey(_storyDetailCardKey('my-card')), findsOneWidget);
+      expect(find.byType(TodayQuestionAnswerEditScreen), findsOneWidget);
     });
 
     testWidgets('disables submit for blank answer', (tester) async {

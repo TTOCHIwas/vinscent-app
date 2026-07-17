@@ -28,8 +28,8 @@ const _storyAddButtonKey = Key('home-story-add-button');
 const _questionBubbleKey = Key('home-question-speech-bubble');
 const _completedStoryLineKey = Key('home-completed-story-line');
 const _completedStoryClotheslineKey = Key('home-completed-story-clothesline');
-const _storyDetailOverlayKey = Key('home-story-card-detail-overlay');
-const _storyDetailCloseButtonKey = Key('home-story-card-detail-close');
+const _storyDetailOverlayKey = Key('story-card-detail-overlay');
+const _storyDetailCloseButtonKey = Key('story-card-detail-close');
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
 const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
 const _storyEditAction = '\uce74\ub4dc \uc218\uc815';
@@ -50,7 +50,7 @@ const _storyAiPlaceholder =
     'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
-Key _storyDetailCardKey(String cardId) => Key('home-story-card-detail-$cardId');
+Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
 
 void main() {
   testWidgets(
