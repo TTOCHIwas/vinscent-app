@@ -52,6 +52,52 @@ void main() {
     expect(_saveButton(tester).onPressed, isNotNull);
   });
 
+  testWidgets('undo removes completed strokes from newest to oldest', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(CharacterCanvas), const Offset(-60, 30));
+    await tester.pump();
+
+    final undoButton = find.byKey(const ValueKey('character-drawing-undo'));
+    expect(undoButton, findsOneWidget);
+    expect(_saveButton(tester).onPressed, isNotNull);
+
+    await tester.tap(undoButton);
+    await tester.pump();
+
+    expect(_saveButton(tester).onPressed, isNotNull);
+
+    await tester.tap(undoButton);
+    await tester.pump();
+
+    expect(_saveButton(tester).onPressed, isNull);
+    expect(tester.widget<IconButton>(undoButton).onPressed, isNull);
+  });
+
+  testWidgets('shows drawing controls as a fixed canvas overlay', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    final canvas = find.byType(CharacterCanvas);
+    final toolbar = find.byKey(const ValueKey('character-drawing-toolbar'));
+
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(toolbar, findsOneWidget);
+    expect(tester.getRect(toolbar).overlaps(tester.getRect(canvas)), isTrue);
+    expect(
+      find.byKey(const ValueKey('character-drawing-clear')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('clears current drawing after confirmation', (tester) async {
     final repository = _FakeCoupleCharacterRepository();
 
@@ -61,9 +107,7 @@ void main() {
     await tester.pump();
     expect(_saveButton(tester).onPressed, isNotNull);
 
-    await tester.ensureVisible(find.text('전체 삭제'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('전체 삭제'));
+    await tester.tap(find.byKey(const ValueKey('character-drawing-clear')));
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(TextButton, '삭제'), findsOneWidget);
