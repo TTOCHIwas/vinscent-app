@@ -18,7 +18,7 @@ class SettingsPageLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: AppColors.settingsBackground,
+      color: AppColors.background,
       child: SafeArea(
         top: false,
         child: Column(
