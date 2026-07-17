@@ -81,6 +81,7 @@ class CharacterSpeechBubble extends StatelessWidget {
       vertical: 12,
     ),
     this.tailSize = const Size(18, 10),
+    this.textStyle = AppTextStyles.homeCharacterLabel,
   });
 
   final String speechText;
@@ -88,6 +89,7 @@ class CharacterSpeechBubble extends StatelessWidget {
   final int? maxLines;
   final EdgeInsetsGeometry contentPadding;
   final Size tailSize;
+  final TextStyle textStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +117,7 @@ class CharacterSpeechBubble extends StatelessWidget {
                 maxLines: maxLines,
                 overflow: maxLines == null ? null : TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: AppTextStyles.homeCharacterLabel.copyWith(height: 1.4),
+                style: textStyle,
               ),
             ),
             Transform.translate(

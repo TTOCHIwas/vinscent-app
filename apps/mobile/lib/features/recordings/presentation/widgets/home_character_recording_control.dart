@@ -107,7 +107,8 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
         );
         final characterSize = math.max(0.0, controlSize - _characterSpacing);
 
-        return Center(
+        return Align(
+          alignment: Alignment.topCenter,
           child: CharacterRecordingControl(
             size: controlSize,
             capturePhase: captureState.phase,

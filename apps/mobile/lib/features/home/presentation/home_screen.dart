@@ -292,12 +292,14 @@ class _HomeStoryLoopContent extends StatelessWidget {
                   child: InkWell(
                     onTap: onQuestionTap,
                     borderRadius: BorderRadius.circular(12),
-                    child: Center(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
                       child: CharacterSpeechBubble(
                         key: const Key('home-question-speech-bubble'),
                         speechText: questionText,
                         maxWidth: 320,
                         maxLines: 4,
+                        textStyle: AppTextStyles.homeQuestionBubble,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 9,

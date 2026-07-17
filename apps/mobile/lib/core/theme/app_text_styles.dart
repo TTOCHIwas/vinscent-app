@@ -35,6 +35,14 @@ abstract final class AppTextStyles {
     letterSpacing: 0,
   );
 
+  static const homeQuestionBubble = TextStyle(
+    color: AppColors.textPrimary,
+    fontSize: 22,
+    fontWeight: FontWeight.w500,
+    height: 30 / 22,
+    letterSpacing: 0,
+  );
+
   static const shellDayCount = TextStyle(
     color: AppColors.textPrimary,
     fontSize: 24,
