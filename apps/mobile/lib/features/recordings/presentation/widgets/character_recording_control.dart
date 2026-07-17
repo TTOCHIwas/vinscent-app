@@ -85,7 +85,6 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
 
   bool get _showProgress =>
       widget.isLoading ||
-      widget.isPlaybackBusy ||
       _isPreparing ||
       _isRecording ||
       _isUploading;
