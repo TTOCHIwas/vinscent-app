@@ -53,6 +53,7 @@ void main() {
       final input = tester.widget<TextField>(inputFinder);
       expect(input.maxLength, storyCardMaxCaptionCharacters);
       expect(input.maxLines, storyCardMaxCaptionLines);
+      expect(input.textAlign, TextAlign.center);
 
       await tester.enterText(inputFinder, 'first date');
       await tester.tap(
@@ -67,6 +68,33 @@ void main() {
       expect(_captionFromPainter(tester), 'first date');
     },
   );
+
+  testWidgets('centers the fixed caption in the bottom area', (tester) async {
+    await _pumpEditor(tester, draft: _existingCaptionDraft());
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.descendant(of: canvas, matching: find.byType(RepaintBoundary)),
+    );
+    ui.Image? rendered;
+    ByteData? bytes;
+    await tester.runAsync(() async {
+      rendered = await boundary.toImage(pixelRatio: 1);
+      bytes = await rendered!.toByteData(format: ui.ImageByteFormat.rawRgba);
+    });
+
+    final capturedImage = rendered!;
+    final capturedBytes = bytes!;
+    addTearDown(capturedImage.dispose);
+    final captionBounds = _darkPixelBounds(
+      capturedBytes,
+      capturedImage,
+      minimumY: 0.75,
+    );
+
+    expect(captionBounds, isNotNull);
+    expect(captionBounds!.center.dx / capturedImage.width, closeTo(0.5, 0.03));
+  });
 
   testWidgets('limits the fixed caption to 50 grapheme characters', (
     tester,
@@ -733,6 +761,13 @@ StoryCardDraft _existingEmptyDraft() {
   return StoryCardDraft(scene: StoryCardScene.empty(), existingRevision: 1);
 }
 
+StoryCardDraft _existingCaptionDraft() {
+  return StoryCardDraft(
+    scene: StoryCardScene.empty().copyWith(caption: 'center'),
+    existingRevision: 1,
+  );
+}
+
 StoryCardDraft _existingPhotoDraft() {
   final photo = image.Image(width: 4, height: 4);
   return StoryCardDraft(
@@ -859,6 +894,46 @@ Color _pixelAt(
     bytes.getUint8(offset),
     bytes.getUint8(offset + 1),
     bytes.getUint8(offset + 2),
+  );
+}
+
+Rect? _darkPixelBounds(
+  ByteData bytes,
+  ui.Image image, {
+  required double minimumY,
+}) {
+  int? left;
+  int? top;
+  int? right;
+  int? bottom;
+  final startY = (image.height * minimumY).floor().clamp(0, image.height - 1);
+
+  for (var y = startY; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final offset = (y * image.width + x) * 4;
+      final red = bytes.getUint8(offset);
+      final green = bytes.getUint8(offset + 1);
+      final blue = bytes.getUint8(offset + 2);
+      final alpha = bytes.getUint8(offset + 3);
+      if (alpha == 0 || red >= 128 || green >= 128 || blue >= 128) {
+        continue;
+      }
+
+      left = left == null || x < left ? x : left;
+      top = top == null || y < top ? y : top;
+      right = right == null || x > right ? x : right;
+      bottom = bottom == null || y > bottom ? y : bottom;
+    }
+  }
+
+  if (left == null || top == null || right == null || bottom == null) {
+    return null;
+  }
+  return Rect.fromLTRB(
+    left.toDouble(),
+    top.toDouble(),
+    (right + 1).toDouble(),
+    (bottom + 1).toDouble(),
   );
 }
 

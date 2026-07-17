@@ -11,6 +11,7 @@ void main() {
     expect(storyCardPreviewHeight, 1000);
     expect(storyCardMaxCaptionCharacters, 50);
     expect(storyCardMaxCaptionLines, 2);
+    expect(storyCardCaptionFontSizeRatio, 0.06);
     expect(storyCardMinBackgroundScale, lessThan(1));
     expect(storyCardMaxStrokeWidth, 0.08);
     expect(storyCardMaxTextScale, 8);
