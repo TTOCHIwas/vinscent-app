@@ -18,7 +18,7 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
   const HomeCharacterRecordingControl({super.key});
 
   static const preferredControlSize = 250.0;
-  static const _characterSpacing = 32.0;
+  static const characterSpacing = 32.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,9 +43,12 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
         }
 
         final currentRecording = next.value?.currentRecording;
+        final placedSlots = next.value?.placedSlots ?? const [];
         final availableTargetKeys = <String>{
           if (currentRecording != null)
             RecordingPlaybackTarget.homeCurrent(currentRecording).key,
+          for (final slot in placedSlots)
+            RecordingPlaybackTarget.homeSlot(slot).key,
         };
 
         unawaited(
@@ -105,7 +108,7 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
           preferredControlSize,
           math.min(availableWidth, availableHeight),
         );
-        final characterSize = math.max(0.0, controlSize - _characterSpacing);
+        final characterSize = math.max(0.0, controlSize - characterSpacing);
 
         return Align(
           alignment: Alignment.topCenter,

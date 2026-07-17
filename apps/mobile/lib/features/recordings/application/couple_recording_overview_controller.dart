@@ -34,6 +34,14 @@ class CoupleRecordingOverviewController
   }
 
   Future<void> refresh() async {
+    await _refresh(showLoading: true);
+  }
+
+  Future<void> _refreshAfterMutation() async {
+    await _refresh(showLoading: false);
+  }
+
+  Future<void> _refresh({required bool showLoading}) async {
     final couple = await ref.read(coupleControllerProvider.future);
     if (couple == null || !couple.canReadSharedData) {
       debugRecordingLog('Overview refresh skipped: no readable couple');
@@ -46,7 +54,9 @@ class CoupleRecordingOverviewController
       'coupleId=${couple.id}, canEdit=${couple.canEditSharedData}, '
       'accessMode=${couple.accessMode.name}',
     );
-    state = const AsyncValue.loading();
+    if (showLoading) {
+      state = const AsyncValue.loading();
+    }
     state = await AsyncValue.guard(
       () => ref.read(coupleRecordingRepositoryProvider).fetchOverview(),
     );
@@ -74,7 +84,7 @@ class CoupleRecordingOverviewController
           audioBytes: audioBytes,
           durationMs: durationMs,
         );
-    await refresh();
+    await _refreshAfterMutation();
   }
 
   Future<void> openNextSlot() async {
@@ -85,7 +95,7 @@ class CoupleRecordingOverviewController
       'accessMode=${couple?.accessMode.name}',
     );
     await ref.read(coupleRecordingRepositoryProvider).openNextSlot();
-    await refresh();
+    await _refreshAfterMutation();
   }
 
   Future<void> saveCurrentRecordingToSlot({
@@ -100,7 +110,7 @@ class CoupleRecordingOverviewController
           title: title,
           expectedSlotRevision: expectedSlotRevision,
         );
-    await refresh();
+    await _refreshAfterMutation();
   }
 
   Future<void> deleteSlot({
@@ -110,7 +120,7 @@ class CoupleRecordingOverviewController
     await ref
         .read(coupleRecordingRepositoryProvider)
         .deleteSlot(slotId: slotId, expectedSlotRevision: expectedSlotRevision);
-    await refresh();
+    await _refreshAfterMutation();
   }
 
   Future<void> saveSlotArtwork({
@@ -129,7 +139,7 @@ class CoupleRecordingOverviewController
           previewBytes: previewBytes,
           drawingDataBytes: drawingDataBytes,
         );
-    await refresh();
+    await _refreshAfterMutation();
   }
 
   Future<void> upsertSlotPlacement({
@@ -146,7 +156,7 @@ class CoupleRecordingOverviewController
           normalizedY: normalizedY,
           expectedPlacementRevision: expectedPlacementRevision,
         );
-    await refresh();
+    await _refreshAfterMutation();
   }
 
   Future<void> deleteSlotPlacement({
@@ -159,6 +169,6 @@ class CoupleRecordingOverviewController
           slotId: slotId,
           expectedPlacementRevision: expectedPlacementRevision,
         );
-    await refresh();
+    await _refreshAfterMutation();
   }
 }

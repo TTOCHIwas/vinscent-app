@@ -8,10 +8,7 @@ import '../data/couple_recording.dart';
 enum RecordingPlaybackSurface { home, library }
 
 class RecordingPlaybackTarget {
-  const RecordingPlaybackTarget._({
-    required this.key,
-    required this.audioUrl,
-  });
+  const RecordingPlaybackTarget._({required this.key, required this.audioUrl});
 
   factory RecordingPlaybackTarget.homeCurrent(
     CurrentCoupleRecording recording,
@@ -38,6 +35,13 @@ class RecordingPlaybackTarget {
     );
   }
 
+  factory RecordingPlaybackTarget.homeSlot(CoupleRecordingSlot slot) {
+    return RecordingPlaybackTarget._(
+      key: 'home-slot:${slot.slotId}:${slot.recordingId}',
+      audioUrl: slot.audioUrl,
+    );
+  }
+
   final String key;
   final String audioUrl;
 }
@@ -50,11 +54,7 @@ class RecordingPlaybackState {
   });
 
   const RecordingPlaybackState.idle()
-    : this(
-        activeTargetKey: null,
-        isPlaying: false,
-        isBusy: false,
-      );
+    : this(activeTargetKey: null, isPlaying: false, isBusy: false);
 
   final String? activeTargetKey;
   final bool isPlaying;

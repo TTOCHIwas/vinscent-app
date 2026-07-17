@@ -1,18 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../profile/application/profile_controller.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/couple_recording_overview_controller.dart';
 import '../application/recording_playback_controller.dart';
+import '../application/recording_slot_placement_session.dart';
 import '../recording_debug_log.dart';
 import '../data/couple_recording.dart';
 import '../data/couple_recording_failure.dart';
@@ -62,6 +64,12 @@ class _RecordingLibraryScreenState
     );
 
     final coupleAsync = ref.watch(coupleControllerProvider);
+    final currentUserId = ref.watch(
+      profileControllerProvider.select(
+        (state) =>
+            state.maybeWhen(data: (profile) => profile?.id, orElse: () => null),
+      ),
+    );
     final overviewAsync = ref.watch(coupleRecordingOverviewControllerProvider);
     final playbackState = ref.watch(
       recordingPlaybackControllerProvider(RecordingPlaybackSurface.library),
@@ -101,6 +109,7 @@ class _RecordingLibraryScreenState
             overview: overview,
             playbackState: playbackState,
             playbackController: playbackController,
+            currentUserId: currentUserId,
           ),
         ),
       ),
@@ -113,6 +122,7 @@ class _RecordingLibraryScreenState
     required CoupleRecordingOverview? overview,
     required RecordingPlaybackState playbackState,
     required RecordingPlaybackController playbackController,
+    required String? currentUserId,
   }) {
     if (couple == null || overview == null) {
       return const _LibraryMessage(title: '보관함을 확인할 수 없어요.');
@@ -123,7 +133,6 @@ class _RecordingLibraryScreenState
     final currentPlaybackTarget = currentRecording == null
         ? null
         : RecordingPlaybackTarget.libraryCurrent(currentRecording);
-    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final slotsByIndex = {
       for (final slot in overview.savedSlots) slot.slotIndex: slot,
     };
@@ -198,6 +207,7 @@ class _RecordingLibraryScreenState
                     slot: slotsByIndex[index],
                     playbackState: playbackState,
                   ),
+                  currentUserId: currentUserId,
                   onPlayPressed: _buildSlotPlayCallback(
                     slot: slotsByIndex[index],
                     playbackController: playbackController,
@@ -215,6 +225,13 @@ class _RecordingLibraryScreenState
                       ? null
                       : () => context.push(
                           '/home/recordings/${slotsByIndex[index]!.slotId}/artwork',
+                        ),
+                  onArtworkLongPress:
+                      !canEdit || slotsByIndex[index]?.artwork == null
+                      ? null
+                      : () => _startHomePlacement(
+                          slot: slotsByIndex[index]!,
+                          overview: overview,
                         ),
                 ),
                 if (index < overview.slotLimit) const SizedBox(height: 12),
@@ -393,6 +410,24 @@ class _RecordingLibraryScreenState
         });
       }
     }
+  }
+
+  void _startHomePlacement({
+    required CoupleRecordingSlot slot,
+    required CoupleRecordingOverview overview,
+  }) {
+    if (slot.placement == null && overview.placedSlots.length >= 4) {
+      _showError(
+        const CoupleRecordingRepositoryException(
+          CoupleRecordingFailureReason.recordingPlacementLimitReached,
+        ),
+      );
+      return;
+    }
+
+    unawaited(HapticFeedback.mediumImpact());
+    ref.read(recordingSlotPlacementSessionProvider.notifier).begin(slot.slotId);
+    context.go('/home');
   }
 
   Future<String?> _promptForTitle({String? initialTitle}) async {
@@ -597,10 +632,12 @@ class _RecordingSlotTile extends StatelessWidget {
     required this.currentRecording,
     required this.canEdit,
     required this.isPlaying,
+    required this.currentUserId,
     this.onPlayPressed,
     this.onSavePressed,
     this.onDeletePressed,
     this.onArtworkPressed,
+    this.onArtworkLongPress,
   });
 
   final int slotIndex;
@@ -608,37 +645,47 @@ class _RecordingSlotTile extends StatelessWidget {
   final CurrentCoupleRecording? currentRecording;
   final bool canEdit;
   final bool isPlaying;
+  final String? currentUserId;
   final VoidCallback? onPlayPressed;
   final VoidCallback? onSavePressed;
   final VoidCallback? onDeletePressed;
   final VoidCallback? onArtworkPressed;
+  final VoidCallback? onArtworkLongPress;
 
   @override
   Widget build(BuildContext context) {
     final slot = this.slot;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.wireframeBorder),
-        borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      key: slot == null
+          ? null
+          : ValueKey('recording-library-slot-${slot.slotId}'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: onArtworkLongPress,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.wireframeBorder),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: slot == null
+            ? _EmptySlotContent(
+                slotIndex: slotIndex,
+                canEdit: canEdit,
+                hasCurrentRecording: currentRecording != null,
+                onSavePressed: onSavePressed,
+              )
+            : _FilledSlotContent(
+                slot: slot,
+                canEdit: canEdit,
+                isPlaying: isPlaying,
+                currentUserId: currentUserId,
+                onPlayPressed: onPlayPressed,
+                onSavePressed: onSavePressed,
+                onDeletePressed: onDeletePressed,
+                onArtworkPressed: onArtworkPressed,
+              ),
       ),
-      child: slot == null
-          ? _EmptySlotContent(
-              slotIndex: slotIndex,
-              canEdit: canEdit,
-              hasCurrentRecording: currentRecording != null,
-              onSavePressed: onSavePressed,
-            )
-          : _FilledSlotContent(
-              slot: slot,
-              canEdit: canEdit,
-              isPlaying: isPlaying,
-              onPlayPressed: onPlayPressed,
-              onSavePressed: onSavePressed,
-              onDeletePressed: onDeletePressed,
-              onArtworkPressed: onArtworkPressed,
-            ),
     );
   }
 }
@@ -687,6 +734,7 @@ class _FilledSlotContent extends StatelessWidget {
     required this.slot,
     required this.canEdit,
     required this.isPlaying,
+    required this.currentUserId,
     this.onPlayPressed,
     this.onSavePressed,
     this.onDeletePressed,
@@ -696,6 +744,7 @@ class _FilledSlotContent extends StatelessWidget {
   final CoupleRecordingSlot slot;
   final bool canEdit;
   final bool isPlaying;
+  final String? currentUserId;
   final VoidCallback? onPlayPressed;
   final VoidCallback? onSavePressed;
   final VoidCallback? onDeletePressed;
@@ -703,8 +752,7 @@ class _FilledSlotContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMine =
-        slot.senderUserId == Supabase.instance.client.auth.currentUser?.id;
+    final isMine = slot.senderUserId == currentUserId;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

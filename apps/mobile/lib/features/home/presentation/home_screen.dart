@@ -12,6 +12,7 @@ import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
+import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
@@ -69,14 +70,35 @@ class _HomeStageLayout extends StatelessWidget {
           math.min(availableWidth, halfHeight),
         );
         final characterOffset = (halfHeight - controlSize) / 2;
+        final mainStageHeight = halfHeight + characterOffset;
+        final characterSize = math.max(
+          0.0,
+          controlSize - HomeCharacterRecordingControl.characterSpacing,
+        );
+        final characterRect = Rect.fromLTWH(
+          (availableWidth - characterSize) / 2,
+          mainStageHeight + (controlSize - characterSize) / 2,
+          characterSize,
+          characterSize,
+        );
 
-        return Column(
+        return Stack(
           children: [
-            SizedBox(
-              height: halfHeight + characterOffset,
-              child: const _HomeMainStage(),
+            Column(
+              children: [
+                SizedBox(
+                  height: mainStageHeight,
+                  child: const _HomeMainStage(),
+                ),
+                const Expanded(child: HomeCharacterRecordingControl()),
+              ],
             ),
-            const Expanded(child: HomeCharacterRecordingControl()),
+            Positioned.fill(
+              child: HomeRecordingArtworkLayer(
+                topForbiddenHeight: mainStageHeight,
+                characterRect: characterRect,
+              ),
+            ),
           ],
         );
       },
