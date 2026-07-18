@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../characters/presentation/widgets/couple_character_avatar.dart';
 import '../../../couple/application/couple_controller.dart';
@@ -90,7 +91,9 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
     final playbackTarget = currentRecording == null
         ? null
         : RecordingPlaybackTarget.homeCurrent(currentRecording);
+    final needsCharacterSetup = couple?.needsCharacterSetupPrompt ?? false;
     final isPlaying =
+        !needsCharacterSetup &&
         playbackTarget != null &&
         playbackState.isPlaying &&
         playbackState.activeTargetKey == playbackTarget.key;
@@ -121,7 +124,11 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
             isPlaybackBusy: playbackState.isBusy,
             isLoading: coupleAsync.isLoading || overviewAsync.isLoading,
             canRecord: canRecord,
-            onPlaybackPressed: playbackTarget == null
+            onPrimaryTap: needsCharacterSetup
+                ? () => context.push('/settings/character')
+                : null,
+            primaryTapSemanticsLabel: needsCharacterSetup ? '캐릭터 설정' : null,
+            onPlaybackPressed: needsCharacterSetup || playbackTarget == null
                 ? null
                 : () => unawaited(playbackController.toggle(playbackTarget)),
             onRecordStart: !canRecord || couple == null

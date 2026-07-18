@@ -36,6 +36,32 @@ void main() {
     expect(playbackCount, 0);
   });
 
+  testWidgets('기본 캐릭터는 짧게 눌러 설정을 열고 길게 눌러 녹음한다', (tester) async {
+    var primaryTapCount = 0;
+    var recordStartCount = 0;
+    var recordEndCount = 0;
+
+    await _pumpControl(
+      tester,
+      onPrimaryTap: () => primaryTapCount += 1,
+      primaryTapSemanticsLabel: '캐릭터 설정',
+      onRecordStart: () => recordStartCount += 1,
+      onRecordEnd: () => recordEndCount += 1,
+    );
+
+    expect(find.bySemanticsLabel('캐릭터 설정'), findsOneWidget);
+
+    await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
+    await tester.pump();
+    expect(primaryTapCount, 1);
+
+    await tester.longPress(find.byKey(CharacterRecordingControl.controlKey));
+    await tester.pump();
+    expect(recordStartCount, 1);
+    expect(recordEndCount, 1);
+    expect(primaryTapCount, 1);
+  });
+
   testWidgets('녹음이 있으면 짧게 눌러 재생하고 길게 눌러 재녹음한다', (tester) async {
     var playbackCount = 0;
     var recordStartCount = 0;
@@ -252,6 +278,8 @@ Future<void> _pumpControl(
   bool isPlaybackBusy = false,
   bool isLoading = false,
   bool canRecord = true,
+  VoidCallback? onPrimaryTap,
+  String? primaryTapSemanticsLabel,
   VoidCallback? onPlaybackPressed,
   VoidCallback? onRecordStart,
   VoidCallback? onRecordEnd,
@@ -268,6 +296,8 @@ Future<void> _pumpControl(
             isPlaybackBusy: isPlaybackBusy,
             isLoading: isLoading,
             canRecord: canRecord,
+            onPrimaryTap: onPrimaryTap,
+            primaryTapSemanticsLabel: primaryTapSemanticsLabel,
             onPlaybackPressed: onPlaybackPressed,
             onRecordStart: onRecordStart,
             onRecordEnd: onRecordEnd,

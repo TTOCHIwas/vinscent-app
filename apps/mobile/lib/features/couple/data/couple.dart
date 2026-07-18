@@ -133,6 +133,11 @@ class Couple {
   bool get isCharacterSetupPending =>
       characterSetupStatus == CoupleCharacterSetupStatus.pending;
 
+  bool get hasCustomCharacter =>
+      characterSetupStatus == CoupleCharacterSetupStatus.custom;
+
+  bool get needsCharacterSetupPrompt => isActive && !hasCustomCharacter;
+
   bool isInitialSetupOwner(String userId) =>
       isActive && userBId != null && userBId == userId;
 

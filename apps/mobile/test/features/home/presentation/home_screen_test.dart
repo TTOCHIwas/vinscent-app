@@ -51,6 +51,7 @@ const _storyWaitingAnswer =
     '\uc0c1\ub300\ubc29\uc758 \ub2f5\ubcc0\uc744 \uae30\ub2e4\ub9ac\uace0 \uc788\uc5b4\uc694.';
 const _storyAiPlaceholder =
     'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
+const _characterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
 Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
@@ -109,6 +110,32 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('기본 캐릭터를 누르면 캐릭터 설정 화면을 연다', (tester) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      couple: activeCouple(
+        currentDate: _today,
+        characterSetupStatus: CoupleCharacterSetupStatus.defaultCharacter,
+      ),
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+    );
+
+    expect(find.text(_characterSetupPrompt), findsOneWidget);
+    final characterControl = tester.widget<CharacterRecordingControl>(
+      find.byType(CharacterRecordingControl),
+    );
+    expect(characterControl.onPrimaryTap, isNotNull);
+    expect(characterControl.isLoading, isFalse);
+    expect(characterControl.isPlaybackBusy, isFalse);
+    expect(find.bySemanticsLabel('캐릭터 설정'), findsOneWidget);
+
+    await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
+    await tester.pumpAndSettle();
+
+    expect(find.text('character settings route'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+  });
 
   testWidgets(
     '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38 \uc704\uc5d0 \ud655\ub300\ub41c \uce74\ub4dc \ubbf8\ub9ac\ubcf4\uae30\ub97c \ubcf4\uc5ec\uc900\ub2e4',
@@ -686,6 +713,7 @@ void main() {
 Future<GoRouter> _pumpRoutedHome(
   WidgetTester tester, {
   required TodayStoryLoopSummary todaySummary,
+  Couple? couple,
 }) async {
   final router = GoRouter(
     initialLocation: '/home',
@@ -709,6 +737,12 @@ Future<GoRouter> _pumpRoutedHome(
         builder: (context, state) =>
             const Scaffold(body: Center(child: Text('question edit route'))),
       ),
+      GoRoute(
+        path: '/settings/character',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('character settings route')),
+        ),
+      ),
     ],
   );
   addTearDown(router.dispose);
@@ -717,7 +751,7 @@ Future<GoRouter> _pumpRoutedHome(
     ProviderScope(
       overrides: [
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => _activeCouple,
+          (ref, notifier) async => couple ?? _activeCouple,
         ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
         profileControllerProvider.overrideWithBuild(

@@ -19,6 +19,8 @@ class CharacterRecordingControl extends StatefulWidget {
     required this.canRecord,
     required this.child,
     this.size = 184,
+    this.onPrimaryTap,
+    this.primaryTapSemanticsLabel,
     this.onPlaybackPressed,
     this.onRecordStart,
     this.onRecordEnd,
@@ -45,6 +47,8 @@ class CharacterRecordingControl extends StatefulWidget {
   final bool canRecord;
   final Widget child;
   final double size;
+  final VoidCallback? onPrimaryTap;
+  final String? primaryTapSemanticsLabel;
   final VoidCallback? onPlaybackPressed;
   final VoidCallback? onRecordStart;
   final VoidCallback? onRecordEnd;
@@ -73,12 +77,16 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
 
   bool get _isCaptureBusy => _isPreparing || _isRecording || _isUploading;
 
-  bool get _canPlay =>
-      widget.recordingKey != null &&
+  VoidCallback? get _primaryTapAction =>
+      widget.onPrimaryTap ?? widget.onPlaybackPressed;
+
+  bool get _canTap =>
+      (widget.onPrimaryTap != null ||
+          (widget.recordingKey != null && widget.onPlaybackPressed != null)) &&
       !_isCaptureBusy &&
       !widget.isLoading &&
       !widget.isPlaybackBusy &&
-      widget.onPlaybackPressed != null;
+      _primaryTapAction != null;
 
   bool get _canStartRecording =>
       widget.canRecord &&
@@ -94,7 +102,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
   bool get _showTopProgress =>
       widget.isLoading || _isPreparing || _isRecording || _isUploading;
 
-  bool get _canPress => _canPlay || _canStartRecording;
+  bool get _canPress => _canTap || _canStartRecording;
 
   @override
   void initState() {
@@ -192,7 +200,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
         enabled: _canPress,
         excludeSemantics: true,
         label: _semanticsLabel(),
-        onTap: _canPlay ? widget.onPlaybackPressed : null,
+        onTap: _canTap ? _primaryTapAction : null,
         child: GestureDetector(
           key: CharacterRecordingControl.controlKey,
           behavior: HitTestBehavior.opaque,
@@ -200,7 +208,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
           onTapDown: _canPress ? (_) => _setPressed(true) : null,
           onTapUp: _canPress ? (_) => _setPressed(false) : null,
           onTapCancel: _canPress ? () => _setPressed(false) : null,
-          onTap: _canPlay ? widget.onPlaybackPressed : null,
+          onTap: _canTap ? _primaryTapAction : null,
           onLongPressStart: _canStartRecording ? _handleLongPressStart : null,
           onLongPressEnd: _canFinishRecording ? _handleLongPressEnd : null,
           onLongPressCancel: _canFinishRecording
@@ -262,6 +270,9 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
     }
     if (_isPreparing || _isRecording) {
       return '녹음 중';
+    }
+    if (widget.onPrimaryTap != null) {
+      return widget.primaryTapSemanticsLabel ?? '캐릭터 열기';
     }
     if (widget.isPlaying) {
       return '재생 일시정지';

@@ -34,6 +34,7 @@ const _homeStatusArchivedHeadline = '\uae30\ub85d \ubcf4\uad00 \uc911';
 const _homeStoryCreateTooltip = '\uce74\ub4dc \uc791\uc131';
 const _homeStoryCardSemantics = '\uc2a4\ud1a0\ub9ac \uce74\ub4dc';
 const _homeStoryRetryTooltip = '\ub2e4\uc2dc \uc2dc\ub3c4';
+const _homeCharacterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -225,7 +226,7 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
   }
 }
 
-class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
+class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
   const _ResolvedHomeStoryLoopPreview({
     required this.summary,
     required this.currentUserId,
@@ -235,17 +236,29 @@ class _ResolvedHomeStoryLoopPreview extends StatelessWidget {
   final String? currentUserId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final presentation = _HomeStoryLoopPresentation.fromSummary(
       summary: summary,
       currentUserId: currentUserId,
     );
-    final questionTargetLocation = presentation.questionTargetLocation;
+    final needsCharacterSetup = ref.watch(
+      coupleControllerProvider.select(
+        (state) => state.maybeWhen(
+          data: (couple) => couple?.needsCharacterSetupPrompt ?? false,
+          orElse: () => false,
+        ),
+      ),
+    );
+    final questionTargetLocation = needsCharacterSetup
+        ? null
+        : presentation.questionTargetLocation;
 
     return _HomeStoryLoopContent(
       myCard: presentation.myCard,
       partnerCard: presentation.partnerCard,
-      questionText: presentation.questionText,
+      questionText: needsCharacterSetup
+          ? _homeCharacterSetupPrompt
+          : presentation.questionText,
       cardsAreCompleted: presentation.cardsAreCompleted,
       canAddCard: presentation.canAddCard,
       onAddCard: presentation.canAddCard
