@@ -12,6 +12,10 @@ import 'package:vinscent/features/characters/presentation/character_editor_scree
 import 'package:vinscent/features/characters/presentation/widgets/character_canvas.dart';
 import 'package:vinscent/features/characters/presentation/widgets/character_toolbar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
+import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/couple/data/couple_repository.dart';
+import 'package:vinscent/features/profile/application/profile_controller.dart';
+import 'package:vinscent/features/profile/data/user_profile.dart';
 
 import '../../../support/couple_fixtures.dart';
 
@@ -196,6 +200,53 @@ void main() {
 
     expect(find.text('settings'), findsOneWidget);
   });
+
+  testWidgets('uses the default character when initial setup is skipped', (
+    tester,
+  ) async {
+    final characterRepository = _FakeCoupleCharacterRepository();
+    final coupleRepository = _FakeCoupleRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _initialSetupCouple,
+          ),
+          coupleRepositoryProvider.overrideWithValue(coupleRepository),
+          coupleCharacterRepositoryProvider.overrideWithValue(
+            characterRepository,
+          ),
+          profileControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _profile,
+          ),
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: '/couple/character',
+            routes: [
+              GoRoute(
+                path: '/couple/character',
+                builder: (context, state) =>
+                    const CharacterEditorScreen.initialSetup(),
+              ),
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const Text('home'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, '건너뛰기'));
+    await tester.pumpAndSettle();
+
+    expect(coupleRepository.didUseDefaultCharacter, isTrue);
+    expect(find.text('home'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpCharacterEditor(
@@ -288,4 +339,54 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   }
 }
 
+class _FakeCoupleRepository implements CoupleRepository {
+  bool didUseDefaultCharacter = false;
+
+  @override
+  Future<Couple?> fetchCurrentCouple() async => _completedSetupCouple;
+
+  @override
+  Future<Couple> useDefaultCharacter() async {
+    didUseDefaultCharacter = true;
+    return _completedSetupCouple;
+  }
+
+  @override
+  Future<Couple> createInvite() => throw UnimplementedError();
+
+  @override
+  Future<Couple> joinByCode(String inviteCode) => throw UnimplementedError();
+
+  @override
+  Future<Couple?> cancelInvite() => throw UnimplementedError();
+
+  @override
+  Future<Couple> updateRelationshipStartDate(DateTime date) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Couple> disconnectCouple() => throw UnimplementedError();
+
+  @override
+  Future<void> deleteDisconnectedArchiveNow() => throw UnimplementedError();
+}
+
 final _activeCouple = activeCouple();
+final _initialSetupCouple = activeCouple(
+  userAId: 'partner-id',
+  userBId: 'user-id',
+  characterSetupStatus: CoupleCharacterSetupStatus.pending,
+);
+final _completedSetupCouple = activeCouple(
+  userAId: 'partner-id',
+  userBId: 'user-id',
+  characterSetupStatus: CoupleCharacterSetupStatus.defaultCharacter,
+);
+final _profile = UserProfile(
+  id: 'user-id',
+  displayName: 'User',
+  birthDate: DateTime(2000),
+  onboardingCompletedAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);

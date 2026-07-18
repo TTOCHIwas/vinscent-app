@@ -11,6 +11,7 @@ import '../features/characters/presentation/character_editor_screen.dart';
 import '../features/couple/application/couple_controller.dart';
 import '../features/couple/data/couple.dart';
 import '../features/couple/presentation/couple_entry_screen.dart';
+import '../features/couple/presentation/couple_setup_waiting_screen.dart';
 import '../features/couple/presentation/couple_waiting_screen.dart';
 import '../features/couple/presentation/relationship_start_date_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -42,10 +43,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isCoupleEntryRoute = path == '/couple';
       final isCoupleWaitingRoute = path == '/couple/waiting';
       final isCoupleAnniversaryRoute = path == '/couple/anniversary';
+      final isCoupleCharacterRoute = path == '/couple/character';
+      final isCoupleSetupWaitingRoute = path == '/couple/setup/waiting';
       final isCoupleRoute =
           isCoupleEntryRoute ||
           isCoupleWaitingRoute ||
-          isCoupleAnniversaryRoute;
+          isCoupleAnniversaryRoute ||
+          isCoupleCharacterRoute ||
+          isCoupleSetupWaitingRoute;
 
       return switch (authStatus) {
         AuthStatus.checking => isBootRoute ? null : '/boot',
@@ -66,32 +71,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   return isCoupleEntryRoute ? null : '/couple';
                 }
 
-                return switch (couple.accessMode) {
-                  CoupleAccessMode.pending =>
-                    isCoupleWaitingRoute ? null : '/couple/waiting',
-                  CoupleAccessMode.active =>
-                    couple.relationshipStartDate == null
-                        ? isCoupleAnniversaryRoute
-                              ? null
-                              : '/couple/anniversary'
-                        : (isBootRoute ||
-                              isLoginRoute ||
-                              isOnboardingRoute ||
-                              isCoupleRoute ||
-                              path == '/')
-                        ? '/home'
-                        : null,
-                  CoupleAccessMode.archivedReadOnly =>
-                    (isBootRoute ||
+                switch (couple.accessMode) {
+                  case CoupleAccessMode.pending:
+                    return isCoupleWaitingRoute ? null : '/couple/waiting';
+                  case CoupleAccessMode.active:
+                    final setupIncomplete =
+                        couple.relationshipStartDate == null ||
+                        couple.isCharacterSetupPending;
+                    final isSetupOwner = couple.isInitialSetupOwner(
+                      profile.id,
+                    );
+
+                    if (setupIncomplete && !isSetupOwner) {
+                      return isCoupleSetupWaitingRoute
+                          ? null
+                          : '/couple/setup/waiting';
+                    }
+                    if (couple.relationshipStartDate == null) {
+                      return isCoupleAnniversaryRoute
+                          ? null
+                          : '/couple/anniversary';
+                    }
+                    if (couple.isCharacterSetupPending) {
+                      return isCoupleCharacterRoute
+                          ? null
+                          : '/couple/character';
+                    }
+                    return (isBootRoute ||
                             isLoginRoute ||
                             isOnboardingRoute ||
-                            isCoupleAnniversaryRoute ||
+                            isCoupleRoute ||
+                            path == '/')
+                        ? '/home'
+                        : null;
+                  case CoupleAccessMode.archivedReadOnly:
+                    return (isBootRoute ||
+                            isLoginRoute ||
+                            isOnboardingRoute ||
+                            isCoupleRoute ||
                             path == '/' ||
                             path == '/home/story' ||
                             path == '/home/question/edit')
                         ? '/home'
-                        : null,
-                };
+                        : null;
+                }
               },
             );
           },
@@ -129,6 +152,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/couple/anniversary',
         name: 'coupleAnniversary',
         builder: (context, state) => const RelationshipStartDateScreen(),
+      ),
+      GoRoute(
+        path: '/couple/character',
+        name: 'coupleCharacterSetup',
+        builder: (context, state) =>
+            const CharacterEditorScreen.initialSetup(),
+      ),
+      GoRoute(
+        path: '/couple/setup/waiting',
+        name: 'coupleSetupWaiting',
+        builder: (context, state) => const CoupleSetupWaitingScreen(),
       ),
       GoRoute(
         path: '/home/story',

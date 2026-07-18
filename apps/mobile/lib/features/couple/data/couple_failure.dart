@@ -10,6 +10,8 @@ enum CoupleFailureReason {
   invalidCode,
   futureDate,
   activeCoupleRequired,
+  initialSetupOwnerRequired,
+  relationshipDateRequired,
   codeGenerationFailed,
   configMissing,
   unknown,

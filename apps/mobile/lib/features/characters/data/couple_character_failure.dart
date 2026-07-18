@@ -2,6 +2,8 @@ enum CoupleCharacterFailureReason {
   configMissing,
   authRequired,
   activeCoupleRequired,
+  initialSetupOwnerRequired,
+  relationshipDateRequired,
   invalidPath,
   requestTimeout,
   storage,

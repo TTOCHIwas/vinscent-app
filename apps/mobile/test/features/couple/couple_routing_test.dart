@@ -6,8 +6,10 @@ import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/presentation/couple_entry_screen.dart';
+import 'package:vinscent/features/couple/presentation/couple_setup_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/couple_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/relationship_start_date_screen.dart';
+import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
@@ -29,12 +31,43 @@ void main() {
     expect(find.byType(CoupleWaitingScreen), findsOneWidget);
   });
 
-  testWidgets('asks active couples for relationship start date first', (
+  testWidgets('asks the code-entering member for relationship start date', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      couple: activeCoupleWithoutDate(
+        userAId: 'partner-id',
+        userBId: _profile.id,
+      ),
+    );
+
+    expect(find.byType(RelationshipStartDateScreen), findsOneWidget);
+  });
+
+  testWidgets('keeps the inviter waiting while initial setup is incomplete', (
     tester,
   ) async {
     await _pumpApp(tester, couple: _activeCoupleWithoutDate);
 
-    expect(find.byType(RelationshipStartDateScreen), findsOneWidget);
+    expect(find.byType(CoupleSetupWaitingScreen), findsOneWidget);
+    expect(find.text('설정 중입니다.'), findsOneWidget);
+  });
+
+  testWidgets('asks the code-entering member to configure a character', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      couple: activeCouple(
+        userAId: 'partner-id',
+        userBId: _profile.id,
+        characterSetupStatus: CoupleCharacterSetupStatus.pending,
+      ),
+    );
+
+    expect(find.byType(CharacterEditorScreen), findsOneWidget);
+    expect(find.text('건너뛰기'), findsOneWidget);
   });
 
   testWidgets('sends fully active couples to home', (tester) async {
@@ -78,6 +111,4 @@ final _pendingCouple = pendingCouple();
 
 final _activeCoupleWithoutDate = activeCoupleWithoutDate();
 
-final _activeCouple = activeCouple(
-  relationshipStartDate: DateTime(2026),
-);
+final _activeCouple = activeCouple(relationshipStartDate: DateTime(2026));

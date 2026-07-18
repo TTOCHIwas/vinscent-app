@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/date/today_controller.dart';
 import '../core/theme/app_theme.dart';
+import '../features/couple/application/couple_controller.dart';
 import '../features/notifications/application/push_token_controller.dart';
 import 'router.dart';
 
@@ -31,6 +32,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(todayControllerProvider.notifier).refresh();
+      ref.invalidate(coupleControllerProvider);
     }
   }
 

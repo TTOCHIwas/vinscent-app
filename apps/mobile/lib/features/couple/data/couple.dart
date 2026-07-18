@@ -32,6 +32,21 @@ enum CoupleAccessMode {
   }
 }
 
+enum CoupleCharacterSetupStatus {
+  pending,
+  custom,
+  defaultCharacter;
+
+  factory CoupleCharacterSetupStatus.fromJson(String value) {
+    return switch (value) {
+      'pending' => CoupleCharacterSetupStatus.pending,
+      'custom' => CoupleCharacterSetupStatus.custom,
+      'default' => CoupleCharacterSetupStatus.defaultCharacter,
+      _ => throw FormatException('Unknown character setup status: $value'),
+    };
+  }
+}
+
 class Couple {
   const Couple({
     required this.id,
@@ -42,6 +57,7 @@ class Couple {
     required this.accessMode,
     required this.createdAt,
     required this.updatedAt,
+    this.characterSetupStatus = CoupleCharacterSetupStatus.custom,
     this.userBId,
     this.relationshipStartDate,
     this.connectedAt,
@@ -61,6 +77,9 @@ class Couple {
       userBId: json['user_b_id'] as String?,
       relationshipStartDate: _parseOptionalDate(
         json['relationship_start_date'] as String?,
+      ),
+      characterSetupStatus: CoupleCharacterSetupStatus.fromJson(
+        json['character_setup_status'] as String? ?? 'custom',
       ),
       timezone: json['timezone'] as String,
       status: status,
@@ -86,6 +105,7 @@ class Couple {
   final String userAId;
   final String? userBId;
   final DateTime? relationshipStartDate;
+  final CoupleCharacterSetupStatus characterSetupStatus;
   final String timezone;
   final CoupleStatus status;
   final CoupleAccessMode accessMode;
@@ -109,6 +129,12 @@ class Couple {
   bool get canReadSharedData => isActive || isArchivedReadOnly;
 
   bool get hasRelationshipStartDate => relationshipStartDate != null;
+
+  bool get isCharacterSetupPending =>
+      characterSetupStatus == CoupleCharacterSetupStatus.pending;
+
+  bool isInitialSetupOwner(String userId) =>
+      isActive && userBId != null && userBId == userId;
 
   DateTime get effectiveCurrentDate => currentDate ?? currentAppDate();
 

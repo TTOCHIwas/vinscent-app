@@ -20,6 +20,8 @@ abstract interface class CoupleRepository {
 
   Future<Couple> updateRelationshipStartDate(DateTime date);
 
+  Future<Couple> useDefaultCharacter();
+
   Future<Couple> disconnectCouple();
 
   Future<void> deleteDisconnectedArchiveNow();
@@ -88,6 +90,13 @@ class SupabaseCoupleRepository implements CoupleRepository {
         'update_relationship_start_date',
         params: {'start_date': _formatDate(date)},
       ),
+    );
+  }
+
+  @override
+  Future<Couple> useDefaultCharacter() async {
+    return _runAndRefresh(
+      () => Supabase.instance.client.rpc('use_default_couple_character'),
     );
   }
 
@@ -180,6 +189,10 @@ class SupabaseCoupleRepository implements CoupleRepository {
       'invalid_invite_code' => CoupleFailureReason.invalidCode,
       'relationship_date_in_future' => CoupleFailureReason.futureDate,
       'active_couple_required' => CoupleFailureReason.activeCoupleRequired,
+      'initial_setup_owner_required' =>
+        CoupleFailureReason.initialSetupOwnerRequired,
+      'relationship_date_required' =>
+        CoupleFailureReason.relationshipDateRequired,
       'invite_code_generation_failed' =>
         CoupleFailureReason.codeGenerationFailed,
       _ => CoupleFailureReason.unknown,

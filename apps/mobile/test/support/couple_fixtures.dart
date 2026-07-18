@@ -16,6 +16,7 @@ Couple pendingCouple({
     timezone: timezone,
     status: CoupleStatus.pending,
     accessMode: CoupleAccessMode.pending,
+    characterSetupStatus: CoupleCharacterSetupStatus.pending,
     createdAt: createdAt,
     updatedAt: updatedAt,
     currentDate: currentDate,
@@ -33,6 +34,8 @@ Couple activeCouple({
   DateTime? createdAt,
   DateTime? updatedAt,
   DateTime? currentDate,
+  CoupleCharacterSetupStatus characterSetupStatus =
+      CoupleCharacterSetupStatus.custom,
 }) {
   final createdAtValue = createdAt ?? DateTime(2026);
 
@@ -45,6 +48,7 @@ Couple activeCouple({
     timezone: timezone,
     status: CoupleStatus.active,
     accessMode: CoupleAccessMode.active,
+    characterSetupStatus: characterSetupStatus,
     connectedAt: connectedAt ?? createdAtValue,
     createdAt: createdAtValue,
     updatedAt: updatedAt,
@@ -62,6 +66,8 @@ Couple activeCoupleWithoutDate({
   DateTime? createdAt,
   DateTime? updatedAt,
   DateTime? currentDate,
+  CoupleCharacterSetupStatus characterSetupStatus =
+      CoupleCharacterSetupStatus.pending,
 }) {
   final createdAtValue = createdAt ?? DateTime(2026);
 
@@ -73,6 +79,7 @@ Couple activeCoupleWithoutDate({
     timezone: timezone,
     status: CoupleStatus.active,
     accessMode: CoupleAccessMode.active,
+    characterSetupStatus: characterSetupStatus,
     connectedAt: connectedAt ?? createdAtValue,
     createdAt: createdAtValue,
     updatedAt: updatedAt,
@@ -94,6 +101,8 @@ Couple archivedReadOnlyCouple({
   DateTime? createdAt,
   DateTime? updatedAt,
   DateTime? currentDate,
+  CoupleCharacterSetupStatus characterSetupStatus =
+      CoupleCharacterSetupStatus.custom,
 }) {
   final createdAtValue = createdAt ?? DateTime(2026);
   final disconnectedAtValue = disconnectedAt ?? DateTime(2026, 6, 1);
@@ -107,6 +116,7 @@ Couple archivedReadOnlyCouple({
     timezone: timezone,
     status: CoupleStatus.disconnected,
     accessMode: CoupleAccessMode.archivedReadOnly,
+    characterSetupStatus: characterSetupStatus,
     connectedAt: connectedAt ?? createdAtValue,
     disconnectedAt: disconnectedAtValue,
     disconnectedByUserId: disconnectedByUserId ?? userAId,
@@ -125,6 +135,8 @@ Couple _buildCouple({
   required String timezone,
   required CoupleStatus status,
   required CoupleAccessMode accessMode,
+  CoupleCharacterSetupStatus characterSetupStatus =
+      CoupleCharacterSetupStatus.custom,
   String? userBId,
   DateTime? relationshipStartDate,
   DateTime? connectedAt,
@@ -146,6 +158,7 @@ Couple _buildCouple({
     timezone: timezone,
     status: status,
     accessMode: accessMode,
+    characterSetupStatus: characterSetupStatus,
     connectedAt: connectedAt,
     disconnectedAt: disconnectedAt,
     disconnectedByUserId: disconnectedByUserId,

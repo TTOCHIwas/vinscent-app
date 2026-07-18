@@ -154,6 +154,10 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.invalidCode => '초대 코드 6자리를 다시 확인해주세요.',
       CoupleFailureReason.futureDate => '오늘 이후 날짜는 선택할 수 없어요.',
       CoupleFailureReason.activeCoupleRequired => '커플 연결을 먼저 완료해주세요.',
+      CoupleFailureReason.initialSetupOwnerRequired =>
+        '초대 코드를 입력한 사용자만 설정할 수 있어요.',
+      CoupleFailureReason.relationshipDateRequired =>
+        '만난 날짜를 먼저 저장해주세요.',
       CoupleFailureReason.codeGenerationFailed => '초대 코드 생성에 실패했어요.',
       CoupleFailureReason.configMissing => '앱 설정이 아직 완료되지 않았어요.',
       CoupleFailureReason.unknown => '잠시 후 다시 시도해주세요.',

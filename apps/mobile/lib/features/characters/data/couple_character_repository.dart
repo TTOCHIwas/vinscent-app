@@ -232,6 +232,10 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
       'auth_required' => CoupleCharacterFailureReason.authRequired,
       'active_couple_required' =>
         CoupleCharacterFailureReason.activeCoupleRequired,
+      'initial_setup_owner_required' =>
+        CoupleCharacterFailureReason.initialSetupOwnerRequired,
+      'relationship_date_required' =>
+        CoupleCharacterFailureReason.relationshipDateRequired,
       'invalid_character_path' => CoupleCharacterFailureReason.invalidPath,
       _ => CoupleCharacterFailureReason.unknown,
     };

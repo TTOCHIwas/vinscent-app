@@ -9,6 +9,8 @@ import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
+import '../../couple/data/couple_failure.dart';
+import '../../profile/application/profile_controller.dart';
 import '../application/couple_character_controller.dart';
 import '../data/character_drawing.dart';
 import '../data/couple_character_failure.dart';
@@ -16,7 +18,11 @@ import 'widgets/character_canvas.dart';
 import 'widgets/character_toolbar.dart';
 
 class CharacterEditorScreen extends ConsumerStatefulWidget {
-  const CharacterEditorScreen({super.key});
+  const CharacterEditorScreen({super.key}) : isInitialSetup = false;
+
+  const CharacterEditorScreen.initialSetup({super.key}) : isInitialSetup = true;
+
+  final bool isInitialSetup;
 
   @override
   ConsumerState<CharacterEditorScreen> createState() =>
@@ -42,7 +48,20 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     final couple = ref
         .read(coupleControllerProvider)
         .maybeWhen(data: (value) => value, orElse: () => null);
-    return couple == null || !couple.canEditSharedData;
+    if (couple == null || !couple.canEditSharedData) {
+      return true;
+    }
+    if (!widget.isInitialSetup) {
+      return false;
+    }
+
+    final profileId = ref
+        .read(profileControllerProvider)
+        .maybeWhen(data: (profile) => profile?.id, orElse: () => null);
+    return profileId == null ||
+        !couple.isInitialSetupOwner(profileId) ||
+        !couple.isCharacterSetupPending ||
+        !couple.hasRelationshipStartDate;
   }
 
   bool get _canSave {
@@ -67,10 +86,17 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         _strokes.isNotEmpty;
   }
 
+  bool get _canSkip =>
+      widget.isInitialSetup && !_isReadOnly && !_isLoadingDrawing && !_isSaving;
+
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(_loadExistingDrawing);
+    if (widget.isInitialSetup) {
+      _isLoadingDrawing = false;
+    } else {
+      Future<void>.microtask(_loadExistingDrawing);
+    }
   }
 
   Future<void> _loadExistingDrawing() async {
@@ -219,12 +245,43 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
             drawingDataJson: drawingData.toJsonString(),
           );
 
+      if (widget.isInitialSetup) {
+        await ref.read(coupleControllerProvider.notifier).refresh();
+      }
+
       if (mounted) {
         _closeEditor();
       }
     } catch (error) {
       if (mounted) {
         _showSnackBar(_saveFailureMessage(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _useDefaultCharacter() async {
+    if (!_canSkip) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await ref.read(coupleControllerProvider.notifier).useDefaultCharacter();
+      if (mounted) {
+        _closeEditor();
+      }
+    } catch (error) {
+      if (mounted) {
+        _showSnackBar(_defaultCharacterFailureMessage(error));
       }
     } finally {
       if (mounted) {
@@ -263,7 +320,19 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   void _closeEditor() {
-    context.go('/settings');
+    context.go(widget.isInitialSetup ? '/home' : '/settings');
+  }
+
+  String _defaultCharacterFailureMessage(Object error) {
+    if (error is CoupleRepositoryException) {
+      return switch (error.reason) {
+        CoupleFailureReason.initialSetupOwnerRequired =>
+          '초대 코드를 입력한 사용자만 설정할 수 있어요.',
+        CoupleFailureReason.relationshipDateRequired => '만난 날짜를 먼저 저장해주세요.',
+        _ => '기본 캐릭터를 설정하지 못했어요.',
+      };
+    }
+    return '기본 캐릭터를 설정하지 못했어요.';
   }
 
   String _saveFailureMessage(Object error) {
@@ -274,6 +343,10 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         CoupleCharacterFailureReason.authRequired => '로그인이 필요해요.',
         CoupleCharacterFailureReason.activeCoupleRequired =>
           '커플 연결 상태를 다시 확인해 주세요.',
+        CoupleCharacterFailureReason.initialSetupOwnerRequired =>
+          '초대 코드를 입력한 사용자만 설정할 수 있어요.',
+        CoupleCharacterFailureReason.relationshipDateRequired =>
+          '만난 날짜를 먼저 저장해주세요.',
         CoupleCharacterFailureReason.invalidPath => '캐릭터 저장 경로가 올바르지 않아요.',
         CoupleCharacterFailureReason.requestTimeout => '요청 시간이 초과됐어요.',
         CoupleCharacterFailureReason.storage => '캐릭터 저장 권한을 확인해 주세요.',
@@ -286,121 +359,136 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isInitialSetup) {
+      ref.watch(profileControllerProvider);
+    }
     final couple = ref
         .watch(coupleControllerProvider)
         .maybeWhen(data: (couple) => couple, orElse: () => null);
-    final isReadOnly = couple == null || !couple.canEditSharedData;
+    final isReadOnly = _isReadOnly;
     final isArchivedReadOnly = couple?.isArchivedReadOnly ?? false;
 
-    return Column(
-      children: [
-        _CharacterEditorHeader(
-          canSave: _canSave,
-          isSaving: _isSaving,
-          onBackPressed: _closeEditor,
-          onSavePressed: _save,
-        ),
-        Expanded(
-          child: SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                if (isArchivedReadOnly)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        border: Border.all(color: AppColors.wireframeBorder),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
-                        style: AppTextStyles.homeCharacterLabel.copyWith(
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ),
-                  ),
-                Expanded(
-                  child: Padding(
-                    key: const ValueKey('character-drawing-canvas-region'),
-                    padding: const EdgeInsets.all(16),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: _exportSize.toDouble(),
-                          maxHeight: _exportSize.toDouble(),
-                        ),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              border: Border.all(
-                                color: AppColors.wireframeBorder,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
+    return ColoredBox(
+      color: AppColors.background,
+      child: SafeArea(
+        top: widget.isInitialSetup,
+        bottom: false,
+        child: Column(
+          children: [
+            _CharacterEditorHeader(
+              canSave: _canSave,
+              canSkip: _canSkip,
+              showSkip: widget.isInitialSetup,
+              isSaving: _isSaving,
+              onBackPressed: _closeEditor,
+              onSkipPressed: _useDefaultCharacter,
+              onSavePressed: _save,
+            ),
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    if (isArchivedReadOnly)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            border: Border.all(
+                              color: AppColors.wireframeBorder,
                             ),
-                            clipBehavior: Clip.antiAlias,
-                            child: _isLoadingDrawing
-                                ? const Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : CharacterCanvas(
-                                    strokes: _visibleStrokes,
-                                    isReadOnly: isReadOnly,
-                                    onStrokeStart: _startStroke,
-                                    onStrokeUpdate: _updateStroke,
-                                    onStrokeEnd: _endStroke,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
+                            style: AppTextStyles.homeCharacterLabel.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: Padding(
+                        key: const ValueKey('character-drawing-canvas-region'),
+                        padding: const EdgeInsets.all(16),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: _exportSize.toDouble(),
+                              maxHeight: _exportSize.toDouble(),
+                            ),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  border: Border.all(
+                                    color: AppColors.wireframeBorder,
                                   ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: _isLoadingDrawing
+                                    ? const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : CharacterCanvas(
+                                        strokes: _visibleStrokes,
+                                        isReadOnly: isReadOnly,
+                                        onStrokeStart: _startStroke,
+                                        onStrokeUpdate: _updateStroke,
+                                        onStrokeEnd: _endStroke,
+                                      ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
-                    child: CharacterToolbar(
-                      selectedTool: _selectedTool,
-                      selectedColor: _selectedColor,
-                      selectedStrokeWidth: _selectedStrokeWidth,
-                      isReadOnly: isReadOnly,
-                      canUndo: _canUndo,
-                      canClear: _canClear,
-                      onToolChanged: (tool) {
-                        setState(() {
-                          _selectedTool = tool;
-                        });
-                      },
-                      onColorChanged: (color) {
-                        setState(() {
-                          _selectedColor = color;
-                          _selectedTool = CharacterDrawingTool.pen;
-                        });
-                      },
-                      onStrokeWidthChanged: (width) {
-                        setState(() {
-                          _selectedStrokeWidth = width;
-                        });
-                      },
-                      onUndoPressed: _undoLastStroke,
-                      onClearPressed: _confirmClearCanvas,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: CharacterToolbar(
+                          selectedTool: _selectedTool,
+                          selectedColor: _selectedColor,
+                          selectedStrokeWidth: _selectedStrokeWidth,
+                          isReadOnly: isReadOnly,
+                          canUndo: _canUndo,
+                          canClear: _canClear,
+                          onToolChanged: (tool) {
+                            setState(() {
+                              _selectedTool = tool;
+                            });
+                          },
+                          onColorChanged: (color) {
+                            setState(() {
+                              _selectedColor = color;
+                              _selectedTool = CharacterDrawingTool.pen;
+                            });
+                          },
+                          onStrokeWidthChanged: (width) {
+                            setState(() {
+                              _selectedStrokeWidth = width;
+                            });
+                          },
+                          onUndoPressed: _undoLastStroke,
+                          onClearPressed: _confirmClearCanvas,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -408,14 +496,20 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
 class _CharacterEditorHeader extends StatelessWidget {
   const _CharacterEditorHeader({
     required this.canSave,
+    required this.canSkip,
+    required this.showSkip,
     required this.isSaving,
     required this.onBackPressed,
+    required this.onSkipPressed,
     required this.onSavePressed,
   });
 
   final bool canSave;
+  final bool canSkip;
+  final bool showSkip;
   final bool isSaving;
   final VoidCallback onBackPressed;
+  final VoidCallback onSkipPressed;
   final VoidCallback onSavePressed;
 
   @override
@@ -427,7 +521,15 @@ class _CharacterEditorHeader extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: AppBackButton(onPressed: onBackPressed, iconSize: 32),
+            child: showSkip
+                ? SizedBox(
+                    width: 84,
+                    child: TextButton(
+                      onPressed: canSkip ? onSkipPressed : null,
+                      child: const Text('건너뛰기'),
+                    ),
+                  )
+                : AppBackButton(onPressed: onBackPressed, iconSize: 32),
           ),
           const Text('캐릭터 그리기', style: AppTextStyles.shellTitle),
           Align(
