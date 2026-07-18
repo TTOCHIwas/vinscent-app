@@ -11,6 +11,8 @@ import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
+import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
@@ -52,6 +54,7 @@ const _storyWaitingAnswer =
 const _storyAiPlaceholder =
     'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
 const _characterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
+const _firstRecordingPrompt = '나를 길게 눌러 상대방에게 녹음해보세요!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
 Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
@@ -119,6 +122,7 @@ void main() {
         characterSetupStatus: CoupleCharacterSetupStatus.defaultCharacter,
       ),
       todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
     );
 
     expect(find.text(_characterSetupPrompt), findsOneWidget);
@@ -137,6 +141,31 @@ void main() {
     expect(router.canPop(), isTrue);
   });
 
+  testWidgets('커스텀 캐릭터에 질문과 녹음이 없으면 첫 녹음을 안내한다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    expect(find.text(_firstRecordingPrompt), findsOneWidget);
+    expect(find.byKey(_questionBubbleKey), findsOneWidget);
+  });
+
+  testWidgets('현재 녹음이 있으면 첫 녹음 안내를 표시하지 않는다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _recordingOverviewWithCurrentAudio(),
+    );
+
+    expect(find.text(_firstRecordingPrompt), findsNothing);
+  });
+
   testWidgets(
     '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38 \uc704\uc5d0 \ud655\ub300\ub41c \uce74\ub4dc \ubbf8\ub9ac\ubcf4\uae30\ub97c \ubcf4\uc5ec\uc900\ub2e4',
     (tester) async {
@@ -147,6 +176,7 @@ void main() {
         tester,
         couple: _activeCouple,
         today: _today,
+        recordingOverview: _emptyRecordingOverview,
         todaySummary: sampleTodaySummary(
           coupleDate: _today,
           cards: [
@@ -171,6 +201,7 @@ void main() {
       );
 
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(find.text(_firstRecordingPrompt), findsNothing);
       final questionBubble = find.byKey(_questionBubbleKey);
       final questionAction = find.byKey(_questionActionKey);
       final characterControl = find.byKey(CharacterRecordingControl.controlKey);
@@ -714,6 +745,7 @@ Future<GoRouter> _pumpRoutedHome(
   WidgetTester tester, {
   required TodayStoryLoopSummary todaySummary,
   Couple? couple,
+  CoupleRecordingOverview? recordingOverview,
 }) async {
   final router = GoRouter(
     initialLocation: '/home',
@@ -760,6 +792,10 @@ Future<GoRouter> _pumpRoutedHome(
         storyLoopReadRepositoryProvider.overrideWithValue(
           FakeStoryLoopReadRepository(todaySummary: todaySummary),
         ),
+        if (recordingOverview != null)
+          coupleRecordingOverviewControllerProvider.overrideWithBuild(
+            (ref, notifier) => recordingOverview,
+          ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -774,6 +810,7 @@ Future<void> _pumpHome(
   required DateTime today,
   TodayStoryLoopSummary? todaySummary,
   StoryLoopReadRepository? storyLoopRepository,
+  CoupleRecordingOverview? recordingOverview,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -790,6 +827,10 @@ Future<void> _pumpHome(
           storyLoopRepository ??
               FakeStoryLoopReadRepository(todaySummary: todaySummary),
         ),
+        if (recordingOverview != null)
+          coupleRecordingOverviewControllerProvider.overrideWithBuild(
+            (ref, notifier) => recordingOverview,
+          ),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
     ),
@@ -856,6 +897,29 @@ final _profile = UserProfile(
 );
 
 final _dailyQuestion = sampleDailyQuestion(assignedDate: _today);
+
+const _emptyRecordingOverview = CoupleRecordingOverview(
+  slotLimit: 5,
+  currentRecording: null,
+  savedSlots: [],
+);
+
+CoupleRecordingOverview _recordingOverviewWithCurrentAudio() {
+  final recordedAt = DateTime.utc(2026, 5, 31, 9);
+  return CoupleRecordingOverview(
+    slotLimit: 5,
+    currentRecording: CurrentCoupleRecording(
+      recordingId: 'recording-id',
+      senderUserId: _profile.id,
+      durationMs: 1200,
+      recordedAt: recordedAt,
+      revision: 1,
+      updatedAt: recordedAt,
+      audioUrl: 'https://example.com/current.m4a',
+    ),
+    savedSlots: const [],
+  );
+}
 
 TodayStoryLoopSummary _emptyTodaySummary({required DateTime coupleDate}) {
   return TodayStoryLoopSummary(

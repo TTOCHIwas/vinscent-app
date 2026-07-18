@@ -11,6 +11,7 @@ import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
 import '../../questions/presentation/widgets/character_speech_prompt.dart';
+import '../../recordings/application/couple_recording_overview_controller.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
@@ -35,6 +36,7 @@ const _homeStoryCreateTooltip = '\uce74\ub4dc \uc791\uc131';
 const _homeStoryCardSemantics = '\uc2a4\ud1a0\ub9ac \uce74\ub4dc';
 const _homeStoryRetryTooltip = '\ub2e4\uc2dc \uc2dc\ub3c4';
 const _homeCharacterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
+const _homeFirstRecordingPrompt = '나를 길게 눌러 상대방에게 녹음해보세요!';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -241,24 +243,42 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
       summary: summary,
       currentUserId: currentUserId,
     );
-    final needsCharacterSetup = ref.watch(
+    final characterPromptState = ref.watch(
       coupleControllerProvider.select(
         (state) => state.maybeWhen(
-          data: (couple) => couple?.needsCharacterSetupPrompt ?? false,
+          data: (couple) => (
+            needsSetup: couple?.needsCharacterSetupPrompt ?? false,
+            canGuideRecording:
+                couple?.isActive == true && couple?.hasCustomCharacter == true,
+          ),
+          orElse: () => (needsSetup: false, canGuideRecording: false),
+        ),
+      ),
+    );
+    final hasNoCurrentRecording = ref.watch(
+      coupleRecordingOverviewControllerProvider.select(
+        (state) => state.maybeWhen(
+          data: (overview) =>
+              overview != null && overview.currentRecording == null,
           orElse: () => false,
         ),
       ),
     );
-    final questionTargetLocation = needsCharacterSetup
-        ? null
-        : presentation.questionTargetLocation;
+    final guideText = characterPromptState.needsSetup
+        ? _homeCharacterSetupPrompt
+        : characterPromptState.canGuideRecording &&
+              presentation.questionText == null &&
+              hasNoCurrentRecording
+        ? _homeFirstRecordingPrompt
+        : null;
+    final questionTargetLocation = guideText == null
+        ? presentation.questionTargetLocation
+        : null;
 
     return _HomeStoryLoopContent(
       myCard: presentation.myCard,
       partnerCard: presentation.partnerCard,
-      questionText: needsCharacterSetup
-          ? _homeCharacterSetupPrompt
-          : presentation.questionText,
+      questionText: guideText ?? presentation.questionText,
       cardsAreCompleted: presentation.cardsAreCompleted,
       canAddCard: presentation.canAddCard,
       onAddCard: presentation.canAddCard
