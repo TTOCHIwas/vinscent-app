@@ -189,6 +189,8 @@ class _RecordingLibraryScreenState
                 onSavePressed:
                     !canEdit || currentRecording == null || _isProcessing
                     ? null
+                    : slotsByIndex[index] == null
+                    ? () => context.push('/home/recordings/create/$index')
                     : () => _saveSlot(
                         slotIndex: index,
                         slot: slotsByIndex[index],

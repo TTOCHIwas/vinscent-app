@@ -118,7 +118,9 @@ void main() {
     expect(coloredArtworkMaterials, isEmpty);
   });
 
-  testWidgets('an empty slot uses an explicit add action', (tester) async {
+  testWidgets('an empty slot opens the combined title and artwork editor', (
+    tester,
+  ) async {
     final overview = CoupleRecordingOverview(
       slotLimit: 2,
       currentRecording: _currentRecording(),
@@ -135,7 +137,8 @@ void main() {
     await tester.tap(addButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('슬롯 제목'), findsOneWidget);
+    expect(find.text('create-slot'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('a read-only library exposes artwork viewing only', (
@@ -182,6 +185,10 @@ Future<_LibraryHarness> _pumpLibrary(
       GoRoute(
         path: '/home/recordings/:slotId/artwork',
         builder: (context, state) => const Text('artwork'),
+      ),
+      GoRoute(
+        path: '/home/recordings/create/:slotIndex',
+        builder: (context, state) => const Text('create-slot'),
       ),
     ],
   );
@@ -281,11 +288,15 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
   Future<void> openNextSlot() async {}
 
   @override
-  Future<void> saveCurrentRecordingToSlot({
+  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
     required int slotIndex,
     required String title,
     required int? expectedSlotRevision,
-  }) async {}
+  }) async => CoupleRecordingSlotSaveResult(
+    slotId: 'slot-$slotIndex',
+    slotIndex: slotIndex,
+    slotRevision: expectedSlotRevision ?? 1,
+  );
 
   @override
   Future<void> saveSlotArtwork({

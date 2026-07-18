@@ -21,7 +21,9 @@ import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
+import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/presentation/recording_library_screen.dart';
+import 'package:vinscent/features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
@@ -176,6 +178,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('an empty recording slot opens the combined creation route', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+      recordingOverview: _recordingOverviewWithCurrentAudio(),
+    );
+
+    await tester.tap(find.byKey(const Key('app-header-recording-library')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('recording-library-empty-slot-save-1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RecordingSlotArtworkEditorScreen), findsOneWidget);
+    expect(
+      GoRouterState.of(
+        tester.element(find.byType(RecordingSlotArtworkEditorScreen)),
+      ).uri.path,
+      '/home/recordings/create/1',
+    );
   });
 
   testWidgets('하단바 탭은 넓은 터치 영역과 안쪽 타원형 피드백을 제공한다', (tester) async {
@@ -643,6 +672,7 @@ Future<void> _pumpApp(
   required DailyQuestion question,
   required DailyQuestionAnswerState todayAnswerState,
   bool stubRecordingOverview = false,
+  CoupleRecordingOverview? recordingOverview,
 }) async {
   final storyLoopRepository = FakeStoryLoopReadRepository(
     todaySummary: sampleTodaySummary(
@@ -691,9 +721,9 @@ Future<void> _pumpApp(
         coupleCharacterControllerProvider.overrideWithBuild(
           (ref, notifier) async => null,
         ),
-        if (stubRecordingOverview)
+        if (stubRecordingOverview || recordingOverview != null)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
-            (ref, notifier) => null,
+            (ref, notifier) => recordingOverview,
           ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
         storyLoopReadRepositoryProvider.overrideWithValue(storyLoopRepository),
@@ -703,6 +733,23 @@ Future<void> _pumpApp(
   );
 
   await tester.pumpAndSettle();
+}
+
+CoupleRecordingOverview _recordingOverviewWithCurrentAudio() {
+  final recordedAt = DateTime.utc(2026, 7, 18);
+  return CoupleRecordingOverview(
+    slotLimit: 1,
+    currentRecording: CurrentCoupleRecording(
+      recordingId: 'recording-current',
+      senderUserId: _profile.id,
+      durationMs: 1000,
+      recordedAt: recordedAt,
+      revision: 1,
+      updatedAt: recordedAt,
+      audioUrl: 'https://example.com/current.m4a',
+    ),
+    savedSlots: const [],
+  );
 }
 
 StoryLoopStatus _summaryStatusFor(DailyQuestionAnswerState state) {

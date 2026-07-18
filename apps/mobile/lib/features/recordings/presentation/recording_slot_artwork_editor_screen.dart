@@ -16,9 +16,19 @@ import '../data/couple_recording_failure.dart';
 import '../data/couple_recording_repository.dart';
 
 class RecordingSlotArtworkEditorScreen extends ConsumerStatefulWidget {
-  const RecordingSlotArtworkEditorScreen({super.key, required this.slotId});
+  const RecordingSlotArtworkEditorScreen({super.key, required this.slotId})
+    : slotIndex = 0,
+      isCreating = false;
+
+  const RecordingSlotArtworkEditorScreen.create({
+    super.key,
+    required this.slotIndex,
+  }) : slotId = '',
+       isCreating = true;
 
   final String slotId;
+  final int slotIndex;
+  final bool isCreating;
 
   @override
   ConsumerState<RecordingSlotArtworkEditorScreen> createState() =>
@@ -38,6 +48,8 @@ class _RecordingSlotArtworkEditorScreenState
   bool _isLoading = true;
   bool _loadFailed = false;
   bool _isSaving = false;
+  late final TextEditingController _titleController;
+  CoupleRecordingSlotSaveResult? _createdSlot;
 
   List<CharacterDrawingStroke> get _visibleStrokes => [
     ..._strokes,
@@ -56,8 +68,13 @@ class _RecordingSlotArtworkEditorScreenState
       !_isLoading &&
       !_loadFailed &&
       !_isSaving &&
-      _slot != null &&
+      (widget.isCreating ? _isTitleValid : _slot != null) &&
       CharacterDrawingData(strokes: _strokes).hasVisibleContent;
+
+  bool get _isTitleValid {
+    final title = _titleController.text.trim();
+    return title.isNotEmpty && title.length <= 20;
+  }
 
   bool get _canUndo =>
       !_isReadOnly &&
@@ -72,7 +89,53 @@ class _RecordingSlotArtworkEditorScreenState
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(_loadSlot);
+    _titleController = TextEditingController();
+    _titleController.addListener(_handleTitleChanged);
+    Future<void>.microtask(widget.isCreating ? _prepareNewSlot : _loadSlot);
+  }
+
+  @override
+  void dispose() {
+    _titleController
+      ..removeListener(_handleTitleChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleTitleChanged() {
+    setState(() {});
+  }
+
+  Future<void> _prepareNewSlot() async {
+    try {
+      final overview = await ref.read(
+        coupleRecordingOverviewControllerProvider.future,
+      );
+      final slotIndex = widget.slotIndex;
+      final isAvailable =
+          overview != null &&
+          slotIndex >= 1 &&
+          slotIndex <= overview.slotLimit &&
+          overview.currentRecording != null &&
+          !overview.savedSlots.any((slot) => slot.slotIndex == slotIndex);
+      if (!isAvailable) {
+        throw StateError('Recording slot is not available.');
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadFailed = true;
+      });
+      _showSnackBar('슬롯 정보를 불러오지 못했어요.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadSlot() async {
@@ -221,7 +284,7 @@ class _RecordingSlotArtworkEditorScreenState
     final couple = ref
         .read(coupleControllerProvider)
         .maybeWhen(data: (value) => value, orElse: () => null);
-    if (!_canSave || slot == null || couple == null) {
+    if (!_canSave || couple == null || (!widget.isCreating && slot == null)) {
       return;
     }
 
@@ -233,12 +296,35 @@ class _RecordingSlotArtworkEditorScreenState
       final artifact = await const RecordingSlotArtworkCodec().encode(
         CharacterDrawingData(strokes: _strokes),
       );
+      var targetSlot = _createdSlot;
+      if (widget.isCreating && targetSlot == null) {
+        targetSlot = await ref
+            .read(coupleRecordingOverviewControllerProvider.notifier)
+            .saveCurrentRecordingToSlot(
+              slotIndex: widget.slotIndex,
+              title: _titleController.text.trim(),
+              expectedSlotRevision: null,
+            );
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _createdSlot = targetSlot;
+        });
+      }
+
+      final targetSlotId = widget.isCreating
+          ? targetSlot!.slotId
+          : slot!.slotId;
+      final targetSlotRevision = widget.isCreating
+          ? targetSlot!.slotRevision
+          : slot!.slotRevision;
       await ref
           .read(coupleRecordingOverviewControllerProvider.notifier)
           .saveSlotArtwork(
             couple: couple,
-            slotId: slot.slotId,
-            expectedSlotRevision: slot.slotRevision,
+            slotId: targetSlotId,
+            expectedSlotRevision: targetSlotRevision,
             previewBytes: artifact.previewBytes,
             drawingDataBytes: artifact.drawingDataBytes,
           );
@@ -277,6 +363,10 @@ class _RecordingSlotArtworkEditorScreenState
       return switch (error.reason) {
         CoupleRecordingFailureReason.recordingSlotConflict =>
           '슬롯이 다른 기기에서 변경됐어요. 다시 열어 주세요.',
+        CoupleRecordingFailureReason.currentRecordingRequired =>
+          '저장할 현재 녹음이 없어요.',
+        CoupleRecordingFailureReason.invalidRecordingSlotTitle =>
+          '제목은 1자 이상 20자 이하로 입력해주세요.',
         CoupleRecordingFailureReason.invalidRecordingArtwork =>
           '그림을 저장할 수 있는 크기로 줄여 주세요.',
         CoupleRecordingFailureReason.recordingArtworkFileMissing =>
@@ -297,11 +387,12 @@ class _RecordingSlotArtworkEditorScreenState
         .maybeWhen(data: (value) => value, orElse: () => null);
     final isReadOnly = couple == null || !couple.canEditSharedData;
 
-    return ColoredBox(
+    return Material(
       color: AppColors.background,
       child: Column(
         children: [
           _ArtworkEditorHeader(
+            title: widget.isCreating ? '슬롯 만들기' : '슬롯 그림',
             canSave: _canSave,
             isSaving: _isSaving,
             onBackPressed: _closeEditor,
@@ -319,6 +410,22 @@ class _RecordingSlotArtworkEditorScreenState
                         '보관 중에는 슬롯 그림을 읽기 전용으로만 볼 수 있어요.',
                         style: AppTextStyles.homeCharacterLabel.copyWith(
                           color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  if (widget.isCreating)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: TextField(
+                        key: const ValueKey('recording-slot-title-field'),
+                        controller: _titleController,
+                        enabled: _createdSlot == null && !_isSaving,
+                        autofocus: true,
+                        maxLength: 20,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          hintText: '슬롯 제목',
+                          counterText: '',
                         ),
                       ),
                     ),
@@ -418,12 +525,14 @@ class _RecordingSlotArtworkEditorScreenState
 
 class _ArtworkEditorHeader extends StatelessWidget {
   const _ArtworkEditorHeader({
+    required this.title,
     required this.canSave,
     required this.isSaving,
     required this.onBackPressed,
     required this.onSavePressed,
   });
 
+  final String title;
   final bool canSave;
   final bool isSaving;
   final VoidCallback onBackPressed;
@@ -440,7 +549,7 @@ class _ArtworkEditorHeader extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: AppBackButton(onPressed: onBackPressed, iconSize: 32),
           ),
-          const Text('슬롯 그림', style: AppTextStyles.shellTitle),
+          Text(title, style: AppTextStyles.shellTitle),
           Align(
             alignment: Alignment.centerRight,
             child: SizedBox(

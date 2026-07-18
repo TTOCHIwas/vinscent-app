@@ -222,12 +222,12 @@ class CoupleRecordingOverviewController
     await _refreshAfterMutation();
   }
 
-  Future<void> saveCurrentRecordingToSlot({
+  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
     required int slotIndex,
     required String title,
     required int? expectedSlotRevision,
   }) async {
-    await ref
+    final result = await ref
         .read(coupleRecordingRepositoryProvider)
         .saveCurrentRecordingToSlot(
           slotIndex: slotIndex,
@@ -235,6 +235,7 @@ class CoupleRecordingOverviewController
           expectedSlotRevision: expectedSlotRevision,
         );
     await _refreshAfterMutation();
+    return result;
   }
 
   Future<void> deleteSlot({

@@ -27,7 +27,7 @@ abstract interface class CoupleRecordingRepository {
     required int durationMs,
   });
 
-  Future<void> saveCurrentRecordingToSlot({
+  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
     required int slotIndex,
     required String title,
     required int? expectedSlotRevision,
@@ -198,7 +198,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
   }
 
   @override
-  Future<void> saveCurrentRecordingToSlot({
+  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
     required int slotIndex,
     required String title,
     required int? expectedSlotRevision,
@@ -206,7 +206,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     _ensureSupabaseConfigured();
 
     try {
-      await Supabase.instance.client
+      final data = await Supabase.instance.client
           .rpc(
             'save_current_couple_recording_to_slot',
             params: {
@@ -216,6 +216,13 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
+      final row = _asSingleRow(data);
+      if (row == null) {
+        throw const CoupleRecordingRepositoryException(
+          CoupleRecordingFailureReason.unknown,
+        );
+      }
+      return CoupleRecordingSlotSaveResult.fromJson(row);
     } on TimeoutException {
       throw const CoupleRecordingRepositoryException(
         CoupleRecordingFailureReason.requestTimeout,

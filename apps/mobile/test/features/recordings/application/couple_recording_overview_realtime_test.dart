@@ -254,11 +254,15 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
   Future<void> openNextSlot() async {}
 
   @override
-  Future<void> saveCurrentRecordingToSlot({
+  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
     required int slotIndex,
     required String title,
     required int? expectedSlotRevision,
-  }) async {}
+  }) async => CoupleRecordingSlotSaveResult(
+    slotId: 'slot-$slotIndex',
+    slotIndex: slotIndex,
+    slotRevision: expectedSlotRevision ?? 1,
+  );
 
   @override
   Future<void> saveSlotArtwork({

@@ -78,9 +78,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     final setupIncomplete =
                         couple.relationshipStartDate == null ||
                         couple.isCharacterSetupPending;
-                    final isSetupOwner = couple.isInitialSetupOwner(
-                      profile.id,
-                    );
+                    final isSetupOwner = couple.isInitialSetupOwner(profile.id);
 
                     if (setupIncomplete && !isSetupOwner) {
                       return isCoupleSetupWaitingRoute
@@ -156,8 +154,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/couple/character',
         name: 'coupleCharacterSetup',
-        builder: (context, state) =>
-            const CharacterEditorScreen.initialSetup(),
+        builder: (context, state) => const CharacterEditorScreen.initialSetup(),
       ),
       GoRoute(
         path: '/couple/setup/waiting',
@@ -212,6 +209,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 name: 'recordingLibrary',
                 builder: (context, state) => const RecordingLibraryScreen(),
                 routes: [
+                  GoRoute(
+                    path: 'create/:slotIndex',
+                    name: 'recordingSlotCreate',
+                    builder: (context, state) =>
+                        RecordingSlotArtworkEditorScreen.create(
+                          slotIndex:
+                              int.tryParse(
+                                state.pathParameters['slotIndex'] ?? '',
+                              ) ??
+                              0,
+                        ),
+                  ),
                   GoRoute(
                     path: ':slotId/artwork',
                     name: 'recordingSlotArtworkEditor',

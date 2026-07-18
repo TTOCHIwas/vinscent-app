@@ -45,6 +45,26 @@ class CurrentCoupleRecording {
   Duration get duration => Duration(milliseconds: durationMs);
 }
 
+class CoupleRecordingSlotSaveResult {
+  const CoupleRecordingSlotSaveResult({
+    required this.slotId,
+    required this.slotIndex,
+    required this.slotRevision,
+  });
+
+  factory CoupleRecordingSlotSaveResult.fromJson(Map<String, dynamic> json) {
+    return CoupleRecordingSlotSaveResult(
+      slotId: json['slot_id'] as String,
+      slotIndex: json['slot_index'] as int,
+      slotRevision: json['slot_revision'] as int,
+    );
+  }
+
+  final String slotId;
+  final int slotIndex;
+  final int slotRevision;
+}
+
 class CoupleRecordingSlot {
   const CoupleRecordingSlot({
     required this.slotId,

@@ -385,7 +385,7 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
   }
 
   @override
-  Future<void> saveCurrentRecordingToSlot({
+  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
     required int slotIndex,
     required String title,
     required int? expectedSlotRevision,
@@ -393,6 +393,11 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
     savedSlotIndex = slotIndex;
     savedSlotTitle = title;
     savedSlotRevision = expectedSlotRevision;
+    return CoupleRecordingSlotSaveResult(
+      slotId: 'slot-$slotIndex',
+      slotIndex: slotIndex,
+      slotRevision: expectedSlotRevision ?? 1,
+    );
   }
 
   @override
