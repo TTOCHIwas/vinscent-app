@@ -77,16 +77,26 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
 
   bool get _isCaptureBusy => _isPreparing || _isRecording || _isUploading;
 
-  VoidCallback? get _primaryTapAction =>
-      widget.onPrimaryTap ?? widget.onPlaybackPressed;
+  bool get _canStopRecording =>
+      (_isPreparing || _isRecording) && widget.onRecordEnd != null;
 
-  bool get _canTap =>
-      (widget.onPrimaryTap != null ||
-          (widget.recordingKey != null && widget.onPlaybackPressed != null)) &&
-      !_isCaptureBusy &&
-      !widget.isLoading &&
-      !widget.isPlaybackBusy &&
-      _primaryTapAction != null;
+  VoidCallback? get _primaryTapAction => _canStopRecording
+      ? widget.onRecordEnd
+      : widget.onPrimaryTap ?? widget.onPlaybackPressed;
+
+  bool get _canTap {
+    if (_canStopRecording) {
+      return !widget.isLoading && _primaryTapAction != null;
+    }
+
+    return (widget.onPrimaryTap != null ||
+            (widget.recordingKey != null &&
+                widget.onPlaybackPressed != null)) &&
+        !_isCaptureBusy &&
+        !widget.isLoading &&
+        !widget.isPlaybackBusy &&
+        _primaryTapAction != null;
+  }
 
   bool get _canStartRecording =>
       widget.canRecord &&
@@ -269,7 +279,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
       return '녹음 저장 중';
     }
     if (_isPreparing || _isRecording) {
-      return '녹음 중';
+      return '녹음 종료';
     }
     if (widget.onPrimaryTap != null) {
       return widget.primaryTapSemanticsLabel ?? '캐릭터 열기';

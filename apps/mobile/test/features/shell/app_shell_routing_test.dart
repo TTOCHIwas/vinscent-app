@@ -41,6 +41,26 @@ import '../../support/question_answer_fixtures.dart';
 import '../../support/story_loop_fixtures.dart';
 
 void main() {
+  testWidgets('widget launch URI does not become a GoRouter location', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.defaultRouteNameTestValue =
+        'vinscent://widget/record?homeWidget';
+    addTearDown(
+      tester.binding.platformDispatcher.clearDefaultRouteNameTestValue,
+    );
+
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.textContaining('GoException'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     '\uc778\uc99d\ub41c \ud648 \uacbd\ub85c\uc5d0 shell\uacfc \uc9c8\ubb38\uc744 \ubcf4\uc5ec\uc900\ub2e4',
     (tester) async {

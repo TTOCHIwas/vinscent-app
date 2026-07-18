@@ -233,6 +233,24 @@ void main() {
     expect(find.byType(Icon), findsNothing);
   });
 
+  testWidgets('externally started recording stops on a single tap', (
+    tester,
+  ) async {
+    var recordEndCount = 0;
+
+    await _pumpControl(
+      tester,
+      capturePhase: RecordingCapturePhase.recording,
+      recordingProgress: 0.25,
+      onRecordEnd: () => recordEndCount += 1,
+    );
+
+    await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
+    await tester.pump();
+
+    expect(recordEndCount, 1);
+  });
+
   testWidgets('준비와 저장 중에는 부정형 진행 효과와 입력 차단을 사용한다', (tester) async {
     var playbackCount = 0;
     var recordStartCount = 0;

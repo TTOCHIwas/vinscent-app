@@ -35,6 +35,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/home',
+    overridePlatformDefaultLocation: true,
     redirect: (context, state) {
       final path = state.uri.path;
       final isBootRoute = path == '/boot';

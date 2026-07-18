@@ -215,6 +215,6 @@ class WidgetPlaybackService : Service() {
         const val ACTION_TOGGLE = "com.vinscent.vinscent.widget.TOGGLE_PLAYBACK"
         private const val CHANNEL_ID = "vinscent_widget_playback"
         private const val NOTIFICATION_ID = 2301
-        private const val BOUNCE_INTERVAL_MS = 420L
+        private const val BOUNCE_INTERVAL_MS = 320L
     }
 }

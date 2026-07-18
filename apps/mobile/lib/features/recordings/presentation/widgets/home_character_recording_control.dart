@@ -11,6 +11,7 @@ import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
 import '../../application/recording_capture_controller.dart';
+import '../../application/recording_capture_launch_request.dart';
 import '../../application/recording_playback_controller.dart';
 import '../../data/couple_recording.dart';
 import 'character_recording_control.dart';
@@ -67,6 +68,9 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
     final coupleAsync = ref.watch(coupleControllerProvider);
     final overviewAsync = ref.watch(coupleRecordingOverviewControllerProvider);
     final captureState = ref.watch(recordingCaptureControllerProvider);
+    final captureLaunchRequestId = ref.watch(
+      recordingCaptureLaunchRequestProvider,
+    );
     final playbackState = ref.watch(
       recordingPlaybackControllerProvider(RecordingPlaybackSurface.home),
     );
@@ -98,6 +102,28 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
         playbackState.isPlaying &&
         playbackState.activeTargetKey == playbackTarget.key;
     final canRecord = couple?.canEditSharedData ?? false;
+
+    if (captureLaunchRequestId != null && coupleAsync.hasValue) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) {
+          return;
+        }
+        final requestController = ref.read(
+          recordingCaptureLaunchRequestProvider.notifier,
+        );
+        if (!requestController.consume(captureLaunchRequestId)) {
+          return;
+        }
+        final latestCaptureState = ref.read(recordingCaptureControllerProvider);
+        if (!canRecord || couple == null || !latestCaptureState.isIdle) {
+          return;
+        }
+
+        unawaited(HapticFeedback.mediumImpact());
+        unawaited(playbackController.reset());
+        unawaited(captureController.startRecording(couple));
+      });
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {

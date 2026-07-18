@@ -12,6 +12,9 @@ import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
+import 'package:vinscent/features/recordings/application/recording_capture_controller.dart';
+import 'package:vinscent/features/recordings/application/recording_capture_launch_request.dart';
+import 'package:vinscent/features/recordings/application/recording_playback_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
@@ -164,6 +167,37 @@ void main() {
     );
 
     expect(find.text(_firstRecordingPrompt), findsNothing);
+  });
+
+  testWidgets('widget recording request starts capture on the home character', (
+    tester,
+  ) async {
+    final captureController = _FakeRecordingCaptureController();
+    final playbackController = _FakeRecordingPlaybackController();
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
+      captureController: captureController,
+      playbackController: playbackController,
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeScreen)),
+    );
+    container.read(recordingCaptureLaunchRequestProvider.notifier).request();
+    await tester.pump();
+    await tester.pump();
+
+    expect(captureController.startCount, 1);
+    expect(playbackController.resetCount, 1);
+    expect(
+      container.read(recordingCaptureControllerProvider).phase,
+      RecordingCapturePhase.recording,
+    );
   });
 
   testWidgets(
@@ -811,6 +845,8 @@ Future<void> _pumpHome(
   TodayStoryLoopSummary? todaySummary,
   StoryLoopReadRepository? storyLoopRepository,
   CoupleRecordingOverview? recordingOverview,
+  RecordingCaptureController? captureController,
+  RecordingPlaybackController? playbackController,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -831,6 +867,14 @@ Future<void> _pumpHome(
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
           ),
+        if (captureController != null)
+          recordingCaptureControllerProvider.overrideWith(
+            () => captureController,
+          ),
+        if (playbackController != null)
+          recordingPlaybackControllerProvider(
+            RecordingPlaybackSurface.home,
+          ).overrideWith(() => playbackController),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
     ),
@@ -841,6 +885,38 @@ Future<void> _pumpHome(
   } else {
     await tester.pump();
   }
+}
+
+class _FakeRecordingCaptureController extends RecordingCaptureController {
+  int startCount = 0;
+
+  @override
+  RecordingCaptureState build() => const RecordingCaptureState.idle();
+
+  @override
+  Future<void> startRecording(Couple couple) async {
+    startCount += 1;
+    state = const RecordingCaptureState(
+      phase: RecordingCapturePhase.recording,
+      elapsedMs: 0,
+    );
+  }
+}
+
+class _FakeRecordingPlaybackController extends RecordingPlaybackController {
+  int resetCount = 0;
+
+  @override
+  RecordingPlaybackState build() => const RecordingPlaybackState.idle();
+
+  @override
+  Future<void> reset() async {
+    resetCount += 1;
+    state = const RecordingPlaybackState.idle();
+  }
+
+  @override
+  Future<void> syncAvailableTargetKeys(Set<String> targetKeys) async {}
 }
 
 class _PendingStoryLoopReadRepository implements StoryLoopReadRepository {
