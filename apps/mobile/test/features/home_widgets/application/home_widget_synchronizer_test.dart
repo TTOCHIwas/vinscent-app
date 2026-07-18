@@ -84,8 +84,7 @@ void main() {
   });
 }
 
-class _FakeHomeWidgetAssetDownloader
-    implements HomeWidgetAssetDownloader {
+class _FakeHomeWidgetAssetDownloader implements HomeWidgetAssetDownloader {
   final requestedUrls = <String>[];
 
   @override
