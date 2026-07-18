@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../../profile/application/profile_controller.dart';
-import '../../recordings/application/recording_capture_launch_request.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import 'home_widget_launch_policy.dart';
 
@@ -28,7 +27,6 @@ class HomeWidgetLaunchCoordinator {
       return null;
     }
     if (action == HomeWidgetLaunchAction.record) {
-      _ref.read(recordingCaptureLaunchRequestProvider.notifier).request();
       return HomeWidgetCardLaunchPolicy.homeLocation;
     }
 

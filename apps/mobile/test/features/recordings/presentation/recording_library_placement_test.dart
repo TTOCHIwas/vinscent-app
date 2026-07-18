@@ -312,6 +312,8 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
     required String coupleId,
     required Uint8List audioBytes,
     required int durationMs,
+    String? recordingId,
+    bool resumeExistingUpload = false,
   }) async {}
 
   @override

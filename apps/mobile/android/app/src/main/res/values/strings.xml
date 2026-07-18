@@ -4,8 +4,16 @@
     <string name="character_widget_description">커플 캐릭터와 녹음</string>
     <string name="character_widget_playback">녹음 재생</string>
     <string name="character_widget_record">녹음하기</string>
+    <string name="character_widget_stop_recording">녹음 끝내기</string>
+    <string name="character_widget_uploading">녹음 저장 중</string>
     <string name="card_widget_description">상대방의 최근 카드</string>
     <string name="card_widget_open">카드 열기</string>
     <string name="widget_playback_channel_name">녹음 재생</string>
     <string name="widget_playback_notification">녹음을 재생하고 있어요</string>
+    <string name="widget_recording_channel_name">위젯 녹음</string>
+    <string name="widget_recording_notification_title">녹음 중</string>
+    <string name="widget_recording_notification_text">위젯의 정지 버튼을 누르면 녹음이 끝나요</string>
+    <string name="widget_recording_stop">녹음 끝내기</string>
+    <string name="widget_recording_result_channel_name">위젯 녹음 저장</string>
+    <string name="widget_recording_save_failed">녹음을 저장하지 못했어요</string>
 </resources>

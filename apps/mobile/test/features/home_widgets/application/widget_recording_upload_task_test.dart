@@ -10,10 +10,12 @@ void main() {
       final request = WidgetRecordingUploadRequest.fromArguments({
         'filePath': '/data/user/0/com.vinscent.vinscent/files/pending.m4a',
         'durationMs': 4200,
+        'recordingId': '9f90dbff-7f06-4d06-ae53-b5e8762c83af',
       });
 
       expect(request.filePath, endsWith('pending.m4a'));
       expect(request.durationMs, 4200);
+      expect(request.recordingId, '9f90dbff-7f06-4d06-ae53-b5e8762c83af');
     });
 
     test('rejects an empty path and an out-of-range duration', () {
@@ -34,40 +36,43 @@ void main() {
     });
   });
 
-  test('uploads the draft before replacing the widget playback cache', () async {
-    final events = <String>[];
-    final reader = _FakeDraftReader(
-      Uint8List.fromList([1, 2, 3]),
-      onRead: () => events.add('read'),
-    );
-    final gateway = _FakeUploadGateway(
-      onUpload: (bytes, durationMs) {
-        expect(bytes, [1, 2, 3]);
-        expect(durationMs, 4200);
-        events.add('upload');
-      },
-    );
-    final cache = _FakePlaybackCache(
-      onReplace: (bytes) {
-        expect(bytes, [1, 2, 3]);
-        events.add('cache');
-      },
-    );
-    final task = WidgetRecordingUploadTask(
-      draftReader: reader,
-      uploadGateway: gateway,
-      playbackCache: cache,
-    );
+  test(
+    'uploads the draft before replacing the widget playback cache',
+    () async {
+      final events = <String>[];
+      final reader = _FakeDraftReader(
+        Uint8List.fromList([1, 2, 3]),
+        onRead: () => events.add('read'),
+      );
+      final gateway = _FakeUploadGateway(
+        onUpload: (bytes, durationMs) {
+          expect(bytes, [1, 2, 3]);
+          expect(durationMs, 4200);
+          events.add('upload');
+        },
+      );
+      final cache = _FakePlaybackCache(
+        onReplace: (bytes) {
+          expect(bytes, [1, 2, 3]);
+          events.add('cache');
+        },
+      );
+      final task = WidgetRecordingUploadTask(
+        draftReader: reader,
+        uploadGateway: gateway,
+        playbackCache: cache,
+      );
 
-    await task.execute(
-      const WidgetRecordingUploadRequest(
-        filePath: '/tmp/pending.m4a',
-        durationMs: 4200,
-      ),
-    );
+      await task.execute(
+        const WidgetRecordingUploadRequest(
+          filePath: '/tmp/pending.m4a',
+          durationMs: 4200,
+        ),
+      );
 
-    expect(events, ['read', 'upload', 'cache']);
-  });
+      expect(events, ['read', 'upload', 'cache']);
+    },
+  );
 
   test('does not replace the playback cache when upload fails', () async {
     final cache = _FakePlaybackCache();
@@ -141,7 +146,11 @@ class _FakeUploadGateway implements WidgetRecordingUploadGateway {
   final Object? error;
 
   @override
-  Future<void> upload(Uint8List bytes, {required int durationMs}) async {
+  Future<void> upload(
+    Uint8List bytes, {
+    required int durationMs,
+    String? recordingId,
+  }) async {
     final uploadError = error;
     if (uploadError != null) {
       throw uploadError;

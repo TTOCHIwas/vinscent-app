@@ -23,13 +23,15 @@ class AppBootstrap {
       _debugPushLog('Firebase initialization skipped: already initialized');
     }
 
-    if (AppConfig.isSupabaseConfigured) {
+    await initializeSupabase();
+  }
+
+  static Future<void> initializeSupabase() async {
+    if (AppConfig.isSupabaseConfigured && !Supabase.instance.isInitialized) {
       await Supabase.initialize(
         url: AppConfig.supabaseUrl,
         anonKey: AppConfig.supabaseAnonKey,
-        authOptions: const FlutterAuthClientOptions(
-          detectSessionInUri: false,
-        ),
+        authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
       );
     }
   }

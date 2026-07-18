@@ -1,17 +1,16 @@
 package com.vinscent.vinscent.widgets
 
+import android.Manifest
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
+import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.RemoteViews
-import com.vinscent.vinscent.MainActivity
 import com.vinscent.vinscent.R
-import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetPlugin
 import es.antonborri.home_widget.HomeWidgetProvider
 
@@ -26,8 +25,6 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
     }
 
     companion object {
-        private val recordUri = Uri.parse("vinscent://widget/record?homeWidget")
-
         fun updateAll(context: Context, raised: Boolean = false) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(
@@ -56,11 +53,18 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
             )
             val audioPath = data.getString(WidgetStorageKeys.RECORDING_AUDIO_PATH, null)
             val hasAudio = !audioPath.isNullOrBlank()
-            val recordIntent = HomeWidgetLaunchIntent.getActivity(
-                context,
-                MainActivity::class.java,
-                recordUri,
+            val recordingPhase = WidgetRecordingStateStore(context).phase()
+            val tapTarget = WidgetRecordingTapPolicy.resolve(
+                phase = recordingPhase,
+                hasMicrophonePermission = context.checkSelfPermission(
+                    Manifest.permission.RECORD_AUDIO,
+                ) == PackageManager.PERMISSION_GRANTED,
             )
+            val recordIntent = when (tapTarget) {
+                WidgetRecordingTapTarget.RECORDING_SERVICE -> recordingIntent(context)
+                WidgetRecordingTapTarget.PERMISSION_ACTIVITY -> permissionIntent(context)
+                WidgetRecordingTapTarget.DISABLED -> noOpIntent(context)
+            }
             val characterFrame = source?.let {
                 WidgetBitmapLoader.characterFrame(it, raised)
             }
@@ -80,13 +84,76 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                 }
                 views.setOnClickPendingIntent(
                     R.id.character_widget_image,
-                    if (hasAudio) playbackIntent(context) else recordIntent,
+                    if (recordingPhase == WidgetRecordingPhase.IDLE) {
+                        if (hasAudio) playbackIntent(context) else recordIntent
+                    } else {
+                        noOpIntent(context)
+                    },
+                )
+                val recordIcon = when (recordingPhase) {
+                    WidgetRecordingPhase.IDLE -> R.drawable.ic_widget_mic
+                    WidgetRecordingPhase.RECORDING -> R.drawable.ic_widget_stop
+                    WidgetRecordingPhase.UPLOADING -> R.drawable.ic_widget_uploading
+                }
+                val recordBackground = when (recordingPhase) {
+                    WidgetRecordingPhase.RECORDING ->
+                        R.drawable.widget_record_button_recording_background
+                    else -> R.drawable.widget_record_button_background
+                }
+                val recordDescription = when (recordingPhase) {
+                    WidgetRecordingPhase.IDLE -> R.string.character_widget_record
+                    WidgetRecordingPhase.RECORDING -> R.string.character_widget_stop_recording
+                    WidgetRecordingPhase.UPLOADING -> R.string.character_widget_uploading
+                }
+                views.setImageViewResource(R.id.character_widget_record, recordIcon)
+                views.setInt(
+                    R.id.character_widget_record,
+                    "setBackgroundResource",
+                    recordBackground,
+                )
+                views.setContentDescription(
+                    R.id.character_widget_record,
+                    context.getString(recordDescription),
                 )
                 views.setOnClickPendingIntent(R.id.character_widget_record, recordIntent)
                 manager.updateAppWidget(widgetId, views)
             }
             characterFrame?.recycle()
             source?.recycle()
+        }
+
+        private fun recordingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, WidgetRecordingService::class.java).apply {
+                action = WidgetRecordingService.ACTION_TOGGLE
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                PendingIntent.getForegroundService(context, 41, intent, flags)
+            } else {
+                PendingIntent.getService(context, 41, intent, flags)
+            }
+        }
+
+        private fun permissionIntent(context: Context): PendingIntent {
+            val intent = Intent(context, WidgetRecordingPermissionActivity::class.java)
+            return PendingIntent.getActivity(
+                context,
+                42,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        private fun noOpIntent(context: Context): PendingIntent {
+            val intent = Intent(context, CharacterWidgetProvider::class.java).apply {
+                action = ACTION_NO_OP
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                43,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         }
 
         private fun playbackIntent(context: Context): PendingIntent {
@@ -100,5 +167,7 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                 PendingIntent.getService(context, 31, intent, flags)
             }
         }
+
+        private const val ACTION_NO_OP = "com.vinscent.vinscent.widget.NO_OP"
     }
 }
