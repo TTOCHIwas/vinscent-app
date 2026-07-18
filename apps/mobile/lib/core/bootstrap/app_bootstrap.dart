@@ -27,7 +27,7 @@ class AppBootstrap {
   }
 
   static Future<void> initializeSupabase() async {
-    if (AppConfig.isSupabaseConfigured && !Supabase.instance.isInitialized) {
+    if (AppConfig.isSupabaseConfigured) {
       await Supabase.initialize(
         url: AppConfig.supabaseUrl,
         anonKey: AppConfig.supabaseAnonKey,
