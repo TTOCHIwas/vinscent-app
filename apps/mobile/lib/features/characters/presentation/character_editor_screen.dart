@@ -245,10 +245,6 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
             drawingDataJson: drawingData.toJsonString(),
           );
 
-      if (widget.isInitialSetup) {
-        await ref.read(coupleControllerProvider.notifier).refresh();
-      }
-
       if (mounted) {
         _closeEditor();
       }

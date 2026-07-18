@@ -61,6 +61,9 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
         );
 
     state = AsyncValue.data(character);
+    if (!couple.hasCustomCharacter) {
+      await ref.read(coupleControllerProvider.notifier).refresh();
+    }
     return character;
   }
 
