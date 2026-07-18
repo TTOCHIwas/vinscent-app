@@ -98,6 +98,27 @@ void main() {
     expect(cache.replaceCount, 0);
   });
 
+  test(
+    'keeps a completed upload successful when local cache refresh fails',
+    () async {
+      final gateway = _FakeUploadGateway();
+      final task = WidgetRecordingUploadTask(
+        draftReader: _FakeDraftReader(Uint8List.fromList([1])),
+        uploadGateway: gateway,
+        playbackCache: _FakePlaybackCache(error: StateError('cache failed')),
+      );
+
+      await task.execute(
+        const WidgetRecordingUploadRequest(
+          filePath: '/tmp/pending.m4a',
+          durationMs: 1000,
+        ),
+      );
+
+      expect(gateway.uploadCount, 1);
+    },
+  );
+
   test('only transient recording failures are retryable', () {
     expect(
       isRetryableWidgetRecordingUploadError(
@@ -144,6 +165,7 @@ class _FakeUploadGateway implements WidgetRecordingUploadGateway {
 
   final void Function(Uint8List bytes, int durationMs)? onUpload;
   final Object? error;
+  int uploadCount = 0;
 
   @override
   Future<void> upload(
@@ -151,6 +173,7 @@ class _FakeUploadGateway implements WidgetRecordingUploadGateway {
     required int durationMs,
     String? recordingId,
   }) async {
+    uploadCount += 1;
     final uploadError = error;
     if (uploadError != null) {
       throw uploadError;
@@ -160,14 +183,19 @@ class _FakeUploadGateway implements WidgetRecordingUploadGateway {
 }
 
 class _FakePlaybackCache implements WidgetRecordingPlaybackCache {
-  _FakePlaybackCache({this.onReplace});
+  _FakePlaybackCache({this.onReplace, this.error});
 
   final void Function(Uint8List bytes)? onReplace;
+  final Object? error;
   int replaceCount = 0;
 
   @override
   Future<void> replace(Uint8List bytes) async {
     replaceCount += 1;
+    final cacheError = error;
+    if (cacheError != null) {
+      throw cacheError;
+    }
     onReplace?.call(bytes);
   }
 }

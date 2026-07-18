@@ -61,20 +61,29 @@ class WidgetRecordingUploadWorker(
 
     private fun isValidDraft(filePath: String): Boolean {
         return runCatching {
-            val root = File(applicationContext.filesDir, DRAFT_DIRECTORY).canonicalFile
             val file = File(filePath).canonicalFile
             file.isFile &&
                 file.length() in 1..MAXIMUM_DRAFT_BYTES &&
-                file.path.startsWith(root.path + File.separator)
+                isOwnedDraft(file)
         }.getOrDefault(false)
     }
 
     private fun finishFailure(filePath: String?): Result {
-        filePath?.let(::File)?.delete()
+        filePath?.let(::File)?.let { file ->
+            runCatching {
+                val canonicalFile = file.canonicalFile
+                if (isOwnedDraft(canonicalFile)) canonicalFile.delete()
+            }
+        }
         WidgetRecordingStateStore(applicationContext).markIdle()
         CharacterWidgetProvider.updateAll(applicationContext)
         showFailureNotification()
         return Result.failure()
+    }
+
+    private fun isOwnedDraft(file: File): Boolean {
+        val root = File(applicationContext.filesDir, DRAFT_DIRECTORY).canonicalFile
+        return file.path.startsWith(root.path + File.separator)
     }
 
     private fun showFailureNotification() {
@@ -130,26 +139,28 @@ class WidgetRecordingUploadWorker(
             recordingId: String,
             filePath: String,
             durationMs: Int,
-        ) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val request = OneTimeWorkRequestBuilder<WidgetRecordingUploadWorker>()
-                .setInputData(
-                    workDataOf(
-                        INPUT_RECORDING_ID to recordingId,
-                        INPUT_FILE_PATH to filePath,
-                        INPUT_DURATION_MS to durationMs,
-                    ),
+        ): Boolean {
+            return runCatching {
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+                val request = OneTimeWorkRequestBuilder<WidgetRecordingUploadWorker>()
+                    .setInputData(
+                        workDataOf(
+                            INPUT_RECORDING_ID to recordingId,
+                            INPUT_FILE_PATH to filePath,
+                            INPUT_DURATION_MS to durationMs,
+                        ),
+                    )
+                    .setConstraints(constraints)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                    .build()
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    UNIQUE_WORK_NAME,
+                    ExistingWorkPolicy.REPLACE,
+                    request,
                 )
-                .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
-                .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                UNIQUE_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                request,
-            )
+            }.isSuccess
         }
     }
 }

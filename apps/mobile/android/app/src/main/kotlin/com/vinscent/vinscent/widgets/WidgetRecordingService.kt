@@ -61,7 +61,11 @@ class WidgetRecordingService : Service() {
     }
 
     private fun startRecordingIfPossible() {
-        if (recorder != null || stateStore.phase() == WidgetRecordingPhase.UPLOADING) {
+        if (recorder != null) {
+            return
+        }
+        if (stateStore.phase() == WidgetRecordingPhase.UPLOADING) {
+            stopSelf()
             return
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
@@ -150,12 +154,17 @@ class WidgetRecordingService : Service() {
         if (stoppedCleanly && file?.isFile == true && file.length() > 0L && id != null) {
             stateStore.markUploading(file.absolutePath, elapsedMs)
             CharacterWidgetProvider.updateAll(this)
-            WidgetRecordingUploadWorker.enqueue(
+            val enqueued = WidgetRecordingUploadWorker.enqueue(
                 context = this,
                 recordingId = id,
                 filePath = file.absolutePath,
                 durationMs = elapsedMs,
             )
+            if (!enqueued) {
+                file.delete()
+                stateStore.markIdle()
+                CharacterWidgetProvider.updateAll(this)
+            }
         } else {
             file?.delete()
             stateStore.markIdle()
@@ -193,7 +202,7 @@ class WidgetRecordingService : Service() {
 
     private fun startMicrophoneForeground() {
         val notification = buildRecordingNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
@@ -205,12 +214,7 @@ class WidgetRecordingService : Service() {
     }
 
     private fun stopForegroundCompat() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     private fun createNotificationChannel() {

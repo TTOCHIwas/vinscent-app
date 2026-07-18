@@ -89,7 +89,13 @@ class WidgetRecordingUploadTask {
       durationMs: request.durationMs,
       recordingId: request.recordingId,
     );
-    await _playbackCache.replace(bytes);
+    await _replacePlaybackCacheBestEffort(bytes);
+  }
+
+  Future<void> _replacePlaybackCacheBestEffort(Uint8List bytes) async {
+    try {
+      await _playbackCache.replace(bytes);
+    } catch (_) {}
   }
 }
 
