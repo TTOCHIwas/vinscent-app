@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
+import android.view.View
 import android.widget.RemoteViews
 import com.vinscent.vinscent.R
 import es.antonborri.home_widget.HomeWidgetPlugin
@@ -93,7 +94,7 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                 val recordIcon = when (recordingPhase) {
                     WidgetRecordingPhase.IDLE -> R.drawable.ic_widget_mic
                     WidgetRecordingPhase.RECORDING -> R.drawable.ic_widget_stop
-                    WidgetRecordingPhase.UPLOADING -> R.drawable.ic_widget_uploading
+                    WidgetRecordingPhase.UPLOADING -> R.drawable.ic_widget_mic
                 }
                 val recordBackground = when (recordingPhase) {
                     WidgetRecordingPhase.RECORDING ->
@@ -105,7 +106,16 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                     WidgetRecordingPhase.RECORDING -> R.string.character_widget_stop_recording
                     WidgetRecordingPhase.UPLOADING -> R.string.character_widget_uploading
                 }
-                views.setImageViewResource(R.id.character_widget_record, recordIcon)
+                val isUploading = recordingPhase == WidgetRecordingPhase.UPLOADING
+                views.setImageViewResource(R.id.character_widget_record_icon, recordIcon)
+                views.setViewVisibility(
+                    R.id.character_widget_record_icon,
+                    if (isUploading) View.GONE else View.VISIBLE,
+                )
+                views.setViewVisibility(
+                    R.id.character_widget_record_progress,
+                    if (isUploading) View.VISIBLE else View.GONE,
+                )
                 views.setInt(
                     R.id.character_widget_record,
                     "setBackgroundResource",
