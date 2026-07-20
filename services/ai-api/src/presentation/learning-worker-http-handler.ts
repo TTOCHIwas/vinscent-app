@@ -9,6 +9,7 @@ interface LearningJobBatchProcessor {
 interface LearningWorkerHttpHandlerOptions {
   serviceRoleKey: string;
   workerSecret?: string;
+  maximumBatchSize?: number;
   processor: LearningJobBatchProcessor;
   onError?: (error: unknown) => void;
 }
@@ -20,6 +21,14 @@ export function createLearningWorkerHttpHandler(
   const workerSecret = options.workerSecret === undefined
     ? null
     : requireSecret(options.workerSecret);
+  const maximumBatchSize = options.maximumBatchSize ?? 5;
+  if (
+    !Number.isInteger(maximumBatchSize)
+    || maximumBatchSize < 1
+    || maximumBatchSize > 5
+  ) {
+    throw new RangeError('maximum batch size must be between 1 and 5');
+  }
   const onError = options.onError ?? logSafeError;
 
   return async (request: Request): Promise<Response> => {
@@ -45,7 +54,7 @@ export function createLearningWorkerHttpHandler(
 
     let limit: number;
     try {
-      limit = await readLimit(request);
+      limit = await readLimit(request, maximumBatchSize);
     } catch (_) {
       return jsonResponse({ error: 'invalid_payload' }, 400);
     }
@@ -60,10 +69,13 @@ export function createLearningWorkerHttpHandler(
   };
 }
 
-async function readLimit(request: Request): Promise<number> {
+async function readLimit(
+  request: Request,
+  maximumBatchSize: number,
+): Promise<number> {
   const bodyText = await request.text();
   if (bodyText.trim().length === 0) {
-    return 3;
+    return Math.min(3, maximumBatchSize);
   }
 
   const body = JSON.parse(bodyText);
@@ -75,7 +87,7 @@ async function readLimit(request: Request): Promise<number> {
   if (!Number.isInteger(limit) || limit < 1 || limit > 5) {
     throw new RangeError('batch limit must be between 1 and 5');
   }
-  return limit;
+  return Math.min(limit, maximumBatchSize);
 }
 
 function requireSecret(value: string): string {

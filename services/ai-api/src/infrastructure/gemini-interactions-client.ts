@@ -3,9 +3,10 @@ import type {
 } from '../application/learning-model-port.ts';
 
 const defaultEndpoint =
-  'https://generativelanguage.googleapis.com/v1beta/interactions';
-const defaultModel = 'gemini-3.5-flash';
+  'https://generativelanguage.googleapis.com/v1/interactions';
+const defaultModel = 'gemini-2.5-flash-lite';
 const defaultTimeoutMs = 30_000;
+const maximumRetryAfterMs = 86_400_000;
 
 export interface StructuredGenerationRequest {
   prompt: string;
@@ -36,11 +37,17 @@ export class GeminiProviderError extends Error {
   readonly code: string;
   readonly retryable: boolean;
   readonly status: number | null;
+  readonly providerStatus: string | null;
+  readonly retryAfterMs: number | null;
+  readonly latencyMs: number;
 
   constructor(params: {
     code: string;
     retryable: boolean;
     status?: number | null;
+    providerStatus?: string | null;
+    retryAfterMs?: number | null;
+    latencyMs?: number;
     cause?: unknown;
   }) {
     super(params.code, { cause: params.cause });
@@ -48,16 +55,21 @@ export class GeminiProviderError extends Error {
     this.code = params.code;
     this.retryable = params.retryable;
     this.status = params.status ?? null;
+    this.providerStatus = params.providerStatus ?? null;
+    this.retryAfterMs = params.retryAfterMs ?? null;
+    this.latencyMs = params.latencyMs ?? 0;
   }
 }
 
 export class GeminiOutputError extends Error {
   readonly code = 'gemini_invalid_output';
   readonly retryable = false;
+  readonly latencyMs: number;
 
-  constructor(cause?: unknown) {
+  constructor(cause?: unknown, latencyMs = 0) {
     super('gemini_invalid_output', { cause });
     this.name = 'GeminiOutputError';
+    this.latencyMs = latencyMs;
   }
 }
 
@@ -121,17 +133,24 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
         signal: controller.signal,
       });
 
-      const payload = await readJsonResponse(response);
+      const completedAt = this.#now();
+      const latencyMs = Math.max(0, completedAt - startedAt);
+      const payload = await readJsonResponse(response, latencyMs);
       if (!response.ok) {
-        throw providerErrorForStatus(response.status);
+        throw providerErrorForResponse(
+          response,
+          payload,
+          completedAt,
+          latencyMs,
+        );
       }
 
-      const outputText = readOutputText(payload);
+      const outputText = readOutputText(payload, latencyMs);
       let value: unknown;
       try {
         value = JSON.parse(outputText);
       } catch (error) {
-        throw new GeminiOutputError(error);
+        throw new GeminiOutputError(error, latencyMs);
       }
 
       const usage = readUsage(payload);
@@ -140,7 +159,7 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
         usage: {
           inputTokenCount: usage.inputTokenCount,
           outputTokenCount: usage.outputTokenCount,
-          latencyMs: Math.max(0, this.#now() - startedAt),
+          latencyMs,
         },
       };
     } catch (error) {
@@ -152,6 +171,7 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
         throw new GeminiProviderError({
           code: 'gemini_timeout',
           retryable: true,
+          latencyMs: Math.max(0, this.#now() - startedAt),
           cause: error,
         });
       }
@@ -159,6 +179,7 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
       throw new GeminiProviderError({
         code: 'gemini_network_error',
         retryable: true,
+        latencyMs: Math.max(0, this.#now() - startedAt),
         cause: error,
       });
     } finally {
@@ -175,18 +196,21 @@ function requireConfigValue(value: string, name: string): string {
   return normalized;
 }
 
-async function readJsonResponse(response: Response): Promise<unknown> {
+async function readJsonResponse(
+  response: Response,
+  latencyMs: number,
+): Promise<unknown> {
   try {
     return await response.json();
   } catch (error) {
     if (response.ok) {
-      throw new GeminiOutputError(error);
+      throw new GeminiOutputError(error, latencyMs);
     }
     return null;
   }
 }
 
-function readOutputText(payload: unknown): string {
+function readOutputText(payload: unknown, latencyMs: number): string {
   const record = asRecord(payload);
   if (typeof record?.output_text === 'string' && record.output_text.length > 0) {
     return record.output_text;
@@ -217,7 +241,7 @@ function readOutputText(payload: unknown): string {
     .join('');
 
   if (text.length === 0) {
-    throw new GeminiOutputError();
+    throw new GeminiOutputError(undefined, latencyMs);
   }
   return text;
 }
@@ -245,47 +269,143 @@ function readNonNegativeInteger(value: unknown): number | null {
   return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : null;
 }
 
-function providerErrorForStatus(status: number): GeminiProviderError {
+function providerErrorForResponse(
+  response: Response,
+  payload: unknown,
+  completedAt: number,
+  latencyMs: number,
+): GeminiProviderError {
+  const status = response.status;
+  const diagnostics = {
+    status,
+    providerStatus: readProviderStatus(payload),
+    retryAfterMs: readRetryAfterMs(response, payload, completedAt),
+    latencyMs,
+  };
+
   if (status === 429) {
     return new GeminiProviderError({
       code: 'gemini_rate_limited',
       retryable: true,
-      status,
+      ...diagnostics,
     });
   }
   if (status === 408 || status === 409 || status >= 500) {
     return new GeminiProviderError({
       code: 'gemini_provider_unavailable',
       retryable: true,
-      status,
+      ...diagnostics,
     });
   }
   if (status === 400) {
     return new GeminiProviderError({
       code: 'gemini_invalid_request',
       retryable: false,
-      status,
+      ...diagnostics,
     });
   }
   if (status === 401 || status === 403) {
     return new GeminiProviderError({
       code: 'gemini_auth_failed',
       retryable: false,
-      status,
+      ...diagnostics,
     });
   }
   if (status === 404) {
     return new GeminiProviderError({
       code: 'gemini_model_not_found',
       retryable: false,
-      status,
+      ...diagnostics,
     });
   }
   return new GeminiProviderError({
     code: 'gemini_request_failed',
     retryable: false,
-    status,
+    ...diagnostics,
   });
+}
+
+function readProviderStatus(payload: unknown): string | null {
+  const error = asRecord(asRecord(payload)?.error);
+  const status = error?.status;
+  if (
+    typeof status !== 'string'
+    || !/^[A-Z][A-Z0-9_]{0,99}$/.test(status)
+  ) {
+    return null;
+  }
+  return status;
+}
+
+function readRetryAfterMs(
+  response: Response,
+  payload: unknown,
+  completedAt: number,
+): number | null {
+  const candidates = [
+    parseRetryAfterHeader(response.headers.get('retry-after'), completedAt),
+    parseRetryInfo(payload),
+  ].filter((value): value is number => value !== null);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+  return Math.min(maximumRetryAfterMs, Math.max(...candidates));
+}
+
+function parseRetryAfterHeader(
+  value: string | null,
+  completedAt: number,
+): number | null {
+  if (value === null) {
+    return null;
+  }
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return boundedRetryDelay(seconds * 1_000);
+  }
+
+  const retryAt = Date.parse(value);
+  if (!Number.isFinite(retryAt)) {
+    return null;
+  }
+  return boundedRetryDelay(Math.max(0, retryAt - completedAt));
+}
+
+function parseRetryInfo(payload: unknown): number | null {
+  const error = asRecord(asRecord(payload)?.error);
+  const details = error?.details;
+  if (!Array.isArray(details)) {
+    return null;
+  }
+
+  for (const value of details) {
+    const detail = asRecord(value);
+    if (
+      detail?.['@type'] !== 'type.googleapis.com/google.rpc.RetryInfo'
+      || typeof detail.retryDelay !== 'string'
+    ) {
+      continue;
+    }
+
+    const match = /^(\d+)(?:\.(\d{1,9}))?s$/.exec(detail.retryDelay);
+    if (match === null) {
+      continue;
+    }
+    const fraction = (match[2] ?? '').padEnd(9, '0');
+    return boundedRetryDelay(
+      Number(match[1]) * 1_000 + Number(fraction.slice(0, 3) || '0'),
+    );
+  }
+  return null;
+}
+
+function boundedRetryDelay(value: number): number | null {
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return Math.min(maximumRetryAfterMs, Math.ceil(value));
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

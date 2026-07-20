@@ -8,7 +8,7 @@ import {
   requiredEnv,
 } from '../_shared/push.ts';
 
-const defaultModel = 'gemini-3.5-flash';
+const defaultModel = 'gemini-2.5-flash-lite';
 
 const modelName = optionalEnv('GEMINI_MODEL') ?? defaultModel;
 const supabase = createServiceRoleClient();
@@ -31,6 +31,7 @@ Deno.serve(createLearningWorkerHttpHandler({
   serviceRoleKey: requiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
   workerSecret: optionalEnv('AI_WORKER_SECRET')
     ?? optionalEnv('SCHEDULE_WEBHOOK_SECRET'),
+  maximumBatchSize: optionalPositiveIntegerEnv('AI_WORKER_MAX_BATCH_SIZE') ?? 1,
   processor,
 }));
 

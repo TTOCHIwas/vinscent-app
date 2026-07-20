@@ -42,6 +42,9 @@ export interface RunFailure {
   errorCode: string;
   safetyStatus: 'flagged' | 'error';
   retryable: boolean;
+  providerHttpStatus: number | null;
+  providerErrorStatus: string | null;
+  retryAfterMs: number | null;
   usage: LearningModelUsage;
 }
 
@@ -83,6 +86,10 @@ interface ClassifiedFailure {
   errorCode: string;
   safetyStatus: 'flagged' | 'error';
   retryable: boolean;
+  providerHttpStatus: number | null;
+  providerErrorStatus: string | null;
+  retryAfterMs: number | null;
+  usage: LearningModelUsage;
 }
 
 const emptyUsage: LearningModelUsage = {
@@ -184,7 +191,8 @@ export class LearningJobProcessor {
 
         summary.succeeded += 1;
       } catch (error) {
-        const failure = classifyFailure(error);
+        const failure = classifyFailure(error, usage);
+        usage = failure.usage;
         if (runId === null) {
           await this.#repository.failClaimedJob(
             job.jobId,
@@ -197,6 +205,9 @@ export class LearningJobProcessor {
             errorCode: failure.errorCode,
             safetyStatus: failure.safetyStatus,
             retryable: failure.retryable,
+            providerHttpStatus: failure.providerHttpStatus,
+            providerErrorStatus: failure.providerErrorStatus,
+            retryAfterMs: failure.retryAfterMs,
             usage,
           });
         }
@@ -285,12 +296,23 @@ export class LearningJobProcessor {
   }
 }
 
-function classifyFailure(error: unknown): ClassifiedFailure {
+function classifyFailure(
+  error: unknown,
+  fallbackUsage: LearningModelUsage,
+): ClassifiedFailure {
   if (error instanceof GeminiProviderError) {
     return {
       errorCode: error.code,
       safetyStatus: 'error',
       retryable: error.retryable,
+      providerHttpStatus: error.status,
+      providerErrorStatus: error.providerStatus,
+      retryAfterMs: error.retryAfterMs,
+      usage: {
+        inputTokenCount: null,
+        outputTokenCount: null,
+        latencyMs: error.latencyMs,
+      },
     };
   }
   if (error instanceof GeminiOutputError) {
@@ -298,6 +320,14 @@ function classifyFailure(error: unknown): ClassifiedFailure {
       errorCode: error.code,
       safetyStatus: 'error',
       retryable: error.retryable,
+      providerHttpStatus: null,
+      providerErrorStatus: null,
+      retryAfterMs: null,
+      usage: {
+        inputTokenCount: null,
+        outputTokenCount: null,
+        latencyMs: error.latencyMs,
+      },
     };
   }
   if (error instanceof AiRepositoryError) {
@@ -305,6 +335,10 @@ function classifyFailure(error: unknown): ClassifiedFailure {
       errorCode: error.code,
       safetyStatus: 'error',
       retryable: error.retryable,
+      providerHttpStatus: null,
+      providerErrorStatus: null,
+      retryAfterMs: null,
+      usage: fallbackUsage,
     };
   }
   if (error instanceof RangeError || error instanceof TypeError) {
@@ -312,6 +346,10 @@ function classifyFailure(error: unknown): ClassifiedFailure {
       errorCode: 'model_contract_invalid',
       safetyStatus: 'error',
       retryable: false,
+      providerHttpStatus: null,
+      providerErrorStatus: null,
+      retryAfterMs: null,
+      usage: fallbackUsage,
     };
   }
   if (error instanceof Error) {
@@ -319,12 +357,20 @@ function classifyFailure(error: unknown): ClassifiedFailure {
       errorCode: 'model_contract_invalid',
       safetyStatus: 'error',
       retryable: false,
+      providerHttpStatus: null,
+      providerErrorStatus: null,
+      retryAfterMs: null,
+      usage: fallbackUsage,
     };
   }
   return {
     errorCode: 'ai_worker_unexpected',
     safetyStatus: 'error',
     retryable: true,
+    providerHttpStatus: null,
+    providerErrorStatus: null,
+    retryAfterMs: null,
+    usage: fallbackUsage,
   };
 }
 

@@ -19,9 +19,10 @@ npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 
 선택 설정은 다음과 같다.
 
-- `GEMINI_MODEL`: 기본값 `gemini-3.5-flash`
+- `GEMINI_MODEL`: 기본값 `gemini-2.5-flash-lite`
 - `GEMINI_INTERACTIONS_ENDPOINT`: Gemini Interactions API 주소 교체용
 - `GEMINI_TIMEOUT_MS`: 기본값 `30000`
+- `AI_WORKER_MAX_BATCH_SIZE`: 기본값 `1`, 허용 범위 `1~5`
 
 ## Deploy
 
@@ -44,13 +45,16 @@ Supabase Cron에서 1분 간격 HTTP 작업을 만들고 다음 요청을 보낸
 - URL: `https://<project-ref>.supabase.co/functions/v1/process-ai-learning-jobs`
 - Header: `x-ai-worker-secret: <AI_WORKER_SECRET 또는 SCHEDULE_WEBHOOK_SECRET>`
 - Header: `content-type: application/json`
-- Body: `{"limit":3}`
+- Body: `{"limit":1}`
 
-한 번에 허용되는 범위는 1~5건이다. 중복 스케줄 실행이 발생해도 DB의
-원자적 claim과 lease가 같은 작업의 중복 처리를 막는다.
+요청 범위는 1~5건이지만 실제 처리량은 `AI_WORKER_MAX_BATCH_SIZE`로 제한된다.
+무료 테스트 환경에서는 공급자 요청이 몰리지 않도록 기본 1건을 유지한다. 중복
+스케줄 실행이 발생해도 DB의 원자적 claim과 lease가 같은 작업의 중복 처리를
+막는다.
 
 ## Privacy
 
 모델 입력에는 실제 사용자·커플 식별자 대신 익명 참여자 키만 전달한다.
 원문 질문과 답변은 실행 로그에 저장하지 않으며, 로그에는 작업 종류,
-모델, 토큰 수, 지연 시간, 제한된 오류 코드만 남긴다.
+모델, 토큰 수, 지연 시간, 제한된 오류 코드, HTTP 상태, 공급자 상태와
+재시도 대기 시간만 남긴다. 공급자 오류 메시지와 응답 본문은 저장하지 않는다.

@@ -121,7 +121,7 @@ export class SupabaseLearningJobRepository implements LearningJobRepository {
 
   async failRun(failure: RunFailure): Promise<boolean> {
     const data = await this.#rpc(
-      'fail_ai_processing_run',
+      'fail_ai_processing_run_with_diagnostics',
       {
         requested_run_id: failure.runId,
         requested_error_code: failure.errorCode,
@@ -130,6 +130,9 @@ export class SupabaseLearningJobRepository implements LearningJobRepository {
         requested_input_token_count: failure.usage.inputTokenCount,
         requested_output_token_count: failure.usage.outputTokenCount,
         requested_latency_ms: failure.usage.latencyMs,
+        requested_provider_http_status: failure.providerHttpStatus,
+        requested_provider_error_status: failure.providerErrorStatus,
+        requested_retry_after_ms: failure.retryAfterMs,
       },
       'ai_run_failure_record_failed',
     );
