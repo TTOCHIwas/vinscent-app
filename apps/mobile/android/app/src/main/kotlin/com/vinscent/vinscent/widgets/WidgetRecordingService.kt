@@ -27,6 +27,19 @@ class WidgetRecordingService : Service() {
     private var recordingId: String? = null
     private var startedAtElapsedMs = 0L
     private var stopping = false
+    private val progressUpdate = object : Runnable {
+        override fun run() {
+            if (recorder == null || stopping) return
+            val elapsedMs = SystemClock.elapsedRealtime() - startedAtElapsedMs
+            CharacterWidgetProvider.updateRecordingProgress(
+                this@WidgetRecordingService,
+                elapsedMs,
+            )
+            if (elapsedMs < WidgetRecordingDuration.MAXIMUM_MS) {
+                mainHandler.postDelayed(this, PROGRESS_UPDATE_INTERVAL_MS)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -54,6 +67,7 @@ class WidgetRecordingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        stopProgressUpdates()
         if (recorder != null) {
             discardInterruptedRecording()
         }
@@ -103,6 +117,7 @@ class WidgetRecordingService : Service() {
         stopping = false
         stateStore.markRecording(nextDraft.absolutePath, System.currentTimeMillis())
         CharacterWidgetProvider.updateAll(this)
+        startProgressUpdates()
     }
 
     private fun createRecorder(output: File): MediaRecorder {
@@ -119,7 +134,7 @@ class WidgetRecordingService : Service() {
             setAudioEncodingBitRate(AUDIO_BIT_RATE)
             setAudioSamplingRate(AUDIO_SAMPLE_RATE)
             setOutputFile(output.absolutePath)
-            setMaxDuration(MAXIMUM_DURATION_MS)
+            setMaxDuration(WidgetRecordingDuration.MAXIMUM_MS)
             setOnInfoListener { _, what, _ ->
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
                     mainHandler.post { stopAndUpload() }
@@ -135,9 +150,10 @@ class WidgetRecordingService : Service() {
             return
         }
         stopping = true
+        stopProgressUpdates()
 
         val elapsedMs = (SystemClock.elapsedRealtime() - startedAtElapsedMs)
-            .coerceIn(1L, MAXIMUM_DURATION_MS.toLong())
+            .coerceIn(1L, WidgetRecordingDuration.MAXIMUM_MS.toLong())
             .toInt()
         val file = draftFile
         val id = recordingId
@@ -185,6 +201,7 @@ class WidgetRecordingService : Service() {
     }
 
     private fun discardInterruptedRecording() {
+        stopProgressUpdates()
         runCatching { recorder?.stop() }
         recorder?.release()
         recorder = null
@@ -193,6 +210,15 @@ class WidgetRecordingService : Service() {
         recordingId = null
         stateStore.markIdle()
         CharacterWidgetProvider.updateAll(this)
+    }
+
+    private fun startProgressUpdates() {
+        mainHandler.removeCallbacks(progressUpdate)
+        mainHandler.post(progressUpdate)
+    }
+
+    private fun stopProgressUpdates() {
+        mainHandler.removeCallbacks(progressUpdate)
     }
 
     private fun createDraftFile(id: String): File {
@@ -278,7 +304,7 @@ class WidgetRecordingService : Service() {
         private const val DRAFT_DIRECTORY = "widget_recordings"
         private const val CHANNEL_ID = "vinscent_widget_recording"
         private const val NOTIFICATION_ID = 2401
-        private const val MAXIMUM_DURATION_MS = 15000
+        private const val PROGRESS_UPDATE_INTERVAL_MS = 250L
         private const val AUDIO_SAMPLE_RATE = 44100
         private const val AUDIO_BIT_RATE = 96000
     }

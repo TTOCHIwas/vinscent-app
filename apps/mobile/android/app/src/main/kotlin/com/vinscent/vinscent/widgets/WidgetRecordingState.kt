@@ -40,6 +40,46 @@ internal object WidgetRecordingTapPolicy {
     }
 }
 
+internal data class WidgetRecordingIndicatorVisibility(
+    val showRecordingRing: Boolean,
+    val showUploadSpinner: Boolean,
+)
+
+internal object WidgetRecordingIndicatorPolicy {
+    fun resolve(phase: WidgetRecordingPhase): WidgetRecordingIndicatorVisibility {
+        return when (phase) {
+            WidgetRecordingPhase.IDLE -> WidgetRecordingIndicatorVisibility(
+                showRecordingRing = false,
+                showUploadSpinner = false,
+            )
+            WidgetRecordingPhase.RECORDING -> WidgetRecordingIndicatorVisibility(
+                showRecordingRing = true,
+                showUploadSpinner = false,
+            )
+            WidgetRecordingPhase.UPLOADING -> WidgetRecordingIndicatorVisibility(
+                showRecordingRing = false,
+                showUploadSpinner = true,
+            )
+        }
+    }
+}
+
+internal object WidgetRecordingDuration {
+    const val MAXIMUM_MS = 15_000
+
+    fun elapsedSince(startedAtMs: Long?, nowMs: Long): Int {
+        if (startedAtMs == null) return 0
+        return (nowMs - startedAtMs)
+            .coerceIn(0L, MAXIMUM_MS.toLong())
+            .toInt()
+    }
+
+    fun remainingMs(elapsedMs: Long): Int {
+        val boundedElapsedMs = elapsedMs.coerceIn(0L, MAXIMUM_MS.toLong())
+        return MAXIMUM_MS - boundedElapsedMs.toInt()
+    }
+}
+
 internal class WidgetRecordingStateStore(context: Context) {
     private val data = HomeWidgetPlugin.getData(context)
 
@@ -51,6 +91,11 @@ internal class WidgetRecordingStateStore(context: Context) {
 
     fun draftPath(): String? {
         return data.getString(WidgetStorageKeys.RECORDING_DRAFT_PATH, null)
+    }
+
+    fun recordingStartedAtMs(): Long? {
+        return data.getLong(WidgetStorageKeys.RECORDING_STARTED_AT, 0L)
+            .takeIf { it > 0L }
     }
 
     fun markRecording(filePath: String, startedAtMs: Long) {

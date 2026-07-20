@@ -3,6 +3,7 @@ package com.vinscent.vinscent.widgets
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import java.io.File
@@ -53,18 +54,22 @@ internal object WidgetBitmapLoader {
     }
 
     fun characterFrame(source: Bitmap, raised: Boolean): Bitmap {
-        val horizontalPadding = max(8, source.width / 48)
-        val verticalPadding = max(12, source.height / 12)
+        val horizontalPadding = max(8, CHARACTER_FRAME_WIDTH / 48)
+        val verticalPadding = max(12, CHARACTER_FRAME_HEIGHT / 12)
         val frame = Bitmap.createBitmap(
-            source.width + horizontalPadding * 2,
-            source.height + verticalPadding * 2,
+            CHARACTER_FRAME_WIDTH,
+            CHARACTER_FRAME_HEIGHT,
             Bitmap.Config.ARGB_8888,
         )
         val activeScale = if (raised) 1.07f else 1f
-        val targetWidth = source.width * activeScale
-        val targetHeight = source.height * activeScale
+        val fittedScale = minOf(
+            (frame.width - horizontalPadding * 2).toFloat() / source.width,
+            (frame.height - verticalPadding * 2).toFloat() / source.height,
+        )
+        val targetWidth = source.width * fittedScale * activeScale
+        val targetHeight = source.height * fittedScale * activeScale
         val left = (frame.width - targetWidth) / 2f
-        val restingTop = verticalPadding + (source.height - targetHeight) / 2f
+        val restingTop = (frame.height - targetHeight) / 2f
         val lift = if (raised) verticalPadding * 0.45f else 0f
         val target = RectF(
             left,
@@ -73,7 +78,13 @@ internal object WidgetBitmapLoader {
             restingTop - lift + targetHeight,
         )
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        Canvas(frame).drawBitmap(source, null, target, paint)
+        Canvas(frame).apply {
+            drawColor(Color.WHITE)
+            drawBitmap(source, null, target, paint)
+        }
         return frame
     }
+
+    private const val CHARACTER_FRAME_WIDTH = 384
+    private const val CHARACTER_FRAME_HEIGHT = 480
 }

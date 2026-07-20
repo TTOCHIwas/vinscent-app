@@ -54,7 +54,14 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
             )
             val audioPath = data.getString(WidgetStorageKeys.RECORDING_AUDIO_PATH, null)
             val hasAudio = !audioPath.isNullOrBlank()
-            val recordingPhase = WidgetRecordingStateStore(context).phase()
+            val recordingStateStore = WidgetRecordingStateStore(context)
+            val recordingPhase = recordingStateStore.phase()
+            val recordingProgress = WidgetRecordingDuration.remainingMs(
+                WidgetRecordingDuration.elapsedSince(
+                    startedAtMs = recordingStateStore.recordingStartedAtMs(),
+                    nowMs = System.currentTimeMillis(),
+                ).toLong(),
+            )
             val tapTarget = WidgetRecordingTapPolicy.resolve(
                 phase = recordingPhase,
                 hasMicrophonePermission = context.checkSelfPermission(
@@ -106,15 +113,25 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                     WidgetRecordingPhase.RECORDING -> R.string.character_widget_stop_recording
                     WidgetRecordingPhase.UPLOADING -> R.string.character_widget_uploading
                 }
-                val isUploading = recordingPhase == WidgetRecordingPhase.UPLOADING
+                val indicatorVisibility = WidgetRecordingIndicatorPolicy.resolve(recordingPhase)
                 views.setImageViewResource(R.id.character_widget_record_icon, recordIcon)
                 views.setViewVisibility(
                     R.id.character_widget_record_icon,
-                    if (isUploading) View.GONE else View.VISIBLE,
+                    if (indicatorVisibility.showUploadSpinner) View.GONE else View.VISIBLE,
+                )
+                views.setViewVisibility(
+                    R.id.character_widget_recording_indicator,
+                    if (indicatorVisibility.showRecordingRing) View.VISIBLE else View.GONE,
+                )
+                views.setProgressBar(
+                    R.id.character_widget_recording_indicator,
+                    WidgetRecordingDuration.MAXIMUM_MS,
+                    recordingProgress,
+                    false,
                 )
                 views.setViewVisibility(
                     R.id.character_widget_record_progress,
-                    if (isUploading) View.VISIBLE else View.GONE,
+                    if (indicatorVisibility.showUploadSpinner) View.VISIBLE else View.GONE,
                 )
                 views.setInt(
                     R.id.character_widget_record,
@@ -130,6 +147,23 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
             }
             characterFrame?.recycle()
             source?.recycle()
+        }
+
+        fun updateRecordingProgress(context: Context, elapsedMs: Long) {
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = manager.getAppWidgetIds(
+                ComponentName(context, CharacterWidgetProvider::class.java),
+            )
+            if (ids.isEmpty()) return
+
+            val views = RemoteViews(context.packageName, R.layout.character_widget)
+            views.setProgressBar(
+                R.id.character_widget_recording_indicator,
+                WidgetRecordingDuration.MAXIMUM_MS,
+                WidgetRecordingDuration.remainingMs(elapsedMs),
+                false,
+            )
+            manager.partiallyUpdateAppWidget(ids, views)
         }
 
         private fun recordingIntent(context: Context): PendingIntent {

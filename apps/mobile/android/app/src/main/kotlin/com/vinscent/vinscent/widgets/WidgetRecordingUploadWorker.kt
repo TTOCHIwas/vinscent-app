@@ -31,7 +31,7 @@ class WidgetRecordingUploadWorker(
         val durationMs = inputData.getInt(INPUT_DURATION_MS, 0)
         if (recordingId.isNullOrBlank() ||
             filePath.isNullOrBlank() ||
-            durationMs !in 1..MAXIMUM_DURATION_MS ||
+            durationMs !in 1..WidgetRecordingDuration.MAXIMUM_MS ||
             !isValidDraft(filePath)
         ) {
             return finishFailure(filePath)
@@ -130,7 +130,6 @@ class WidgetRecordingUploadWorker(
         private const val DRAFT_DIRECTORY = "widget_recordings"
         private const val FAILURE_CHANNEL_ID = "vinscent_widget_recording_result"
         private const val FAILURE_NOTIFICATION_ID = 2403
-        private const val MAXIMUM_DURATION_MS = 15000
         private const val MAXIMUM_DRAFT_BYTES = 4L * 1024L * 1024L
         private const val MAXIMUM_ATTEMPTS = 3
 
