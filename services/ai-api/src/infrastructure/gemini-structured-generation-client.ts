@@ -4,7 +4,7 @@ import type {
 
 const defaultEndpointBase =
   'https://generativelanguage.googleapis.com/v1beta/models';
-const defaultModel = 'gemini-2.5-flash-lite';
+const defaultModel = 'gemini-3.1-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
 

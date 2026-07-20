@@ -201,7 +201,7 @@ test('Gemini client defaults to the lightweight stable model endpoint', async ()
   assert.equal(
     capturedUrl,
     'https://generativelanguage.googleapis.com/v1beta/models/'
-      + 'gemini-2.5-flash-lite:generateContent',
+      + 'gemini-3.1-flash-lite:generateContent',
   );
 });
 
