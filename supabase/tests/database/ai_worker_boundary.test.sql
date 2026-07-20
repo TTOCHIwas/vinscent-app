@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(25);
+select plan(26);
 
 insert into auth.users (
   id,
@@ -464,6 +464,23 @@ select is(
   'published'::text,
   'successful feedback is immediately readable'
 );
+
+select set_config(
+  'request.jwt.claim.sub',
+  '11000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.get_ai_question_feedback(
+    '41000000-0000-0000-0000-000000000001'
+  )->>'feedback_text',
+  'You value different moments and can make room for both.'::text,
+  'a couple member can read published question feedback'
+);
+
+reset role;
 
 insert into ai_worker_test_values (value_key, value_uuid)
 select

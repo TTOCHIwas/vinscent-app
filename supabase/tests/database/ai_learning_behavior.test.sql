@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(24);
+select plan(30);
 
 insert into auth.users (
   id,
@@ -228,6 +228,16 @@ select is(
   'the first completed question remains in the collecting stage'
 );
 
+select is(
+  (
+    public.get_ai_learning_dashboard()
+      ->'progress'
+      ->>'completed_count'
+  )::integer,
+  1,
+  'the AI dashboard includes learning progress'
+);
+
 reset role;
 
 insert into public.ai_runs (
@@ -359,6 +369,17 @@ set local role authenticated;
 
 select is(
   (
+    public.get_ai_learning_dashboard()
+      ->'memories'
+      ->0
+      ->>'can_confirm'
+  )::boolean,
+  true,
+  'the subject can confirm a pending personal memory from the dashboard'
+);
+
+select is(
+  (
     select memory_state
     from public.confirm_ai_memory(
       '70000000-0000-0000-0000-000000000001',
@@ -382,6 +403,97 @@ select is(
   (select count(*) from public.list_ai_memories()),
   1::bigint,
   'a confirmed personal memory is shared with the partner'
+);
+
+select is(
+  (
+    public.get_ai_learning_dashboard()
+      ->'memories'
+      ->0
+      ->>'can_confirm'
+  )::boolean,
+  false,
+  'the partner cannot confirm another member personal memory'
+);
+
+reset role;
+
+insert into public.ai_memories (
+  id,
+  couple_id,
+  scope,
+  subject_user_id,
+  memory_key,
+  kind,
+  statement,
+  confidence,
+  source_run_id,
+  observed_at,
+  last_observed_at
+)
+values (
+  '70000000-0000-0000-0000-000000000002',
+  '20000000-0000-0000-0000-000000000001',
+  'couple',
+  null,
+  'test_couple_memory',
+  'relationship_pattern',
+  '두 사람이 함께 확인해야 하는 커플 기억',
+  0.85,
+  '60000000-0000-0000-0000-000000000001',
+  now(),
+  now()
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '10000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select is(
+  (
+    select memory_state
+    from public.confirm_ai_memory(
+      '70000000-0000-0000-0000-000000000002',
+      'confirmed'
+    )
+  ),
+  'pending'::text,
+  'one confirmation keeps a couple memory pending'
+);
+
+select is(
+  (
+    select memory->>'my_decision'
+    from jsonb_array_elements(
+      public.get_ai_learning_dashboard()->'memories'
+    ) as memory
+    where memory->>'memory_id' =
+      '70000000-0000-0000-0000-000000000002'
+  ),
+  'confirmed'::text,
+  'the dashboard exposes the current member confirmation'
+);
+
+select is(
+  (
+    select concat(
+      memory->>'can_confirm',
+      ':',
+      memory->>'confirmed_count',
+      ':',
+      memory->>'required_confirmation_count'
+    )
+    from jsonb_array_elements(
+      public.get_ai_learning_dashboard()->'memories'
+    ) as memory
+    where memory->>'memory_id' =
+      '70000000-0000-0000-0000-000000000002'
+  ),
+  'false:1:2'::text,
+  'the dashboard represents partner confirmation waiting state'
 );
 
 reset role;
