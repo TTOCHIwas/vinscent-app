@@ -92,6 +92,31 @@ test('worker handler validates and caps the requested batch size', async () => {
   assert.deepEqual(receivedLimits, [3, 5]);
 });
 
+test('worker handler honors a deployment batch cap', async () => {
+  const receivedLimits: number[] = [];
+  const handler = createLearningWorkerHttpHandler({
+    serviceRoleKey: 'service-role-secret',
+    maximumBatchSize: 1,
+    processor: {
+      async processBatch(limit) {
+        receivedLimits.push(limit);
+        return { claimed: 0, succeeded: 0, retried: 0, failed: 0 };
+      },
+    },
+  });
+  const response = await handler(new Request('https://example.test', {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer service-role-secret',
+      'content-type': 'application/json',
+    },
+    body: '{"limit":5}',
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(receivedLimits, [1]);
+});
+
 test('worker handler does not expose internal processing errors', async () => {
   const handler = createLearningWorkerHttpHandler({
     serviceRoleKey: 'service-role-secret',

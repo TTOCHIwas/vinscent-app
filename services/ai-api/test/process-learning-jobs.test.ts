@@ -171,6 +171,9 @@ test('processor records retryable model failures and continues the batch', async
           code: 'gemini_rate_limited',
           retryable: true,
           status: 429,
+          providerStatus: 'RESOURCE_EXHAUSTED',
+          retryAfterMs: 45_000,
+          latencyMs: 275,
         });
       }
       return result({ text: 'The second job succeeds.' });
@@ -194,6 +197,13 @@ test('processor records retryable model failures and continues the batch', async
   });
   assert.equal(repository.failures[0]?.errorCode, 'gemini_rate_limited');
   assert.equal(repository.failures[0]?.retryable, true);
+  assert.equal(repository.failures[0]?.providerHttpStatus, 429);
+  assert.equal(
+    repository.failures[0]?.providerErrorStatus,
+    'RESOURCE_EXHAUSTED',
+  );
+  assert.equal(repository.failures[0]?.retryAfterMs, 45_000);
+  assert.equal(repository.failures[0]?.usage.latencyMs, 275);
   assert.equal(repository.successes[0]?.runId, 'run-job-next');
 });
 

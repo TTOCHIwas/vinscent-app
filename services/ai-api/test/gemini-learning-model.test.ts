@@ -77,7 +77,7 @@ test('Gemini client sends structured Interactions API request and reports usage'
 
   assert.equal(
     capturedUrl,
-    'https://generativelanguage.googleapis.com/v1beta/interactions',
+    'https://generativelanguage.googleapis.com/v1/interactions',
   );
   assert.equal(
     new Headers(capturedInit?.headers).get('x-goog-api-key'),
@@ -122,11 +122,27 @@ test('Gemini client reads v1beta2 model output steps', async () => {
 });
 
 test('Gemini client classifies rate limits as retryable', async () => {
+  const clockValues = [1_000, 1_275];
   const client = new GeminiInteractionsClient({
     apiKey: 'test-api-key',
+    now: () => clockValues.shift() ?? 1_275,
     fetcher: async () => new Response(
-      JSON.stringify({ error: { message: 'Quota exceeded' } }),
-      { status: 429 },
+      JSON.stringify({
+        error: {
+          status: 'RESOURCE_EXHAUSTED',
+          message: 'Quota exceeded',
+          details: [
+            {
+              '@type': 'type.googleapis.com/google.rpc.RetryInfo',
+              retryDelay: '45.25s',
+            },
+          ],
+        },
+      }),
+      {
+        status: 429,
+        headers: { 'retry-after': '30' },
+      },
     ),
   });
 
@@ -140,9 +156,32 @@ test('Gemini client classifies rate limits as retryable', async () => {
       assert.equal(error.code, 'gemini_rate_limited');
       assert.equal(error.retryable, true);
       assert.equal(error.status, 429);
+      assert.equal(error.providerStatus, 'RESOURCE_EXHAUSTED');
+      assert.equal(error.retryAfterMs, 45_250);
+      assert.equal(error.latencyMs, 275);
       return true;
     },
   );
+});
+
+test('Gemini client defaults to the lightweight stable model', async () => {
+  let capturedBody = '';
+  const client = new GeminiInteractionsClient({
+    apiKey: 'test-api-key',
+    fetcher: async (_input, init) => {
+      capturedBody = String(init?.body);
+      return new Response(JSON.stringify({
+        output_text: '{"feedback_text":"ok"}',
+      }));
+    },
+  });
+
+  await client.generateStructured({
+    prompt: 'Return feedback.',
+    schema: { type: 'object' },
+  });
+
+  assert.equal(JSON.parse(capturedBody).model, 'gemini-2.5-flash-lite');
 });
 
 test('Gemini client classifies invalid requests as terminal', async () => {

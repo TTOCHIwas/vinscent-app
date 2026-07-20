@@ -87,7 +87,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
   const client = new FakeRpcClient({
     start_ai_processing_run: { data: 'run-1', error: null },
     succeed_ai_processing_run: { data: true, error: null },
-    fail_ai_processing_run: { data: true, error: null },
+    fail_ai_processing_run_with_diagnostics: { data: true, error: null },
     complete_ai_processing_job: { data: true, error: null },
     expand_ai_rebuild_profile_job: { data: true, error: null },
   });
@@ -120,6 +120,9 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
     errorCode: 'gemini_rate_limited',
     safetyStatus: 'error',
     retryable: true,
+    providerHttpStatus: 429,
+    providerErrorStatus: 'RESOURCE_EXHAUSTED',
+    retryAfterMs: 45_000,
     usage: {
       inputTokenCount: null,
       outputTokenCount: null,
@@ -140,7 +143,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
     },
   });
   assert.deepEqual(client.calls[2], {
-    name: 'fail_ai_processing_run',
+    name: 'fail_ai_processing_run_with_diagnostics',
     params: {
       requested_run_id: 'run-1',
       requested_error_code: 'gemini_rate_limited',
@@ -149,6 +152,9 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
       requested_input_token_count: null,
       requested_output_token_count: null,
       requested_latency_ms: 200,
+      requested_provider_http_status: 429,
+      requested_provider_error_status: 'RESOURCE_EXHAUSTED',
+      requested_retry_after_ms: 45_000,
     },
   });
   assert.deepEqual(client.calls[3], {

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(26);
+select plan(31);
 
 insert into auth.users (
   id,
@@ -546,7 +546,7 @@ select ok(
 );
 
 select is(
-  public.fail_ai_processing_run(
+  public.fail_ai_processing_run_with_diagnostics(
     (
       select value_uuid
       from ai_worker_test_values
@@ -557,7 +557,10 @@ select is(
     true,
     null,
     null,
-    300
+    300,
+    429,
+    'RESOURCE_EXHAUSTED',
+    120000
   ),
   true,
   'worker can record a retryable provider failure'
@@ -585,6 +588,67 @@ select is(
   ),
   'pending'::text,
   'retryable failure returns the job to the queue'
+);
+
+select is(
+  (
+    select air.provider_http_status
+    from public.ai_runs as air
+    where air.id = (
+      select value_uuid
+      from ai_worker_test_values
+      where value_key = 'failure_run'
+    )
+  ),
+  429,
+  'provider HTTP status is retained without storing response content'
+);
+
+select is(
+  (
+    select air.provider_error_status
+    from public.ai_runs as air
+    where air.id = (
+      select value_uuid
+      from ai_worker_test_values
+      where value_key = 'failure_run'
+    )
+  ),
+  'RESOURCE_EXHAUSTED'::text,
+  'bounded provider error status is retained'
+);
+
+select is(
+  (
+    select air.provider_retry_after_ms
+    from public.ai_runs as air
+    where air.id = (
+      select value_uuid
+      from ai_worker_test_values
+      where value_key = 'failure_run'
+    )
+  ),
+  120000,
+  'provider retry delay is retained'
+);
+
+select ok(
+  (
+    select aipj.available_at > now() + interval '90 seconds'
+    from public.ai_processing_jobs as aipj
+    where aipj.id = '81000000-0000-0000-0000-000000000004'
+  ),
+  'retry honors provider delay and does not immediately burst again'
+);
+
+select is(
+  (
+    select aipj.max_attempts
+    from public.ai_processing_jobs as aipj
+    where aipj.id = '81000000-0000-0000-0000-000000000004'
+  ),
+  5,
+  'AI jobs receive enough attempts for exponential provider backoff'
 );
 
 select is(
