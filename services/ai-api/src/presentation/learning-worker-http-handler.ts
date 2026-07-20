@@ -8,6 +8,7 @@ interface LearningJobBatchProcessor {
 
 interface LearningWorkerHttpHandlerOptions {
   serviceRoleKey: string;
+  workerSecret?: string;
   processor: LearningJobBatchProcessor;
   onError?: (error: unknown) => void;
 }
@@ -16,6 +17,9 @@ export function createLearningWorkerHttpHandler(
   options: LearningWorkerHttpHandlerOptions,
 ): (request: Request) => Promise<Response> {
   const serviceRoleKey = requireSecret(options.serviceRoleKey);
+  const workerSecret = options.workerSecret === undefined
+    ? null
+    : requireSecret(options.workerSecret);
   const onError = options.onError ?? logSafeError;
 
   return async (request: Request): Promise<Response> => {
@@ -27,7 +31,15 @@ export function createLearningWorkerHttpHandler(
     const providedKey = authorization?.startsWith('Bearer ')
       ? authorization.slice('Bearer '.length)
       : '';
-    if (!constantTimeEquals(providedKey, serviceRoleKey)) {
+    const providedWorkerSecret =
+      request.headers.get('x-ai-worker-secret') ?? '';
+    const isServiceRoleRequest = constantTimeEquals(
+      providedKey,
+      serviceRoleKey,
+    );
+    const isScheduledRequest = workerSecret !== null
+      && constantTimeEquals(providedWorkerSecret, workerSecret);
+    if (!isServiceRoleRequest && !isScheduledRequest) {
       return jsonResponse({ error: 'unauthorized' }, 401);
     }
 
