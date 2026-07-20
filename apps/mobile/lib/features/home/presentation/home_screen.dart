@@ -339,16 +339,26 @@ class _HomeStoryLoopContent extends StatelessWidget {
     );
     final questionText = this.questionText;
     final hasStoryEntry = myCard != null || partnerCard != null || canAddCard;
+    final maximumCardHeight = cardsAreCompleted
+        ? HomeHangingStoryCards.maximumCompactHeight
+        : HomeHangingStoryCards.maximumStandardHeight;
 
     if (questionText == null) {
-      return Align(alignment: Alignment.topCenter, child: storyEntry);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final cardHeight = constraints.hasBoundedHeight
+              ? math.min(maximumCardHeight, constraints.maxHeight)
+              : maximumCardHeight;
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(height: cardHeight, child: storyEntry),
+          );
+        },
+      );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maximumCardHeight = cardsAreCompleted
-            ? HomeHangingStoryCards.maximumCompactHeight
-            : HomeHangingStoryCards.maximumStandardHeight;
         final availableCardHeight = constraints.hasBoundedHeight
             ? math.max(
                 0.0,
@@ -695,7 +705,9 @@ class _HomeStoryLoopPresentation {
     return _HomeStoryLoopPresentation(
       myCard: myCard,
       partnerCard: partnerCard,
-      questionText: question?.question.questionText,
+      questionText: question?.myAnswerExists == true
+          ? null
+          : question?.question.questionText,
       cardsAreCompleted:
           myCard != null &&
           partnerCard != null &&

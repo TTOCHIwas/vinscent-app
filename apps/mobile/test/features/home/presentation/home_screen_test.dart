@@ -392,7 +392,7 @@ void main() {
         tester.getCenter(myCard).dx,
         lessThan(tester.getCenter(partnerCard).dx),
       );
-      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(find.text(_dailyQuestion.questionText), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -682,6 +682,7 @@ void main() {
           String name,
           bool myAnswerExists,
           bool partnerAnswerExists,
+          bool showsQuestion,
           String removedMessage,
         })
       >[
@@ -689,23 +690,26 @@ void main() {
           name: '\uc0c1\ub300\ub9cc \ub2f5\ubcc0\ud55c \uc0c1\ud0dc',
           myAnswerExists: false,
           partnerAnswerExists: true,
+          showsQuestion: true,
           removedMessage: _storyPartnerAnswered,
         ),
         (
           name: '\ub098\ub9cc \ub2f5\ubcc0\ud55c \uc0c1\ud0dc',
           myAnswerExists: true,
           partnerAnswerExists: false,
+          showsQuestion: false,
           removedMessage: _storyWaitingAnswer,
         ),
         (
           name: '\ub458 \ub2e4 \ub2f5\ubcc0\ud55c \uc0c1\ud0dc',
           myAnswerExists: true,
           partnerAnswerExists: true,
+          showsQuestion: false,
           removedMessage: _storyAiPlaceholder,
         ),
       ]) {
     testWidgets(
-      '${scenario.name}\uc5d0\uc11c\ub3c4 \uc9c8\ubb38 \ubb38\uad6c\ub97c \uacc4\uc18d \ubcf4\uc5ec\uc900\ub2e4',
+      '${scenario.name}\uc758 \ub0b4 \ub2f5\ubcc0 \uc0c1\ud0dc\uc5d0 \ub9de\ucdb0 \uc9c8\ubb38 \ubb38\uad6c\ub97c \ub178\ucd9c\ud55c\ub2e4',
       (tester) async {
         await _pumpHome(
           tester,
@@ -732,7 +736,10 @@ void main() {
           ),
         );
 
-        expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+        expect(
+          find.text(_dailyQuestion.questionText),
+          scenario.showsQuestion ? findsOneWidget : findsNothing,
+        );
         expect(find.text(scenario.removedMessage), findsNothing);
         expect(find.text(_storyQuestionAction), findsNothing);
         expect(find.text(_storyAnswerAction), findsNothing);
