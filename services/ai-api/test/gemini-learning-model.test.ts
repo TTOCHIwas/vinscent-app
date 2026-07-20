@@ -168,6 +168,54 @@ test('Gemini client classifies invalid requests as terminal', async () => {
   );
 });
 
+test('Gemini client classifies provider failures as retryable', async () => {
+  const client = new GeminiInteractionsClient({
+    apiKey: 'test-api-key',
+    fetcher: async () => new Response(null, { status: 503 }),
+  });
+
+  await assert.rejects(
+    () => client.generateStructured({
+      prompt: 'Return feedback.',
+      schema: { type: 'object' },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof GeminiProviderError);
+      assert.equal(error.code, 'gemini_provider_unavailable');
+      assert.equal(error.retryable, true);
+      return true;
+    },
+  );
+});
+
+test('Gemini client classifies request aborts as retryable timeouts', async () => {
+  const client = new GeminiInteractionsClient({
+    apiKey: 'test-api-key',
+    timeoutMs: 1,
+    fetcher: async (_input, init) => {
+      await new Promise<void>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'));
+        });
+      });
+      throw new Error('unreachable');
+    },
+  });
+
+  await assert.rejects(
+    () => client.generateStructured({
+      prompt: 'Return feedback.',
+      schema: { type: 'object' },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof GeminiProviderError);
+      assert.equal(error.code, 'gemini_timeout');
+      assert.equal(error.retryable, true);
+      return true;
+    },
+  );
+});
+
 test('Gemini client rejects malformed structured output', async () => {
   const client = new GeminiInteractionsClient({
     apiKey: 'test-api-key',

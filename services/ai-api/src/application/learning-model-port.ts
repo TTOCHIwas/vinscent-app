@@ -11,21 +11,32 @@ export interface FoundationQuestionRecommendation {
   rationale: string;
 }
 
+export interface LearningModelUsage {
+  inputTokenCount: number | null;
+  outputTokenCount: number | null;
+  latencyMs: number;
+}
+
+export interface LearningModelResult<T> {
+  value: T;
+  usage: LearningModelUsage;
+}
+
 export interface LearningModelPort {
   rankFoundationQuestions(
     context: AnonymizedCompletedQuestionContext,
     candidates: FoundationQuestionCandidate[],
-  ): Promise<FoundationQuestionRecommendation>;
+  ): Promise<LearningModelResult<FoundationQuestionRecommendation>>;
 
   extractMemoryCandidates(
     context: AnonymizedCompletedQuestionContext,
-  ): Promise<ModelMemoryCandidate[]>;
+  ): Promise<LearningModelResult<ModelMemoryCandidate[]>>;
 
   generateCoupleFeedback(
     context: AnonymizedCompletedQuestionContext,
-  ): Promise<CoupleFeedbackCandidate>;
+  ): Promise<LearningModelResult<CoupleFeedbackCandidate>>;
 
   generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,
-  ): Promise<PersonalizedQuestionCandidate>;
+  ): Promise<LearningModelResult<PersonalizedQuestionCandidate>>;
 }
