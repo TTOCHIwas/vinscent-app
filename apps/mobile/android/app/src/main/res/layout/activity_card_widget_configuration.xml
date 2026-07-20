@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/card_widget_configuration_title"
+            android:textColor="#111111"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/card_widget_configuration_done"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:minWidth="48dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="@string/card_widget_configuration_done"
+            android:textAllCaps="false"
+            android:textColor="#111111"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_weight="1">
+
+        <ImageView
+            android:id="@+id/card_widget_configuration_preview"
+            android:layout_width="192dp"
+            android:layout_height="240dp"
+            android:layout_gravity="center"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/card_widget_open"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_card_placeholder" />
+
+    </FrameLayout>
+
+    <RadioGroup
+        android:id="@+id/card_widget_tilt_options"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/widget_tilt_options_background"
+        android:orientation="horizontal"
+        android:padding="4dp">
+
+        <RadioButton
+            android:id="@+id/card_widget_tilt_left_5"
+            style="@style/CardWidgetTiltOption"
+            android:text="@string/card_widget_tilt_left_5" />
+
+        <RadioButton
+            android:id="@+id/card_widget_tilt_left_2_5"
+            style="@style/CardWidgetTiltOption"
+            android:text="@string/card_widget_tilt_left_2_5" />
+
+        <RadioButton
+            android:id="@+id/card_widget_tilt_straight"
+            style="@style/CardWidgetTiltOption"
+            android:text="@string/card_widget_tilt_straight" />
+
+        <RadioButton
+            android:id="@+id/card_widget_tilt_right_2_5"
+            style="@style/CardWidgetTiltOption"
+            android:text="@string/card_widget_tilt_right_2_5" />
+
+        <RadioButton
+            android:id="@+id/card_widget_tilt_right_5"
+            style="@style/CardWidgetTiltOption"
+            android:text="@string/card_widget_tilt_right_5" />
+
+    </RadioGroup>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="24dp" />
+
+</LinearLayout>

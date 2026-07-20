@@ -8,6 +8,14 @@
     <string name="character_widget_uploading">녹음 저장 중</string>
     <string name="card_widget_description">상대방의 최근 카드</string>
     <string name="card_widget_open">카드 열기</string>
+    <string name="card_widget_configuration_title">카드 기울기</string>
+    <string name="card_widget_configuration_done">완료</string>
+    <string name="card_widget_configuration_save_failed">설정을 저장하지 못했어요</string>
+    <string name="card_widget_tilt_left_5">-5°</string>
+    <string name="card_widget_tilt_left_2_5">-2.5°</string>
+    <string name="card_widget_tilt_straight">0°</string>
+    <string name="card_widget_tilt_right_2_5">+2.5°</string>
+    <string name="card_widget_tilt_right_5">+5°</string>
     <string name="widget_playback_channel_name">녹음 재생</string>
     <string name="widget_playback_notification">녹음을 재생하고 있어요</string>
     <string name="widget_recording_channel_name">위젯 녹음</string>

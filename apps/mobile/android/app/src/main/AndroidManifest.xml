@@ -51,6 +51,15 @@
             android:exported="false"
             android:noHistory="true"
             android:theme="@style/WidgetPermissionTheme" />
+        <activity
+            android:name=".widgets.CardWidgetConfigurationActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/CardWidgetConfigurationTheme">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <receiver
             android:name=".widgets.CharacterWidgetProvider"
             android:exported="true">

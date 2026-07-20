@@ -4,6 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:padding="6dp">
 
     <ImageView
@@ -13,6 +15,7 @@
         android:layout_centerInParent="true"
         android:adjustViewBounds="true"
         android:contentDescription="@string/card_widget_open"
+        android:rotation="2.5"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_widget_card_placeholder" />
 
