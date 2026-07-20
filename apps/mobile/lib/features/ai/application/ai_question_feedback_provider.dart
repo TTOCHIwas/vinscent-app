@@ -9,6 +9,12 @@ const _maximumFeedbackPollAttempts = 36;
 final aiQuestionFeedbackProvider = StreamProvider.autoDispose
     .family<AiQuestionFeedback?, String>((ref, dailyQuestionId) async* {
       final repository = ref.watch(aiLearningRepositoryProvider);
+      final dashboard = await repository.fetchDashboard();
+
+      if (!dashboard.progress.isEnabled) {
+        yield null;
+        return;
+      }
 
       for (var attempt = 0; attempt < _maximumFeedbackPollAttempts; attempt++) {
         final feedback = await repository.fetchQuestionFeedback(
