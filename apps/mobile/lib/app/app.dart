@@ -14,6 +14,7 @@ import '../features/characters/application/couple_character_controller.dart';
 import '../features/home_widgets/application/home_widget_launch_coordinator.dart';
 import '../features/home_widgets/application/home_widget_launch_policy.dart';
 import '../features/home_widgets/application/home_widget_sync_service.dart';
+import '../features/home_widgets/data/home_widget_platform_store.dart';
 import '../features/notifications/application/push_token_controller.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/recordings/application/couple_recording_overview_controller.dart';
@@ -41,19 +42,12 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (Platform.isAndroid) {
-      final coordinator = ref.read(homeWidgetLaunchCoordinatorProvider);
-      _widgetClickSubscription = coordinator.widgetClicks.listen(
-        _queueWidgetLaunch,
-      );
+    if (_supportsHomeWidgets) {
       _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((_) {
         _scheduleWidgetSync();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(
-          coordinator.initiallyLaunchedFromWidget().then(_queueWidgetLaunch),
-        );
-        _scheduleWidgetSync();
+        unawaited(_initializeHomeWidgets());
       });
     }
   }
@@ -82,6 +76,20 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     }
     _pendingWidgetUri = uri;
     unawaited(_drainWidgetLaunch());
+  }
+
+  Future<void> _initializeHomeWidgets() async {
+    await configureHomeWidgetPlatform();
+    if (!mounted) {
+      return;
+    }
+
+    final coordinator = ref.read(homeWidgetLaunchCoordinatorProvider);
+    _widgetClickSubscription = coordinator.widgetClicks.listen(
+      _queueWidgetLaunch,
+    );
+    _queueWidgetLaunch(await coordinator.initiallyLaunchedFromWidget());
+    _scheduleWidgetSync();
   }
 
   Future<void> _drainWidgetLaunch() async {
@@ -113,7 +121,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   }
 
   void _scheduleWidgetSync() {
-    if (!Platform.isAndroid) {
+    if (!_supportsHomeWidgets) {
       return;
     }
     _widgetSyncTimer?.cancel();
@@ -144,7 +152,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     ref.watch(pushTokenControllerProvider);
-    if (Platform.isAndroid) {
+    if (_supportsHomeWidgets) {
       ref.listen(authControllerProvider, (_, next) {
         if (next == AuthStatus.authenticated) {
           unawaited(_drainWidgetLaunch());
@@ -187,4 +195,6 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       routerConfig: router,
     );
   }
+
+  bool get _supportsHomeWidgets => Platform.isAndroid || Platform.isIOS;
 }

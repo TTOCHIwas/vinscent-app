@@ -33,7 +33,7 @@ class HomeWidgetSyncService {
   final HomeWidgetSynchronizer _synchronizer;
 
   Future<void> synchronize() async {
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       return;
     }
 

@@ -38,11 +38,11 @@ void main() {
       'https://example.com/recording.m4a',
       'https://example.com/card.png',
     ]);
-    expect(store.updatedAndroidProviders, [
-      HomeWidgetStorage.characterAndroidProvider,
-      HomeWidgetStorage.cardAndroidProvider,
-      HomeWidgetStorage.characterAndroidProvider,
-      HomeWidgetStorage.cardAndroidProvider,
+    expect(store.refreshedTargets, [
+      HomeWidgetStorage.characterTarget,
+      HomeWidgetStorage.cardTarget,
+      HomeWidgetStorage.characterTarget,
+      HomeWidgetStorage.cardTarget,
     ]);
     expect(
       store.values[HomeWidgetStorage.characterImageVersionKey],
@@ -97,7 +97,7 @@ class _FakeHomeWidgetAssetDownloader implements HomeWidgetAssetDownloader {
 class _FakeHomeWidgetStore implements HomeWidgetStore {
   final values = <String, String>{};
   final removedFilePaths = <String>{};
-  final updatedAndroidProviders = <String>[];
+  final refreshedTargets = <HomeWidgetTarget>[];
 
   @override
   Future<String?> read(String key) async => values[key];
@@ -125,7 +125,7 @@ class _FakeHomeWidgetStore implements HomeWidgetStore {
   }
 
   @override
-  Future<void> updateAndroidWidget(String qualifiedProviderName) async {
-    updatedAndroidProviders.add(qualifiedProviderName);
+  Future<void> refreshWidget(HomeWidgetTarget target) async {
+    refreshedTargets.add(target);
   }
 }

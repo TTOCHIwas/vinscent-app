@@ -19,7 +19,7 @@ abstract interface class HomeWidgetStore {
     required String extension,
   });
 
-  Future<void> updateAndroidWidget(String qualifiedProviderName);
+  Future<void> refreshWidget(HomeWidgetTarget target);
 }
 
 class HomeWidgetSynchronizer {
@@ -51,10 +51,8 @@ class HomeWidgetSynchronizer {
       ),
     ]);
 
-    await _store.updateAndroidWidget(
-      HomeWidgetStorage.characterAndroidProvider,
-    );
-    await _store.updateAndroidWidget(HomeWidgetStorage.cardAndroidProvider);
+    await _store.refreshWidget(HomeWidgetStorage.characterTarget);
+    await _store.refreshWidget(HomeWidgetStorage.cardTarget);
   }
 
   Future<void> _synchronizeAsset({

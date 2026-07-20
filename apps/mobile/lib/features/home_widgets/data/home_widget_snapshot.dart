@@ -24,8 +24,20 @@ class HomeWidgetRemoteAsset {
   final int maxBytes;
 }
 
+class HomeWidgetTarget {
+  const HomeWidgetTarget({
+    required this.qualifiedAndroidName,
+    required this.iOSName,
+  });
+
+  final String qualifiedAndroidName;
+  final String iOSName;
+}
+
 class HomeWidgetStorage {
   const HomeWidgetStorage._();
+
+  static const appGroupId = 'group.com.vinscent.vinscent';
 
   static const characterImagePathKey = 'widget_character_image_path';
   static const characterImageVersionKey = 'widget_character_image_version';
@@ -38,4 +50,15 @@ class HomeWidgetStorage {
       'com.vinscent.vinscent.widgets.CharacterWidgetProvider';
   static const cardAndroidProvider =
       'com.vinscent.vinscent.widgets.CardWidgetProvider';
+  static const characterIOSKind = 'VinscentCharacterWidget';
+  static const cardIOSKind = 'VinscentCardWidget';
+
+  static const characterTarget = HomeWidgetTarget(
+    qualifiedAndroidName: characterAndroidProvider,
+    iOSName: characterIOSKind,
+  );
+  static const cardTarget = HomeWidgetTarget(
+    qualifiedAndroidName: cardAndroidProvider,
+    iOSName: cardIOSKind,
+  );
 }

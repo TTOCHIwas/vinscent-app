@@ -165,9 +165,7 @@ class HomeWidgetRecordingPlaybackCache implements WidgetRecordingPlaybackCache {
       extension: 'm4a',
     );
     await _store.remove(HomeWidgetStorage.recordingAudioVersionKey);
-    await _store.updateAndroidWidget(
-      HomeWidgetStorage.characterAndroidProvider,
-    );
+    await _store.refreshWidget(HomeWidgetStorage.characterTarget);
   }
 }
 
