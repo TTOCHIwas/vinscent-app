@@ -77,14 +77,14 @@ test('Gemini client sends structured Interactions API request and reports usage'
 
   assert.equal(
     capturedUrl,
-    'https://generativelanguage.googleapis.com/v1beta/interactions',
+    'https://generativelanguage.googleapis.com/v1/interactions',
   );
   assert.equal(
     new Headers(capturedInit?.headers).get('x-goog-api-key'),
     'test-api-key',
   );
   const body = JSON.parse(String(capturedInit?.body));
-  assert.equal(body.model, 'gemini-3.5-flash');
+  assert.equal(body.model, 'models/gemini-3.5-flash');
   assert.equal(body.response_format.mime_type, 'application/json');
   assert.equal(body.response_format.schema.additionalProperties, false);
   assert.deepEqual(result.value, { feedback_text: 'A short response.' });
@@ -164,7 +164,7 @@ test('Gemini client classifies rate limits as retryable', async () => {
   );
 });
 
-test('Gemini client defaults to the lightweight stable model', async () => {
+test('Gemini client defaults to the lightweight stable model resource', async () => {
   let capturedBody = '';
   const client = new GeminiInteractionsClient({
     apiKey: 'test-api-key',
@@ -181,7 +181,31 @@ test('Gemini client defaults to the lightweight stable model', async () => {
     schema: { type: 'object' },
   });
 
-  assert.equal(JSON.parse(capturedBody).model, 'gemini-2.5-flash-lite');
+  assert.equal(
+    JSON.parse(capturedBody).model,
+    'models/gemini-2.5-flash-lite',
+  );
+});
+
+test('Gemini client preserves an explicit model resource name', async () => {
+  let capturedBody = '';
+  const client = new GeminiInteractionsClient({
+    apiKey: 'test-api-key',
+    model: 'models/gemini-2.5-flash',
+    fetcher: async (_input, init) => {
+      capturedBody = String(init?.body);
+      return new Response(JSON.stringify({
+        output_text: '{"feedback_text":"ok"}',
+      }));
+    },
+  });
+
+  await client.generateStructured({
+    prompt: 'Return feedback.',
+    schema: { type: 'object' },
+  });
+
+  assert.equal(JSON.parse(capturedBody).model, 'models/gemini-2.5-flash');
 });
 
 test('Gemini client classifies invalid requests as terminal', async () => {

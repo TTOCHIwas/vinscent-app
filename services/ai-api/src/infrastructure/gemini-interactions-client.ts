@@ -3,7 +3,7 @@ import type {
 } from '../application/learning-model-port.ts';
 
 const defaultEndpoint =
-  'https://generativelanguage.googleapis.com/v1beta/interactions';
+  'https://generativelanguage.googleapis.com/v1/interactions';
 const defaultModel = 'gemini-2.5-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
@@ -87,7 +87,9 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
     }
 
     this.#apiKey = options.apiKey;
-    this.#model = requireConfigValue(options.model ?? defaultModel, 'model');
+    this.#model = interactionModelResourceName(
+      requireConfigValue(options.model ?? defaultModel, 'model'),
+    );
     this.#endpoint = requireConfigValue(
       options.endpoint ?? defaultEndpoint,
       'endpoint',
@@ -194,6 +196,10 @@ function requireConfigValue(value: string, name: string): string {
     throw new TypeError(`Gemini ${name} is required`);
   }
   return normalized;
+}
+
+function interactionModelResourceName(model: string): string {
+  return model.startsWith('models/') ? model : `models/${model}`;
 }
 
 async function readJsonResponse(
