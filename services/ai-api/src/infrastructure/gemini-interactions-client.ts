@@ -3,7 +3,7 @@ import type {
 } from '../application/learning-model-port.ts';
 
 const defaultEndpoint =
-  'https://generativelanguage.googleapis.com/v1/interactions';
+  'https://generativelanguage.googleapis.com/v1beta/interactions';
 const defaultModel = 'gemini-2.5-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
