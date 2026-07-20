@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
+import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
@@ -213,6 +215,53 @@ void main() {
 
       expect(router.routeInformationProvider.value.uri.path, '/home/question');
       expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('shows published AI feedback after both answers', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        aiFeedbacks: {
+          'daily-question-id': AiQuestionFeedback(
+            dailyQuestionId: 'daily-question-id',
+            feedbackText: '서로 다른 방식으로 배려하는 모습이 닮아 있어요.',
+            publishedAt: DateTime.utc(2026, 5, 31, 12),
+          ),
+        },
+      );
+
+      expect(find.byKey(const Key('ai-question-feedback')), findsOneWidget);
+      expect(find.text('AI의 한마디'), findsOneWidget);
+      expect(find.text('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'), findsOneWidget);
+    });
+
+    testWidgets('does not show AI feedback before both answers exist', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _submittedAnswerState,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        aiFeedbacks: {
+          'daily-question-id': AiQuestionFeedback(
+            dailyQuestionId: 'daily-question-id',
+            feedbackText: '아직 공개되면 안 되는 피드백',
+            publishedAt: DateTime.utc(2026, 5, 31, 12),
+          ),
+        },
+      );
+
+      expect(find.byKey(const Key('ai-question-feedback')), findsNothing);
+      expect(find.text('아직 공개되면 안 되는 피드백'), findsNothing);
     });
 
     testWidgets('opens edit route from answer action', (tester) async {
@@ -788,6 +837,7 @@ Future<GoRouter> _pumpRouter(
   StoryLoopReadRepository? storyLoopRepository,
   DateTime? relationshipStartDate,
   double viewInsetsBottom = 0,
+  Map<String, AiQuestionFeedback> aiFeedbacks = const {},
 }) async {
   final today = DateTime(2026, 5, 31);
   final normalizedDetails = <DateTime, StoryLoopDetail?>{
@@ -856,6 +906,9 @@ Future<GoRouter> _pumpRouter(
           (ref, notifier) async => _profile,
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
+        aiQuestionFeedbackProvider.overrideWith(
+          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
+        ),
         storyLoopReadRepositoryProvider.overrideWithValue(
           resolvedStoryLoopRepository,
         ),
