@@ -6,6 +6,6 @@
     "node": ">=22.6.0"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test test/learning-contract.test.ts test/gemini-learning-model.test.ts test/process-learning-jobs.test.ts"
+    "test": "node --experimental-strip-types --test test/learning-contract.test.ts test/gemini-learning-model.test.ts test/process-learning-jobs.test.ts test/supabase-learning-job-repository.test.ts"
   }
 }
