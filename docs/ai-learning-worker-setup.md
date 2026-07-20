@@ -13,6 +13,10 @@ npx supabase secrets set GEMINI_API_KEY=<gemini-api-key>
 npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 ```
 
+`AI_WORKER_SECRET`을 별도로 설정하지 않으면 기존
+`SCHEDULE_WEBHOOK_SECRET`을 사용한다. AI 작업만 독립적으로 키를 교체할 수
+있도록 운영 환경에서는 전용 시크릿을 권장한다.
+
 선택 설정은 다음과 같다.
 
 - `GEMINI_MODEL`: 기본값 `gemini-3.5-flash`
@@ -38,7 +42,7 @@ Supabase Cron에서 1분 간격 HTTP 작업을 만들고 다음 요청을 보낸
 
 - Method: `POST`
 - URL: `https://<project-ref>.supabase.co/functions/v1/process-ai-learning-jobs`
-- Header: `x-ai-worker-secret: <AI_WORKER_SECRET>`
+- Header: `x-ai-worker-secret: <AI_WORKER_SECRET 또는 SCHEDULE_WEBHOOK_SECRET>`
 - Header: `content-type: application/json`
 - Body: `{"limit":3}`
 

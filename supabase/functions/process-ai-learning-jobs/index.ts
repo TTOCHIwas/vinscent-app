@@ -29,7 +29,8 @@ const processor = new LearningJobProcessor({
 
 Deno.serve(createLearningWorkerHttpHandler({
   serviceRoleKey: requiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
-  workerSecret: optionalEnv('AI_WORKER_SECRET'),
+  workerSecret: optionalEnv('AI_WORKER_SECRET')
+    ?? optionalEnv('SCHEDULE_WEBHOOK_SECRET'),
   processor,
 }));
 
