@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../ai/presentation/widgets/ai_question_feedback_section.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../story_loops/application/story_loop_detail_navigation_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
@@ -88,17 +89,25 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
               question: questionState.question,
               cards: cards,
               currentUserId: currentUserId,
-              child: QuestionAnswerOverview(
-                answerState: questionState.answerState,
-                myEmptyMessage: questionState.canEdit
-                    ? '이곳을 눌러서 답변을 입력해주세요'
-                    : '이 날에는 답변하지 않았어요',
-                partnerHiddenMessage: questionState.canEdit
-                    ? PartnerQuestionAnswerSection.todayHiddenMessage
-                    : PartnerQuestionAnswerSection.historyHiddenMessage,
-                onMyAnswerPressed: questionState.canEdit
-                    ? () => context.push(routeContext.buildEditLocation())
-                    : null,
+              child: Column(
+                children: [
+                  QuestionAnswerOverview(
+                    answerState: questionState.answerState,
+                    myEmptyMessage: questionState.canEdit
+                        ? '이곳을 눌러서 답변을 입력해주세요'
+                        : '이 날에는 답변하지 않았어요',
+                    partnerHiddenMessage: questionState.canEdit
+                        ? PartnerQuestionAnswerSection.todayHiddenMessage
+                        : PartnerQuestionAnswerSection.historyHiddenMessage,
+                    onMyAnswerPressed: questionState.canEdit
+                        ? () => context.push(routeContext.buildEditLocation())
+                        : null,
+                  ),
+                  if (questionState.answerState?.hasBothAnswers ?? false)
+                    AiQuestionFeedbackSection(
+                      dailyQuestionId: questionState.question.dailyQuestionId,
+                    ),
+                ],
               ),
             ),
           ),
