@@ -33,6 +33,33 @@ test('worker handler accepts only an exact service role bearer token', async () 
   assert.equal(calls, 1);
 });
 
+test('worker handler accepts an exact scheduler secret without exposing service role credentials', async () => {
+  let calls = 0;
+  const handler = createLearningWorkerHttpHandler({
+    serviceRoleKey: 'service-role-secret',
+    workerSecret: 'scheduler-secret',
+    processor: {
+      async processBatch() {
+        calls += 1;
+        return { claimed: 0, succeeded: 0, retried: 0, failed: 0 };
+      },
+    },
+  });
+
+  const wrong = await handler(new Request('https://example.test', {
+    method: 'POST',
+    headers: { 'x-ai-worker-secret': 'wrong-secret' },
+  }));
+  const accepted = await handler(new Request('https://example.test', {
+    method: 'POST',
+    headers: { 'x-ai-worker-secret': 'scheduler-secret' },
+  }));
+
+  assert.equal(wrong.status, 401);
+  assert.equal(accepted.status, 200);
+  assert.equal(calls, 1);
+});
+
 test('worker handler validates and caps the requested batch size', async () => {
   const receivedLimits: number[] = [];
   const handler = createLearningWorkerHttpHandler({
@@ -68,6 +95,7 @@ test('worker handler validates and caps the requested batch size', async () => {
 test('worker handler does not expose internal processing errors', async () => {
   const handler = createLearningWorkerHttpHandler({
     serviceRoleKey: 'service-role-secret',
+    onError() {},
     processor: {
       async processBatch() {
         throw new Error('private answer text must never leave the server');
