@@ -77,7 +77,7 @@ test('Gemini client sends structured Interactions API request and reports usage'
 
   assert.equal(
     capturedUrl,
-    'https://generativelanguage.googleapis.com/v1/interactions',
+    'https://generativelanguage.googleapis.com/v1beta/interactions',
   );
   assert.equal(
     new Headers(capturedInit?.headers).get('x-goog-api-key'),
