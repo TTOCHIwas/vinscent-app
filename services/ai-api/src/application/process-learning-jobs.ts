@@ -9,7 +9,7 @@ import {
 import {
   GeminiOutputError,
   GeminiProviderError,
-} from '../infrastructure/gemini-interactions-client.ts';
+} from '../infrastructure/gemini-structured-generation-client.ts';
 import type {
   LearningModelPort,
   LearningModelUsage,

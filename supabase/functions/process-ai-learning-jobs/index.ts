@@ -1,5 +1,5 @@
 import { LearningJobProcessor } from '../../../services/ai-api/src/application/process-learning-jobs.ts';
-import { GeminiInteractionsClient } from '../../../services/ai-api/src/infrastructure/gemini-interactions-client.ts';
+import { GeminiStructuredGenerationClient } from '../../../services/ai-api/src/infrastructure/gemini-structured-generation-client.ts';
 import { GeminiLearningModel } from '../../../services/ai-api/src/infrastructure/gemini-learning-model.ts';
 import { SupabaseLearningJobRepository } from '../../../services/ai-api/src/infrastructure/supabase-learning-job-repository.ts';
 import { createLearningWorkerHttpHandler } from '../../../services/ai-api/src/presentation/learning-worker-http-handler.ts';
@@ -13,10 +13,10 @@ const defaultModel = 'gemini-2.5-flash-lite';
 const modelName = optionalEnv('GEMINI_MODEL') ?? defaultModel;
 const supabase = createServiceRoleClient();
 const repository = new SupabaseLearningJobRepository(supabase);
-const client = new GeminiInteractionsClient({
+const client = new GeminiStructuredGenerationClient({
   apiKey: requiredEnv('GEMINI_API_KEY'),
   model: modelName,
-  endpoint: optionalEnv('GEMINI_INTERACTIONS_ENDPOINT'),
+  endpoint: optionalEnv('GEMINI_GENERATE_CONTENT_ENDPOINT'),
   timeoutMs: optionalPositiveIntegerEnv('GEMINI_TIMEOUT_MS'),
 });
 const processor = new LearningJobProcessor({

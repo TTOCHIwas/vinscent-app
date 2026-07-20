@@ -20,7 +20,7 @@ npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 선택 설정은 다음과 같다.
 
 - `GEMINI_MODEL`: 기본값 `gemini-2.5-flash-lite`
-- `GEMINI_INTERACTIONS_ENDPOINT`: Gemini Interactions API 주소 교체용
+- `GEMINI_GENERATE_CONTENT_ENDPOINT`: Gemini `generateContent` 전체 주소 교체용
 - `GEMINI_TIMEOUT_MS`: 기본값 `30000`
 - `AI_WORKER_MAX_BATCH_SIZE`: 기본값 `1`, 허용 범위 `1~5`
 

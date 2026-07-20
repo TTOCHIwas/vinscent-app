@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  GeminiInteractionsClient,
+  GeminiStructuredGenerationClient,
   GeminiOutputError,
   GeminiProviderError,
-} from '../src/infrastructure/gemini-interactions-client.ts';
+} from '../src/infrastructure/gemini-structured-generation-client.ts';
 import { GeminiLearningModel } from '../src/infrastructure/gemini-learning-model.ts';
 import type {
   AnonymizedCompletedQuestionContext,
@@ -40,11 +40,11 @@ const context: AnonymizedCompletedQuestionContext = {
   ],
 };
 
-test('Gemini client sends structured Interactions API request and reports usage', async () => {
+test('Gemini client sends structured generateContent request and reports usage', async () => {
   let capturedUrl = '';
   let capturedInit: RequestInit | undefined;
   const clockValues = [1_000, 1_240];
-  const client = new GeminiInteractionsClient({
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     model: 'gemini-3.5-flash',
     now: () => clockValues.shift() ?? 1_240,
@@ -53,11 +53,23 @@ test('Gemini client sends structured Interactions API request and reports usage'
       capturedInit = init;
       return new Response(
         JSON.stringify({
-          output_text: JSON.stringify({ feedback_text: 'A short response.' }),
-          usage: {
-            prompt_tokens: 18,
-            completion_tokens: 7,
-            total_tokens: 25,
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      feedback_text: 'A short response.',
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+          usageMetadata: {
+            promptTokenCount: 18,
+            candidatesTokenCount: 7,
+            totalTokenCount: 25,
           },
         }),
         { status: 200 },
@@ -77,16 +89,20 @@ test('Gemini client sends structured Interactions API request and reports usage'
 
   assert.equal(
     capturedUrl,
-    'https://generativelanguage.googleapis.com/v1/interactions',
+    'https://generativelanguage.googleapis.com/v1beta/models/'
+      + 'gemini-3.5-flash:generateContent',
   );
   assert.equal(
     new Headers(capturedInit?.headers).get('x-goog-api-key'),
     'test-api-key',
   );
   const body = JSON.parse(String(capturedInit?.body));
-  assert.equal(body.model, 'models/gemini-3.5-flash');
-  assert.equal(body.response_format.mime_type, 'application/json');
-  assert.equal(body.response_format.schema.additionalProperties, false);
+  assert.equal(body.contents[0].parts[0].text, 'Return a short response.');
+  assert.equal(body.generationConfig.responseMimeType, 'application/json');
+  assert.equal(
+    body.generationConfig.responseJsonSchema.additionalProperties,
+    false,
+  );
   assert.deepEqual(result.value, { feedback_text: 'A short response.' });
   assert.deepEqual(result.usage, {
     inputTokenCount: 18,
@@ -95,20 +111,19 @@ test('Gemini client sends structured Interactions API request and reports usage'
   });
 });
 
-test('Gemini client reads v1beta2 model output steps', async () => {
-  const client = new GeminiInteractionsClient({
+test('Gemini client reads generateContent candidate parts', async () => {
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     fetcher: async () => new Response(
       JSON.stringify({
-        steps: [
+        candidates: [
           {
-            type: 'model_output',
-            content: [
-              { type: 'text', text: '{"feedback_text":"Step output"}' },
-            ],
+            content: {
+              parts: [{ text: '{"feedback_text":"Step output"}' }],
+            },
           },
         ],
-        usage: { prompt_tokens: 4, completion_tokens: 2 },
+        usageMetadata: { promptTokenCount: 4, candidatesTokenCount: 2 },
       }),
     ),
   });
@@ -123,7 +138,7 @@ test('Gemini client reads v1beta2 model output steps', async () => {
 
 test('Gemini client classifies rate limits as retryable', async () => {
   const clockValues = [1_000, 1_275];
-  const client = new GeminiInteractionsClient({
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     now: () => clockValues.shift() ?? 1_275,
     fetcher: async () => new Response(
@@ -164,14 +179,16 @@ test('Gemini client classifies rate limits as retryable', async () => {
   );
 });
 
-test('Gemini client defaults to the lightweight stable model resource', async () => {
-  let capturedBody = '';
-  const client = new GeminiInteractionsClient({
+test('Gemini client defaults to the lightweight stable model endpoint', async () => {
+  let capturedUrl = '';
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
-    fetcher: async (_input, init) => {
-      capturedBody = String(init?.body);
+    fetcher: async (input) => {
+      capturedUrl = String(input);
       return new Response(JSON.stringify({
-        output_text: '{"feedback_text":"ok"}',
+        candidates: [{
+          content: { parts: [{ text: '{"feedback_text":"ok"}' }] },
+        }],
       }));
     },
   });
@@ -182,20 +199,23 @@ test('Gemini client defaults to the lightweight stable model resource', async ()
   });
 
   assert.equal(
-    JSON.parse(capturedBody).model,
-    'models/gemini-2.5-flash-lite',
+    capturedUrl,
+    'https://generativelanguage.googleapis.com/v1beta/models/'
+      + 'gemini-2.5-flash-lite:generateContent',
   );
 });
 
-test('Gemini client preserves an explicit model resource name', async () => {
-  let capturedBody = '';
-  const client = new GeminiInteractionsClient({
+test('Gemini client accepts an explicit model resource name', async () => {
+  let capturedUrl = '';
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     model: 'models/gemini-2.5-flash',
-    fetcher: async (_input, init) => {
-      capturedBody = String(init?.body);
+    fetcher: async (input) => {
+      capturedUrl = String(input);
       return new Response(JSON.stringify({
-        output_text: '{"feedback_text":"ok"}',
+        candidates: [{
+          content: { parts: [{ text: '{"feedback_text":"ok"}' }] },
+        }],
       }));
     },
   });
@@ -205,11 +225,15 @@ test('Gemini client preserves an explicit model resource name', async () => {
     schema: { type: 'object' },
   });
 
-  assert.equal(JSON.parse(capturedBody).model, 'models/gemini-2.5-flash');
+  assert.equal(
+    capturedUrl,
+    'https://generativelanguage.googleapis.com/v1beta/models/'
+      + 'gemini-2.5-flash:generateContent',
+  );
 });
 
 test('Gemini client classifies invalid requests as terminal', async () => {
-  const client = new GeminiInteractionsClient({
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     fetcher: async () => new Response(
       JSON.stringify({ error: { message: 'Malformed schema' } }),
@@ -232,7 +256,7 @@ test('Gemini client classifies invalid requests as terminal', async () => {
 });
 
 test('Gemini client classifies provider failures as retryable', async () => {
-  const client = new GeminiInteractionsClient({
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     fetcher: async () => new Response(null, { status: 503 }),
   });
@@ -252,7 +276,7 @@ test('Gemini client classifies provider failures as retryable', async () => {
 });
 
 test('Gemini client classifies request aborts as retryable timeouts', async () => {
-  const client = new GeminiInteractionsClient({
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     timeoutMs: 1,
     fetcher: async (_input, init) => {
@@ -280,10 +304,12 @@ test('Gemini client classifies request aborts as retryable timeouts', async () =
 });
 
 test('Gemini client rejects malformed structured output', async () => {
-  const client = new GeminiInteractionsClient({
+  const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     fetcher: async () => new Response(
-      JSON.stringify({ output_text: 'not-json' }),
+      JSON.stringify({
+        candidates: [{ content: { parts: [{ text: 'not-json' }] } }],
+      }),
     ),
   });
 

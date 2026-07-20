@@ -17,7 +17,7 @@ import type {
   AnonymizedCompletedQuestionContext,
   CompletedQuestionContext,
 } from '../src/domain/learning-contract.ts';
-import { GeminiProviderError } from '../src/infrastructure/gemini-interactions-client.ts';
+import { GeminiProviderError } from '../src/infrastructure/gemini-structured-generation-client.ts';
 
 const completedContext: CompletedQuestionContext = {
   coupleId: 'couple-real-id',

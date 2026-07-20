@@ -2,8 +2,8 @@ import type {
   LearningModelUsage,
 } from '../application/learning-model-port.ts';
 
-const defaultEndpoint =
-  'https://generativelanguage.googleapis.com/v1/interactions';
+const defaultEndpointBase =
+  'https://generativelanguage.googleapis.com/v1beta/models';
 const defaultModel = 'gemini-2.5-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
@@ -24,7 +24,7 @@ export interface StructuredGenerationClient {
   ): Promise<StructuredGenerationResult>;
 }
 
-interface GeminiInteractionsClientOptions {
+interface GeminiStructuredGenerationClientOptions {
   apiKey: string;
   model?: string;
   endpoint?: string;
@@ -73,7 +73,8 @@ export class GeminiOutputError extends Error {
   }
 }
 
-export class GeminiInteractionsClient implements StructuredGenerationClient {
+export class GeminiStructuredGenerationClient
+  implements StructuredGenerationClient {
   readonly #apiKey: string;
   readonly #model: string;
   readonly #endpoint: string;
@@ -81,17 +82,17 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
   readonly #fetcher: typeof fetch;
   readonly #now: () => number;
 
-  constructor(options: GeminiInteractionsClientOptions) {
+  constructor(options: GeminiStructuredGenerationClientOptions) {
     if (options.apiKey.trim().length === 0) {
       throw new TypeError('Gemini API key is required');
     }
 
     this.#apiKey = options.apiKey;
-    this.#model = interactionModelResourceName(
+    this.#model = generateContentModelName(
       requireConfigValue(options.model ?? defaultModel, 'model'),
     );
     this.#endpoint = requireConfigValue(
-      options.endpoint ?? defaultEndpoint,
+      options.endpoint ?? generateContentEndpoint(this.#model),
       'endpoint',
     );
     this.#timeoutMs = options.timeoutMs ?? defaultTimeoutMs;
@@ -121,15 +122,16 @@ export class GeminiInteractionsClient implements StructuredGenerationClient {
           'x-goog-api-key': this.#apiKey,
         },
         body: JSON.stringify({
-          model: this.#model,
-          input: request.prompt,
-          generation_config: {
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: request.prompt }],
+            },
+          ],
+          generationConfig: {
             temperature: 0.2,
-          },
-          response_format: {
-            type: 'text',
-            mime_type: 'application/json',
-            schema: request.schema,
+            responseMimeType: 'application/json',
+            responseJsonSchema: request.schema,
           },
         }),
         signal: controller.signal,
@@ -198,8 +200,18 @@ function requireConfigValue(value: string, name: string): string {
   return normalized;
 }
 
-function interactionModelResourceName(model: string): string {
-  return model.startsWith('models/') ? model : `models/${model}`;
+function generateContentModelName(model: string): string {
+  const normalized = model.startsWith('models/')
+    ? model.slice('models/'.length)
+    : model;
+  if (!/^[a-zA-Z0-9._-]+$/.test(normalized)) {
+    throw new TypeError('Gemini model has an invalid format');
+  }
+  return normalized;
+}
+
+function generateContentEndpoint(model: string): string {
+  return `${defaultEndpointBase}/${model}:generateContent`;
 }
 
 async function readJsonResponse(
@@ -218,30 +230,13 @@ async function readJsonResponse(
 
 function readOutputText(payload: unknown, latencyMs: number): string {
   const record = asRecord(payload);
-  if (typeof record?.output_text === 'string' && record.output_text.length > 0) {
-    return record.output_text;
-  }
-
-  const interaction = asRecord(record?.interaction);
-  if (
-    typeof interaction?.output_text === 'string'
-    && interaction.output_text.length > 0
-  ) {
-    return interaction.output_text;
-  }
-
-  const steps = Array.isArray(record?.steps)
-    ? record.steps
-    : Array.isArray(interaction?.steps)
-    ? interaction.steps
+  const candidates = Array.isArray(record?.candidates)
+    ? record.candidates
     : [];
-  const text = steps
-    .filter((step) => asRecord(step)?.type === 'model_output')
-    .flatMap((step) => {
-      const content = asRecord(step)?.content;
-      return Array.isArray(content) ? content : [];
+  const text = candidates.flatMap((candidate) => {
+      const parts = asRecord(asRecord(candidate)?.content)?.parts;
+      return Array.isArray(parts) ? parts : [];
     })
-    .filter((part) => asRecord(part)?.type === 'text')
     .map((part) => asRecord(part)?.text)
     .filter((part): part is string => typeof part === 'string')
     .join('');
@@ -257,16 +252,13 @@ function readUsage(payload: unknown): {
   outputTokenCount: number | null;
 } {
   const record = asRecord(payload);
-  const interaction = asRecord(record?.interaction);
-  const usage = asRecord(record?.usage) ?? asRecord(interaction?.usage);
+  const usage = asRecord(record?.usageMetadata);
   return {
     inputTokenCount: readNonNegativeInteger(
-      usage?.prompt_tokens ?? usage?.input_tokens ?? usage?.total_input_tokens,
+      usage?.promptTokenCount,
     ),
     outputTokenCount: readNonNegativeInteger(
-      usage?.completion_tokens
-        ?? usage?.output_tokens
-        ?? usage?.total_output_tokens,
+      usage?.candidatesTokenCount,
     ),
   };
 }
