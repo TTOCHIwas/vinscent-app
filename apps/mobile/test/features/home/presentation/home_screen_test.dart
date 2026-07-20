@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
+import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -35,6 +37,7 @@ const _storyLineKey = Key('home-story-line');
 const _storyClotheslineKey = Key('home-story-clothesline');
 const _storyDetailOverlayKey = Key('story-card-detail-overlay');
 const _storyDetailCloseButtonKey = Key('story-card-detail-close');
+const _aiFeedbackText = 'AI feedback for both answers';
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
 const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
 const _storyEditAction = '\uce74\ub4dc \uc218\uc815';
@@ -397,6 +400,83 @@ void main() {
     },
   );
 
+  testWidgets('shows published AI feedback after both answers on home', (
+    tester,
+  ) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: true,
+          partnerAnswerExists: true,
+          answerCount: 2,
+        ),
+      ),
+      aiFeedbacks: {
+        _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
+          dailyQuestionId: _dailyQuestion.dailyQuestionId,
+          feedbackText: _aiFeedbackText,
+          publishedAt: DateTime.utc(2026, 5, 31, 12),
+        ),
+      },
+    );
+
+    expect(find.text(_dailyQuestion.questionText), findsNothing);
+    expect(find.text(_aiFeedbackText), findsOneWidget);
+    expect(find.byKey(_questionBubbleKey), findsOneWidget);
+
+    await tester.tap(find.text(_aiFeedbackText));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home/question');
+  });
+
+  testWidgets('does not show AI feedback before both answers exist', (
+    tester,
+  ) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: true,
+          partnerAnswerExists: false,
+          answerCount: 1,
+        ),
+      ),
+      aiFeedbacks: {
+        _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
+          dailyQuestionId: _dailyQuestion.dailyQuestionId,
+          feedbackText: _aiFeedbackText,
+          publishedAt: DateTime.utc(2026, 5, 31, 12),
+        ),
+      },
+    );
+
+    expect(find.text(_aiFeedbackText), findsNothing);
+  });
+
   testWidgets(
     '\ube48 \uc0c1\ud0dc\uc640 \ub2f5\ubcc0 \uc804\ud6c4\uc5d0 \uac19\uc740 \uc704\uce58\uc758 \uc904\uc744 \uc0ac\uc6a9\ud55c\ub2e4',
     (tester) async {
@@ -715,6 +795,7 @@ void main() {
           tester,
           couple: _activeCouple,
           today: _today,
+          recordingOverview: _emptyRecordingOverview,
           todaySummary: sampleTodaySummary(
             coupleDate: _today,
             cards: [
@@ -743,6 +824,7 @@ void main() {
         expect(find.text(scenario.removedMessage), findsNothing);
         expect(find.text(_storyQuestionAction), findsNothing);
         expect(find.text(_storyAnswerAction), findsNothing);
+        expect(find.text(_firstRecordingPrompt), findsNothing);
       },
     );
   }
@@ -753,6 +835,7 @@ Future<GoRouter> _pumpRoutedHome(
   required TodayStoryLoopSummary todaySummary,
   Couple? couple,
   CoupleRecordingOverview? recordingOverview,
+  Map<String, AiQuestionFeedback> aiFeedbacks = const {},
 }) async {
   final router = GoRouter(
     initialLocation: '/home',
@@ -799,6 +882,9 @@ Future<GoRouter> _pumpRoutedHome(
         storyLoopReadRepositoryProvider.overrideWithValue(
           FakeStoryLoopReadRepository(todaySummary: todaySummary),
         ),
+        aiQuestionFeedbackProvider.overrideWith(
+          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
+        ),
         if (recordingOverview != null)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
@@ -818,6 +904,7 @@ Future<void> _pumpHome(
   TodayStoryLoopSummary? todaySummary,
   StoryLoopReadRepository? storyLoopRepository,
   CoupleRecordingOverview? recordingOverview,
+  Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -833,6 +920,9 @@ Future<void> _pumpHome(
         storyLoopReadRepositoryProvider.overrideWithValue(
           storyLoopRepository ??
               FakeStoryLoopReadRepository(todaySummary: todaySummary),
+        ),
+        aiQuestionFeedbackProvider.overrideWith(
+          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
         ),
         if (recordingOverview != null)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(

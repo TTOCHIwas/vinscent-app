@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../ai/application/ai_question_feedback_provider.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
@@ -243,6 +244,18 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
       summary: summary,
       currentUserId: currentUserId,
     );
+    final question = summary.question;
+    String? feedbackText;
+    if (question != null &&
+        question.myAnswerExists &&
+        question.partnerAnswerExists) {
+      feedbackText = ref
+          .watch(aiQuestionFeedbackProvider(question.question.dailyQuestionId))
+          .maybeWhen(
+            data: (feedback) => feedback?.feedbackText,
+            orElse: () => null,
+          );
+    }
     final characterPromptState = ref.watch(
       coupleControllerProvider.select(
         (state) => state.maybeWhen(
@@ -267,7 +280,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
     final guideText = characterPromptState.needsSetup
         ? _homeCharacterSetupPrompt
         : characterPromptState.canGuideRecording &&
-              presentation.questionText == null &&
+              question == null &&
               hasNoCurrentRecording
         ? _homeFirstRecordingPrompt
         : null;
@@ -278,7 +291,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
     return _HomeStoryLoopContent(
       myCard: presentation.myCard,
       partnerCard: presentation.partnerCard,
-      questionText: guideText ?? presentation.questionText,
+      questionText: guideText ?? feedbackText ?? presentation.questionText,
       cardsAreCompleted: presentation.cardsAreCompleted,
       canAddCard: presentation.canAddCard,
       onAddCard: presentation.canAddCard
