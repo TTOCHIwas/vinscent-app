@@ -70,4 +70,20 @@ void main() {
 
     expect(session.cancel(), const HomeRecordingDragSession.idle());
   });
+
+  test('updates temporary z-order without interrupting a drag', () {
+    final dragging = const HomeRecordingDragSession.idle().start(
+      slotId: 'slot-1',
+      position: const Offset(40, 40),
+    );
+
+    final broughtForward = dragging.bringToFront('slot-2');
+    final cleared = broughtForward.clearFront();
+
+    expect(broughtForward.frontSlotId, 'slot-2');
+    expect(broughtForward.draggingSlotId, 'slot-1');
+    expect(cleared.frontSlotId, isNull);
+    expect(cleared.draggingSlotId, 'slot-1');
+    expect(cleared.dragPosition, const Offset(40, 40));
+  });
 }
