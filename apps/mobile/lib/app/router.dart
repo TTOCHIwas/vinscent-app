@@ -1,15 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'application/app_route_redirect_policy.dart';
 import '../features/ai/presentation/ai_screen.dart';
 import '../features/auth/application/auth_controller.dart';
-import '../features/auth/application/auth_status.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/boot/presentation/boot_screen.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/characters/presentation/character_editor_screen.dart';
 import '../features/couple/application/couple_controller.dart';
-import '../features/couple/data/couple.dart';
 import '../features/couple/presentation/couple_entry_screen.dart';
 import '../features/couple/presentation/couple_setup_waiting_screen.dart';
 import '../features/couple/presentation/couple_waiting_screen.dart';
@@ -36,90 +35,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
     overridePlatformDefaultLocation: true,
-    redirect: (context, state) {
-      final path = state.uri.path;
-      final isBootRoute = path == '/boot';
-      final isLoginRoute = path == '/login';
-      final isOnboardingRoute = path == '/onboarding';
-      final isCoupleEntryRoute = path == '/couple';
-      final isCoupleWaitingRoute = path == '/couple/waiting';
-      final isCoupleAnniversaryRoute = path == '/couple/anniversary';
-      final isCoupleCharacterRoute = path == '/couple/character';
-      final isCoupleSetupWaitingRoute = path == '/couple/setup/waiting';
-      final isCoupleRoute =
-          isCoupleEntryRoute ||
-          isCoupleWaitingRoute ||
-          isCoupleAnniversaryRoute ||
-          isCoupleCharacterRoute ||
-          isCoupleSetupWaitingRoute;
-
-      return switch (authStatus) {
-        AuthStatus.checking => isBootRoute ? null : '/boot',
-        AuthStatus.unauthenticated => isLoginRoute ? null : '/login',
-        AuthStatus.authenticated => profile.when(
-          loading: () => isBootRoute ? null : '/boot',
-          error: (error, stackTrace) => isBootRoute ? null : '/boot',
-          data: (profile) {
-            if (profile == null) {
-              return isOnboardingRoute ? null : '/onboarding';
-            }
-
-            return couple.when(
-              loading: () => isBootRoute ? null : '/boot',
-              error: (error, stackTrace) => isBootRoute ? null : '/boot',
-              data: (couple) {
-                if (couple == null) {
-                  return isCoupleEntryRoute ? null : '/couple';
-                }
-
-                switch (couple.accessMode) {
-                  case CoupleAccessMode.pending:
-                    return isCoupleWaitingRoute ? null : '/couple/waiting';
-                  case CoupleAccessMode.active:
-                    final setupIncomplete =
-                        couple.relationshipStartDate == null ||
-                        couple.isCharacterSetupPending;
-                    final isSetupOwner = couple.isInitialSetupOwner(profile.id);
-
-                    if (setupIncomplete && !isSetupOwner) {
-                      return isCoupleSetupWaitingRoute
-                          ? null
-                          : '/couple/setup/waiting';
-                    }
-                    if (couple.relationshipStartDate == null) {
-                      return isCoupleAnniversaryRoute
-                          ? null
-                          : '/couple/anniversary';
-                    }
-                    if (couple.isCharacterSetupPending) {
-                      return isCoupleCharacterRoute
-                          ? null
-                          : '/couple/character';
-                    }
-                    return (isBootRoute ||
-                            isLoginRoute ||
-                            isOnboardingRoute ||
-                            isCoupleRoute ||
-                            path == '/')
-                        ? '/home'
-                        : null;
-                  case CoupleAccessMode.archivedReadOnly:
-                    return (isBootRoute ||
-                            isLoginRoute ||
-                            isOnboardingRoute ||
-                            isCoupleRoute ||
-                            path == '/' ||
-                            path == '/home/story' ||
-                            path == '/home/question/edit')
-                        ? '/home'
-                        : null;
-                }
-              },
-            );
-          },
-        ),
-      };
-    },
+    redirect: (context, state) => AppRouteRedirectPolicy.resolve(
+      path: state.uri.path,
+      authStatus: authStatus,
+      profile: profile,
+      couple: couple,
+    ),
     routes: [
       GoRoute(path: '/', redirect: (context, state) => '/home'),
       GoRoute(
