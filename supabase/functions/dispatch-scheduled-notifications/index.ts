@@ -1,10 +1,12 @@
 import {
   createFcmAccessToken,
   createServiceRoleClient,
-  jsonResponse,
   sendPushNotification,
-  verifyWebhookSecret,
 } from '../_shared/push.ts';
+import {
+  jsonResponse,
+  verifyWebhookSecret,
+} from '../_shared/webhook.ts';
 
 type StoryLoopRow = {
   id: string;
