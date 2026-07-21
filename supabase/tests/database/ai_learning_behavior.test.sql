@@ -285,18 +285,36 @@ select throws_ok(
   'personalized questions cannot be created before 24 foundation answers'
 );
 
+insert into public.daily_story_loops (
+  couple_id,
+  couple_date,
+  status
+)
+select
+  '20000000-0000-0000-0000-000000000001',
+  current_date - q.curriculum_position,
+  'answered_by_one'
+from public.questions as q
+where q.curriculum_version = 1
+  and q.curriculum_position between 2 and 24;
+
 insert into public.daily_questions (
   couple_id,
   question_id,
   assigned_date,
-  status
+  status,
+  story_loop_id
 )
 select
   '20000000-0000-0000-0000-000000000001',
   q.id,
   current_date - q.curriculum_position,
-  'answered_by_one'
+  'answered_by_one',
+  dsl.id
 from public.questions as q
+join public.daily_story_loops as dsl
+  on dsl.couple_id = '20000000-0000-0000-0000-000000000001'
+  and dsl.couple_date = current_date - q.curriculum_position
 where q.curriculum_version = 1
   and q.curriculum_position between 2 and 24;
 
@@ -565,6 +583,13 @@ select is(
 );
 
 reset role;
+
+delete from public.daily_questions as dq
+using public.questions as q
+where dq.question_id = q.id
+  and dq.couple_id = '20000000-0000-0000-0000-000000000001'
+  and q.curriculum_version = 1
+  and q.curriculum_position between 2 and 24;
 
 insert into public.ai_runs (
   id,

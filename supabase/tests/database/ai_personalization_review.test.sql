@@ -74,18 +74,35 @@ values
     null
   );
 
+insert into public.daily_story_loops (
+  couple_id,
+  couple_date,
+  status
+)
+select
+  '22000000-0000-0000-0000-000000000001',
+  current_date - (25 - q.curriculum_position),
+  'answered_by_one'
+from public.questions as q
+where q.curriculum_version = 1;
+
 insert into public.daily_questions (
   couple_id,
   question_id,
   assigned_date,
-  status
+  status,
+  story_loop_id
 )
 select
   '22000000-0000-0000-0000-000000000001',
   q.id,
   current_date - (25 - q.curriculum_position),
-  'answered_by_one'
+  'answered_by_one',
+  dsl.id
 from public.questions as q
+join public.daily_story_loops as dsl
+  on dsl.couple_id = '22000000-0000-0000-0000-000000000001'
+  and dsl.couple_date = current_date - (25 - q.curriculum_position)
 where q.curriculum_version = 1;
 
 insert into public.daily_question_answers (
@@ -345,6 +362,8 @@ select is(
   'the dashboard counts only decisions assigned to the current member'
 );
 
+reset role;
+
 select is(
   (
     select count(*)
@@ -353,6 +372,13 @@ select is(
   0::bigint,
   'personalized question work cannot start before review completion'
 );
+
+select set_config(
+  'request.jwt.claim.sub',
+  '12000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
 
 select is(
   (
