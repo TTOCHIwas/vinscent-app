@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
+import '../../application/home_recording_drag_session.dart';
 import '../../application/home_recording_placement_geometry.dart';
 import '../../application/recording_playback_controller.dart';
 import '../../application/recording_slot_placement_session.dart';
@@ -30,10 +31,7 @@ class _HomeRecordingArtworkLayerState
   final Map<String, int> _pulseTokens = {};
   final Set<String> _hiddenSlotIds = {};
   final Set<String> _busySlotIds = {};
-  String? _frontSlotId;
-  String? _draggingSlotId;
-  Offset? _dragPosition;
-  bool _isOverTrash = false;
+  HomeRecordingDragSession _dragSession = const HomeRecordingDragSession.idle();
   bool _isPlacementSessionRunning = false;
   String? _pendingNewSlotId;
 
@@ -116,7 +114,7 @@ class _HomeRecordingArtworkLayerState
                       slot: slot,
                       size: itemSize,
                       isBusy: _busySlotIds.contains(slot.slotId),
-                      isDragging: _draggingSlotId == slot.slotId,
+                      isDragging: _dragSession.draggingSlotId == slot.slotId,
                       pulseToken: _pulseTokens[slot.slotId],
                       isPlaying:
                           playbackState.isPlaying &&
@@ -144,10 +142,12 @@ class _HomeRecordingArtworkLayerState
                       onPanCancel: canEdit ? _cancelDrag : null,
                     ),
                   ),
-            if (_draggingSlotId != null)
+            if (_dragSession.draggingSlotId != null)
               Positioned.fromRect(
                 rect: trashRect,
-                child: HomeRecordingArtworkTrashTarget(isActive: _isOverTrash),
+                child: HomeRecordingArtworkTrashTarget(
+                  isActive: _dragSession.isOverTrash,
+                ),
               ),
           ],
         );
@@ -162,7 +162,7 @@ class _HomeRecordingArtworkLayerState
   }
 
   List<CoupleRecordingSlot> _bringFront(List<CoupleRecordingSlot> slots) {
-    final frontSlotId = _frontSlotId;
+    final frontSlotId = _dragSession.frontSlotId;
     if (frontSlotId == null) {
       return slots;
     }
@@ -201,8 +201,8 @@ class _HomeRecordingArtworkLayerState
     CoupleRecordingSlot slot,
     HomeRecordingPlacementGeometry geometry,
   ) {
-    if (_draggingSlotId == slot.slotId) {
-      return _dragPosition;
+    if (_dragSession.draggingSlotId == slot.slotId) {
+      return _dragSession.dragPosition;
     }
     final pendingPosition = _pendingPositions[slot.slotId];
     if (pendingPosition != null) {
@@ -308,10 +308,10 @@ class _HomeRecordingArtworkLayerState
       return;
     }
     setState(() {
-      _frontSlotId = slot.slotId;
-      _draggingSlotId = slot.slotId;
-      _dragPosition = position;
-      _isOverTrash = false;
+      _dragSession = _dragSession.start(
+        slotId: slot.slotId,
+        position: position,
+      );
     });
   }
 
@@ -322,19 +322,18 @@ class _HomeRecordingArtworkLayerState
     required double itemSize,
     required Rect trashRect,
   }) {
-    if (_draggingSlotId != slot.slotId || _dragPosition == null) {
+    final updatedSession = _dragSession.update(
+      slotId: slot.slotId,
+      delta: delta,
+      canvasSize: canvasSize,
+      itemSize: itemSize,
+      trashRect: trashRect,
+    );
+    if (identical(updatedSession, _dragSession)) {
       return;
     }
-
-    final halfItem = itemSize / 2;
-    final next = _dragPosition! + delta;
-    final clamped = Offset(
-      next.dx.clamp(halfItem, canvasSize.width - halfItem),
-      next.dy.clamp(halfItem, canvasSize.height - halfItem),
-    );
     setState(() {
-      _dragPosition = clamped;
-      _isOverTrash = trashRect.inflate(12).contains(clamped);
+      _dragSession = updatedSession;
     });
   }
 
@@ -342,15 +341,13 @@ class _HomeRecordingArtworkLayerState
     CoupleRecordingSlot slot,
     HomeRecordingPlacementGeometry geometry,
   ) {
-    if (_draggingSlotId != slot.slotId) {
+    if (_dragSession.draggingSlotId != slot.slotId) {
       return;
     }
-    final dragPosition = _dragPosition;
-    final shouldDelete = _isOverTrash;
+    final dragPosition = _dragSession.dragPosition;
+    final shouldDelete = _dragSession.isOverTrash;
     setState(() {
-      _draggingSlotId = null;
-      _dragPosition = null;
-      _isOverTrash = false;
+      _dragSession = _dragSession.end(slotId: slot.slotId);
     });
 
     if (shouldDelete) {
@@ -359,14 +356,14 @@ class _HomeRecordingArtworkLayerState
     }
     if (dragPosition == null) {
       setState(() {
-        _frontSlotId = null;
+        _dragSession = _dragSession.clearFront();
       });
       return;
     }
     final resolved = geometry.resolve(dragPosition);
     if (resolved == null) {
       setState(() {
-        _frontSlotId = null;
+        _dragSession = _dragSession.clearFront();
       });
       _showMessage('그림을 둘 수 있는 위치에 놓아 주세요.');
       return;
@@ -375,14 +372,11 @@ class _HomeRecordingArtworkLayerState
   }
 
   void _cancelDrag() {
-    if (_draggingSlotId == null) {
+    if (_dragSession.draggingSlotId == null) {
       return;
     }
     setState(() {
-      _frontSlotId = null;
-      _draggingSlotId = null;
-      _dragPosition = null;
-      _isOverTrash = false;
+      _dragSession = _dragSession.cancel();
     });
   }
 
@@ -416,7 +410,7 @@ class _HomeRecordingArtworkLayerState
     } finally {
       if (mounted) {
         setState(() {
-          _frontSlotId = null;
+          _dragSession = _dragSession.clearFront();
           _pendingPositions.remove(slot.slotId);
           _pendingBaseRevisions.remove(slot.slotId);
           _busySlotIds.remove(slot.slotId);
@@ -432,8 +426,8 @@ class _HomeRecordingArtworkLayerState
     }
 
     setState(() {
-      if (_frontSlotId == slot.slotId) {
-        _frontSlotId = null;
+      if (_dragSession.frontSlotId == slot.slotId) {
+        _dragSession = _dragSession.clearFront();
       }
       _hiddenSlotIds.add(slot.slotId);
       _busySlotIds.add(slot.slotId);
@@ -531,7 +525,7 @@ class _HomeRecordingArtworkLayerState
     }
     setState(() {
       _pulseTokens[slotId] = (_pulseTokens[slotId] ?? 0) + 1;
-      _frontSlotId = slotId;
+      _dragSession = _dragSession.bringToFront(slotId);
     });
   }
 
