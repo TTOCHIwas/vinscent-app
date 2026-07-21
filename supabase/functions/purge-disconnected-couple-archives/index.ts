@@ -1,9 +1,11 @@
 import {
   createServiceRoleClient,
+} from '../_shared/push.ts';
+import {
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
-} from '../_shared/push.ts';
+} from '../_shared/webhook.ts';
 
 const defaultBatchLimit = 50;
 
