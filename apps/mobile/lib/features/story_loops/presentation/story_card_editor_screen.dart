@@ -18,8 +18,10 @@ import '../data/story_card_scene.dart';
 import '../data/story_loop_write_failure.dart';
 import 'widgets/story_card_caption_input_overlay.dart';
 import 'widgets/story_card_camera_stage.dart';
+import 'widgets/story_card_editor_action_bar.dart';
 import 'widgets/story_card_editor_canvas.dart';
 import 'widgets/story_card_editor_header.dart';
+import 'widgets/story_card_editor_icon_button.dart';
 import 'widgets/story_card_text_input_overlay.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
@@ -185,7 +187,7 @@ class _StoryCardEditorContentState
               alignment: Alignment.centerRight,
               child: Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: _StoryCardActionBar(
+                child: StoryCardEditorActionBar(
                   interactionMode: _session.tool,
                   hasBackground: _draft.hasPhoto,
                   onAddTextPressed: _selectTextTool,
@@ -967,94 +969,6 @@ class _StoryCardTextTrashTarget extends StatelessWidget {
   }
 }
 
-class _StoryCardActionBar extends StatelessWidget {
-  const _StoryCardActionBar({
-    required this.interactionMode,
-    required this.hasBackground,
-    required this.onAddTextPressed,
-    required this.onEditCaptionPressed,
-    required this.onDrawingModePressed,
-    required this.onBackgroundColorPressed,
-  });
-
-  final StoryCardEditorTool interactionMode;
-  final bool hasBackground;
-  final VoidCallback onAddTextPressed;
-  final VoidCallback onEditCaptionPressed;
-  final VoidCallback onDrawingModePressed;
-  final VoidCallback? onBackgroundColorPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _EditorIconButton(
-          tooltip: '텍스트 추가',
-          icon: Icons.text_fields,
-          isSelected: interactionMode == StoryCardEditorTool.text,
-          onPressed: onAddTextPressed,
-        ),
-        const SizedBox(height: 8),
-        _EditorIconButton(
-          key: const ValueKey('story-card-caption-tool'),
-          tooltip: '짧은 글',
-          icon: Icons.short_text,
-          onPressed: onEditCaptionPressed,
-        ),
-        const SizedBox(height: 8),
-        _EditorIconButton(
-          tooltip: '그리기',
-          icon: Icons.brush_outlined,
-          isSelected: interactionMode == StoryCardEditorTool.drawing,
-          onPressed: onDrawingModePressed,
-        ),
-        if (!hasBackground) ...[
-          const SizedBox(height: 8),
-          _EditorIconButton(
-            tooltip: '배경색 전환',
-            icon: Icons.contrast,
-            onPressed: onBackgroundColorPressed,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _EditorIconButton extends StatelessWidget {
-  const _EditorIconButton({
-    super.key,
-    required this.tooltip,
-    required this.onPressed,
-    this.icon,
-    this.iconWidget,
-    this.isSelected = false,
-  }) : assert(icon != null || iconWidget != null),
-       assert(icon == null || iconWidget == null);
-
-  final String tooltip;
-  final IconData? icon;
-  final Widget? iconWidget;
-  final VoidCallback? onPressed;
-  final bool isSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: iconWidget ?? Icon(icon),
-      color: Colors.white,
-      style: IconButton.styleFrom(
-        backgroundColor: isSelected
-            ? AppColors.actionPrimary
-            : const Color(0x85000000),
-      ),
-    );
-  }
-}
-
 class _StoryCardDrawingControls extends StatelessWidget {
   const _StoryCardDrawingControls({
     required this.selectedTool,
@@ -1092,7 +1006,7 @@ class _StoryCardDrawingControls extends StatelessWidget {
           children: [
             Row(
               children: [
-                _EditorIconButton(
+                StoryCardEditorIconButton(
                   key: const ValueKey('story-card-drawing-pen'),
                   tooltip: '펜',
                   icon: Icons.edit,
@@ -1100,7 +1014,7 @@ class _StoryCardDrawingControls extends StatelessWidget {
                   onPressed: () => onToolChanged(StoryCardDrawingTool.pen),
                 ),
                 const SizedBox(width: 6),
-                _EditorIconButton(
+                StoryCardEditorIconButton(
                   key: const ValueKey('story-card-drawing-eraser'),
                   tooltip: '지우개',
                   iconWidget: const AppSvgIcon(AppIcons.eraser),
@@ -1108,7 +1022,7 @@ class _StoryCardDrawingControls extends StatelessWidget {
                   onPressed: () => onToolChanged(StoryCardDrawingTool.eraser),
                 ),
                 const SizedBox(width: 6),
-                _EditorIconButton(
+                StoryCardEditorIconButton(
                   key: const ValueKey('story-card-drawing-undo'),
                   tooltip: '되돌리기',
                   icon: Icons.undo,
