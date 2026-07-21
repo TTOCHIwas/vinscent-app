@@ -198,6 +198,7 @@ test('processor records retryable model failures and continues the batch', async
           retryable: true,
           status: 429,
           providerStatus: 'RESOURCE_EXHAUSTED',
+          providerErrorDetail: 'Quota exhausted for this project.',
           retryAfterMs: 45_000,
           latencyMs: 275,
         });
@@ -227,6 +228,10 @@ test('processor records retryable model failures and continues the batch', async
   assert.equal(
     repository.failures[0]?.providerErrorStatus,
     'RESOURCE_EXHAUSTED',
+  );
+  assert.equal(
+    repository.failures[0]?.providerErrorDetail,
+    'Quota exhausted for this project.',
   );
   assert.equal(repository.failures[0]?.retryAfterMs, 45_000);
   assert.equal(repository.failures[0]?.usage.latencyMs, 275);

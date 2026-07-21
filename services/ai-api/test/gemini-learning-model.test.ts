@@ -256,7 +256,12 @@ test('Gemini client classifies invalid requests as terminal', async () => {
   const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
     fetcher: async () => new Response(
-      JSON.stringify({ error: { message: 'Malformed schema' } }),
+      JSON.stringify({
+        error: {
+          status: 'INVALID_ARGUMENT',
+          message: 'Malformed\nresponse schema for key AIza0123456789abcdef',
+        },
+      }),
       { status: 400 },
     ),
   });
@@ -270,6 +275,11 @@ test('Gemini client classifies invalid requests as terminal', async () => {
       assert.ok(error instanceof GeminiProviderError);
       assert.equal(error.code, 'gemini_invalid_request');
       assert.equal(error.retryable, false);
+      assert.equal(error.providerStatus, 'INVALID_ARGUMENT');
+      assert.equal(
+        error.providerErrorDetail,
+        'Malformed response schema for key [REDACTED]',
+      );
       return true;
     },
   );
@@ -397,6 +407,59 @@ test('Gemini model maps memory output without real user identifiers', async () =
     },
   ]);
   assert.equal(result.usage.inputTokenCount, 30);
+});
+
+test('memory extraction uses a flat couple subject discriminator', async () => {
+  let capturedSchema: unknown;
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ schema }) => {
+      capturedSchema = schema;
+      return {
+        value: {
+          memories: [
+            {
+              memory_key: 'shared_quiet_time',
+              scope: 'couple',
+              subject_participant_key: 'couple',
+              kind: 'shared_preference',
+              learning_domain: 'daily_life',
+              evidence_type: 'explicit',
+              sensitive_category: 'none',
+              statement: 'Both partners value quiet time together.',
+              confidence: 0.84,
+              evidence_answer_ids: ['answer-a', 'answer-b'],
+            },
+          ],
+        },
+        usage: {
+          inputTokenCount: 30,
+          outputTokenCount: 20,
+          latencyMs: 150,
+        },
+      };
+    },
+  });
+
+  const result = await model.extractMemoryCandidates(context);
+  const schema = capturedSchema as {
+    properties: {
+      memories: {
+        items: {
+          properties: { subject_participant_key: unknown };
+        };
+      };
+    };
+  };
+
+  assert.deepEqual(
+    schema.properties.memories.items.properties.subject_participant_key,
+    {
+      type: 'string',
+      enum: ['partner_a', 'partner_b', 'couple'],
+    },
+  );
+  assert.equal(result.value[0]?.scope, 'couple');
+  assert.equal(result.value[0]?.subjectParticipantKey, null);
 });
 
 test('foundation ranking receives metadata but not answers or memories', async () => {

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(34);
 
 insert into auth.users (
   id,
@@ -576,7 +576,7 @@ select ok(
 );
 
 select is(
-  public.fail_ai_processing_run_with_diagnostics(
+  public.fail_ai_processing_run_with_diagnostics_v2(
     (
       select value_uuid
       from ai_worker_test_values
@@ -590,6 +590,7 @@ select is(
     300,
     429,
     'RESOURCE_EXHAUSTED',
+    'Quota exhausted for this project.',
     120000
   ),
   true,
@@ -646,6 +647,20 @@ select is(
   ),
   'RESOURCE_EXHAUSTED'::text,
   'bounded provider error status is retained'
+);
+
+select is(
+  (
+    select air.provider_error_detail
+    from public.ai_runs as air
+    where air.id = (
+      select value_uuid
+      from ai_worker_test_values
+      where value_key = 'failure_run'
+    )
+  ),
+  'Quota exhausted for this project.'::text,
+  'bounded provider error detail is retained'
 );
 
 select is(

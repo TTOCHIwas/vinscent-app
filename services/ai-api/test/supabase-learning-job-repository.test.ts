@@ -150,6 +150,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
     retryable: true,
     providerHttpStatus: 429,
     providerErrorStatus: 'RESOURCE_EXHAUSTED',
+    providerErrorDetail: 'Quota exhausted for this project.',
     retryAfterMs: 45_000,
     usage: {
       inputTokenCount: null,
@@ -171,7 +172,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
     },
   });
   assert.deepEqual(client.calls[2], {
-    name: 'fail_ai_processing_run_with_diagnostics',
+    name: 'fail_ai_processing_run_with_diagnostics_v2',
     params: {
       requested_run_id: 'run-1',
       requested_error_code: 'gemini_rate_limited',
@@ -182,6 +183,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
       requested_latency_ms: 200,
       requested_provider_http_status: 429,
       requested_provider_error_status: 'RESOURCE_EXHAUSTED',
+      requested_provider_error_detail: 'Quota exhausted for this project.',
       requested_retry_after_ms: 45_000,
     },
   });
