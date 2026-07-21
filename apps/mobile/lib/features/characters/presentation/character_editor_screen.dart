@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/drawing/app_drawing.dart';
+import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/app_drawing_painter.dart';
-import '../../../core/drawing/app_drawing_style.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
@@ -34,17 +34,9 @@ class CharacterEditorScreen extends ConsumerStatefulWidget {
 class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   static const _exportSize = 512;
 
-  List<AppDrawingStroke> _strokes = [];
-  AppDrawingStroke? _activeStroke;
-  AppDrawingTool _selectedTool = AppDrawingTool.pen;
-  Color _selectedColor = AppDrawingStyle.colorPalette.first;
-  double _selectedStrokeWidth = AppDrawingStyle.normalStrokeWidth;
+  late final AppDrawingController _drawingController;
   bool _isLoadingDrawing = true;
   bool _isSaving = false;
-
-  List<AppDrawingStroke> get _visibleStrokes {
-    return [..._strokes, ?_activeStroke];
-  }
 
   bool get _isReadOnly {
     final couple = ref
@@ -70,22 +62,21 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
         !_isSaving &&
-        AppDrawingData(strokes: _strokes).hasVisibleContent;
+        _drawingController.hasVisibleContent;
   }
 
   bool get _canClear {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
         !_isSaving &&
-        _strokes.isNotEmpty;
+        _drawingController.canClear;
   }
 
   bool get _canUndo {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
         !_isSaving &&
-        _activeStroke == null &&
-        _strokes.isNotEmpty;
+        _drawingController.canUndo;
   }
 
   bool get _canSkip =>
@@ -94,10 +85,26 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _drawingController = AppDrawingController()
+      ..addListener(_handleDrawingChanged);
     if (widget.isInitialSetup) {
       _isLoadingDrawing = false;
     } else {
       Future<void>.microtask(_loadExistingDrawing);
+    }
+  }
+
+  @override
+  void dispose() {
+    _drawingController
+      ..removeListener(_handleDrawingChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleDrawingChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -118,9 +125,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       }
 
       final drawingData = AppDrawingData.fromJsonString(drawingDataJson);
-      setState(() {
-        _strokes = drawingData.strokes;
-      });
+      _drawingController.replaceStrokes(drawingData.strokes);
     } catch (_) {
       if (mounted) {
         _showSnackBar('캐릭터를 불러오지 못했어요.');
@@ -139,14 +144,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       return;
     }
 
-    setState(() {
-      _activeStroke = AppDrawingStroke(
-        tool: _selectedTool,
-        color: _selectedColor,
-        width: _selectedStrokeWidth,
-        points: [point],
-      );
-    });
+    _drawingController.startStroke(point);
   }
 
   void _updateStroke(AppDrawingPoint point) {
@@ -154,16 +152,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       return;
     }
 
-    final activeStroke = _activeStroke;
-    if (activeStroke == null) {
-      return;
-    }
-
-    setState(() {
-      _activeStroke = activeStroke.copyWith(
-        points: [...activeStroke.points, point],
-      );
-    });
+    _drawingController.updateStroke(point);
   }
 
   void _endStroke() {
@@ -171,15 +160,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       return;
     }
 
-    final activeStroke = _activeStroke;
-    if (activeStroke == null) {
-      return;
-    }
-
-    setState(() {
-      _strokes = [..._strokes, activeStroke];
-      _activeStroke = null;
-    });
+    _drawingController.endStroke();
   }
 
   void _undoLastStroke() {
@@ -187,9 +168,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       return;
     }
 
-    setState(() {
-      _strokes = _strokes.sublist(0, _strokes.length - 1);
-    });
+    _drawingController.undo();
   }
 
   Future<void> _confirmClearCanvas() async {
@@ -221,10 +200,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
       return;
     }
 
-    setState(() {
-      _strokes = [];
-      _activeStroke = null;
-    });
+    _drawingController.clear();
   }
 
   Future<void> _save() async {
@@ -237,7 +213,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     });
 
     try {
-      final drawingData = AppDrawingData(strokes: _strokes);
+      final drawingData = _drawingController.drawingData;
       final imageBytes = await _renderPng(drawingData);
 
       await ref
@@ -436,7 +412,8 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                                         ),
                                       )
                                     : AppDrawingCanvas(
-                                        strokes: _visibleStrokes,
+                                        strokes:
+                                            _drawingController.visibleStrokes,
                                         isReadOnly: isReadOnly,
                                         onStrokeStart: _startStroke,
                                         onStrokeUpdate: _updateStroke,
@@ -453,28 +430,17 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
                         child: AppDrawingToolbar(
-                          selectedTool: _selectedTool,
-                          selectedColor: _selectedColor,
-                          selectedStrokeWidth: _selectedStrokeWidth,
+                          selectedTool: _drawingController.selectedTool,
+                          selectedColor: _drawingController.selectedColor,
+                          selectedStrokeWidth:
+                              _drawingController.selectedStrokeWidth,
                           isReadOnly: isReadOnly,
                           canUndo: _canUndo,
                           canClear: _canClear,
-                          onToolChanged: (tool) {
-                            setState(() {
-                              _selectedTool = tool;
-                            });
-                          },
-                          onColorChanged: (color) {
-                            setState(() {
-                              _selectedColor = color;
-                              _selectedTool = AppDrawingTool.pen;
-                            });
-                          },
-                          onStrokeWidthChanged: (width) {
-                            setState(() {
-                              _selectedStrokeWidth = width;
-                            });
-                          },
+                          onToolChanged: _drawingController.selectTool,
+                          onColorChanged: _drawingController.selectColor,
+                          onStrokeWidthChanged:
+                              _drawingController.selectStrokeWidth,
                           onUndoPressed: _undoLastStroke,
                           onClearPressed: _confirmClearCanvas,
                         ),
