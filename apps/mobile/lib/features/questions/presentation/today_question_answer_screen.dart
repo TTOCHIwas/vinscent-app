@@ -21,8 +21,9 @@ import '../data/question_detail_state.dart';
 import 'question_route_context.dart';
 import 'story_loop_question_view_model.dart';
 import 'widgets/question_answer_prompt_row.dart';
-import 'widgets/question_detail_header.dart';
 import 'widgets/question_answer_sections.dart';
+import 'widgets/question_detail_header.dart';
+import 'widgets/question_detail_title.dart';
 
 class TodayQuestionAnswerScreen extends ConsumerWidget {
   const TodayQuestionAnswerScreen({
@@ -89,6 +90,8 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
               question: questionState.question,
               cards: cards,
               currentUserId: currentUserId,
+              showQuestionAsTitle:
+                  questionState.answerState?.hasBothAnswers ?? false,
               child: Column(
                 children: [
                   QuestionAnswerOverview(
@@ -106,6 +109,8 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
                   if (questionState.answerState?.hasBothAnswers ?? false)
                     AiQuestionFeedbackSection(
                       dailyQuestionId: questionState.question.dailyQuestionId,
+                      presentation:
+                          AiQuestionFeedbackPresentation.characterSpeech,
                     ),
                 ],
               ),
@@ -379,12 +384,14 @@ class _QuestionDetailContent extends StatelessWidget {
     required this.question,
     required this.cards,
     required this.currentUserId,
+    required this.showQuestionAsTitle,
     required this.child,
   });
 
   final DailyQuestion question;
   final List<StoryLoopCardDetail> cards;
   final String? currentUserId;
+  final bool showQuestionAsTitle;
   final Widget child;
 
   @override
@@ -402,10 +409,16 @@ class _QuestionDetailContent extends StatelessWidget {
         children: [
           if (cardPair.hasCard) ...[
             _QuestionAnswerCards(cardPair: cardPair),
-            const SizedBox(height: 16),
+            SizedBox(height: showQuestionAsTitle ? 28 : 16),
           ],
-          QuestionAnswerPromptRow(questionText: question.questionText),
-          const SizedBox(height: 16),
+          if (showQuestionAsTitle)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: QuestionDetailTitle(questionText: question.questionText),
+            )
+          else
+            QuestionAnswerPromptRow(questionText: question.questionText),
+          SizedBox(height: showQuestionAsTitle ? 28 : 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: child,

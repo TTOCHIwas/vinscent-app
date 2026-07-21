@@ -7,6 +7,7 @@ import '../../../ai/presentation/widgets/ai_question_feedback_section.dart';
 import '../../../questions/data/daily_question_answer_state.dart';
 import '../../../questions/presentation/question_route_context.dart';
 import '../../../questions/presentation/widgets/question_answer_sections.dart';
+import '../../../questions/presentation/widgets/question_detail_title.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
 import '../../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
@@ -71,7 +72,7 @@ class _LoadedDetailSection extends StatelessWidget {
           _CardOnlyMessage(detail: detail),
         ] else ...[
           const SizedBox(height: 28),
-          _QuestionTitle(questionText: question.question.questionText),
+          QuestionDetailTitle(questionText: question.question.questionText),
           const SizedBox(height: 28),
           QuestionAnswerOverview(
             answerState: question.answerState,
@@ -227,33 +228,6 @@ class _DetailDateHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _QuestionTitle extends StatelessWidget {
-  const _QuestionTitle({required this.questionText});
-
-  final String questionText;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      header: true,
-      label: '질문: $questionText',
-      excludeSemantics: true,
-      child: SizedBox(
-        width: double.infinity,
-        child: Text(
-          questionText,
-          key: const Key('calendar-detail-question-title'),
-          textAlign: TextAlign.center,
-          style: AppTextStyles.homeBodyMedium.copyWith(
-            fontSize: 18,
-            height: 1.5,
-          ),
-        ),
-      ),
     );
   }
 }

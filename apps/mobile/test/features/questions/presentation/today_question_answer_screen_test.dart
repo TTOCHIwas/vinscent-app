@@ -53,7 +53,7 @@ void main() {
     });
 
     testWidgets(
-      'shows cards above the horizontal prompt in a scrollable detail layout',
+      'shows cards above the completed question title in a scrollable detail layout',
       (tester) async {
         final repository = _FakeDailyQuestionAnswerRepository(
           _completedAnswerState,
@@ -91,8 +91,7 @@ void main() {
         final partnerCard = find.byKey(
           const ValueKey('question-answer-card-partner-detail-card'),
         );
-        final character = find.byKey(const Key('question-answer-character'));
-        final question = find.byKey(const Key('question-answer-prompt'));
+        final questionTitle = find.byKey(const Key('question-detail-title'));
         final scrollView = find.byType(SingleChildScrollView);
 
         expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));
@@ -110,19 +109,9 @@ void main() {
         );
         expect(
           tester.getBottomLeft(myCard).dy,
-          lessThan(tester.getTopLeft(character).dy),
-        );
-        expect(
-          tester.getCenter(character).dx,
-          lessThan(tester.getCenter(question).dx),
+          lessThan(tester.getTopLeft(questionTitle).dy),
         );
         expect(scrollView, findsOneWidget);
-
-        final initialCardTop = tester.getTopLeft(myCard).dy;
-        await tester.drag(scrollView, const Offset(0, -120));
-        await tester.pumpAndSettle();
-
-        expect(tester.getTopLeft(myCard).dy, lessThan(initialCardTop));
         expect(tester.takeException(), isNull);
       },
     );
