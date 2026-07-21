@@ -106,6 +106,8 @@ class NotificationPreferencesController
         next.reminderEnabled == current.reminderEnabled &&
         next.coupleDisconnectEnabled == current.coupleDisconnectEnabled &&
         next.recordingEnabled == current.recordingEnabled &&
-        next.partnerStoryCardEnabled == current.partnerStoryCardEnabled;
+        next.partnerStoryCardEnabled == current.partnerStoryCardEnabled &&
+        next.coupleActivityEnabled == current.coupleActivityEnabled &&
+        next.aiUpdatesEnabled == current.aiUpdatesEnabled;
   }
 }

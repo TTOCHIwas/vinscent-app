@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +11,9 @@ import '../../../core/config/app_config.dart';
 import 'push_token_failure.dart';
 
 final pushTokenRepositoryProvider = Provider<PushTokenRepository>((ref) {
-  return FirebasePushTokenRepository();
+  final repository = FirebasePushTokenRepository();
+  ref.onDispose(repository.dispose);
+  return repository;
 });
 
 abstract interface class PushTokenRepository {
@@ -21,6 +24,10 @@ abstract interface class PushTokenRepository {
   Future<void> deactivateCurrentDeviceToken();
 
   Stream<String> get tokenRefreshes;
+
+  Stream<Map<String, dynamic>> get notificationOpens;
+
+  Future<Map<String, dynamic>?> initiallyOpenedNotification();
 
   Future<void> registerToken(String token);
 }
@@ -42,10 +49,44 @@ class FirebasePushTokenRepository implements PushTokenRepository {
 
   final FirebaseMessaging _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications;
+  final _notificationOpenController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  StreamSubscription<RemoteMessage>? _notificationOpenSubscription;
   bool _foregroundNotificationsConfigured = false;
 
   @override
   Stream<String> get tokenRefreshes => _messaging.onTokenRefresh;
+
+  @override
+  Stream<Map<String, dynamic>> get notificationOpens {
+    _notificationOpenSubscription ??= FirebaseMessaging.onMessageOpenedApp
+        .listen((message) {
+          _notificationOpenController.add(message.data);
+        });
+    return _notificationOpenController.stream;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> initiallyOpenedNotification() async {
+    final message = await _messaging.getInitialMessage();
+    if (message != null) {
+      return message.data;
+    }
+
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return null;
+    }
+
+    final launchDetails = await _localNotifications
+        .getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp != true) {
+      return null;
+    }
+
+    return _decodeNotificationPayload(
+      launchDetails?.notificationResponse?.payload,
+    );
+  }
 
   @override
   Future<void> configureForegroundNotifications() async {
@@ -68,7 +109,10 @@ class FirebasePushTokenRepository implements PushTokenRepository {
         android: androidSettings,
       );
 
-      await _localNotifications.initialize(initializationSettings);
+      await _localNotifications.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: _handleLocalNotificationResponse,
+      );
       await _localNotifications
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
@@ -235,7 +279,34 @@ class FirebasePushTokenRepository implements PushTokenRepository {
           priority: Priority.high,
         ),
       ),
+      payload: jsonEncode(message.data),
     );
+  }
+
+  void _handleLocalNotificationResponse(NotificationResponse response) {
+    final data = _decodeNotificationPayload(response.payload);
+    if (data != null) {
+      _notificationOpenController.add(data);
+    }
+  }
+
+  Map<String, dynamic>? _decodeNotificationPayload(String? payload) {
+    if (payload == null || payload.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(payload);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
+    } on FormatException {
+      _debugPushLog('Local notification payload ignored: invalid JSON');
+      return null;
+    }
+  }
+
+  Future<void> dispose() async {
+    await _notificationOpenSubscription?.cancel();
+    await _notificationOpenController.close();
   }
 
   void _ensureSupabaseConfigured() {

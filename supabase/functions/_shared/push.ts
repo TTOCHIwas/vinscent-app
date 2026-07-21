@@ -7,7 +7,9 @@ export type NotificationType =
   | 'couple_disconnect'
   | 'recording_activity'
   | 'partner_story_card_uploaded'
-  | 'question_generated';
+  | 'question_generated'
+  | 'couple_activity'
+  | 'ai_update';
 
 export type DeliveryStatus =
   | 'sent'
@@ -21,7 +23,9 @@ export type PreferenceColumn =
   | 'reminder_enabled'
   | 'couple_disconnect_enabled'
   | 'recording_enabled'
-  | 'partner_story_card_enabled';
+  | 'partner_story_card_enabled'
+  | 'couple_activity_enabled'
+  | 'ai_updates_enabled';
 
 type PushTokenRow = {
   id: string;

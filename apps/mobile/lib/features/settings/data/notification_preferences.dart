@@ -7,6 +7,8 @@ class NotificationPreferences {
     required this.coupleDisconnectEnabled,
     required this.recordingEnabled,
     required this.partnerStoryCardEnabled,
+    required this.coupleActivityEnabled,
+    required this.aiUpdatesEnabled,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -20,6 +22,8 @@ class NotificationPreferences {
       coupleDisconnectEnabled: json['couple_disconnect_enabled'] as bool,
       recordingEnabled: json['recording_enabled'] as bool,
       partnerStoryCardEnabled: json['partner_story_card_enabled'] as bool,
+      coupleActivityEnabled: json['couple_activity_enabled'] as bool,
+      aiUpdatesEnabled: json['ai_updates_enabled'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -32,6 +36,8 @@ class NotificationPreferences {
   final bool coupleDisconnectEnabled;
   final bool recordingEnabled;
   final bool partnerStoryCardEnabled;
+  final bool coupleActivityEnabled;
+  final bool aiUpdatesEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -42,6 +48,8 @@ class NotificationPreferences {
     bool? coupleDisconnectEnabled,
     bool? recordingEnabled,
     bool? partnerStoryCardEnabled,
+    bool? coupleActivityEnabled,
+    bool? aiUpdatesEnabled,
   }) {
     return NotificationPreferences(
       userId: userId,
@@ -53,6 +61,9 @@ class NotificationPreferences {
       recordingEnabled: recordingEnabled ?? this.recordingEnabled,
       partnerStoryCardEnabled:
           partnerStoryCardEnabled ?? this.partnerStoryCardEnabled,
+      coupleActivityEnabled:
+          coupleActivityEnabled ?? this.coupleActivityEnabled,
+      aiUpdatesEnabled: aiUpdatesEnabled ?? this.aiUpdatesEnabled,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

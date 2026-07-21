@@ -111,6 +111,26 @@ class _NotificationSettingsContent extends ConsumerWidget {
                 ),
               ),
             ),
+            SettingsToggleRow(
+              title: '커플 활동 알림',
+              value: preferences.coupleActivityEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(coupleActivityEnabled: value),
+                ),
+              ),
+            ),
+            SettingsToggleRow(
+              title: '캐릭터 소식 알림',
+              value: preferences.aiUpdatesEnabled,
+              onChanged: (value) => _updatePreferences(
+                context: context,
+                update: controller.updatePreferences(
+                  preferences.copyWith(aiUpdatesEnabled: value),
+                ),
+              ),
+            ),
           ],
         ),
       ],

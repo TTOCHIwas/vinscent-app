@@ -60,6 +60,9 @@ class SupabaseSettingsRepository implements SettingsRepository {
           'requested_recording_enabled': preferences.recordingEnabled,
           'requested_partner_story_card_enabled':
               preferences.partnerStoryCardEnabled,
+          'requested_couple_activity_enabled':
+              preferences.coupleActivityEnabled,
+          'requested_ai_updates_enabled': preferences.aiUpdatesEnabled,
         },
       );
 
