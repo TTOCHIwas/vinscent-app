@@ -44,6 +44,7 @@ export interface RunFailure {
   retryable: boolean;
   providerHttpStatus: number | null;
   providerErrorStatus: string | null;
+  providerErrorDetail: string | null;
   retryAfterMs: number | null;
   usage: LearningModelUsage;
 }
@@ -88,6 +89,7 @@ interface ClassifiedFailure {
   retryable: boolean;
   providerHttpStatus: number | null;
   providerErrorStatus: string | null;
+  providerErrorDetail: string | null;
   retryAfterMs: number | null;
   usage: LearningModelUsage;
 }
@@ -99,7 +101,7 @@ const emptyUsage: LearningModelUsage = {
 };
 
 const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string> = {
-  extract_memories: 'memory-v2',
+  extract_memories: 'memory-v3',
   generate_feedback: 'feedback-v2',
   select_curated_question: 'question-ranking-v2',
   generate_personalized_question: 'personalized-question-v2',
@@ -207,6 +209,7 @@ export class LearningJobProcessor {
             retryable: failure.retryable,
             providerHttpStatus: failure.providerHttpStatus,
             providerErrorStatus: failure.providerErrorStatus,
+            providerErrorDetail: failure.providerErrorDetail,
             retryAfterMs: failure.retryAfterMs,
             usage,
           });
@@ -315,6 +318,7 @@ function classifyFailure(
       retryable: error.retryable,
       providerHttpStatus: error.status,
       providerErrorStatus: error.providerStatus,
+      providerErrorDetail: error.providerErrorDetail,
       retryAfterMs: error.retryAfterMs,
       usage: {
         inputTokenCount: null,
@@ -330,6 +334,7 @@ function classifyFailure(
       retryable: error.retryable,
       providerHttpStatus: null,
       providerErrorStatus: null,
+      providerErrorDetail: null,
       retryAfterMs: null,
       usage: {
         inputTokenCount: null,
@@ -345,6 +350,7 @@ function classifyFailure(
       retryable: error.retryable,
       providerHttpStatus: null,
       providerErrorStatus: null,
+      providerErrorDetail: null,
       retryAfterMs: null,
       usage: fallbackUsage,
     };
@@ -356,6 +362,7 @@ function classifyFailure(
       retryable: false,
       providerHttpStatus: null,
       providerErrorStatus: null,
+      providerErrorDetail: null,
       retryAfterMs: null,
       usage: fallbackUsage,
     };
@@ -367,6 +374,7 @@ function classifyFailure(
       retryable: false,
       providerHttpStatus: null,
       providerErrorStatus: null,
+      providerErrorDetail: null,
       retryAfterMs: null,
       usage: fallbackUsage,
     };
@@ -377,6 +385,7 @@ function classifyFailure(
     retryable: true,
     providerHttpStatus: null,
     providerErrorStatus: null,
+    providerErrorDetail: null,
     retryAfterMs: null,
     usage: fallbackUsage,
   };

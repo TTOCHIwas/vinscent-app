@@ -39,10 +39,8 @@ const memorySchema = objectSchema({
       memory_key: { type: 'string' },
       scope: { type: 'string', enum: ['personal', 'couple'] },
       subject_participant_key: {
-        anyOf: [
-          { type: 'string', enum: ['partner_a', 'partner_b'] },
-          { type: 'null' },
-        ],
+        type: 'string',
+        enum: ['partner_a', 'partner_b', 'couple'],
       },
       kind: { type: 'string' },
       learning_domain: {
@@ -225,6 +223,7 @@ function buildMemoryExtractionPrompt(
       'Use evidence_type repeated_pattern only when a matching existing candidate was observed in another question; reuse its memory_key.',
       'A single answer cannot establish a personality or repeated tendency.',
       'A personal memory may cite only that participant answer. A couple memory may cite either or both answers.',
+      'Use subject_participant_key partner_a or partner_b for personal memories and couple for couple memories.',
       'Do not save transient moods, unsupported interpretations, or rejected candidate keys.',
       'Classify the blocked categories sexual health, pregnancy or fertility, finance or debt, physical or mental health, trauma, religion or politics, and family conflict in sensitive_category so the server can discard them.',
     ].join(' '),
@@ -342,7 +341,7 @@ function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {
   const scope = requireEnum(record, 'scope', ['personal', 'couple'] as const);
   const subject = record.subject_participant_key;
   let subjectParticipantKey: ParticipantKey | null;
-  if (subject === null) {
+  if (subject === null || subject === 'couple') {
     subjectParticipantKey = null;
   } else if (subject === 'partner_a' || subject === 'partner_b') {
     subjectParticipantKey = subject;

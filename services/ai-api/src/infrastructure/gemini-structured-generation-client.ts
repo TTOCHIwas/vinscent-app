@@ -7,6 +7,7 @@ const defaultEndpointBase =
 const defaultModel = 'gemini-3.1-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
+const maximumProviderErrorDetailLength = 500;
 
 export interface StructuredGenerationRequest {
   prompt: string;
@@ -38,6 +39,7 @@ export class GeminiProviderError extends Error {
   readonly retryable: boolean;
   readonly status: number | null;
   readonly providerStatus: string | null;
+  readonly providerErrorDetail: string | null;
   readonly retryAfterMs: number | null;
   readonly latencyMs: number;
 
@@ -46,6 +48,7 @@ export class GeminiProviderError extends Error {
     retryable: boolean;
     status?: number | null;
     providerStatus?: string | null;
+    providerErrorDetail?: string | null;
     retryAfterMs?: number | null;
     latencyMs?: number;
     cause?: unknown;
@@ -56,6 +59,7 @@ export class GeminiProviderError extends Error {
     this.retryable = params.retryable;
     this.status = params.status ?? null;
     this.providerStatus = params.providerStatus ?? null;
+    this.providerErrorDetail = params.providerErrorDetail ?? null;
     this.retryAfterMs = params.retryAfterMs ?? null;
     this.latencyMs = params.latencyMs ?? 0;
   }
@@ -277,6 +281,7 @@ function providerErrorForResponse(
   const diagnostics = {
     status,
     providerStatus: readProviderStatus(payload),
+    providerErrorDetail: readProviderErrorDetail(payload),
     retryAfterMs: readRetryAfterMs(response, payload, completedAt),
     latencyMs,
   };
@@ -333,6 +338,25 @@ function readProviderStatus(payload: unknown): string | null {
     return null;
   }
   return status;
+}
+
+function readProviderErrorDetail(payload: unknown): string | null {
+  const error = asRecord(asRecord(payload)?.error);
+  if (typeof error?.message !== 'string') {
+    return null;
+  }
+
+  const normalized = error.message
+    .replace(/\bAIza[0-9A-Za-z_-]{12,}\b/g, '[REDACTED]')
+    .replace(/\bBearer\s+[0-9A-Za-z._~-]+/gi, 'Bearer [REDACTED]')
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[REDACTED]')
+    .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+  return normalized.slice(0, maximumProviderErrorDetailLength);
 }
 
 function readRetryAfterMs(

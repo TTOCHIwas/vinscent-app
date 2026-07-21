@@ -115,7 +115,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
   const client = new FakeRpcClient({
     start_ai_processing_run: { data: 'run-1', error: null },
     succeed_ai_processing_run: { data: true, error: null },
-    fail_ai_processing_run_with_diagnostics: { data: true, error: null },
+    fail_ai_processing_run_with_diagnostics_v2: { data: true, error: null },
     complete_ai_processing_job: { data: true, error: null },
     expand_ai_rebuild_profile_job: { data: true, error: null },
   });
