@@ -1,14 +1,13 @@
 import {
   createServiceRoleClient,
+  sendPushNotification,
+} from '../_shared/push.ts';
+import {
+  extractWebhookRecordId,
   isRecord,
   jsonResponse,
-  sendPushNotification,
   verifyWebhookSecret,
-} from '../_shared/push.ts';
-
-type AnswerRecord = {
-  id: string;
-};
+} from '../_shared/webhook.ts';
 
 type AnswerNotificationContext = {
   answer_id: string;
@@ -35,10 +34,9 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
-  let answer: AnswerRecord;
+  let answerId: string;
   try {
-    const payload = await request.json();
-    answer = extractAnswerRecord(payload);
+    answerId = extractWebhookRecordId(await request.json());
   } catch (error) {
     return jsonResponse(
       { error: 'invalid_payload', detail: String(error) },
@@ -48,7 +46,7 @@ Deno.serve(async (request) => {
 
   try {
     const supabase = createServiceRoleClient();
-    const context = await loadNotificationContext(supabase, answer.id);
+    const context = await loadNotificationContext(supabase, answerId);
     if (!context) {
       return jsonResponse({ status: 'skipped', error: 'answer_context_missing' });
     }
@@ -78,19 +76,6 @@ Deno.serve(async (request) => {
     );
   }
 });
-
-function extractAnswerRecord(payload: unknown): AnswerRecord {
-  if (!isRecord(payload)) {
-    throw new Error('payload must be an object');
-  }
-
-  const candidate = isRecord(payload.record) ? payload.record : payload;
-  if (typeof candidate.id !== 'string' || candidate.id === '') {
-    throw new Error('missing id');
-  }
-
-  return { id: candidate.id as string };
-}
 
 async function loadNotificationContext(
   supabase: ReturnType<typeof createServiceRoleClient>,
