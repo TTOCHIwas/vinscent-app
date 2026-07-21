@@ -13,6 +13,7 @@ import '../features/couple/application/couple_controller.dart';
 import '../features/characters/application/couple_character_controller.dart';
 import '../features/home_widgets/application/home_widget_launch_coordinator.dart';
 import '../features/home_widgets/application/home_widget_launch_policy.dart';
+import '../features/home_widgets/application/home_widget_sync_scheduler.dart';
 import '../features/home_widgets/application/home_widget_sync_service.dart';
 import '../features/home_widgets/data/home_widget_platform_store.dart';
 import '../features/notifications/application/push_token_controller.dart';
@@ -35,17 +36,19 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   StreamSubscription<Uri?>? _widgetClickSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<Map<String, dynamic>>? _notificationOpenSubscription;
-  Timer? _widgetSyncTimer;
+  late final HomeWidgetSyncScheduler _widgetSyncScheduler;
   Uri? _pendingWidgetUri;
   String? _pendingNotificationLocation;
   bool _isHandlingWidgetLaunch = false;
   bool _isHandlingNotificationLaunch = false;
-  bool _isWidgetSyncRunning = false;
-  bool _isWidgetSyncQueued = false;
 
   @override
   void initState() {
     super.initState();
+    _widgetSyncScheduler = HomeWidgetSyncScheduler(
+      synchronize: () =>
+          ref.read(homeWidgetSyncServiceProvider).synchronizeSafely(),
+    );
     WidgetsBinding.instance.addObserver(this);
     if (_supportsPushNotifications) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,7 +70,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     _widgetClickSubscription?.cancel();
     _foregroundMessageSubscription?.cancel();
     _notificationOpenSubscription?.cancel();
-    _widgetSyncTimer?.cancel();
+    _widgetSyncScheduler.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -187,28 +190,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     if (!_supportsHomeWidgets) {
       return;
     }
-    _widgetSyncTimer?.cancel();
-    _widgetSyncTimer = Timer(const Duration(milliseconds: 350), () {
-      _widgetSyncTimer = null;
-      unawaited(_runWidgetSync());
-    });
-  }
-
-  Future<void> _runWidgetSync() async {
-    if (_isWidgetSyncRunning) {
-      _isWidgetSyncQueued = true;
-      return;
-    }
-
-    _isWidgetSyncRunning = true;
-    try {
-      do {
-        _isWidgetSyncQueued = false;
-        await ref.read(homeWidgetSyncServiceProvider).synchronizeSafely();
-      } while (_isWidgetSyncQueued && mounted);
-    } finally {
-      _isWidgetSyncRunning = false;
-    }
+    _widgetSyncScheduler.schedule();
   }
 
   @override
