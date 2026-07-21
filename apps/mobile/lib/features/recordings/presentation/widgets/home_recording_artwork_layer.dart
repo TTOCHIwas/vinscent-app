@@ -9,6 +9,7 @@ import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
 import '../../application/home_recording_drag_session.dart';
 import '../../application/home_recording_placement_geometry.dart';
+import '../../application/home_recording_placement_state.dart';
 import '../../application/recording_playback_controller.dart';
 import '../../application/recording_slot_placement_session.dart';
 import '../../data/couple_recording.dart';
@@ -26,14 +27,11 @@ class HomeRecordingArtworkLayer extends ConsumerStatefulWidget {
 
 class _HomeRecordingArtworkLayerState
     extends ConsumerState<HomeRecordingArtworkLayer> {
-  final Map<String, Offset> _pendingPositions = {};
-  final Map<String, int> _pendingBaseRevisions = {};
   final Map<String, int> _pulseTokens = {};
-  final Set<String> _hiddenSlotIds = {};
   final Set<String> _busySlotIds = {};
   HomeRecordingDragSession _dragSession = const HomeRecordingDragSession.idle();
-  bool _isPlacementSessionRunning = false;
-  String? _pendingNewSlotId;
+  HomeRecordingPlacementState _placementState =
+      HomeRecordingPlacementState.initial();
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +68,7 @@ class _HomeRecordingArtworkLayerState
           itemSize: itemSize,
           forbiddenRects: const [],
         );
-        _synchronizePendingPositions(overview);
+        _placementState = _placementState.synchronize(overview);
 
         final slotsById = {
           for (final slot in overview.savedSlots) slot.slotId: slot,
@@ -85,22 +83,16 @@ class _HomeRecordingArtworkLayerState
           canEdit: canEdit,
         );
 
-        final displayedSlots = _bringFront(<CoupleRecordingSlot>[
-          ...overview.placedSlots,
-          if (_pendingNewSlotId case final pendingId?)
-            if (slotsById[pendingId] case final pendingSlot?)
-              if (!overview.placedSlots.any(
-                (slot) => slot.slotId == pendingSlot.slotId,
-              ))
-                pendingSlot,
-        ]);
+        final displayedSlots = _bringFront(
+          _placementState.displayedSlots(overview),
+        );
         final trashRect = _trashRect(canvasSize);
 
         return Stack(
           clipBehavior: Clip.none,
           children: [
             for (final slot in displayedSlots)
-              if (!_hiddenSlotIds.contains(slot.slotId))
+              if (!_placementState.isHidden(slot.slotId))
                 if (_positionFor(slot, geometry) case final position?)
                   Positioned(
                     key: ValueKey(
@@ -174,29 +166,6 @@ class _HomeRecordingArtworkLayerState
     return [...slots, frontSlot];
   }
 
-  void _synchronizePendingPositions(CoupleRecordingOverview overview) {
-    final slotsById = {
-      for (final slot in overview.savedSlots) slot.slotId: slot,
-    };
-    _pendingPositions.removeWhere((slotId, _) {
-      final slot = slotsById[slotId];
-      if (slot == null) {
-        return true;
-      }
-      if (slot.placement == null) {
-        return _pendingNewSlotId != slotId;
-      }
-      final baseRevision = _pendingBaseRevisions[slotId];
-      return baseRevision != null && slot.placement!.revision != baseRevision;
-    });
-    _pendingBaseRevisions.removeWhere(
-      (slotId, _) => !_pendingPositions.containsKey(slotId),
-    );
-    _hiddenSlotIds.removeWhere(
-      (slotId) => slotsById[slotId]?.placement == null,
-    );
-  }
-
   Offset? _positionFor(
     CoupleRecordingSlot slot,
     HomeRecordingPlacementGeometry geometry,
@@ -204,19 +173,7 @@ class _HomeRecordingArtworkLayerState
     if (_dragSession.draggingSlotId == slot.slotId) {
       return _dragSession.dragPosition;
     }
-    final pendingPosition = _pendingPositions[slot.slotId];
-    if (pendingPosition != null) {
-      return pendingPosition;
-    }
-    final placement = slot.placement;
-    if (placement == null) {
-      return null;
-    }
-    return geometry.resolve(
-      geometry.denormalize(
-        Offset(placement.normalizedX, placement.normalizedY),
-      ),
-    );
+    return _placementState.positionFor(slot, geometry);
   }
 
   void _schedulePlacementSession({
@@ -226,12 +183,12 @@ class _HomeRecordingArtworkLayerState
     required CoupleRecordingOverview overview,
     required bool canEdit,
   }) {
-    if (slotId == null || _isPlacementSessionRunning) {
+    if (slotId == null || _placementState.isPlacementSessionRunning) {
       return;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _isPlacementSessionRunning) {
+      if (!mounted || _placementState.isPlacementSessionRunning) {
         return;
       }
       if (!canEdit) {
@@ -258,21 +215,23 @@ class _HomeRecordingArtworkLayerState
     CoupleRecordingOverview overview,
     HomeRecordingPlacementGeometry geometry,
   ) async {
-    _isPlacementSessionRunning = true;
+    _placementState = _placementState.startSession();
     ref.read(recordingSlotPlacementSessionProvider.notifier).consume();
     final occupied = overview.placedSlots
         .map((placedSlot) => _positionFor(placedSlot, geometry))
         .whereType<Offset>();
     final defaultPosition = geometry.findDefaultPosition(occupied: occupied);
     if (defaultPosition == null) {
-      _isPlacementSessionRunning = false;
+      _placementState = _placementState.endSession();
       _showMessage('이 화면 크기에서는 그림을 둘 공간이 부족해요.');
       return;
     }
 
     setState(() {
-      _pendingNewSlotId = slot.slotId;
-      _pendingPositions[slot.slotId] = defaultPosition;
+      _placementState = _placementState.beginNewPlacement(
+        slotId: slot.slotId,
+        position: defaultPosition,
+      );
       _busySlotIds.add(slot.slotId);
     });
 
@@ -292,11 +251,10 @@ class _HomeRecordingArtworkLayerState
     } catch (error) {
       _showMessage(_messageForError(error));
     } finally {
-      _isPlacementSessionRunning = false;
+      _placementState = _placementState.endSession();
       if (mounted) {
         setState(() {
-          _pendingNewSlotId = null;
-          _pendingPositions.remove(slot.slotId);
+          _placementState = _placementState.completeNewPlacement(slot.slotId);
           _busySlotIds.remove(slot.slotId);
         });
       }
@@ -391,8 +349,11 @@ class _HomeRecordingArtworkLayerState
     }
 
     setState(() {
-      _pendingPositions[slot.slotId] = position;
-      _pendingBaseRevisions[slot.slotId] = placement.revision;
+      _placementState = _placementState.beginMove(
+        slotId: slot.slotId,
+        position: position,
+        baseRevision: placement.revision,
+      );
       _busySlotIds.add(slot.slotId);
     });
     try {
@@ -411,8 +372,7 @@ class _HomeRecordingArtworkLayerState
       if (mounted) {
         setState(() {
           _dragSession = _dragSession.clearFront();
-          _pendingPositions.remove(slot.slotId);
-          _pendingBaseRevisions.remove(slot.slotId);
+          _placementState = _placementState.completeMove(slot.slotId);
           _busySlotIds.remove(slot.slotId);
         });
       }
@@ -429,7 +389,7 @@ class _HomeRecordingArtworkLayerState
       if (_dragSession.frontSlotId == slot.slotId) {
         _dragSession = _dragSession.clearFront();
       }
-      _hiddenSlotIds.add(slot.slotId);
+      _placementState = _placementState.beginDelete(slot.slotId);
       _busySlotIds.add(slot.slotId);
     });
     unawaited(HapticFeedback.mediumImpact());
@@ -445,7 +405,7 @@ class _HomeRecordingArtworkLayerState
     } finally {
       if (mounted) {
         setState(() {
-          _hiddenSlotIds.remove(slot.slotId);
+          _placementState = _placementState.completeDelete(slot.slotId);
           _busySlotIds.remove(slot.slotId);
         });
       }
