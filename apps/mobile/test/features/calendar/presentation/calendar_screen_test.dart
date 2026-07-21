@@ -271,12 +271,24 @@ void main() {
       contains(AppColors.actionPrimary),
     );
     expect(find.text('history question'), findsOneWidget);
-    expect(find.byType(QuestionAnswerPromptRow), findsOneWidget);
+    expect(
+      find.byKey(const Key('calendar-detail-question-title')),
+      findsOneWidget,
+    );
+    expect(find.byType(QuestionAnswerPromptRow), findsNothing);
     expect(find.byType(QuestionAnswerOverview), findsOneWidget);
     expect(find.text('my answer'), findsOneWidget);
     expect(find.text('partner answer'), findsOneWidget);
     expect(find.text('종합'), findsNothing);
-    expect(find.text('AI의 한마디'), findsOneWidget);
+    expect(find.text('AI의 한마디'), findsNothing);
+    expect(
+      find.byKey(const Key('ai-question-feedback-character')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('ai-question-feedback-prompt')),
+      findsOneWidget,
+    );
     expect(find.text('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
