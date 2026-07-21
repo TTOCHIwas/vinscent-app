@@ -1,5 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 
+import { isRecord } from './webhook.ts';
+
+export {
+  isRecord,
+  jsonResponse,
+  verifyWebhookSecret,
+} from './webhook.ts';
+
 export type NotificationType =
   | 'partner_answer_completed'
   | 'daily_question_delivery'
@@ -90,38 +98,6 @@ export function requiredEnv(name: string) {
   }
 
   return value;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-export function verifyWebhookSecret(
-  request: Request,
-  params: {
-    envName: string;
-    headerName: string;
-    fallbackEnvName?: string;
-    fallbackHeaderName?: string;
-  },
-) {
-  const configuredSecret =
-    Deno.env.get(params.envName) ??
-    (params.fallbackEnvName ? Deno.env.get(params.fallbackEnvName) : null);
-  const requestSecret =
-    request.headers.get(params.headerName) ??
-    (params.fallbackHeaderName
-        ? request.headers.get(params.fallbackHeaderName)
-        : null);
-
-  return Boolean(configuredSecret && requestSecret === configuredSecret);
 }
 
 export async function createFcmAccessToken() {
