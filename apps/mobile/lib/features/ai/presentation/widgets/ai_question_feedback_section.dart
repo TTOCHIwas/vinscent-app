@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../characters/presentation/widgets/couple_character_avatar.dart';
-import '../../../questions/presentation/widgets/character_speech_prompt.dart';
+import '../../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../application/ai_question_feedback_provider.dart';
 import '../../data/ai_learning_dashboard.dart';
 
