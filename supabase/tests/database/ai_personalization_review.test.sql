@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(18);
+select plan(20);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -530,6 +530,28 @@ select is(
   ),
   1::bigint,
   'personalization activation is persisted once per curriculum'
+);
+
+select is(
+  (
+    select count(*)
+    from public.app_notification_events as aine
+    where aine.couple_id = '22000000-0000-0000-0000-000000000001'
+      and aine.event_type = 'ai_memory_review_ready'
+  ),
+  2::bigint,
+  'memory review readiness notifies each member once'
+);
+
+select is(
+  (
+    select count(*)
+    from public.app_notification_events as aine
+    where aine.couple_id = '22000000-0000-0000-0000-000000000001'
+      and aine.event_type = 'ai_personalization_activated'
+  ),
+  2::bigint,
+  'personalization activation notifies each member once'
 );
 
 select is(

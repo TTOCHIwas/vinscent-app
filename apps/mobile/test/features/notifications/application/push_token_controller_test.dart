@@ -117,9 +117,18 @@ class _FakePushTokenRepository implements PushTokenRepository {
   final calls = <String>[];
   final registeredTokens = <String>[];
   final _tokenRefreshController = StreamController<String>.broadcast();
+  final _notificationOpenController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   @override
   Stream<String> get tokenRefreshes => _tokenRefreshController.stream;
+
+  @override
+  Stream<Map<String, dynamic>> get notificationOpens =>
+      _notificationOpenController.stream;
+
+  @override
+  Future<Map<String, dynamic>?> initiallyOpenedNotification() async => null;
 
   @override
   Future<void> configureForegroundNotifications() async {
@@ -155,5 +164,6 @@ class _FakePushTokenRepository implements PushTokenRepository {
 
   void dispose() {
     _tokenRefreshController.close();
+    _notificationOpenController.close();
   }
 }

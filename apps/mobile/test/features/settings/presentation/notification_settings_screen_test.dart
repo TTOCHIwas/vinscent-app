@@ -26,7 +26,7 @@ void main() {
     expect(group, findsOneWidget);
     expect(
       find.descendant(of: group, matching: find.byType(SwitchListTile)),
-      findsNWidgets(6),
+      findsNWidgets(8),
     );
   });
 }
@@ -39,6 +39,8 @@ final _preferences = NotificationPreferences(
   coupleDisconnectEnabled: true,
   recordingEnabled: true,
   partnerStoryCardEnabled: true,
+  coupleActivityEnabled: true,
+  aiUpdatesEnabled: true,
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
