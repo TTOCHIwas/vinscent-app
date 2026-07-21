@@ -97,6 +97,7 @@ class _CharacterSpeechFeedback extends StatelessWidget {
   const _CharacterSpeechFeedback({required this.feedback});
 
   static const _characterSize = 96.0;
+  static const _maximumContentWidth = 360.0;
 
   final AiQuestionFeedback feedback;
 
@@ -104,34 +105,40 @@ class _CharacterSpeechFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 32),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(width: 24),
-          const CoupleCharacterAvatar(
-            key: Key('ai-question-feedback-character'),
-            size: _characterSize,
-          ),
-          Expanded(
-            child: Semantics(
-              label: '캐릭터의 한마디: ${feedback.feedbackText}',
-              excludeSemantics: true,
-              child: CharacterSpeechBubble(
-                key: const Key('ai-question-feedback-prompt'),
-                speechText: feedback.feedbackText,
-                maxWidth: double.infinity,
-                maxLines: 4,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                tailSize: const Size(10, 18),
-                tailPosition: SpeechBubbleTailPosition.left,
-                textStyle: AppTextStyles.homeQuestionBubble,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maximumContentWidth),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const CoupleCharacterAvatar(
+                key: Key('ai-question-feedback-character'),
+                size: _characterSize,
               ),
-            ),
+              Flexible(
+                fit: FlexFit.loose,
+                child: Semantics(
+                  label: '캐릭터의 한마디: ${feedback.feedbackText}',
+                  excludeSemantics: true,
+                  child: CharacterSpeechBubble(
+                    key: const Key('ai-question-feedback-prompt'),
+                    speechText: feedback.feedbackText,
+                    maxWidth: double.infinity,
+                    maxLines: 4,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    tailSize: const Size(10, 18),
+                    tailPosition: SpeechBubbleTailPosition.left,
+                    textStyle: AppTextStyles.homeQuestionBubble,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
