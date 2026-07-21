@@ -1,7 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-
+import { requiredEnv } from './environment.ts';
+import { createServiceRoleClient } from './supabase.ts';
 import { isRecord } from './webhook.ts';
 
+export { requiredEnv } from './environment.ts';
+export { createServiceRoleClient } from './supabase.ts';
 export {
   isRecord,
   jsonResponse,
@@ -83,22 +85,6 @@ type SendPushNotificationParams = {
 };
 
 const defaultAndroidChannelId = 'vinscent_notifications';
-
-export function createServiceRoleClient() {
-  return createClient(
-    requiredEnv('SUPABASE_URL'),
-    requiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
-  );
-}
-
-export function requiredEnv(name: string) {
-  const value = Deno.env.get(name);
-  if (!value) {
-    throw new Error(`missing_env:${name}`);
-  }
-
-  return value;
-}
 
 export async function createFcmAccessToken() {
   const clientEmail = requiredEnv('FCM_CLIENT_EMAIL');
