@@ -2,6 +2,7 @@ import '../../couple/data/couple_repository.dart';
 import '../../recordings/data/couple_recording_repository.dart';
 import '../application/widget_recording_upload_task.dart';
 import 'home_widget_platform_store.dart';
+import 'widget_recording_upload_adapters.dart';
 
 WidgetRecordingUploadTask createWidgetRecordingUploadTask() {
   return WidgetRecordingUploadTask(
