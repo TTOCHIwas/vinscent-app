@@ -7,17 +7,22 @@ import '../../../core/config/app_config.dart';
 import '../recording_debug_log.dart';
 import 'couple_recording.dart';
 import 'couple_recording_failure.dart';
+import 'couple_recording_read_mapper.dart';
 import 'recording_id_generator.dart';
 import 'recording_slot_artwork_path.dart';
 import 'recording_upload_failure_policy.dart';
 import 'couple_recording_repository_contract.dart';
 
 class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
-  const SupabaseCoupleRecordingRepository();
+  const SupabaseCoupleRecordingRepository({
+    CoupleRecordingReadMapper readMapper = const CoupleRecordingReadMapper(),
+  }) : _readMapper = readMapper;
 
   static const _bucketId = 'couple-recordings';
   static const _signedUrlExpiresInSeconds = 60 * 60;
   static const _maxArtworkObjectBytes = 256 * 1024;
+
+  final CoupleRecordingReadMapper _readMapper;
 
   @override
   Future<CoupleRecordingOverview> fetchOverview() async {
@@ -39,8 +44,19 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
           .timeout(AppConfig.supabaseRpcTimeout);
       final slotRows = _asRows(slotData);
 
-      final currentRecording = await _parseCurrentRecording(currentRow);
-      final savedSlots = await Future.wait(slotRows.map(_parseSavedSlot));
+      final currentRecording = await _readMapper.mapCurrentRecording(
+        currentRow,
+        resolveAudioUrl: _createSignedUrl,
+      );
+      final savedSlots = await Future.wait(
+        slotRows.map(
+          (row) => _readMapper.mapSavedSlot(
+            row,
+            resolveAudioUrl: _createSignedUrl,
+            resolveArtworkUrl: _createArtworkSignedUrl,
+          ),
+        ),
+      );
 
       return CoupleRecordingOverview(
         slotLimit: currentRow['slot_limit'] as int,
@@ -471,80 +487,6 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
         CoupleRecordingFailureReason.configMissing,
       );
     }
-  }
-
-  Future<CurrentCoupleRecording?> _parseCurrentRecording(
-    Map<String, dynamic> row,
-  ) async {
-    final recordingId = row['current_recording_id'] as String?;
-    final storagePath = row['current_recording_path'] as String?;
-
-    if (recordingId == null || storagePath == null) {
-      return null;
-    }
-
-    final audioUrl = await _createSignedUrl(storagePath);
-    return CurrentCoupleRecording(
-      recordingId: recordingId,
-      senderUserId: row['current_sender_user_id'] as String,
-      durationMs: row['current_duration_ms'] as int,
-      recordedAt: DateTime.parse(row['current_recorded_at'] as String),
-      revision: row['current_revision'] as int,
-      updatedAt: DateTime.parse(row['current_updated_at'] as String),
-      audioUrl: audioUrl,
-    );
-  }
-
-  Future<CoupleRecordingSlot> _parseSavedSlot(Map<String, dynamic> row) async {
-    final artworkPreviewPath = row['artwork_preview_path'] as String?;
-    final urlFutures = <Future<String>>[
-      _createSignedUrl(row['recording_path'] as String),
-      if (artworkPreviewPath != null)
-        _createArtworkSignedUrl(artworkPreviewPath),
-    ];
-    final urls = await Future.wait(urlFutures);
-    final artworkDataPath = row['artwork_data_path'] as String?;
-    final artworkRevision = row['artwork_revision'] as int?;
-    final placementX = row['placement_normalized_x'] as num?;
-    final placementY = row['placement_normalized_y'] as num?;
-    final placementRevision = row['placement_revision'] as int?;
-    final placementZIndex = row['placement_z_index'] as int?;
-
-    return CoupleRecordingSlot(
-      slotId: row['slot_id'] as String,
-      slotIndex: row['slot_index'] as int,
-      title: row['title'] as String,
-      recordingId: row['recording_id'] as String,
-      senderUserId: row['sender_user_id'] as String,
-      durationMs: row['duration_ms'] as int,
-      recordedAt: DateTime.parse(row['recorded_at'] as String),
-      slotRevision: row['slot_revision'] as int,
-      createdByUserId: row['created_by_user_id'] as String?,
-      updatedByUserId: row['updated_by_user_id'] as String?,
-      createdAt: DateTime.parse(row['created_at'] as String),
-      updatedAt: DateTime.parse(row['updated_at'] as String),
-      audioUrl: urls.first,
-      artwork:
-          artworkPreviewPath != null &&
-              artworkDataPath != null &&
-              artworkRevision != null
-          ? CoupleRecordingSlotArtwork(
-              previewPath: artworkPreviewPath,
-              previewUrl: urls[1],
-              drawingDataPath: artworkDataPath,
-              revision: artworkRevision,
-            )
-          : null,
-      placement:
-          placementX != null && placementY != null && placementRevision != null
-          ? CoupleRecordingSlotPlacement(
-              normalizedX: placementX.toDouble(),
-              normalizedY: placementY.toDouble(),
-              revision: placementRevision,
-              zIndex: placementZIndex ?? 0,
-            )
-          : null,
-    );
   }
 
   Future<String> _createSignedUrl(String path) {
