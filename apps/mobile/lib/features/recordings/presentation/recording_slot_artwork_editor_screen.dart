@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/drawing/app_drawing.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../characters/data/character_drawing.dart';
 import '../../characters/presentation/widgets/character_canvas.dart';
 import '../../characters/presentation/widgets/character_toolbar.dart';
 import '../../couple/application/couple_controller.dart';
@@ -39,9 +39,9 @@ class _RecordingSlotArtworkEditorScreenState
     extends ConsumerState<RecordingSlotArtworkEditorScreen> {
   static const _maxCanvasSize = 512.0;
 
-  List<CharacterDrawingStroke> _strokes = [];
-  CharacterDrawingStroke? _activeStroke;
-  CharacterDrawingTool _selectedTool = CharacterDrawingTool.pen;
+  List<AppDrawingStroke> _strokes = [];
+  AppDrawingStroke? _activeStroke;
+  AppDrawingTool _selectedTool = AppDrawingTool.pen;
   Color _selectedColor = characterColorPalette.first;
   double _selectedStrokeWidth = characterNormalStrokeWidth;
   CoupleRecordingSlot? _slot;
@@ -51,10 +51,7 @@ class _RecordingSlotArtworkEditorScreenState
   late final TextEditingController _titleController;
   CoupleRecordingSlotSaveResult? _createdSlot;
 
-  List<CharacterDrawingStroke> get _visibleStrokes => [
-    ..._strokes,
-    ?_activeStroke,
-  ];
+  List<AppDrawingStroke> get _visibleStrokes => [..._strokes, ?_activeStroke];
 
   bool get _isReadOnly {
     final couple = ref
@@ -69,7 +66,7 @@ class _RecordingSlotArtworkEditorScreenState
       !_loadFailed &&
       !_isSaving &&
       (widget.isCreating ? _isTitleValid : _slot != null) &&
-      CharacterDrawingData(strokes: _strokes).hasVisibleContent;
+      AppDrawingData(strokes: _strokes).hasVisibleContent;
 
   bool get _isTitleValid {
     final title = _titleController.text.trim();
@@ -148,7 +145,7 @@ class _RecordingSlotArtworkEditorScreenState
         throw StateError('Recording slot not found.');
       }
 
-      var strokes = const <CharacterDrawingStroke>[];
+      var strokes = const <AppDrawingStroke>[];
       final artwork = slot.artwork;
       if (artwork != null) {
         final bytes = await ref
@@ -198,13 +195,13 @@ class _RecordingSlotArtworkEditorScreenState
     return null;
   }
 
-  void _startStroke(CharacterDrawingPoint point) {
+  void _startStroke(AppDrawingPoint point) {
     if (_isReadOnly || _loadFailed) {
       return;
     }
 
     setState(() {
-      _activeStroke = CharacterDrawingStroke(
+      _activeStroke = AppDrawingStroke(
         tool: _selectedTool,
         color: _selectedColor,
         width: _selectedStrokeWidth,
@@ -213,7 +210,7 @@ class _RecordingSlotArtworkEditorScreenState
     });
   }
 
-  void _updateStroke(CharacterDrawingPoint point) {
+  void _updateStroke(AppDrawingPoint point) {
     final activeStroke = _activeStroke;
     if (activeStroke == null || _isReadOnly || _loadFailed) {
       return;
@@ -294,7 +291,7 @@ class _RecordingSlotArtworkEditorScreenState
 
     try {
       final artifact = await const RecordingSlotArtworkCodec().encode(
-        CharacterDrawingData(strokes: _strokes),
+        AppDrawingData(strokes: _strokes),
       );
       var targetSlot = _createdSlot;
       if (widget.isCreating && targetSlot == null) {
@@ -478,7 +475,7 @@ class _RecordingSlotArtworkEditorScreenState
                         onColorChanged: (color) {
                           setState(() {
                             _selectedColor = color;
-                            _selectedTool = CharacterDrawingTool.pen;
+                            _selectedTool = AppDrawingTool.pen;
                           });
                         },
                         onStrokeWidthChanged: (width) {

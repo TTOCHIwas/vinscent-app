@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/drawing/app_drawing.dart';
+import '../../../core/drawing/app_drawing_painter.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -12,7 +14,6 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple_failure.dart';
 import '../../profile/application/profile_controller.dart';
 import '../application/couple_character_controller.dart';
-import '../data/character_drawing.dart';
 import '../data/couple_character_failure.dart';
 import 'widgets/character_canvas.dart';
 import 'widgets/character_toolbar.dart';
@@ -32,15 +33,15 @@ class CharacterEditorScreen extends ConsumerStatefulWidget {
 class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   static const _exportSize = 512;
 
-  List<CharacterDrawingStroke> _strokes = [];
-  CharacterDrawingStroke? _activeStroke;
-  CharacterDrawingTool _selectedTool = CharacterDrawingTool.pen;
+  List<AppDrawingStroke> _strokes = [];
+  AppDrawingStroke? _activeStroke;
+  AppDrawingTool _selectedTool = AppDrawingTool.pen;
   Color _selectedColor = characterColorPalette.first;
   double _selectedStrokeWidth = characterNormalStrokeWidth;
   bool _isLoadingDrawing = true;
   bool _isSaving = false;
 
-  List<CharacterDrawingStroke> get _visibleStrokes {
+  List<AppDrawingStroke> get _visibleStrokes {
     return [..._strokes, ?_activeStroke];
   }
 
@@ -68,7 +69,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
         !_isSaving &&
-        CharacterDrawingData(strokes: _strokes).hasVisibleContent;
+        AppDrawingData(strokes: _strokes).hasVisibleContent;
   }
 
   bool get _canClear {
@@ -115,7 +116,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         return;
       }
 
-      final drawingData = CharacterDrawingData.fromJsonString(drawingDataJson);
+      final drawingData = AppDrawingData.fromJsonString(drawingDataJson);
       setState(() {
         _strokes = drawingData.strokes;
       });
@@ -132,13 +133,13 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     }
   }
 
-  void _startStroke(CharacterDrawingPoint point) {
+  void _startStroke(AppDrawingPoint point) {
     if (_isReadOnly) {
       return;
     }
 
     setState(() {
-      _activeStroke = CharacterDrawingStroke(
+      _activeStroke = AppDrawingStroke(
         tool: _selectedTool,
         color: _selectedColor,
         width: _selectedStrokeWidth,
@@ -147,7 +148,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     });
   }
 
-  void _updateStroke(CharacterDrawingPoint point) {
+  void _updateStroke(AppDrawingPoint point) {
     if (_isReadOnly) {
       return;
     }
@@ -235,7 +236,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     });
 
     try {
-      final drawingData = CharacterDrawingData(strokes: _strokes);
+      final drawingData = AppDrawingData(strokes: _strokes);
       final imageBytes = await _renderPng(drawingData);
 
       await ref
@@ -288,12 +289,12 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     }
   }
 
-  Future<Uint8List> _renderPng(CharacterDrawingData drawingData) async {
+  Future<Uint8List> _renderPng(AppDrawingData drawingData) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final size = Size.square(_exportSize.toDouble());
 
-    CharacterDrawingPainter(strokes: drawingData.strokes).paint(canvas, size);
+    AppDrawingPainter(strokes: drawingData.strokes).paint(canvas, size);
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(_exportSize, _exportSize);
@@ -465,7 +466,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                           onColorChanged: (color) {
                             setState(() {
                               _selectedColor = color;
-                              _selectedTool = CharacterDrawingTool.pen;
+                              _selectedTool = AppDrawingTool.pen;
                             });
                           },
                           onStrokeWidthChanged: (width) {

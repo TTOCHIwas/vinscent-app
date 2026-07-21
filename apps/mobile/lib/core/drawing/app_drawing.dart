@@ -1,40 +1,40 @@
 import 'dart:convert';
 import 'dart:ui';
 
-enum CharacterDrawingTool {
+enum AppDrawingTool {
   pen,
   eraser;
 
-  factory CharacterDrawingTool.fromJson(String value) {
+  factory AppDrawingTool.fromJson(String value) {
     return switch (value) {
-      'pen' => CharacterDrawingTool.pen,
-      'eraser' => CharacterDrawingTool.eraser,
+      'pen' => AppDrawingTool.pen,
+      'eraser' => AppDrawingTool.eraser,
       _ => throw FormatException('Unknown drawing tool: $value'),
     };
   }
 
   String toJson() {
     return switch (this) {
-      CharacterDrawingTool.pen => 'pen',
-      CharacterDrawingTool.eraser => 'eraser',
+      AppDrawingTool.pen => 'pen',
+      AppDrawingTool.eraser => 'eraser',
     };
   }
 }
 
-class CharacterDrawingData {
-  const CharacterDrawingData({required this.strokes});
+class AppDrawingData {
+  const AppDrawingData({required this.strokes});
 
-  factory CharacterDrawingData.empty() {
-    return const CharacterDrawingData(strokes: []);
+  factory AppDrawingData.empty() {
+    return const AppDrawingData(strokes: []);
   }
 
-  factory CharacterDrawingData.fromJson(Map<String, dynamic> json) {
+  factory AppDrawingData.fromJson(Map<String, dynamic> json) {
     final strokes = json['strokes'] as List<dynamic>? ?? [];
 
-    return CharacterDrawingData(
+    return AppDrawingData(
       strokes: strokes
           .map(
-            (stroke) => CharacterDrawingStroke.fromJson(
+            (stroke) => AppDrawingStroke.fromJson(
               Map<String, dynamic>.from(stroke as Map),
             ),
           )
@@ -42,16 +42,16 @@ class CharacterDrawingData {
     );
   }
 
-  factory CharacterDrawingData.fromJsonString(String value) {
-    return CharacterDrawingData.fromJson(
+  factory AppDrawingData.fromJsonString(String value) {
+    return AppDrawingData.fromJson(
       Map<String, dynamic>.from(jsonDecode(value) as Map),
     );
   }
 
-  final List<CharacterDrawingStroke> strokes;
+  final List<AppDrawingStroke> strokes;
 
   bool get hasVisibleContent {
-    return strokes.any((stroke) => stroke.tool == CharacterDrawingTool.pen);
+    return strokes.any((stroke) => stroke.tool == AppDrawingTool.pen);
   }
 
   Map<String, dynamic> toJson() {
@@ -66,24 +66,24 @@ class CharacterDrawingData {
   }
 }
 
-class CharacterDrawingStroke {
-  const CharacterDrawingStroke({
+class AppDrawingStroke {
+  const AppDrawingStroke({
     required this.tool,
     required this.color,
     required this.width,
     required this.points,
   });
 
-  factory CharacterDrawingStroke.fromJson(Map<String, dynamic> json) {
+  factory AppDrawingStroke.fromJson(Map<String, dynamic> json) {
     final points = json['points'] as List<dynamic>? ?? [];
 
-    return CharacterDrawingStroke(
-      tool: CharacterDrawingTool.fromJson(json['tool'] as String),
+    return AppDrawingStroke(
+      tool: AppDrawingTool.fromJson(json['tool'] as String),
       color: _colorFromJson(json['color'] as String),
       width: (json['width'] as num).toDouble(),
       points: points
           .map(
-            (point) => CharacterDrawingPoint.fromJson(
+            (point) => AppDrawingPoint.fromJson(
               Map<String, dynamic>.from(point as Map),
             ),
           )
@@ -91,13 +91,13 @@ class CharacterDrawingStroke {
     );
   }
 
-  final CharacterDrawingTool tool;
+  final AppDrawingTool tool;
   final Color color;
   final double width;
-  final List<CharacterDrawingPoint> points;
+  final List<AppDrawingPoint> points;
 
-  CharacterDrawingStroke copyWith({List<CharacterDrawingPoint>? points}) {
-    return CharacterDrawingStroke(
+  AppDrawingStroke copyWith({List<AppDrawingPoint>? points}) {
+    return AppDrawingStroke(
       tool: tool,
       color: color,
       width: width,
@@ -115,11 +115,11 @@ class CharacterDrawingStroke {
   }
 }
 
-class CharacterDrawingPoint {
-  const CharacterDrawingPoint({required this.x, required this.y});
+class AppDrawingPoint {
+  const AppDrawingPoint({required this.x, required this.y});
 
-  factory CharacterDrawingPoint.fromJson(Map<String, dynamic> json) {
-    return CharacterDrawingPoint(
+  factory AppDrawingPoint.fromJson(Map<String, dynamic> json) {
+    return AppDrawingPoint(
       x: (json['x'] as num).toDouble(),
       y: (json['y'] as num).toDouble(),
     );

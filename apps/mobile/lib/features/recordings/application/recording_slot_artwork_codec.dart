@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as image;
 
-import '../../characters/data/character_drawing.dart';
-import '../../characters/presentation/widgets/character_canvas.dart';
+import '../../../core/drawing/app_drawing.dart';
+import '../../../core/drawing/app_drawing_painter.dart';
 
 class RecordingSlotArtworkArtifact {
   const RecordingSlotArtworkArtifact({
@@ -30,9 +30,7 @@ class RecordingSlotArtworkCodec {
   static const maxPointsPerStroke = 10000;
   static const maxTotalPointCount = 50000;
 
-  Future<RecordingSlotArtworkArtifact> encode(
-    CharacterDrawingData drawing,
-  ) async {
+  Future<RecordingSlotArtworkArtifact> encode(AppDrawingData drawing) async {
     if (!drawing.hasVisibleContent) {
       throw StateError('A visible drawing is required.');
     }
@@ -54,7 +52,7 @@ class RecordingSlotArtworkCodec {
     );
   }
 
-  Future<CharacterDrawingData> decodeDrawingData(Uint8List bytes) {
+  Future<AppDrawingData> decodeDrawingData(Uint8List bytes) {
     if (bytes.length > maxObjectBytes) {
       throw const FormatException(
         'Recording slot artwork exceeds its compressed data limit.',
@@ -64,11 +62,11 @@ class RecordingSlotArtworkCodec {
     return compute(_decodeDrawingData, bytes);
   }
 
-  Future<Uint8List> _renderRawRgba(CharacterDrawingData drawing) async {
+  Future<Uint8List> _renderRawRgba(AppDrawingData drawing) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final size = Size.square(previewSize.toDouble());
-    CharacterDrawingPainter(strokes: drawing.strokes).paint(canvas, size);
+    AppDrawingPainter(strokes: drawing.strokes).paint(canvas, size);
 
     final picture = recorder.endRecording();
     final renderedImage = await picture.toImage(previewSize, previewSize);
@@ -91,7 +89,7 @@ class RecordingSlotArtworkCodec {
   }
 }
 
-CharacterDrawingData _decodeDrawingData(Uint8List bytes) {
+AppDrawingData _decodeDrawingData(Uint8List bytes) {
   final decodedBytes = _decodeGzipWithLimit(
     bytes,
     RecordingSlotArtworkCodec.maxDecodedDrawingBytes,
@@ -103,7 +101,7 @@ CharacterDrawingData _decodeDrawingData(Uint8List bytes) {
 
   final json = Map<String, dynamic>.from(decodedJson);
   _validateDrawingJson(json);
-  return CharacterDrawingData.fromJson(json);
+  return AppDrawingData.fromJson(json);
 }
 
 Uint8List _decodeGzipWithLimit(Uint8List bytes, int maxBytes) {

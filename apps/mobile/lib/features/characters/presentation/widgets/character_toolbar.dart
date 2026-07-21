@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/assets/app_icons.dart';
+import '../../../../core/drawing/app_drawing.dart';
 import '../../../../core/drawing/app_drawing_style.dart';
 import '../../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../data/character_drawing.dart';
 
 const characterColorPalette = AppDrawingStyle.colorPalette;
 const characterThinStrokeWidth = AppDrawingStyle.thinStrokeWidth;
@@ -29,13 +29,13 @@ class CharacterToolbar extends StatelessWidget {
     required this.onClearPressed,
   });
 
-  final CharacterDrawingTool selectedTool;
+  final AppDrawingTool selectedTool;
   final Color selectedColor;
   final double selectedStrokeWidth;
   final bool isReadOnly;
   final bool canUndo;
   final bool canClear;
-  final ValueChanged<CharacterDrawingTool> onToolChanged;
+  final ValueChanged<AppDrawingTool> onToolChanged;
   final ValueChanged<Color> onColorChanged;
   final ValueChanged<double> onStrokeWidthChanged;
   final VoidCallback onUndoPressed;
@@ -62,20 +62,20 @@ class CharacterToolbar extends StatelessWidget {
                     buttonKey: const ValueKey('character-drawing-pen'),
                     tooltip: '펜',
                     icon: const Icon(Icons.edit),
-                    isSelected: selectedTool == CharacterDrawingTool.pen,
+                    isSelected: selectedTool == AppDrawingTool.pen,
                     onPressed: isReadOnly
                         ? null
-                        : () => onToolChanged(CharacterDrawingTool.pen),
+                        : () => onToolChanged(AppDrawingTool.pen),
                   ),
                   const SizedBox(width: 6),
                   _ToolbarIconButton(
                     buttonKey: const ValueKey('character-drawing-eraser'),
                     tooltip: '지우개',
                     icon: const AppSvgIcon(AppIcons.eraser),
-                    isSelected: selectedTool == CharacterDrawingTool.eraser,
+                    isSelected: selectedTool == AppDrawingTool.eraser,
                     onPressed: isReadOnly
                         ? null
-                        : () => onToolChanged(CharacterDrawingTool.eraser),
+                        : () => onToolChanged(AppDrawingTool.eraser),
                   ),
                   const SizedBox(width: 6),
                   _ToolbarIconButton(
@@ -109,7 +109,7 @@ class CharacterToolbar extends StatelessWidget {
                       color: characterColorPalette[index],
                       isEnabled: !isReadOnly,
                       isSelected:
-                          selectedTool == CharacterDrawingTool.pen &&
+                          selectedTool == AppDrawingTool.pen &&
                           characterColorPalette[index] == selectedColor,
                       onTap: () => onColorChanged(characterColorPalette[index]),
                     ),
@@ -228,13 +228,13 @@ class _StrokeWidthSlider extends StatelessWidget {
   });
 
   final double selectedStrokeWidth;
-  final CharacterDrawingTool selectedTool;
+  final AppDrawingTool selectedTool;
   final Color selectedColor;
   final ValueChanged<double>? onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final previewColor = selectedTool == CharacterDrawingTool.pen
+    final previewColor = selectedTool == AppDrawingTool.pen
         ? selectedColor
         : Colors.white70;
     final previewDiameter = 8 + (selectedStrokeWidth * 360);
