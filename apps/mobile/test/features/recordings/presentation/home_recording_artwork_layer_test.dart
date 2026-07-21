@@ -99,8 +99,8 @@ void main() {
 
     expect(repository.upsertedSlotId, 'slot-1');
     expect(repository.upsertedExpectedRevision, isNull);
-    expect(repository.upsertedX, inInclusiveRange(0, 1));
-    expect(repository.upsertedY, inInclusiveRange(0, 1));
+    expect(repository.upsertedX, closeTo(0.5, 0.001));
+    expect(repository.upsertedY, closeTo(0.5, 0.001));
     expect(container.read(recordingSlotPlacementSessionProvider), isNull);
   });
 

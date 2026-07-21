@@ -48,6 +48,20 @@ void main() {
     expect(occupied.toSet(), hasLength(4));
   });
 
+  test('places the first home artwork at the canvas center', () {
+    final unrestrictedGeometry = HomeRecordingPlacementGeometry(
+      canvasSize: canvasSize,
+      itemSize: itemSize,
+      forbiddenRects: const [],
+    );
+
+    final position = unrestrictedGeometry.findDefaultPosition(
+      occupied: const [],
+    );
+
+    expect(position, const Offset(168, 310));
+  });
+
   test('placement session is consumed only once', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);

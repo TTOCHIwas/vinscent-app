@@ -58,32 +58,28 @@ class HomeRecordingPlacementGeometry {
   Offset? findDefaultPosition({required Iterable<Offset> occupied}) {
     final occupiedPositions = occupied.toList(growable: false);
     final minimumSpacing = itemSize + safetyMargin;
+    final canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2);
+    bool hasEnoughSpacing(Offset candidate) => occupiedPositions.every(
+      (position) => (candidate - position).distance >= minimumSpacing,
+    );
+
+    final resolvedCenter = resolve(canvasCenter);
+    if (resolvedCenter != null && hasEnoughSpacing(resolvedCenter)) {
+      return resolvedCenter;
+    }
+
     final candidates = _allowedCandidates()
-        .where(
-          (candidate) => occupiedPositions.every(
-            (position) => (candidate - position).distance >= minimumSpacing,
-          ),
-        )
+        .where(hasEnoughSpacing)
         .toList(growable: false);
     if (candidates.isEmpty) {
       return null;
     }
-    if (occupiedPositions.isEmpty) {
-      return candidates.first;
-    }
-
-    Offset? best;
-    var bestDistance = -1.0;
-    for (final candidate in candidates) {
-      final nearestDistance = occupiedPositions
-          .map((position) => (candidate - position).distanceSquared)
-          .reduce(math.min);
-      if (nearestDistance > bestDistance) {
-        best = candidate;
-        bestDistance = nearestDistance;
-      }
-    }
-    return best;
+    candidates.sort(
+      (left, right) => (left - canvasCenter).distanceSquared.compareTo(
+        (right - canvasCenter).distanceSquared,
+      ),
+    );
+    return candidates.first;
   }
 
   Offset normalize(Offset center) {
