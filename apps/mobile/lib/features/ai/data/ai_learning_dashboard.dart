@@ -28,6 +28,27 @@ enum AiLearningStage {
   }
 }
 
+enum AiPersonalizationStatus {
+  collecting,
+  processing,
+  processingError,
+  reviewing,
+  waitingPartner,
+  ready;
+
+  factory AiPersonalizationStatus.fromJson(String value) {
+    return switch (value) {
+      'collecting' => AiPersonalizationStatus.collecting,
+      'processing' => AiPersonalizationStatus.processing,
+      'processing_error' => AiPersonalizationStatus.processingError,
+      'reviewing' => AiPersonalizationStatus.reviewing,
+      'waiting_partner' => AiPersonalizationStatus.waitingPartner,
+      'ready' => AiPersonalizationStatus.ready,
+      _ => throw FormatException('Unknown AI personalization status: $value'),
+    };
+  }
+}
+
 enum AiLearningDomain {
   personalValues,
   emotionalSupport,
@@ -134,6 +155,12 @@ class AiLearningProgress {
     required this.myConsent,
     required this.partnerConsent,
     required this.isEnabled,
+    required this.foundationComplete,
+    required this.memoryProcessingComplete,
+    required this.personalizationStatus,
+    required this.personalizationEnabled,
+    required this.myPendingReviewCount,
+    required this.partnerPendingReviewCount,
   });
 
   factory AiLearningProgress.fromJson(Map<String, dynamic> json) {
@@ -158,6 +185,14 @@ class AiLearningProgress {
         _readString(json, 'partner_consent_status'),
       ),
       isEnabled: _readBool(json, 'ai_enabled'),
+      foundationComplete: _readBool(json, 'foundation_complete'),
+      memoryProcessingComplete: _readBool(json, 'memory_processing_complete'),
+      personalizationStatus: AiPersonalizationStatus.fromJson(
+        _readString(json, 'personalization_status'),
+      ),
+      personalizationEnabled: _readBool(json, 'personalization_enabled'),
+      myPendingReviewCount: _readInt(json, 'my_pending_review_count'),
+      partnerPendingReviewCount: _readInt(json, 'partner_pending_review_count'),
     );
   }
 
@@ -169,6 +204,12 @@ class AiLearningProgress {
   final AiConsentStatus myConsent;
   final AiConsentStatus partnerConsent;
   final bool isEnabled;
+  final bool foundationComplete;
+  final bool memoryProcessingComplete;
+  final AiPersonalizationStatus personalizationStatus;
+  final bool personalizationEnabled;
+  final int myPendingReviewCount;
+  final int partnerPendingReviewCount;
 
   double get completionRatio {
     if (totalCount <= 0) {

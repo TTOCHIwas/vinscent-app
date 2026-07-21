@@ -97,24 +97,35 @@ class _MemoryRow extends StatelessWidget {
             ),
           ),
           if (memory.canConfirm) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              key: Key('ai-memory-reject-${memory.id}'),
-              tooltip: '기억에서 제외',
-              onPressed: () async {
-                await onDecision(memory, AiMemoryDecision.rejected);
-              },
-              icon: const Icon(Icons.close_rounded),
-              color: AppColors.textMuted,
-            ),
-            IconButton(
-              key: Key('ai-memory-confirm-${memory.id}'),
-              tooltip: '기억 확인',
-              onPressed: () async {
-                await onDecision(memory, AiMemoryDecision.confirmed);
-              },
-              icon: const Icon(Icons.check_rounded),
-              color: AppColors.textPrimary,
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                TextButton(
+                  key: Key('ai-memory-confirm-${memory.id}'),
+                  onPressed: () async {
+                    await onDecision(memory, AiMemoryDecision.confirmed);
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    minimumSize: const Size(56, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('맞아'),
+                ),
+                TextButton(
+                  key: Key('ai-memory-reject-${memory.id}'),
+                  onPressed: () async {
+                    await onDecision(memory, AiMemoryDecision.rejected);
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textMuted,
+                    minimumSize: const Size(56, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('아니야'),
+                ),
+              ],
             ),
           ],
         ],

@@ -9,6 +9,11 @@ String aiLearningErrorMessage(Object error) {
       AiLearningFailureReason.memoryNotFound => '확인할 기억을 찾지 못했어요.',
       AiLearningFailureReason.memoryConfirmationForbidden =>
         '이 기억은 본인만 확인할 수 있어요.',
+      AiLearningFailureReason.memoryReviewNotReady =>
+        '기억을 확인할 준비가 아직 끝나지 않았어요.',
+      AiLearningFailureReason.memoryAlreadyReviewed => '이미 확인한 기억이에요.',
+      AiLearningFailureReason.personalizationNotReady =>
+        '두 사람의 기억 확인이 아직 끝나지 않았어요.',
       AiLearningFailureReason.curriculumUnavailable => 'AI 학습 질문을 준비하고 있어요.',
       AiLearningFailureReason.invalidQuestion => '질문 정보를 확인하지 못했어요.',
       AiLearningFailureReason.configMissing => 'AI 연결 설정을 확인해 주세요.',

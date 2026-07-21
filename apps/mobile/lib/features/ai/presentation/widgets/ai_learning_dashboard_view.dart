@@ -40,7 +40,8 @@ class AiLearningDashboardView extends ConsumerWidget {
           _ConsentSection(progress: dashboard.progress),
           if (dashboard.progress.isEnabled) ...[
             const SizedBox(height: 40),
-            AiMemorySection(
+            _PersonalizationSection(
+              progress: dashboard.progress,
               memories: dashboard.memories,
               onDecision: (memory, decision) => _runAction(
                 context,
@@ -53,6 +54,78 @@ class AiLearningDashboardView extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _PersonalizationSection extends StatelessWidget {
+  const _PersonalizationSection({
+    required this.progress,
+    required this.memories,
+    required this.onDecision,
+  });
+
+  final AiLearningProgress progress;
+  final List<AiMemory> memories;
+  final AiMemoryDecisionCallback onDecision;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (progress.personalizationStatus) {
+      AiPersonalizationStatus.collecting => const _PersonalizationMessage(
+        icon: Icons.lock_clock_outlined,
+        message: '24개의 답변이 모이면 기억을 함께 확인할 수 있어',
+      ),
+      AiPersonalizationStatus.processing => const _PersonalizationMessage(
+        icon: Icons.auto_awesome_outlined,
+        message: '답변에서 기억을 정리하는 중',
+      ),
+      AiPersonalizationStatus.processingError => const _PersonalizationMessage(
+        icon: Icons.error_outline_rounded,
+        message: '기억을 정리하지 못했어. 잠시 후 다시 확인해 줘',
+      ),
+      AiPersonalizationStatus.reviewing => AiMemorySection(
+        memories: memories,
+        onDecision: onDecision,
+      ),
+      AiPersonalizationStatus.waitingPartner => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _PersonalizationMessage(
+            icon: Icons.hourglass_top_rounded,
+            message: '상대방이 기억을 확인하는 중',
+          ),
+          if (memories.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            AiMemorySection(memories: memories, onDecision: onDecision),
+          ],
+        ],
+      ),
+      AiPersonalizationStatus.ready => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _PersonalizationMessage(
+            icon: Icons.check_circle_outline_rounded,
+            message: '우리 둘의 AI가 준비됐어',
+          ),
+          if (memories.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            AiMemorySection(memories: memories, onDecision: onDecision),
+          ],
+        ],
+      ),
+    };
+  }
+}
+
+class _PersonalizationMessage extends StatelessWidget {
+  const _PersonalizationMessage({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return _StatusLine(icon: icon, label: message);
   }
 }
 
@@ -280,6 +353,6 @@ String _stageLabel(AiLearningStage stage) {
     AiLearningStage.collecting => '서로를 알아가는 중',
     AiLearningStage.exploring => '대화의 결을 찾는 중',
     AiLearningStage.refining => '우리 둘을 정리하는 중',
-    AiLearningStage.ready => '우리 둘의 AI 준비 완료',
+    AiLearningStage.ready => '24개의 답변 완료',
   };
 }

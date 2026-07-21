@@ -150,6 +150,12 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
       'ai_memory_not_found' => AiLearningFailureReason.memoryNotFound,
       'ai_memory_confirmation_forbidden' =>
         AiLearningFailureReason.memoryConfirmationForbidden,
+      'ai_memory_review_not_ready' =>
+        AiLearningFailureReason.memoryReviewNotReady,
+      'ai_memory_already_reviewed' =>
+        AiLearningFailureReason.memoryAlreadyReviewed,
+      'ai_personalization_not_ready' =>
+        AiLearningFailureReason.personalizationNotReady,
       'ai_curriculum_unavailable' =>
         AiLearningFailureReason.curriculumUnavailable,
       'invalid_daily_question' => AiLearningFailureReason.invalidQuestion,
