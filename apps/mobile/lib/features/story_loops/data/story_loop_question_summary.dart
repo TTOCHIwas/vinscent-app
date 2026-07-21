@@ -1,4 +1,4 @@
-import '../../questions/data/daily_question.dart';
+import '../../../core/questions/daily_question.dart';
 
 class StoryLoopQuestionSummary {
   const StoryLoopQuestionSummary({
