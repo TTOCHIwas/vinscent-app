@@ -32,16 +32,106 @@ import '../../../support/story_loop_fixtures.dart';
 import '../../../support/text_finders.dart';
 
 void main() {
-  testWidgets('shows current month without fetching detail before selection', (
-    tester,
-  ) async {
-    final repository = FakeStoryLoopReadRepository();
+  testWidgets('selects today and loads its detail on entry', (tester) async {
+    final repository = FakeStoryLoopReadRepository(
+      details: {DateTime(2026, 5, 10): _todayPendingDetail},
+    );
     await _pumpCalendar(tester, repository: repository);
 
     expect(find.text('2026년 05월'), findsOneWidget);
-    expect(find.text('날짜를 선택해 주세요'), findsOneWidget);
+    expect(find.text('날짜를 선택해 주세요'), findsNothing);
+    expect(find.text('today history question'), findsOneWidget);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
-    expect(repository.requestedDetailDates, isEmpty);
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
+    expect(
+      _circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
+        ),
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
+    );
+  });
+
+  testWidgets('swipes one day at a time within the relationship range', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository();
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 9),
+    );
+    final swipeRegion = find.byKey(const Key('calendar-date-swipe-region'));
+
+    await tester.fling(swipeRegion, const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 9),
+    ]);
+    expect(
+      _circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-09'),
+        ),
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
+    );
+
+    await tester.fling(swipeRegion, const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 9),
+    ]);
+
+    await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 9),
+    ]);
+    expect(
+      _circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
+        ),
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
+    );
+  });
+
+  testWidgets('updates the visible month when a date swipe crosses a month', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository();
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      today: DateTime(2026, 6, 1),
+    );
+
+    await tester.fling(
+      find.byKey(const Key('calendar-date-swipe-region')),
+      const Offset(300, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026년 05월'), findsOneWidget);
+    expect(repository.requestedMonths, [DateTime(2026, 6), DateTime(2026, 5)]);
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 6, 1),
+      DateTime(2026, 5, 31),
+    ]);
   });
 
   testWidgets('does not move before relationship start month', (tester) async {
