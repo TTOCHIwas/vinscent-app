@@ -29,18 +29,28 @@ class WidgetRecordingUploadWorker(
         val recordingId = inputData.getString(INPUT_RECORDING_ID)
         val filePath = inputData.getString(INPUT_FILE_PATH)
         val durationMs = inputData.getInt(INPUT_DURATION_MS, 0)
-        if (recordingId.isNullOrBlank() ||
-            filePath.isNullOrBlank() ||
-            durationMs !in 1..WidgetRecordingDuration.MAXIMUM_MS ||
-            !isValidDraft(filePath)
+        if (!WidgetRecordingUploadPolicy.isValidInput(
+                recordingId = recordingId,
+                filePath = filePath,
+                durationMs = durationMs,
+            )
         ) {
             return finishFailure(filePath)
+        }
+        val validRecordingId = recordingId!!
+        val validFilePath = filePath!!
+        if (!WidgetRecordingUploadPolicy.isValidDraft(
+                file = File(validFilePath),
+                rootDirectory = draftDirectory(),
+            )
+        ) {
+            return finishFailure(validFilePath)
         }
 
         val outcome = runCatching {
             WidgetRecordingFlutterBridge(applicationContext).upload(
-                recordingId = recordingId,
-                filePath = filePath,
+                recordingId = validRecordingId,
+                filePath = validFilePath,
                 durationMs = durationMs,
             )
         }.getOrElse {
@@ -48,31 +58,32 @@ class WidgetRecordingUploadWorker(
         }
 
         if (outcome.success) {
-            File(filePath).delete()
+            File(validFilePath).delete()
             WidgetRecordingStateStore(applicationContext).markIdle()
             CharacterWidgetProvider.updateAll(applicationContext)
             return Result.success()
         }
-        if (outcome.retryable && runAttemptCount < MAXIMUM_ATTEMPTS - 1) {
+        if (WidgetRecordingUploadPolicy.shouldRetry(
+                retryable = outcome.retryable,
+                runAttemptCount = runAttemptCount,
+            )
+        ) {
             return Result.retry()
         }
-        return finishFailure(filePath)
-    }
-
-    private fun isValidDraft(filePath: String): Boolean {
-        return runCatching {
-            val file = File(filePath).canonicalFile
-            file.isFile &&
-                file.length() in 1..MAXIMUM_DRAFT_BYTES &&
-                isOwnedDraft(file)
-        }.getOrDefault(false)
+        return finishFailure(validFilePath)
     }
 
     private fun finishFailure(filePath: String?): Result {
         filePath?.let(::File)?.let { file ->
             runCatching {
                 val canonicalFile = file.canonicalFile
-                if (isOwnedDraft(canonicalFile)) canonicalFile.delete()
+                if (WidgetRecordingUploadPolicy.isOwnedDraft(
+                        file = canonicalFile,
+                        rootDirectory = draftDirectory(),
+                    )
+                ) {
+                    canonicalFile.delete()
+                }
             }
         }
         WidgetRecordingStateStore(applicationContext).markIdle()
@@ -81,10 +92,8 @@ class WidgetRecordingUploadWorker(
         return Result.failure()
     }
 
-    private fun isOwnedDraft(file: File): Boolean {
-        val root = File(applicationContext.filesDir, DRAFT_DIRECTORY).canonicalFile
-        return file.path.startsWith(root.path + File.separator)
-    }
+    private fun draftDirectory(): File =
+        File(applicationContext.filesDir, DRAFT_DIRECTORY)
 
     private fun showFailureNotification() {
         val manager = applicationContext.getSystemService(NotificationManager::class.java)
@@ -130,8 +139,6 @@ class WidgetRecordingUploadWorker(
         private const val DRAFT_DIRECTORY = "widget_recordings"
         private const val FAILURE_CHANNEL_ID = "vinscent_widget_recording_result"
         private const val FAILURE_NOTIFICATION_ID = 2403
-        private const val MAXIMUM_DRAFT_BYTES = 4L * 1024L * 1024L
-        private const val MAXIMUM_ATTEMPTS = 3
 
         fun enqueue(
             context: Context,
