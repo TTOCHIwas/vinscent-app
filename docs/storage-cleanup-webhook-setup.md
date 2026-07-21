@@ -117,3 +117,34 @@ limit 20;
 - `discard_uploaded_couple_recording` 경로도 직접 삭제 대신 cleanup 요청을 남긴다.
 - 커플 아카이브 삭제 시 녹음/캐릭터 파일이 cleanup 요청으로 전환된다.
 - 실패한 요청은 `storage_cleanup_requests.last_error`에서 원인을 볼 수 있다.
+
+## 9. Webhook 복구 전 생성된 pending 요청 재처리
+
+Webhook이 잘못 연결된 동안 생성된 기존 `pending` 행은 Webhook을 수정해도 자동 재호출되지 않는다. 아래 PowerShell은 pending ID만 조회한 뒤 기존 Edge Function의 원자적 claim을 그대로 사용해 안전하게 재처리한다.
+
+```powershell
+$secret = '<STORAGE_CLEANUP_WEBHOOK_SECRET>'
+$projectUrl = 'https://<PROJECT_REF>.supabase.co'
+$serviceRoleKey = '<SUPABASE_SERVICE_ROLE_KEY>'
+
+$headers = @{
+  apikey = $serviceRoleKey
+  Authorization = "Bearer $serviceRoleKey"
+}
+
+$pending = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$projectUrl/rest/v1/storage_cleanup_requests?status=eq.pending&select=id&order=created_at.asc" `
+  -Headers $headers
+
+foreach ($item in $pending) {
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "$projectUrl/functions/v1/process-storage-cleanup" `
+    -Headers @{ 'x-storage-cleanup-webhook-secret' = $secret } `
+    -ContentType 'application/json' `
+    -Body (@{ record = @{ id = $item.id } } | ConvertTo-Json -Depth 3)
+}
+```
+
+서비스 역할 키는 로컬 셸에서만 사용하고 로그나 저장소에 남기지 않는다. 재처리 후 `status = 'pending'`인 행이 남아 있는지 다시 확인한다.

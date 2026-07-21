@@ -1,6 +1,6 @@
 # 푸시 알림 설정
 
-작성일: 2026-07-16
+작성일: 2026-07-21
 
 ## 1. 기준 프로젝트
 
@@ -43,6 +43,7 @@ Webhook과 예약 호출은 용도별 secret을 분리한다.
 - `RECORDING_WEBHOOK_SECRET`
 - `COUPLE_WEBHOOK_SECRET`
 - `SCHEDULE_WEBHOOK_SECRET`
+- `APP_NOTIFICATION_WEBHOOK_SECRET`
 
 ```powershell
 npx supabase secrets set FCM_PROJECT_ID=...
@@ -53,6 +54,7 @@ npx supabase secrets set ANSWER_WEBHOOK_SECRET=...
 npx supabase secrets set RECORDING_WEBHOOK_SECRET=...
 npx supabase secrets set COUPLE_WEBHOOK_SECRET=...
 npx supabase secrets set SCHEDULE_WEBHOOK_SECRET=...
+npx supabase secrets set APP_NOTIFICATION_WEBHOOK_SECRET=...
 ```
 
 서비스 계정 JSON 파일은 Git에 커밋하지 않는다. `FCM_PRIVATE_KEY`는 `-----BEGIN PRIVATE KEY-----`부터 `-----END PRIVATE KEY-----`까지 전체 값을 등록한다.
@@ -73,6 +75,7 @@ npx supabase functions deploy send-answer-complete-notification --no-verify-jwt
 npx supabase functions deploy send-recording-notification --no-verify-jwt
 npx supabase functions deploy send-couple-disconnect-notification --no-verify-jwt
 npx supabase functions deploy dispatch-scheduled-notifications --no-verify-jwt
+npx supabase functions deploy send-app-notification --no-verify-jwt
 ```
 
 ## 5. Database Webhook 설정
@@ -85,6 +88,7 @@ npx supabase functions deploy dispatch-scheduled-notifications --no-verify-jwt
 | `public.daily_question_answers` | `INSERT` | `send-answer-complete-notification` | `x-answer-webhook-secret` |
 | `public.recording_notification_events` | `INSERT` | `send-recording-notification` | `x-recording-webhook-secret` |
 | `public.couples` | `UPDATE` | `send-couple-disconnect-notification` | `x-couple-webhook-secret` |
+| `public.app_notification_events` | `INSERT` | `send-app-notification` | `x-app-notification-webhook-secret` |
 
 각 헤더 값은 대응하는 Edge Function secret과 같아야 한다. Webhook의 target은 표에 적힌 Edge Function이며 HTTP method는 `POST`다.
 
@@ -118,6 +122,25 @@ Android 알림 채널 ID는 앱과 Edge Function 모두 `vinscent_notifications`
 - 활성 토큰이 없을 때도 delivery status가 `skipped`로 기록된다.
 - 성공 또는 실패 결과가 `push_notification_deliveries`에 기록된다.
 - 동일 이벤트 재호출은 중복 푸시를 발송하지 않는다.
+
+## 10. 앱 활동 알림
+
+`app_notification_events` Webhook은 다음 알림을 한 경로로 처리한다.
+
+- 커플 연결 후 초기 설정 시작 및 완료
+- 커플 캐릭터 변경
+- 보관 중인 커플의 재연결 완료
+- 질문 답변에 대한 캐릭터의 한마디 준비
+- 24개 기초 질문 이후 기억 검토 준비
+- 양쪽 검토가 끝난 뒤 개인화 활성화
+
+Webhook 생성 시 `Supabase Edge Function` 대상으로 `send-app-notification`을 선택하고 다음 Header를 추가한다.
+
+```text
+x-app-notification-webhook-secret: <APP_NOTIFICATION_WEBHOOK_SECRET>
+```
+
+설정 화면의 `커플 활동 알림`은 연결·설정·캐릭터 변경을 제어하고, `캐릭터 소식 알림`은 한마디·기억 검토·개인화 준비 알림을 제어한다.
 
 ## 9. 현재 제약
 
