@@ -240,6 +240,64 @@ void main() {
       expect(find.text('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'), findsOneWidget);
     });
 
+    testWidgets('centers published feedback on phone and tablet widths', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      for (final width in [360.0, 1024.0]) {
+        tester.view.physicalSize = Size(width, 1400);
+        final repository = _FakeDailyQuestionAnswerRepository(
+          _completedAnswerState,
+        );
+
+        await _pumpRouter(
+          tester,
+          repository: repository,
+          aiFeedbacks: {
+            'daily-question-id': AiQuestionFeedback(
+              dailyQuestionId: 'daily-question-id',
+              feedbackText:
+                  'You both notice the same small moments and remember them in your own ways.',
+              publishedAt: DateTime.utc(2026, 5, 31, 12),
+            ),
+          },
+        );
+
+        final feedback = find.byKey(const Key('ai-question-feedback'));
+        final character = find.byKey(
+          const Key('ai-question-feedback-character'),
+        );
+        final bubbleBody = find.descendant(
+          of: feedback,
+          matching: find.byWidgetPredicate((widget) {
+            if (widget case Container(decoration: final BoxDecoration value)) {
+              return value.color == const Color(0xFFEFEFEF);
+            }
+            return false;
+          }),
+        );
+
+        expect(bubbleBody, findsOneWidget);
+        final characterRect = tester.getRect(character);
+        final bubbleRect = tester.getRect(bubbleBody);
+        final visualCenter = (characterRect.left + bubbleRect.right) / 2;
+
+        expect(
+          visualCenter,
+          closeTo(width / 2, 0.5),
+          reason: 'feedback should remain centered at width $width',
+        );
+        expect(
+          bubbleRect.right - characterRect.left,
+          lessThanOrEqualTo(360),
+          reason: 'feedback should keep a readable maximum width',
+        );
+      }
+    });
+
     testWidgets('does not show AI feedback before both answers exist', (
       tester,
     ) async {
