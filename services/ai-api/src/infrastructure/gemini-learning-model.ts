@@ -26,6 +26,8 @@ const commonPolicy = [
   'Return all user-facing text in natural Korean.',
 ].join(' ');
 
+const maximumMemoryCandidates = 12;
+
 const rankingSchema = objectSchema({
   question_key: { type: 'string' },
   rationale: { type: 'string' },
@@ -34,63 +36,7 @@ const rankingSchema = objectSchema({
 const memorySchema = objectSchema({
   memories: {
     type: 'array',
-    maxItems: 12,
-    items: objectSchema({
-      memory_key: { type: 'string' },
-      scope: { type: 'string', enum: ['personal', 'couple'] },
-      subject_participant_key: {
-        type: 'string',
-        enum: ['partner_a', 'partner_b', 'couple'],
-      },
-      kind: { type: 'string' },
-      learning_domain: {
-        type: 'string',
-        enum: [
-          'personal_values',
-          'emotional_support',
-          'communication_repair',
-          'daily_life',
-          'relationship_strength',
-          'future_boundaries',
-        ],
-      },
-      evidence_type: {
-        type: 'string',
-        enum: ['explicit', 'repeated_pattern'],
-      },
-      sensitive_category: {
-        type: 'string',
-        enum: [
-          'none',
-          'sexual_health',
-          'pregnancy_fertility',
-          'finance_debt',
-          'health_mental_health',
-          'trauma',
-          'religion_politics',
-          'family_conflict',
-        ],
-      },
-      statement: { type: 'string' },
-      confidence: { type: 'number', minimum: 0, maximum: 1 },
-      evidence_answer_ids: {
-        type: 'array',
-        minItems: 1,
-        maxItems: 2,
-        items: { type: 'string' },
-      },
-    }, [
-      'memory_key',
-      'scope',
-      'subject_participant_key',
-      'kind',
-      'learning_domain',
-      'evidence_type',
-      'sensitive_category',
-      'statement',
-      'confidence',
-      'evidence_answer_ids',
-    ]),
+    items: { type: 'object' },
   },
 }, ['memories']);
 
@@ -137,7 +83,11 @@ export class GeminiLearningModel implements LearningModelPort {
       schema: memorySchema,
     });
     const output = requireRecord(result.value);
-    const memories = requireArray(output, 'memories').map(parseMemoryCandidate);
+    const rawMemories = requireArray(output, 'memories');
+    if (rawMemories.length > maximumMemoryCandidates) {
+      throw new GeminiOutputError();
+    }
+    const memories = rawMemories.map(parseMemoryCandidate);
 
     return withUsage(result, memories);
   }
@@ -218,12 +168,17 @@ function buildMemoryExtractionPrompt(
   return buildTaskPrompt(
     [
       'Extract zero or more atomic memory candidates from only the current two answers.',
+      `Return one JSON object with a memories array containing at most ${maximumMemoryCandidates} objects.`,
+      'Every memory object must contain exactly these fields: memory_key, scope, subject_participant_key, kind, learning_domain, evidence_type, sensitive_category, statement, confidence, evidence_answer_ids.',
+      'Use scope personal or couple. Use subject_participant_key partner_a or partner_b for personal memories and couple for couple memories.',
+      'Use learning_domain personal_values, emotional_support, communication_repair, daily_life, relationship_strength, or future_boundaries.',
+      'Use evidence_type explicit or repeated_pattern. Use confidence as a number from 0 to 1 and evidence_answer_ids as an array of one or two supplied answer IDs.',
+      'Use sensitive_category none, sexual_health, pregnancy_fertility, finance_debt, health_mental_health, trauma, religion_politics, or family_conflict.',
       'Each memory must contain exactly one explicit fact, preference, or repeated pattern and cite its supporting current answer IDs.',
       'Use evidence_type explicit when the answer directly states the fact.',
       'Use evidence_type repeated_pattern only when a matching existing candidate was observed in another question; reuse its memory_key.',
       'A single answer cannot establish a personality or repeated tendency.',
       'A personal memory may cite only that participant answer. A couple memory may cite either or both answers.',
-      'Use subject_participant_key partner_a or partner_b for personal memories and couple for couple memories.',
       'Do not save transient moods, unsupported interpretations, or rejected candidate keys.',
       'Classify the blocked categories sexual health, pregnancy or fertility, finance or debt, physical or mental health, trauma, religion or politics, and family conflict in sensitive_category so the server can discard them.',
     ].join(' '),
