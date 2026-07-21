@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/drawing/app_drawing.dart';
-import '../../../core/drawing/app_drawing_style.dart';
+import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
@@ -40,19 +40,13 @@ class _RecordingSlotArtworkEditorScreenState
     extends ConsumerState<RecordingSlotArtworkEditorScreen> {
   static const _maxCanvasSize = 512.0;
 
-  List<AppDrawingStroke> _strokes = [];
-  AppDrawingStroke? _activeStroke;
-  AppDrawingTool _selectedTool = AppDrawingTool.pen;
-  Color _selectedColor = AppDrawingStyle.colorPalette.first;
-  double _selectedStrokeWidth = AppDrawingStyle.normalStrokeWidth;
+  late final AppDrawingController _drawingController;
   CoupleRecordingSlot? _slot;
   bool _isLoading = true;
   bool _loadFailed = false;
   bool _isSaving = false;
   late final TextEditingController _titleController;
   CoupleRecordingSlotSaveResult? _createdSlot;
-
-  List<AppDrawingStroke> get _visibleStrokes => [..._strokes, ?_activeStroke];
 
   bool get _isReadOnly {
     final couple = ref
@@ -67,7 +61,7 @@ class _RecordingSlotArtworkEditorScreenState
       !_loadFailed &&
       !_isSaving &&
       (widget.isCreating ? _isTitleValid : _slot != null) &&
-      AppDrawingData(strokes: _strokes).hasVisibleContent;
+      _drawingController.hasVisibleContent;
 
   bool get _isTitleValid {
     final title = _titleController.text.trim();
@@ -75,18 +69,16 @@ class _RecordingSlotArtworkEditorScreenState
   }
 
   bool get _canUndo =>
-      !_isReadOnly &&
-      !_isLoading &&
-      !_isSaving &&
-      _activeStroke == null &&
-      _strokes.isNotEmpty;
+      !_isReadOnly && !_isLoading && !_isSaving && _drawingController.canUndo;
 
   bool get _canClear =>
-      !_isReadOnly && !_isLoading && !_isSaving && _strokes.isNotEmpty;
+      !_isReadOnly && !_isLoading && !_isSaving && _drawingController.canClear;
 
   @override
   void initState() {
     super.initState();
+    _drawingController = AppDrawingController()
+      ..addListener(_handleDrawingChanged);
     _titleController = TextEditingController();
     _titleController.addListener(_handleTitleChanged);
     Future<void>.microtask(widget.isCreating ? _prepareNewSlot : _loadSlot);
@@ -94,6 +86,9 @@ class _RecordingSlotArtworkEditorScreenState
 
   @override
   void dispose() {
+    _drawingController
+      ..removeListener(_handleDrawingChanged)
+      ..dispose();
     _titleController
       ..removeListener(_handleTitleChanged)
       ..dispose();
@@ -102,6 +97,12 @@ class _RecordingSlotArtworkEditorScreenState
 
   void _handleTitleChanged() {
     setState(() {});
+  }
+
+  void _handleDrawingChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _prepareNewSlot() async {
@@ -162,9 +163,9 @@ class _RecordingSlotArtworkEditorScreenState
       if (!mounted) {
         return;
       }
+      _drawingController.replaceStrokes(strokes);
       setState(() {
         _slot = slot;
-        _strokes = strokes;
       });
     } catch (_) {
       if (!mounted) {
@@ -201,48 +202,28 @@ class _RecordingSlotArtworkEditorScreenState
       return;
     }
 
-    setState(() {
-      _activeStroke = AppDrawingStroke(
-        tool: _selectedTool,
-        color: _selectedColor,
-        width: _selectedStrokeWidth,
-        points: [point],
-      );
-    });
+    _drawingController.startStroke(point);
   }
 
   void _updateStroke(AppDrawingPoint point) {
-    final activeStroke = _activeStroke;
-    if (activeStroke == null || _isReadOnly || _loadFailed) {
+    if (_isReadOnly || _loadFailed) {
       return;
     }
-
-    setState(() {
-      _activeStroke = activeStroke.copyWith(
-        points: [...activeStroke.points, point],
-      );
-    });
+    _drawingController.updateStroke(point);
   }
 
   void _endStroke() {
-    final activeStroke = _activeStroke;
-    if (activeStroke == null || _isReadOnly || _loadFailed) {
+    if (_isReadOnly || _loadFailed) {
       return;
     }
-
-    setState(() {
-      _strokes = [..._strokes, activeStroke];
-      _activeStroke = null;
-    });
+    _drawingController.endStroke();
   }
 
   void _undoLastStroke() {
     if (!_canUndo) {
       return;
     }
-    setState(() {
-      _strokes = _strokes.sublist(0, _strokes.length - 1);
-    });
+    _drawingController.undo();
   }
 
   Future<void> _confirmClearCanvas() async {
@@ -271,10 +252,7 @@ class _RecordingSlotArtworkEditorScreenState
       return;
     }
 
-    setState(() {
-      _strokes = [];
-      _activeStroke = null;
-    });
+    _drawingController.clear();
   }
 
   Future<void> _save() async {
@@ -292,7 +270,7 @@ class _RecordingSlotArtworkEditorScreenState
 
     try {
       final artifact = await const RecordingSlotArtworkCodec().encode(
-        AppDrawingData(strokes: _strokes),
+        _drawingController.drawingData,
       );
       var targetSlot = _createdSlot;
       if (widget.isCreating && targetSlot == null) {
@@ -462,28 +440,17 @@ class _RecordingSlotArtworkEditorScreenState
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 520),
                       child: AppDrawingToolbar(
-                        selectedTool: _selectedTool,
-                        selectedColor: _selectedColor,
-                        selectedStrokeWidth: _selectedStrokeWidth,
+                        selectedTool: _drawingController.selectedTool,
+                        selectedColor: _drawingController.selectedColor,
+                        selectedStrokeWidth:
+                            _drawingController.selectedStrokeWidth,
                         isReadOnly: isReadOnly || _loadFailed,
                         canUndo: _canUndo,
                         canClear: _canClear,
-                        onToolChanged: (tool) {
-                          setState(() {
-                            _selectedTool = tool;
-                          });
-                        },
-                        onColorChanged: (color) {
-                          setState(() {
-                            _selectedColor = color;
-                            _selectedTool = AppDrawingTool.pen;
-                          });
-                        },
-                        onStrokeWidthChanged: (width) {
-                          setState(() {
-                            _selectedStrokeWidth = width;
-                          });
-                        },
+                        onToolChanged: _drawingController.selectTool,
+                        onColorChanged: _drawingController.selectColor,
+                        onStrokeWidthChanged:
+                            _drawingController.selectStrokeWidth,
                         onUndoPressed: _undoLastStroke,
                         onClearPressed: _confirmClearCanvas,
                       ),
@@ -512,7 +479,7 @@ class _RecordingSlotArtworkEditorScreenState
     }
 
     return AppDrawingCanvas(
-      strokes: _visibleStrokes,
+      strokes: _drawingController.visibleStrokes,
       isReadOnly: isReadOnly,
       onStrokeStart: _startStroke,
       onStrokeUpdate: _updateStroke,
