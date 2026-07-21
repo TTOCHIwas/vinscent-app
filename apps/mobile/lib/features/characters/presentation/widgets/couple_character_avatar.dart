@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/character_placeholder.dart';
 import '../../application/couple_character_controller.dart';
+
+export '../../../../core/presentation/widgets/character_placeholder.dart';
 
 class CoupleCharacterAvatar extends ConsumerWidget {
   const CoupleCharacterAvatar({
@@ -47,24 +48,6 @@ class CoupleCharacterAvatar extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: child,
       ),
-    );
-  }
-}
-
-class CharacterPlaceholder extends StatelessWidget {
-  const CharacterPlaceholder({super.key, this.label = '캐릭터', this.size = 140});
-
-  final String label;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      color: AppColors.wireframePlaceholder,
-      child: Text(label, style: AppTextStyles.homeCharacterLabel),
     );
   }
 }

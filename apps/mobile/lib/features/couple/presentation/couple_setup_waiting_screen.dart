@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/presentation/widgets/character_placeholder.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../characters/presentation/widgets/couple_character_avatar.dart';
 
 class CoupleSetupWaitingScreen extends StatelessWidget {
   const CoupleSetupWaitingScreen({super.key});
