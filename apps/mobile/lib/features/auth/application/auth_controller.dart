@@ -3,7 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
 import '../auth_debug_log.dart';
-import '../../notifications/data/push_token_repository.dart';
+import 'auth_sign_out_cleanup_provider.dart';
+import 'auth_sign_out_service.dart';
 import 'auth_status.dart';
 
 final authControllerProvider = NotifierProvider<AuthController, AuthStatus>(
@@ -32,15 +33,11 @@ class AuthController extends Notifier<AuthStatus> {
   Future<void> signOut() async {
     if (AppConfig.isSupabaseConfigured) {
       debugAuthLog('sign-out requested');
-      try {
-        await ref
-            .read(pushTokenRepositoryProvider)
-            .deactivateCurrentDeviceToken();
-      } catch (_) {
-        // Sign-out should not be blocked by push token cleanup.
-      }
-
-      await Supabase.instance.client.auth.signOut();
+      final service = AuthSignOutService(
+        cleanup: ref.read(authSignOutCleanupProvider),
+        signOut: () => Supabase.instance.client.auth.signOut(),
+      );
+      await service.execute();
     }
 
     debugAuthLog('sign-out completed');
