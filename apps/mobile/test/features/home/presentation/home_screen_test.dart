@@ -441,6 +441,47 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/home/question');
   });
 
+  testWidgets('removes published feedback after its temporary display', (
+    tester,
+  ) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: true,
+          partnerAnswerExists: true,
+          answerCount: 2,
+        ),
+      ),
+      aiFeedbacks: {
+        _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
+          dailyQuestionId: _dailyQuestion.dailyQuestionId,
+          feedbackText: _aiFeedbackText,
+          publishedAt: DateTime.utc(2026, 5, 31, 12),
+        ),
+      },
+    );
+
+    expect(find.text(_aiFeedbackText), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 9));
+
+    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(find.byKey(_questionBubbleKey), findsNothing);
+  });
+
   testWidgets('does not show AI feedback before both answers exist', (
     tester,
   ) async {
