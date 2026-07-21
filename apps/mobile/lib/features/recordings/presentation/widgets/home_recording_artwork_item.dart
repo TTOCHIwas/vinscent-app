@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../application/recording_playback_controller.dart';
 import '../../data/couple_recording.dart';
 import 'recording_pulse.dart';
 
