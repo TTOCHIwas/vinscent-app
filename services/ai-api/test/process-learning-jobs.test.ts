@@ -150,7 +150,7 @@ test('processor handles every learning job and restores IDs only at persistence'
         scope: 'personal',
         subject_user_id: 'user-real-a',
         kind: 'personal_value',
-        domain: 'personal_values',
+        learning_domain: 'personal_values',
         evidence_type: 'explicit',
         sensitive_category: 'none',
         statement: 'Partner A values quiet time together.',

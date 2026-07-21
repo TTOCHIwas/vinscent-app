@@ -360,7 +360,7 @@ test('Gemini model maps memory output without real user identifiers', async () =
               scope: 'personal',
               subject_participant_key: 'partner_a',
               kind: 'personal_value',
-              domain: 'personal_values',
+              learning_domain: 'personal_values',
               evidence_type: 'explicit',
               sensitive_category: 'none',
               statement: 'Partner A values quiet time together.',

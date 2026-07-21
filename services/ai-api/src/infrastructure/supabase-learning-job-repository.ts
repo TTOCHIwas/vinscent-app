@@ -9,6 +9,10 @@ import {
 import type {
   CompletedQuestionContext,
   LearningDomain,
+  MemoryCandidateState,
+  MemoryEvidenceType,
+  PromptAngle,
+  QuestionDepth,
 } from '../domain/learning-contract.ts';
 
 interface SupabaseRpcResult {
@@ -38,6 +42,31 @@ const learningJobTypes = new Set<LearningJobType>([
   'select_curated_question',
   'generate_personalized_question',
   'rebuild_profile',
+]);
+
+const questionDepths = new Set<QuestionDepth>([
+  'light',
+  'exploratory',
+  'deep',
+]);
+
+const promptAngles = new Set<PromptAngle>([
+  'preference',
+  'lived_experience',
+  'scenario',
+  'current_need',
+]);
+
+const memoryEvidenceTypes = new Set<MemoryEvidenceType>([
+  'explicit',
+  'repeated_pattern',
+]);
+
+const memoryCandidateStates = new Set<MemoryCandidateState>([
+  'pending',
+  'active',
+  'rejected',
+  'superseded',
 ]);
 
 export class SupabaseLearningJobRepository implements LearningJobRepository {
@@ -223,7 +252,15 @@ function parseCompletedQuestionContext(
   const record = requireRecord(value);
   const question = requireRecord(record.question);
   const answers = requireArray(record.answers);
+  const foundationProgress = requireRecord(record.foundation_progress);
   const memories = requireArray(record.confirmed_memories);
+  const memoryCandidates = requireArray(record.memory_candidates);
+  const recentFoundationQuestions = requireArray(
+    record.recent_foundation_questions,
+  );
+  const recentCompletedQuestions = requireArray(
+    record.recent_completed_questions,
+  );
   const remainingQuestions = requireArray(
     record.remaining_foundation_questions,
   );
@@ -238,6 +275,8 @@ function parseCompletedQuestionContext(
       questionId: requireString(question.question_id, 160),
       text: requireString(question.text, 4000),
       domain: requireNullableLearningDomain(question.domain),
+      depth: requireNullableQuestionDepth(question.depth),
+      promptAngle: requireNullablePromptAngle(question.prompt_angle),
     },
     answers: answers.map((answer) => {
       const item = requireRecord(answer);
@@ -247,6 +286,7 @@ function parseCompletedQuestionContext(
         text: requireString(item.text, 4000),
       };
     }),
+    foundationProgress: parseFoundationProgress(foundationProgress),
     confirmedMemories: memories.map((memory) => {
       const item = requireRecord(memory);
       const scope = item.scope;
@@ -274,8 +314,72 @@ function parseCompletedQuestionContext(
         scope,
         subjectUserId,
         kind: requireString(item.kind, 100),
+        domain: requireLearningDomain(item.learning_domain),
+        evidenceType: requireMemoryEvidenceType(item.evidence_type),
         statement: requireString(item.statement, 500),
         confidence,
+      };
+    }),
+    memoryCandidates: memoryCandidates.map((memory) => {
+      const item = requireRecord(memory);
+      const scope = requireMemoryScope(item.scope);
+      const subjectUserId = requireNullableString(item.subject_user_id, 160);
+      validateMemorySubject(scope, subjectUserId);
+      const confidence = requireConfidence(item.confidence);
+      const statement = item.statement === null
+        ? null
+        : requireString(item.statement, 500);
+      const evidenceQuestionCount = requireInteger(
+        item.evidence_question_count,
+        0,
+      );
+
+      return {
+        memoryKey: requireString(item.memory_key, 160),
+        scope,
+        subjectUserId,
+        kind: requireString(item.kind, 100),
+        domain: requireLearningDomain(item.learning_domain),
+        evidenceType: requireMemoryEvidenceType(item.evidence_type),
+        statement,
+        confidence,
+        state: requireMemoryCandidateState(item.state),
+        evidenceQuestionCount,
+      };
+    }),
+    recentFoundationQuestions: recentFoundationQuestions.map((candidate) => {
+      const item = requireRecord(candidate);
+      return {
+        questionKey: requireString(item.question_key, 120),
+        domain: requireLearningDomain(item.domain),
+        depth: requireQuestionDepth(item.depth),
+        promptAngle: requirePromptAngle(item.prompt_angle),
+      };
+    }),
+    recentCompletedQuestions: recentCompletedQuestions.map((recent) => {
+      const item = requireRecord(recent);
+      const recentQuestion = requireRecord(item.question);
+      const recentAnswers = requireArray(item.answers);
+      if (recentAnswers.length !== 2) {
+        throw new TypeError('recent completed context requires two answers');
+      }
+      return {
+        question: {
+          dailyQuestionId: requireString(
+            recentQuestion.daily_question_id,
+            160,
+          ),
+          text: requireString(recentQuestion.text, 4000),
+          domain: requireNullableLearningDomain(recentQuestion.domain),
+        },
+        answers: recentAnswers.map((answer) => {
+          const recentAnswer = requireRecord(answer);
+          return {
+            answerId: requireString(recentAnswer.answer_id, 160),
+            userId: requireString(recentAnswer.user_id, 160),
+            text: requireString(recentAnswer.text, 4000),
+          };
+        }),
       };
     }),
     remainingFoundationQuestions: remainingQuestions.map((candidate) => {
@@ -284,6 +388,8 @@ function parseCompletedQuestionContext(
         questionKey: requireString(item.question_key, 120),
         text: requireString(item.text, 4000),
         domain: requireLearningDomain(item.domain),
+        depth: requireQuestionDepth(item.depth),
+        promptAngle: requirePromptAngle(item.prompt_angle),
       };
     }),
   };
@@ -308,6 +414,52 @@ function requireBoolean(value: unknown): boolean {
     throw repositoryContractError('ai_rpc_result_invalid');
   }
   return value;
+}
+
+function parseFoundationProgress(
+  value: Record<string, unknown>,
+): CompletedQuestionContext['foundationProgress'] {
+  const rawDomainProgress = requireRecord(value.domain_progress);
+  const domainProgress = {} as CompletedQuestionContext[
+    'foundationProgress'
+  ]['domainProgress'];
+
+  for (const domain of learningDomains) {
+    const rawProgress = requireRecord(rawDomainProgress[domain]);
+    domainProgress[domain] = {
+      completedCount: requireInteger(rawProgress.completed_count, 0),
+      totalCount: requireInteger(rawProgress.total_count, 1),
+    };
+  }
+
+  const completedCount = requireInteger(value.completed_count, 0);
+  const totalCount = requireInteger(value.total_count, 1);
+  if (completedCount > totalCount) {
+    throw new TypeError('invalid foundation progress');
+  }
+
+  return {
+    completedCount,
+    totalCount,
+    personalizationEnabled: requireDirectBoolean(
+      value.personalization_enabled,
+    ),
+    domainProgress,
+  };
+}
+
+function requireDirectBoolean(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    throw new TypeError('expected boolean');
+  }
+  return value;
+}
+
+function requireInteger(value: unknown, minimum: number): number {
+  if (!Number.isInteger(value) || Number(value) < minimum) {
+    throw new TypeError('invalid integer');
+  }
+  return Number(value);
 }
 
 function requireString(value: unknown, maximum: number): string {
@@ -337,6 +489,85 @@ function requireLearningDomain(value: unknown): LearningDomain {
 
 function requireNullableLearningDomain(value: unknown): LearningDomain | null {
   return value === null ? null : requireLearningDomain(value);
+}
+
+function requireQuestionDepth(value: unknown): QuestionDepth {
+  if (
+    typeof value !== 'string'
+    || !questionDepths.has(value as QuestionDepth)
+  ) {
+    throw new TypeError('invalid question depth');
+  }
+  return value as QuestionDepth;
+}
+
+function requireNullableQuestionDepth(value: unknown): QuestionDepth | null {
+  return value === null ? null : requireQuestionDepth(value);
+}
+
+function requirePromptAngle(value: unknown): PromptAngle {
+  if (
+    typeof value !== 'string'
+    || !promptAngles.has(value as PromptAngle)
+  ) {
+    throw new TypeError('invalid prompt angle');
+  }
+  return value as PromptAngle;
+}
+
+function requireNullablePromptAngle(value: unknown): PromptAngle | null {
+  return value === null ? null : requirePromptAngle(value);
+}
+
+function requireMemoryEvidenceType(value: unknown): MemoryEvidenceType {
+  if (
+    typeof value !== 'string'
+    || !memoryEvidenceTypes.has(value as MemoryEvidenceType)
+  ) {
+    throw new TypeError('invalid memory evidence type');
+  }
+  return value as MemoryEvidenceType;
+}
+
+function requireMemoryCandidateState(value: unknown): MemoryCandidateState {
+  if (
+    typeof value !== 'string'
+    || !memoryCandidateStates.has(value as MemoryCandidateState)
+  ) {
+    throw new TypeError('invalid memory candidate state');
+  }
+  return value as MemoryCandidateState;
+}
+
+function requireMemoryScope(value: unknown): 'personal' | 'couple' {
+  if (value !== 'personal' && value !== 'couple') {
+    throw new TypeError('invalid memory scope');
+  }
+  return value;
+}
+
+function validateMemorySubject(
+  scope: 'personal' | 'couple',
+  subjectUserId: string | null,
+): void {
+  if (
+    (scope === 'personal' && subjectUserId === null)
+    || (scope === 'couple' && subjectUserId !== null)
+  ) {
+    throw new TypeError('invalid memory subject');
+  }
+}
+
+function requireConfidence(value: unknown): number {
+  if (
+    typeof value !== 'number'
+    || !Number.isFinite(value)
+    || value < 0
+    || value > 1
+  ) {
+    throw new TypeError('invalid memory confidence');
+  }
+  return value;
 }
 
 function requireJobType(value: unknown): LearningJobType {

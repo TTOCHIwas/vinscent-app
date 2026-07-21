@@ -99,10 +99,10 @@ const emptyUsage: LearningModelUsage = {
 };
 
 const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string> = {
-  extract_memories: 'memory-v1',
-  generate_feedback: 'feedback-v1',
-  select_curated_question: 'question-ranking-v1',
-  generate_personalized_question: 'personalized-question-v1',
+  extract_memories: 'memory-v2',
+  generate_feedback: 'feedback-v2',
+  select_curated_question: 'question-ranking-v2',
+  generate_personalized_question: 'personalized-question-v2',
 };
 
 export class AiRepositoryError extends Error {
@@ -233,7 +233,12 @@ export class LearningJobProcessor {
   }> {
     if (jobType === 'extract_memories') {
       const result = await this.#model.extractMemoryCandidates(modelContext);
-      const resolved = resolveMemoryCandidates(context, result.value);
+      const resolved = resolveMemoryCandidates(
+        context,
+        result.value.filter(
+          (candidate) => candidate.sensitiveCategory === 'none',
+        ),
+      );
       return {
         output: {
           memories: resolved.map((memory) => ({
@@ -241,6 +246,9 @@ export class LearningJobProcessor {
             scope: memory.scope,
             subject_user_id: memory.subjectUserId,
             kind: memory.kind,
+            learning_domain: memory.domain,
+            evidence_type: memory.evidenceType,
+            sensitive_category: memory.sensitiveCategory,
             statement: memory.statement,
             confidence: memory.confidence,
             evidence_answer_ids: memory.evidenceAnswerIds,

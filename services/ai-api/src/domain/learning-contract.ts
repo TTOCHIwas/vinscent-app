@@ -12,6 +12,32 @@ export type LearningDomain =
   | 'relationship_strength'
   | 'future_boundaries';
 
+export type QuestionDepth = 'light' | 'exploratory' | 'deep';
+
+export type PromptAngle =
+  | 'preference'
+  | 'lived_experience'
+  | 'scenario'
+  | 'current_need';
+
+export type MemoryEvidenceType = 'explicit' | 'repeated_pattern';
+
+export type SensitiveCategory =
+  | 'none'
+  | 'sexual_health'
+  | 'pregnancy_fertility'
+  | 'finance_debt'
+  | 'health_mental_health'
+  | 'trauma'
+  | 'religion_politics'
+  | 'family_conflict';
+
+export type MemoryCandidateState =
+  | 'pending'
+  | 'active'
+  | 'rejected'
+  | 'superseded';
+
 export type ParticipantKey = 'partner_a' | 'partner_b';
 
 export interface CompletedQuestionAnswer {
@@ -25,6 +51,8 @@ export interface ConfirmedMemoryContext {
   scope: 'personal' | 'couple';
   subjectUserId: string | null;
   kind: string;
+  domain: LearningDomain;
+  evidenceType: MemoryEvidenceType;
   statement: string;
   confidence: number;
 }
@@ -33,6 +61,47 @@ export interface FoundationQuestionCandidate {
   questionKey: string;
   text: string;
   domain: LearningDomain;
+  depth: QuestionDepth;
+  promptAngle: PromptAngle;
+}
+
+export interface FoundationProgressContext {
+  completedCount: number;
+  totalCount: number;
+  personalizationEnabled: boolean;
+  domainProgress: Record<
+    LearningDomain,
+    { completedCount: number; totalCount: number }
+  >;
+}
+
+export interface MemoryCandidateContext {
+  memoryKey: string;
+  scope: 'personal' | 'couple';
+  subjectUserId: string | null;
+  kind: string;
+  domain: LearningDomain;
+  evidenceType: MemoryEvidenceType;
+  statement: string | null;
+  confidence: number;
+  state: MemoryCandidateState;
+  evidenceQuestionCount: number;
+}
+
+export interface RecentFoundationQuestionContext {
+  questionKey: string;
+  domain: LearningDomain;
+  depth: QuestionDepth;
+  promptAngle: PromptAngle;
+}
+
+export interface RecentCompletedQuestionContext {
+  question: {
+    dailyQuestionId: string;
+    text: string;
+    domain: LearningDomain | null;
+  };
+  answers: CompletedQuestionAnswer[];
 }
 
 export interface CompletedQuestionContext {
@@ -42,9 +111,15 @@ export interface CompletedQuestionContext {
     questionId: string;
     text: string;
     domain: LearningDomain | null;
+    depth: QuestionDepth | null;
+    promptAngle: PromptAngle | null;
   };
   answers: CompletedQuestionAnswer[];
+  foundationProgress: FoundationProgressContext;
   confirmedMemories: ConfirmedMemoryContext[];
+  memoryCandidates: MemoryCandidateContext[];
+  recentFoundationQuestions: RecentFoundationQuestionContext[];
+  recentCompletedQuestions: RecentCompletedQuestionContext[];
   remainingFoundationQuestions: FoundationQuestionCandidate[];
 }
 
@@ -60,8 +135,32 @@ export interface AnonymizedCompletedQuestionContext {
     scope: 'personal' | 'couple';
     subjectParticipantKey: ParticipantKey | null;
     kind: string;
+    domain: LearningDomain;
+    evidenceType: MemoryEvidenceType;
     statement: string;
     confidence: number;
+  }>;
+  foundationProgress: FoundationProgressContext;
+  memoryCandidates: Array<{
+    memoryKey: string;
+    scope: 'personal' | 'couple';
+    subjectParticipantKey: ParticipantKey | null;
+    kind: string;
+    domain: LearningDomain;
+    evidenceType: MemoryEvidenceType;
+    statement: string | null;
+    confidence: number;
+    state: MemoryCandidateState;
+    evidenceQuestionCount: number;
+  }>;
+  recentFoundationQuestions: RecentFoundationQuestionContext[];
+  recentCompletedQuestions: Array<{
+    question: RecentCompletedQuestionContext['question'];
+    answers: Array<{
+      answerId: string;
+      participantKey: ParticipantKey;
+      text: string;
+    }>;
   }>;
   remainingFoundationQuestions: FoundationQuestionCandidate[];
 }
@@ -71,6 +170,9 @@ export interface MemoryCandidate {
   scope: 'personal' | 'couple';
   subjectUserId: string | null;
   kind: string;
+  domain: LearningDomain;
+  evidenceType: MemoryEvidenceType;
+  sensitiveCategory: SensitiveCategory;
   statement: string;
   confidence: number;
   evidenceAnswerIds: string[];
@@ -81,6 +183,9 @@ export interface ModelMemoryCandidate {
   scope: 'personal' | 'couple';
   subjectParticipantKey: ParticipantKey | null;
   kind: string;
+  domain: LearningDomain;
+  evidenceType: MemoryEvidenceType;
+  sensitiveCategory: SensitiveCategory;
   statement: string;
   confidence: number;
   evidenceAnswerIds: string[];
@@ -179,6 +284,24 @@ export function anonymizeCompletedQuestionContext(
   requireNonBlank(context.coupleId, 'couple id', 160);
   const participants = participantKeyMap(context);
 
+  const resolveSubject = (
+    scope: 'personal' | 'couple',
+    subjectUserId: string | null,
+    label: string,
+  ): ParticipantKey | null => {
+    const subjectParticipantKey = subjectUserId === null
+      ? null
+      : participants.get(subjectUserId);
+
+    if (scope === 'personal' && subjectParticipantKey === undefined) {
+      throw new Error(`${label} has an unknown personal subject`);
+    }
+    if (scope === 'couple' && subjectUserId !== null) {
+      throw new Error(`${label} cannot have a personal subject`);
+    }
+    return subjectParticipantKey ?? null;
+  };
+
   return {
     question: { ...context.question },
     answers: context.answers.map((answer) => ({
@@ -187,26 +310,65 @@ export function anonymizeCompletedQuestionContext(
       text: answer.text,
     })),
     confirmedMemories: context.confirmedMemories.map((memory) => {
-      const subjectParticipantKey = memory.subjectUserId === null
-        ? null
-        : participants.get(memory.subjectUserId);
-
-      if (memory.scope === 'personal' && subjectParticipantKey === undefined) {
-        throw new Error('confirmed memory has an unknown personal subject');
-      }
-      if (memory.scope === 'couple' && memory.subjectUserId !== null) {
-        throw new Error('couple memory cannot have a personal subject');
-      }
-
       return {
         memoryKey: memory.memoryKey,
         scope: memory.scope,
-        subjectParticipantKey: subjectParticipantKey ?? null,
+        subjectParticipantKey: resolveSubject(
+          memory.scope,
+          memory.subjectUserId,
+          'confirmed memory',
+        ),
         kind: memory.kind,
+        domain: memory.domain,
+        evidenceType: memory.evidenceType,
         statement: memory.statement,
         confidence: memory.confidence,
       };
     }),
+    foundationProgress: {
+      ...context.foundationProgress,
+      domainProgress: { ...context.foundationProgress.domainProgress },
+    },
+    memoryCandidates: context.memoryCandidates.map((memory) => ({
+      memoryKey: memory.memoryKey,
+      scope: memory.scope,
+      subjectParticipantKey: resolveSubject(
+        memory.scope,
+        memory.subjectUserId,
+        'memory candidate',
+      ),
+      kind: memory.kind,
+      domain: memory.domain,
+      evidenceType: memory.evidenceType,
+      statement: memory.statement,
+      confidence: memory.confidence,
+      state: memory.state,
+      evidenceQuestionCount: memory.evidenceQuestionCount,
+    })),
+    recentFoundationQuestions: context.recentFoundationQuestions.map(
+      (question) => ({ ...question }),
+    ),
+    recentCompletedQuestions: context.recentCompletedQuestions.map(
+      (recent) => {
+        if (recent.answers.length !== 2) {
+          throw new RangeError('recent completed question requires two answers');
+        }
+        return {
+          question: { ...recent.question },
+          answers: recent.answers.map((answer) => {
+            const participantKey = participants.get(answer.userId);
+            if (participantKey === undefined) {
+              throw new Error('recent answer has an unknown participant');
+            }
+            return {
+              answerId: answer.answerId,
+              participantKey,
+              text: answer.text,
+            };
+          }),
+        };
+      },
+    ),
     remainingFoundationQuestions: context.remainingFoundationQuestions.map(
       (question) => ({ ...question }),
     ),
@@ -225,6 +387,13 @@ export function validateMemoryCandidates(
     requireNonBlank(candidate.memoryKey, 'memory key', 160);
     requireNonBlank(candidate.kind, 'memory kind', 100);
     requireNonBlank(candidate.statement, 'memory statement', 500);
+
+    if (candidate.sensitiveCategory !== 'none') {
+      throw new Error('sensitive memory candidate is not allowed');
+    }
+    if (containsBlockedAiTopic(candidate.statement)) {
+      throw new Error('memory candidate contains a blocked topic');
+    }
 
     if (memoryKeys.has(candidate.memoryKey)) {
       throw new Error('duplicate memory key');
@@ -311,6 +480,9 @@ export function resolveMemoryCandidates(
       scope: candidate.scope,
       subjectUserId: subjectUserId ?? null,
       kind: candidate.kind,
+      domain: candidate.domain,
+      evidenceType: candidate.evidenceType,
+      sensitiveCategory: candidate.sensitiveCategory,
       statement: candidate.statement,
       confidence: candidate.confidence,
       evidenceAnswerIds: [...candidate.evidenceAnswerIds],
@@ -339,7 +511,10 @@ export function validateQuestionRecommendation(
 export function validateCoupleFeedback(
   candidate: CoupleFeedbackCandidate,
 ): void {
-  requireNonBlank(candidate.text, 'couple feedback', 500);
+  requireNonBlank(candidate.text, 'couple feedback', 80);
+  if (containsBlockedAiTopic(candidate.text)) {
+    throw new Error('couple feedback contains a blocked topic');
+  }
 }
 
 export function validatePersonalizedQuestion(
@@ -350,7 +525,47 @@ export function validatePersonalizedQuestion(
   requireNonBlank(candidate.category, 'personalized question category', 100);
   requireNonBlank(candidate.rationale, 'personalized question rationale', 500);
 
+  if (
+    containsBlockedAiTopic(candidate.text)
+    || containsBlockedAiTopic(candidate.category)
+  ) {
+    throw new Error('personalized question contains a blocked topic');
+  }
+
   if (candidate.mood !== null) {
     requireNonBlank(candidate.mood, 'personalized question mood', 100);
   }
+}
+
+const blockedAiTopicPattern = new RegExp(
+  [
+    '성관계',
+    '성생활',
+    '섹스',
+    '임신',
+    '출산',
+    '난임',
+    '부채',
+    '빚',
+    '정신건강',
+    '정신질환',
+    '트라우마',
+    '종교',
+    '정치',
+    '가족\\s*(갈등|다툼)',
+    'sexual',
+    'pregnan',
+    'fertility',
+    'debt',
+    'mental\\s*health',
+    'trauma',
+    'religion',
+    'politic',
+    'family\\s*conflict',
+  ].join('|'),
+  'i',
+);
+
+function containsBlockedAiTopic(value: string): boolean {
+  return blockedAiTopicPattern.test(value);
 }
