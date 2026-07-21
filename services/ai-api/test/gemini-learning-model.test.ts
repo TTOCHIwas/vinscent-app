@@ -17,6 +17,8 @@ const context: AnonymizedCompletedQuestionContext = {
     questionId: 'question-1',
     text: 'What kind of time together feels most meaningful?',
     domain: 'personal_values',
+    depth: 'light',
+    promptAngle: 'preference',
   },
   answers: [
     {
@@ -30,12 +32,30 @@ const context: AnonymizedCompletedQuestionContext = {
       text: 'Trying a new place together matters to me.',
     },
   ],
+  foundationProgress: {
+    completedCount: 1,
+    totalCount: 24,
+    personalizationEnabled: false,
+    domainProgress: {
+      personal_values: { completedCount: 1, totalCount: 4 },
+      emotional_support: { completedCount: 0, totalCount: 4 },
+      communication_repair: { completedCount: 0, totalCount: 4 },
+      daily_life: { completedCount: 0, totalCount: 4 },
+      relationship_strength: { completedCount: 0, totalCount: 4 },
+      future_boundaries: { completedCount: 0, totalCount: 4 },
+    },
+  },
   confirmedMemories: [],
+  memoryCandidates: [],
+  recentFoundationQuestions: [],
+  recentCompletedQuestions: [],
   remainingFoundationQuestions: [
     {
       questionKey: 'foundation_v1_personal_values_02',
       text: 'When do you feel most understood?',
       domain: 'personal_values',
+      depth: 'exploratory',
+      promptAngle: 'lived_experience',
     },
   ],
 };
@@ -340,6 +360,9 @@ test('Gemini model maps memory output without real user identifiers', async () =
               scope: 'personal',
               subject_participant_key: 'partner_a',
               kind: 'personal_value',
+              domain: 'personal_values',
+              evidence_type: 'explicit',
+              sensitive_category: 'none',
               statement: 'Partner A values quiet time together.',
               confidence: 0.82,
               evidence_answer_ids: ['answer-a'],
@@ -365,12 +388,111 @@ test('Gemini model maps memory output without real user identifiers', async () =
       scope: 'personal',
       subjectParticipantKey: 'partner_a',
       kind: 'personal_value',
+      domain: 'personal_values',
+      evidenceType: 'explicit',
+      sensitiveCategory: 'none',
       statement: 'Partner A values quiet time together.',
       confidence: 0.82,
       evidenceAnswerIds: ['answer-a'],
     },
   ]);
   assert.equal(result.usage.inputTokenCount, 30);
+});
+
+test('foundation ranking receives metadata but not answers or memories', async () => {
+  let capturedPrompt = '';
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          question_key: 'foundation_v1_personal_values_02',
+          rationale: '영역 균형과 깊이를 보완한다.',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+
+  await model.rankFoundationQuestions(
+    context,
+    context.remainingFoundationQuestions,
+  );
+
+  assert.equal(capturedPrompt.includes('Quiet time at home matters to me.'), false);
+  assert.equal(capturedPrompt.includes('confirmed_memories'), false);
+  assert.equal(capturedPrompt.includes('domain_progress'), true);
+  assert.equal(capturedPrompt.includes('question_depth'), true);
+});
+
+test('feedback uses profile and recent six answers only after personalization opens', async () => {
+  const prompts: string[] = [];
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ prompt }) => {
+      prompts.push(prompt);
+      return {
+        value: { feedback_text: '쉬는 방식은 달라도 함께 보내는 시간은 둘 다 소중하게 여기네.' },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+  const personalizedContext: AnonymizedCompletedQuestionContext = {
+    ...context,
+    foundationProgress: {
+      ...context.foundationProgress,
+      completedCount: 24,
+      personalizationEnabled: true,
+    },
+    confirmedMemories: [
+      {
+        memoryKey: 'shared_walks',
+        scope: 'couple',
+        subjectParticipantKey: null,
+        kind: 'shared_preference',
+        domain: 'daily_life',
+        evidenceType: 'explicit',
+        statement: '둘 다 산책을 좋아한다.',
+        confidence: 0.9,
+      },
+    ],
+    recentCompletedQuestions: [
+      {
+        question: {
+          dailyQuestionId: 'recent-question-1',
+          text: '지난 주말에는 뭘 했어?',
+          domain: 'daily_life',
+        },
+        answers: [
+          {
+            answerId: 'recent-answer-a',
+            participantKey: 'partner_a',
+            text: '함께 공원을 걸었어.',
+          },
+          {
+            answerId: 'recent-answer-b',
+            participantKey: 'partner_b',
+            text: '산책이 좋았어.',
+          },
+        ],
+      },
+    ],
+  };
+
+  await model.generateCoupleFeedback(context);
+  await model.generateCoupleFeedback(personalizedContext);
+
+  assert.equal(prompts[0]?.includes('둘 다 산책을 좋아한다.'), false);
+  assert.equal(prompts[0]?.includes('함께 공원을 걸었어.'), false);
+  assert.equal(prompts[1]?.includes('둘 다 산책을 좋아한다.'), true);
+  assert.equal(prompts[1]?.includes('함께 공원을 걸었어.'), true);
 });
 
 test('Gemini model maps feedback and question outputs', async () => {

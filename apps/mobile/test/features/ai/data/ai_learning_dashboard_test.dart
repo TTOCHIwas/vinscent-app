@@ -15,6 +15,12 @@ void main() {
         'my_consent_status': 'granted',
         'partner_consent_status': 'granted',
         'ai_enabled': true,
+        'foundation_complete': true,
+        'memory_processing_complete': true,
+        'personalization_status': 'waiting_partner',
+        'personalization_enabled': false,
+        'my_pending_review_count': 0,
+        'partner_pending_review_count': 1,
       },
       'memories': [
         {
@@ -40,6 +46,13 @@ void main() {
     expect(dashboard.progress.totalCount, 24);
     expect(dashboard.progress.stage, AiLearningStage.exploring);
     expect(dashboard.progress.isEnabled, true);
+    expect(dashboard.progress.foundationComplete, true);
+    expect(dashboard.progress.memoryProcessingComplete, true);
+    expect(
+      dashboard.progress.personalizationStatus,
+      AiPersonalizationStatus.waitingPartner,
+    );
+    expect(dashboard.progress.personalizationEnabled, false);
     expect(
       dashboard.progress.domainProgress[AiLearningDomain.dailyLife],
       const AiDomainProgress(completedCount: 2, totalCount: 4),
@@ -60,6 +73,12 @@ void main() {
         'my_consent_status': 'revoked',
         'partner_consent_status': 'revoked',
         'ai_enabled': false,
+        'foundation_complete': false,
+        'memory_processing_complete': false,
+        'personalization_status': 'collecting',
+        'personalization_enabled': false,
+        'my_pending_review_count': 0,
+        'partner_pending_review_count': 0,
       }),
       throwsFormatException,
     );

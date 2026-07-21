@@ -113,6 +113,12 @@ AiLearningDashboard _dashboard({
       isEnabled:
           myConsent == AiConsentStatus.granted &&
           partnerConsent == AiConsentStatus.granted,
+      foundationComplete: false,
+      memoryProcessingComplete: false,
+      personalizationStatus: AiPersonalizationStatus.collecting,
+      personalizationEnabled: false,
+      myPendingReviewCount: 0,
+      partnerPendingReviewCount: 0,
     ),
     memories: memories,
   );

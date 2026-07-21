@@ -105,6 +105,14 @@ AiLearningDashboard _dashboard({required bool isEnabled}) {
           ? AiConsentStatus.granted
           : AiConsentStatus.revoked,
       isEnabled: isEnabled,
+      foundationComplete: true,
+      memoryProcessingComplete: true,
+      personalizationStatus: isEnabled
+          ? AiPersonalizationStatus.ready
+          : AiPersonalizationStatus.collecting,
+      personalizationEnabled: isEnabled,
+      myPendingReviewCount: 0,
+      partnerPendingReviewCount: 0,
     ),
     memories: const [],
   );

@@ -30,26 +30,48 @@ test('repository maps claimed jobs and worker context', async () => {
           question_id: 'question-1',
           text: 'Question?',
           domain: 'personal_values',
+          depth: 'light',
+          prompt_angle: 'preference',
         },
         answers: [
           { answer_id: 'answer-a', user_id: 'user-a', text: 'Answer A' },
           { answer_id: 'answer-b', user_id: 'user-b', text: 'Answer B' },
         ],
+        foundation_progress: {
+          completed_count: 24,
+          total_count: 24,
+          personalization_enabled: true,
+          domain_progress: {
+            personal_values: { completed_count: 4, total_count: 4 },
+            emotional_support: { completed_count: 4, total_count: 4 },
+            communication_repair: { completed_count: 4, total_count: 4 },
+            daily_life: { completed_count: 4, total_count: 4 },
+            relationship_strength: { completed_count: 4, total_count: 4 },
+            future_boundaries: { completed_count: 4, total_count: 4 },
+          },
+        },
         confirmed_memories: [
           {
             memory_key: 'shared_walks',
             scope: 'couple',
             subject_user_id: null,
             kind: 'shared_preference',
+            learning_domain: 'daily_life',
+            evidence_type: 'explicit',
             statement: 'They enjoy walking together.',
             confidence: 0.9,
           },
         ],
+        memory_candidates: [],
+        recent_foundation_questions: [],
+        recent_completed_questions: [],
         remaining_foundation_questions: [
           {
             question_key: 'foundation_v1_personal_values_02',
             text: 'Next question?',
             domain: 'personal_values',
+            depth: 'exploratory',
+            prompt_angle: 'lived_experience',
           },
         ],
       },
@@ -73,6 +95,12 @@ test('repository maps claimed jobs and worker context', async () => {
   ]);
   assert.equal(context.answers[0]?.userId, 'user-a');
   assert.equal(context.confirmedMemories[0]?.scope, 'couple');
+  assert.equal(context.foundationProgress.personalizationEnabled, true);
+  assert.equal(context.confirmedMemories[0]?.domain, 'daily_life');
+  assert.equal(
+    context.remainingFoundationQuestions[0]?.depth,
+    'exploratory',
+  );
   assert.equal(
     context.remainingFoundationQuestions[0]?.questionKey,
     'foundation_v1_personal_values_02',

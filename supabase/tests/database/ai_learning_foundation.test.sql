@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(27);
+select plan(31);
 
 select ok(
   to_regclass('public.ai_question_curricula') is not null,
@@ -49,6 +49,16 @@ select ok(
   ),
   'questions has prompt_angle'
 );
+select ok(
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'questions'
+      and column_name = 'question_depth'
+  ),
+  'questions has question_depth'
+);
 select is(
   (
     select count(*)
@@ -80,6 +90,27 @@ select ok(
   ),
   'each learning domain has four questions'
 );
+select is(
+  (
+    select count(distinct question_depth)
+    from public.questions
+    where curriculum_version = 1
+      and is_active
+  ),
+  3::bigint,
+  'foundation curriculum uses three progressive depths'
+);
+select ok(
+  not exists (
+    select question_depth
+    from public.questions
+    where curriculum_version = 1
+      and is_active
+    group by question_depth
+    having count(*) <> 8
+  ),
+  'each foundation depth has eight questions'
+);
 
 select ok(to_regclass('public.ai_user_consents') is not null, 'ai_user_consents exists');
 select ok(to_regclass('public.ai_processing_jobs') is not null, 'ai_processing_jobs exists');
@@ -89,6 +120,7 @@ select ok(to_regclass('public.ai_memory_evidence') is not null, 'ai_memory_evide
 select ok(to_regclass('public.ai_memory_confirmations') is not null, 'ai_memory_confirmations exists');
 select ok(to_regclass('public.ai_question_feedbacks') is not null, 'ai_question_feedbacks exists');
 select ok(to_regclass('public.ai_question_recommendations') is not null, 'ai_question_recommendations exists');
+select ok(to_regclass('public.ai_personalization_states') is not null, 'ai_personalization_states exists');
 
 select ok(
   to_regprocedure('public.set_my_ai_consent(boolean,text)') is not null,

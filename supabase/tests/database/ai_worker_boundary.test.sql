@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(31);
+select plan(33);
 
 insert into auth.users (
   id,
@@ -175,6 +175,9 @@ insert into public.ai_memories (
   subject_user_id,
   memory_key,
   kind,
+  learning_domain,
+  evidence_type,
+  origin_curriculum_version,
   statement,
   confidence,
   state,
@@ -190,6 +193,9 @@ values
     '11000000-0000-0000-0000-000000000001',
     'partner_a_quiet_time',
     'personal_value',
+    'personal_values',
+    'explicit',
+    1,
     'Partner A values quiet time together.',
     0.8,
     'active',
@@ -204,6 +210,9 @@ values
     null,
     'unconfirmed_fixture',
     'relationship_pattern',
+    'relationship_strength',
+    'repeated_pattern',
+    1,
     'This pending memory must not reach the model.',
     0.6,
     'pending',
@@ -313,8 +322,26 @@ select is(
       '81000000-0000-0000-0000-000000000001'
     )->'confirmed_memories'
   ),
-  1,
-  'worker context contains active memories only'
+  0,
+  'pre-foundation worker context does not expose confirmed profile memories'
+);
+
+select is(
+  jsonb_array_length(
+    public.get_ai_processing_job_context(
+      '81000000-0000-0000-0000-000000000001'
+    )->'memory_candidates'
+  ),
+  2,
+  'memory extraction context can reuse internal candidate keys'
+);
+
+select is(
+  public.get_ai_processing_job_context(
+    '81000000-0000-0000-0000-000000000003'
+  )->'question'->>'depth',
+  'light'::text,
+  'foundation ranking context includes question depth'
 );
 
 select is(
@@ -372,6 +399,9 @@ select is(
           'scope', 'personal',
           'subject_user_id', '11000000-0000-0000-0000-000000000001',
           'kind', 'personal_value',
+          'learning_domain', 'personal_values',
+          'evidence_type', 'explicit',
+          'sensitive_category', 'none',
           'statement', 'Partner A values quiet time together.',
           'confidence', 0.91,
           'evidence_answer_ids', jsonb_build_array(

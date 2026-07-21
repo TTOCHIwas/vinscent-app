@@ -285,6 +285,56 @@ select throws_ok(
   'personalized questions cannot be created before 24 foundation answers'
 );
 
+insert into public.daily_questions (
+  couple_id,
+  question_id,
+  assigned_date,
+  status
+)
+select
+  '20000000-0000-0000-0000-000000000001',
+  q.id,
+  current_date - q.curriculum_position,
+  'answered_by_one'
+from public.questions as q
+where q.curriculum_version = 1
+  and q.curriculum_position between 2 and 24;
+
+insert into public.daily_question_answers (
+  daily_question_id,
+  user_id,
+  answer_text
+)
+select
+  dq.id,
+  participant.user_id,
+  '기초 질문 ' || q.curriculum_position::text || '의 테스트 답변'
+from public.daily_questions as dq
+join public.questions as q on q.id = dq.question_id
+cross join (
+  values
+    ('10000000-0000-0000-0000-000000000001'::uuid),
+    ('10000000-0000-0000-0000-000000000002'::uuid)
+) as participant(user_id)
+where dq.couple_id = '20000000-0000-0000-0000-000000000001'
+  and q.curriculum_version = 1
+  and q.curriculum_position between 2 and 24;
+
+update public.daily_questions as dq
+set status = 'completed'
+from public.questions as q
+where dq.question_id = q.id
+  and dq.couple_id = '20000000-0000-0000-0000-000000000001'
+  and q.curriculum_version = 1
+  and q.curriculum_position between 2 and 24;
+
+update public.ai_processing_jobs as aipj
+set
+  status = 'succeeded',
+  completed_at = now()
+where aipj.couple_id = '20000000-0000-0000-0000-000000000001'
+  and aipj.job_type = 'extract_memories';
+
 insert into public.ai_runs (
   id,
   couple_id,
@@ -319,6 +369,9 @@ insert into public.ai_memories (
   subject_user_id,
   memory_key,
   kind,
+  learning_domain,
+  evidence_type,
+  origin_curriculum_version,
   statement,
   confidence,
   source_run_id,
@@ -332,6 +385,9 @@ values (
   '10000000-0000-0000-0000-000000000001',
   'test_personal_memory',
   'personal_value',
+  'personal_values',
+  'explicit',
+  1,
   '첫 번째 사용자가 중요하게 여기는 확인 전 기억',
   0.8,
   '60000000-0000-0000-0000-000000000001',
@@ -425,6 +481,9 @@ insert into public.ai_memories (
   subject_user_id,
   memory_key,
   kind,
+  learning_domain,
+  evidence_type,
+  origin_curriculum_version,
   statement,
   confidence,
   source_run_id,
@@ -438,11 +497,20 @@ values (
   null,
   'test_couple_memory',
   'relationship_pattern',
+  'relationship_strength',
+  'explicit',
+  1,
   '두 사람이 함께 확인해야 하는 커플 기억',
   0.85,
   '60000000-0000-0000-0000-000000000001',
   now(),
   now()
+);
+
+insert into public.ai_memory_evidence (memory_id, answer_id)
+values (
+  '70000000-0000-0000-0000-000000000002',
+  '50000000-0000-0000-0000-000000000001'
 );
 
 select set_config(
