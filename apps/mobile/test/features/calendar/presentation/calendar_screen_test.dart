@@ -291,9 +291,7 @@ void main() {
 
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
-    final card = find.byKey(
-      const ValueKey('calendar-story-card-card-2'),
-    );
+    final card = find.byKey(const ValueKey('calendar-story-card-card-2'));
     await tester.ensureVisible(card);
     await tester.tap(card);
     await tester.pumpAndSettle();
@@ -481,9 +479,7 @@ Future<void> _pumpCalendar(
           (ref, notifier) async => _profile,
         ),
         aiQuestionFeedbackProvider.overrideWith(
-          (ref, dailyQuestionId) => Stream.value(
-            aiFeedbacks[dailyQuestionId],
-          ),
+          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
         ),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
       ],

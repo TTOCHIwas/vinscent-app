@@ -10,6 +10,7 @@ class CalendarStoryCardStack extends StatelessWidget {
     super.key,
     required this.cards,
     this.currentUserId,
+    this.onCardTap,
   });
 
   static const _maximumContentWidth = 360.0;
@@ -18,6 +19,7 @@ class CalendarStoryCardStack extends StatelessWidget {
 
   final List<StoryLoopCardDetail> cards;
   final String? currentUserId;
+  final ValueChanged<StoryLoopCardDetail>? onCardTap;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,7 @@ class CalendarStoryCardStack extends StatelessWidget {
             child: _CalendarStoryCard(
               card: visibleCards.first,
               width: cardWidth,
+              onTap: _cardTapHandler(visibleCards.first),
             ),
           );
         }
@@ -52,14 +55,27 @@ class CalendarStoryCardStack extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CalendarStoryCard(card: visibleCards.first, width: cardWidth),
+              _CalendarStoryCard(
+                card: visibleCards.first,
+                width: cardWidth,
+                onTap: _cardTapHandler(visibleCards.first),
+              ),
               SizedBox(width: gap),
-              _CalendarStoryCard(card: visibleCards[1], width: cardWidth),
+              _CalendarStoryCard(
+                card: visibleCards[1],
+                width: cardWidth,
+                onTap: _cardTapHandler(visibleCards[1]),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  VoidCallback? _cardTapHandler(StoryLoopCardDetail card) {
+    final callback = onCardTap;
+    return callback == null ? null : () => callback(card);
   }
 
   List<StoryLoopCardDetail> _orderedVisibleCards() {
@@ -84,10 +100,15 @@ class CalendarStoryCardStack extends StatelessWidget {
 }
 
 class _CalendarStoryCard extends StatelessWidget {
-  const _CalendarStoryCard({required this.card, required this.width});
+  const _CalendarStoryCard({
+    required this.card,
+    required this.width,
+    this.onTap,
+  });
 
   final StoryLoopCardDetail card;
   final double width;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +116,7 @@ class _CalendarStoryCard extends StatelessWidget {
       surfaceKey: ValueKey('calendar-story-card-${card.id}'),
       previewUrl: card.previewUrl,
       width: width,
+      onTap: onTap,
       semanticsLabel: '스토리 카드',
     );
   }

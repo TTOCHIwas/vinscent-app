@@ -3,13 +3,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../questions/data/daily_question.dart';
+import '../../../ai/presentation/widgets/ai_question_feedback_section.dart';
 import '../../../questions/data/daily_question_answer_state.dart';
 import '../../../questions/presentation/question_route_context.dart';
-import '../../../questions/presentation/widgets/character_speech_prompt.dart';
+import '../../../questions/presentation/widgets/question_answer_prompt_row.dart';
 import '../../../questions/presentation/widgets/question_answer_sections.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
+import '../../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import 'calendar_story_card_stack.dart';
 
 class CalendarStoryLoopDetail extends StatelessWidget {
@@ -53,37 +54,40 @@ class _LoadedDetailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(_formatFullDate(detail.coupleDate), style: _dateTitleStyle),
+        _DetailDateHeader(date: detail.coupleDate),
         if (detail.cards.isNotEmpty) ...[
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           CalendarStoryCardStack(
             cards: detail.cards,
             currentUserId: currentUserId,
+            onCardTap: (card) => showStoryCardDetailOverlay(
+              context: context,
+              cardId: card.id,
+              previewUrl: card.previewUrl,
+            ),
           ),
         ],
         if (question == null) ...[
           const SizedBox(height: 32),
           _CardOnlyMessage(detail: detail),
         ] else ...[
-          const SizedBox(height: 10),
-          _QuestionHistorySection(questionText: question.question.questionText),
-          MyQuestionAnswerSection(
+          const SizedBox(height: 28),
+          QuestionAnswerPromptRow(questionText: question.question.questionText),
+          const SizedBox(height: 24),
+          QuestionAnswerOverview(
             answerState: question.answerState,
-            displayStyle: QuestionAnswerDisplayStyle.plain,
-            onPressed: _buildQuestionPressed(
+            partnerHiddenMessage:
+                PartnerQuestionAnswerSection.historyHiddenMessage,
+            onMyAnswerPressed: _buildQuestionPressed(
               context: context,
               detail: detail,
               answerState: question.answerState,
             ),
           ),
-          PartnerQuestionAnswerSection(
-            answerState: question.answerState,
-            hiddenMessage: PartnerQuestionAnswerSection.historyHiddenMessage,
-            displayStyle: QuestionAnswerDisplayStyle.plain,
-          ),
-          const _SummaryPlaceholder(),
-          if (question.answerState.status == DailyQuestionStatus.completed)
-            const _AiCommentPlaceholder(),
+          if (question.answerState.hasBothAnswers)
+            AiQuestionFeedbackSection(
+              dailyQuestionId: question.question.dailyQuestionId,
+            ),
         ],
       ],
     );
@@ -119,7 +123,7 @@ class _EmptyDetailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(_formatFullDate(targetDate), style: _dateTitleStyle),
+        _DetailDateHeader(date: targetDate),
         const SizedBox(height: 32),
         const _StateMessage(
           title: '이 날의 질문 기록이 없어요',
@@ -144,7 +148,7 @@ class _UnavailableDetailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(_formatFullDate(targetDate), style: _dateTitleStyle),
+        _DetailDateHeader(date: targetDate),
         const SizedBox(height: 32),
         _StateMessage(
           title: switch (reason) {
@@ -189,73 +193,40 @@ class _CardOnlyMessage extends StatelessWidget {
   }
 }
 
-class _QuestionHistorySection extends StatelessWidget {
-  const _QuestionHistorySection({required this.questionText});
+class _DetailDateHeader extends StatelessWidget {
+  const _DetailDateHeader({required this.date});
 
-  final String questionText;
+  static const _weekdayLabels = [
+    '월요일',
+    '화요일',
+    '수요일',
+    '목요일',
+    '금요일',
+    '토요일',
+    '일요일',
+  ];
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(width: double.infinity),
-          Text(
-            '그 날의 질문',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeBody.copyWith(fontSize: 18, height: 1.4),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            questionText,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeBody.copyWith(height: 1.45),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryPlaceholder extends StatelessWidget {
-  const _SummaryPlaceholder();
+  final DateTime date;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('종합', style: AppTextStyles.homeBodyMedium),
-          SizedBox(height: 4),
-          Text(
-            '아직 종합 기록이 없어요',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 14,
-              height: 1.4,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${date.month}월 ${date.day}일',
+          style: AppTextStyles.shellDayCount.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AiCommentPlaceholder extends StatelessWidget {
-  const _AiCommentPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 36),
-      child: CharacterSpeechPrompt(
-        labelText: 'AI 한 줄 평',
-        speechText: '아직 AI 한 줄 평이 없어요',
-      ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${date.year} · ${_weekdayLabels[date.weekday - 1]}',
+          style: AppTextStyles.homeCharacterLabel.copyWith(
+            color: AppColors.textMuted,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -290,15 +261,3 @@ class _StateMessage extends StatelessWidget {
     );
   }
 }
-
-String _formatFullDate(DateTime date) {
-  final year = date.year;
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '$year년 $month월 $day일';
-}
-
-final _dateTitleStyle = AppTextStyles.homeBody.copyWith(
-  fontSize: 16,
-  height: 1.4,
-);
