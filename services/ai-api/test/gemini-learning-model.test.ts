@@ -409,10 +409,12 @@ test('Gemini model maps memory output without real user identifiers', async () =
   assert.equal(result.usage.inputTokenCount, 30);
 });
 
-test('memory extraction uses a flat couple subject discriminator', async () => {
+test('memory extraction uses a minimal provider schema and a complete prompt contract', async () => {
+  let capturedPrompt = '';
   let capturedSchema: unknown;
   const model = new GeminiLearningModel({
-    generateStructured: async ({ schema }) => {
+    generateStructured: async ({ prompt, schema }) => {
+      capturedPrompt = prompt;
       capturedSchema = schema;
       return {
         value: {
@@ -441,25 +443,64 @@ test('memory extraction uses a flat couple subject discriminator', async () => {
   });
 
   const result = await model.extractMemoryCandidates(context);
-  const schema = capturedSchema as {
+  assert.deepEqual(capturedSchema, {
+    type: 'object',
     properties: {
       memories: {
-        items: {
-          properties: { subject_participant_key: unknown };
-        };
-      };
-    };
-  };
-
-  assert.deepEqual(
-    schema.properties.memories.items.properties.subject_participant_key,
-    {
-      type: 'string',
-      enum: ['partner_a', 'partner_b', 'couple'],
+        type: 'array',
+        items: { type: 'object' },
+      },
     },
-  );
+    required: ['memories'],
+    additionalProperties: false,
+  });
+  for (const field of [
+    'memory_key',
+    'scope',
+    'subject_participant_key',
+    'kind',
+    'learning_domain',
+    'evidence_type',
+    'sensitive_category',
+    'statement',
+    'confidence',
+    'evidence_answer_ids',
+  ]) {
+    assert.equal(capturedPrompt.includes(field), true, `${field} is documented`);
+  }
   assert.equal(result.value[0]?.scope, 'couple');
   assert.equal(result.value[0]?.subjectParticipantKey, null);
+});
+
+test('memory extraction rejects more than twelve model candidates', async () => {
+  const model = new GeminiLearningModel({
+    generateStructured: async () => ({
+      value: {
+        memories: Array.from({ length: 13 }, (_, index) => ({
+          memory_key: `partner_a_preference_${index}`,
+          scope: 'personal',
+          subject_participant_key: 'partner_a',
+          kind: 'personal_value',
+          learning_domain: 'personal_values',
+          evidence_type: 'explicit',
+          sensitive_category: 'none',
+          statement: `Partner A preference ${index}.`,
+          confidence: 0.8,
+          evidence_answer_ids: ['answer-a'],
+        })),
+      },
+      usage: {
+        inputTokenCount: 30,
+        outputTokenCount: 300,
+        latencyMs: 150,
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => model.extractMemoryCandidates(context),
+    (error: unknown) => error instanceof GeminiOutputError,
+  );
 });
 
 test('foundation ranking receives metadata but not answers or memories', async () => {
