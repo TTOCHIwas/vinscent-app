@@ -69,6 +69,27 @@ class HomeRecordingDragSession {
     );
   }
 
+  HomeRecordingDragSession bringToFront(String slotId) {
+    return HomeRecordingDragSession._(
+      frontSlotId: slotId,
+      draggingSlotId: draggingSlotId,
+      dragPosition: dragPosition,
+      isOverTrash: isOverTrash,
+    );
+  }
+
+  HomeRecordingDragSession clearFront() {
+    if (frontSlotId == null) {
+      return this;
+    }
+    return HomeRecordingDragSession._(
+      frontSlotId: null,
+      draggingSlotId: draggingSlotId,
+      dragPosition: dragPosition,
+      isOverTrash: isOverTrash,
+    );
+  }
+
   HomeRecordingDragSession cancel() {
     if (draggingSlotId == null) {
       return this;
