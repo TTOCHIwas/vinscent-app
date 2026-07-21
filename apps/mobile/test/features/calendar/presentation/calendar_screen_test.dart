@@ -271,10 +271,7 @@ void main() {
       contains(AppColors.actionPrimary),
     );
     expect(find.text('history question'), findsOneWidget);
-    expect(
-      find.byKey(const Key('calendar-detail-question-title')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('question-detail-title')), findsOneWidget);
     expect(find.byType(QuestionAnswerPromptRow), findsNothing);
     expect(find.byType(QuestionAnswerOverview), findsOneWidget);
     expect(find.text('my answer'), findsOneWidget);

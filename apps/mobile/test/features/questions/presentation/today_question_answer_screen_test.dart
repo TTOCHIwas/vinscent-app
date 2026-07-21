@@ -208,6 +208,8 @@ void main() {
       expect(find.text('상대방 답변'), findsOneWidget);
       expect(find.text('hello'), findsOneWidget);
       expect(find.text('partner answer'), findsOneWidget);
+      expect(find.byKey(const Key('question-detail-title')), findsOneWidget);
+      expect(find.byKey(const Key('question-answer-prompt')), findsNothing);
       expect(find.byType(TextField), findsNothing);
 
       await tester.tap(find.text('내 답변'));
@@ -237,7 +239,15 @@ void main() {
       );
 
       expect(find.byKey(const Key('ai-question-feedback')), findsOneWidget);
-      expect(find.text('AI의 한마디'), findsOneWidget);
+      expect(find.text('AI의 한마디'), findsNothing);
+      expect(
+        find.byKey(const Key('ai-question-feedback-character')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ai-question-feedback-prompt')),
+        findsOneWidget,
+      );
       expect(find.text('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'), findsOneWidget);
     });
 
