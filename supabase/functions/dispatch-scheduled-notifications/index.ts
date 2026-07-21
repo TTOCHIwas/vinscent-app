@@ -1,7 +1,5 @@
-import {
-  createFcmAccessToken,
-  sendPushNotification,
-} from '../_shared/push.ts';
+import { createFcmAccessToken } from '../_shared/fcm.ts';
+import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
   jsonResponse,
