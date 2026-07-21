@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
@@ -14,6 +13,7 @@ import '../../application/recording_slot_placement_session.dart';
 import '../../data/couple_recording.dart';
 import '../../data/couple_recording_failure.dart';
 import 'home_recording_artwork_item.dart';
+import 'home_recording_artwork_trash_target.dart';
 
 class HomeRecordingArtworkLayer extends ConsumerStatefulWidget {
   const HomeRecordingArtworkLayer({super.key});
@@ -147,7 +147,7 @@ class _HomeRecordingArtworkLayerState
             if (_draggingSlotId != null)
               Positioned.fromRect(
                 rect: trashRect,
-                child: _HomeRecordingArtworkTrashTarget(isActive: _isOverTrash),
+                child: HomeRecordingArtworkTrashTarget(isActive: _isOverTrash),
               ),
           ],
         );
@@ -570,35 +570,5 @@ class _HomeRecordingArtworkLayerState
       };
     }
     return '슬롯 그림을 업데이트하지 못했어요.';
-  }
-}
-
-class _HomeRecordingArtworkTrashTarget extends StatelessWidget {
-  const _HomeRecordingArtworkTrashTarget({required this.isActive});
-
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      key: const ValueKey('home-recording-artwork-trash-target'),
-      dimension: 64,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isActive ? const Color(0xE6000000) : const Color(0xB8000000),
-          border: Border.all(
-            color: isActive ? AppColors.actionPrimary : Colors.white54,
-          ),
-        ),
-        child: Icon(
-          Icons.delete_outline,
-          key: const ValueKey('home-recording-artwork-trash-icon'),
-          color: isActive ? AppColors.actionPrimary : Colors.white,
-          size: isActive ? 34 : 30,
-        ),
-      ),
-    );
   }
 }
