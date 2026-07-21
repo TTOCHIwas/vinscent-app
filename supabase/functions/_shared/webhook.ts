@@ -1,13 +1,14 @@
+import {
+  readDenoEnvironment,
+  type EnvironmentReader,
+} from './environment.ts';
+
 export type WebhookSecretOptions = {
   envName: string;
   headerName: string;
   fallbackEnvName?: string;
   fallbackHeaderName?: string;
 };
-
-export type EnvironmentReader = (name: string) => string | undefined;
-
-const readDenoEnvironment: EnvironmentReader = (name) => Deno.env.get(name);
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
