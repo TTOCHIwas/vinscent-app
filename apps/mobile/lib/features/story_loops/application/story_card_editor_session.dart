@@ -80,6 +80,99 @@ class StoryCardEditorSession {
     return copyWith(tool: nextTool);
   }
 
+  StoryCardEditorSession appendStroke(StoryCardStroke stroke) {
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(strokes: [...draft.scene.strokes, stroke]),
+      ),
+    );
+  }
+
+  StoryCardEditorSession undoLastStroke() {
+    if (draft.scene.strokes.isEmpty) {
+      return this;
+    }
+
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(
+          strokes: draft.scene.strokes.sublist(
+            0,
+            draft.scene.strokes.length - 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  StoryCardEditorSession toggleCanvasBackground() {
+    final background =
+        draft.scene.canvasBackground == StoryCardCanvasBackground.white
+        ? StoryCardCanvasBackground.black
+        : StoryCardCanvasBackground.white;
+    return updateDraft(
+      draft.copyWith(scene: draft.scene.copyWith(canvasBackground: background)),
+    );
+  }
+
+  StoryCardEditorSession setCaption(String? caption) {
+    return updateDraft(
+      draft.copyWith(scene: draft.scene.copyWith(caption: caption)),
+    );
+  }
+
+  StoryCardEditorSession addTextLayer(StoryCardTextLayer layer) {
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(
+          textLayers: [...draft.scene.textLayers, layer],
+        ),
+      ),
+    );
+  }
+
+  StoryCardEditorSession setBackgroundTransform(
+    StoryCardBackgroundTransform transform,
+  ) {
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(backgroundTransform: transform),
+      ),
+    );
+  }
+
+  StoryCardEditorSession replaceTextLayer(StoryCardTextLayer replacement) {
+    if (!draft.scene.textLayers.any((layer) => layer.id == replacement.id)) {
+      return this;
+    }
+
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(
+          textLayers: draft.scene.textLayers
+              .map((layer) => layer.id == replacement.id ? replacement : layer)
+              .toList(growable: false),
+        ),
+      ),
+    );
+  }
+
+  StoryCardEditorSession removeTextLayer(String layerId) {
+    if (!draft.scene.textLayers.any((layer) => layer.id == layerId)) {
+      return this;
+    }
+
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(
+          textLayers: draft.scene.textLayers
+              .where((layer) => layer.id != layerId)
+              .toList(growable: false),
+        ),
+      ),
+    );
+  }
+
   StoryCardEditorSession discardChanges() {
     if (hasPersistedCard) {
       return copyWith(
