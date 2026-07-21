@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/assets/app_icons.dart';
-import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/story_card_editor_controller.dart';
@@ -20,6 +19,7 @@ import '../data/story_loop_write_failure.dart';
 import 'widgets/story_card_caption_input_overlay.dart';
 import 'widgets/story_card_camera_stage.dart';
 import 'widgets/story_card_editor_canvas.dart';
+import 'widgets/story_card_editor_header.dart';
 import 'widgets/story_card_text_input_overlay.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
@@ -166,7 +166,7 @@ class _StoryCardEditorContentState
             right: 0,
             child: SafeArea(
               bottom: false,
-              child: _EditorHeader(
+              child: StoryCardEditorHeader(
                 key: const ValueKey('story-card-editor-header'),
                 canSave: _canSave,
                 isSaving: _isSaving,
@@ -961,85 +961,6 @@ class _StoryCardTextTrashTarget extends StatelessWidget {
           key: const ValueKey('story-card-text-trash-icon'),
           color: isActive ? AppColors.actionPrimary : Colors.white,
           size: isActive ? 36 : 32,
-        ),
-      ),
-    );
-  }
-}
-
-class _EditorHeader extends StatelessWidget {
-  const _EditorHeader({
-    super.key,
-    required this.canSave,
-    required this.isSaving,
-    required this.canDelete,
-    required this.onBackPressed,
-    required this.onDeletePressed,
-    required this.onSavePressed,
-  });
-
-  final bool canSave;
-  final bool isSaving;
-  final bool canDelete;
-  final VoidCallback onBackPressed;
-  final VoidCallback onDeletePressed;
-  final VoidCallback onSavePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0x52000000),
-      child: SizedBox(
-        height: 56,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppBackButton(
-                onPressed: onBackPressed,
-                color: Colors.white,
-                iconSize: 30,
-              ),
-            ),
-            const Text(
-              '오늘의 스토리',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (canDelete)
-                    IconButton(
-                      tooltip: '카드 삭제',
-                      color: Colors.white,
-                      onPressed: onDeletePressed,
-                      icon: const Icon(Icons.delete_outline),
-                    ),
-                  TextButton(
-                    key: const ValueKey('story-card-editor-save'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.white),
-                    onPressed: canSave ? onSavePressed : null,
-                    child: isSaving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text('올리기'),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
