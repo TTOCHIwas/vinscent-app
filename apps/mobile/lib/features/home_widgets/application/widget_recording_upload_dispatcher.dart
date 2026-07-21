@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/bootstrap/app_bootstrap.dart';
+import '../data/widget_recording_upload_task_factory.dart';
 import 'widget_recording_upload_task.dart';
 
 const widgetRecordingUploadChannelName =

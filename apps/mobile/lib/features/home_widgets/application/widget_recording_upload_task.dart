@@ -6,7 +6,6 @@ import '../../couple/data/couple_failure.dart';
 import '../../couple/data/couple_repository.dart';
 import '../../recordings/data/couple_recording_failure.dart';
 import '../../recordings/data/couple_recording_repository.dart';
-import '../data/home_widget_platform_store.dart';
 import '../data/home_widget_snapshot.dart';
 import 'home_widget_synchronizer.dart';
 
@@ -185,17 +184,4 @@ bool isRetryableWidgetRecordingUploadError(Object error) {
     return error.reason == CoupleFailureReason.unknown;
   }
   return false;
-}
-
-WidgetRecordingUploadTask createWidgetRecordingUploadTask() {
-  return WidgetRecordingUploadTask(
-    draftReader: const FileWidgetRecordingDraftReader(),
-    uploadGateway: const SupabaseWidgetRecordingUploadGateway(
-      coupleRepository: SupabaseCoupleRepository(),
-      recordingRepository: SupabaseCoupleRecordingRepository(),
-    ),
-    playbackCache: const HomeWidgetRecordingPlaybackCache(
-      store: PluginHomeWidgetStore(),
-    ),
-  );
 }
