@@ -1,5 +1,5 @@
 import '../../../core/questions/daily_question.dart';
-import '../../questions/data/daily_question_answer_state.dart';
+import '../../../core/questions/daily_question_answer_state.dart';
 
 class StoryLoopQuestionDetail {
   const StoryLoopQuestionDetail({
