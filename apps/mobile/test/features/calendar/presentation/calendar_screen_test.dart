@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
+import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
+import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
@@ -14,6 +16,8 @@ import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
+import 'package:vinscent/features/questions/presentation/widgets/question_answer_sections.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -212,13 +216,24 @@ void main() {
     final repository = FakeStoryLoopReadRepository(
       details: {DateTime(2026, 5, 5): _completedDetail},
     );
-    await _pumpCalendar(tester, repository: repository);
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      aiFeedbacks: {
+        'daily-question-id': AiQuestionFeedback(
+          dailyQuestionId: 'daily-question-id',
+          feedbackText: '둘 다 소중한 대상을 바로 떠올렸네',
+          publishedAt: DateTime.utc(2026, 5, 5, 12),
+        ),
+      },
+    );
 
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
-    expect(find.text('2026년 05월 05일'), findsOneWidget);
+    expect(find.text('5월 5일'), findsOneWidget);
+    expect(find.text('2026 · 화요일'), findsOneWidget);
     final cardStack = find.byType(CalendarStoryCardStack);
     expect(cardStack, findsOneWidget);
     expect(
@@ -256,12 +271,35 @@ void main() {
       contains(AppColors.actionPrimary),
     );
     expect(find.text('history question'), findsOneWidget);
+    expect(find.byType(QuestionAnswerPromptRow), findsOneWidget);
+    expect(find.byType(QuestionAnswerOverview), findsOneWidget);
     expect(find.text('my answer'), findsOneWidget);
     expect(find.text('partner answer'), findsOneWidget);
-    expect(find.text('종합'), findsOneWidget);
-    expect(find.text('AI 한 줄 평'), findsOneWidget);
-    expect(find.text('아직 AI 한 줄 평이 없어요'), findsOneWidget);
+    expect(find.text('종합'), findsNothing);
+    expect(find.text('AI의 한마디'), findsOneWidget);
+    expect(find.text('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
+  });
+
+  testWidgets('opens a selected history card in the shared detail overlay', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository(
+      details: {DateTime(2026, 5, 5): _completedDetail},
+    );
+    await _pumpCalendar(tester, repository: repository);
+
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+    final card = find.byKey(
+      const ValueKey('calendar-story-card-card-2'),
+    );
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('story-card-detail-overlay')), findsOneWidget);
+    expect(find.byKey(const Key('story-card-detail-card-2')), findsOneWidget);
   });
 
   testWidgets('shows card only detail when question has not been generated', (
@@ -405,6 +443,7 @@ Future<void> _pumpCalendar(
   required StoryLoopReadRepository repository,
   DateTime? today,
   DateTime? relationshipStartDate,
+  Map<String, AiQuestionFeedback> aiFeedbacks = const {},
 }) async {
   final router = GoRouter(
     initialLocation: '/calendar',
@@ -440,6 +479,11 @@ Future<void> _pumpCalendar(
         ),
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
+        ),
+        aiQuestionFeedbackProvider.overrideWith(
+          (ref, dailyQuestionId) => Stream.value(
+            aiFeedbacks[dailyQuestionId],
+          ),
         ),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
       ],
