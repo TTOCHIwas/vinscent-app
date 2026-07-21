@@ -2,6 +2,8 @@
 
 작성일: 2026-05-06
 
+현재 코드의 책임 경계와 전체 회귀 검증 명령은 `docs/code-architecture-and-verification.md`를 함께 참고한다.
+
 ## 1. 현재 결정된 방향
 
 모바일 앱 기준 스택은 Flutter다.
