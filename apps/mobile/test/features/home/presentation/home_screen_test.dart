@@ -10,6 +10,7 @@ import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/home/data/home_feedback_impression_store.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
@@ -405,23 +406,7 @@ void main() {
   ) async {
     final router = await _pumpRoutedHome(
       tester,
-      todaySummary: sampleTodaySummary(
-        coupleDate: _today,
-        cards: [
-          samplePreviewCard(authorUserId: _profile.id),
-          samplePreviewCard(
-            id: 'card-2',
-            authorUserId: 'partner-id',
-            previewPath: 'previews/card-2.png',
-          ),
-        ],
-        question: StoryLoopQuestionSummary(
-          question: _dailyQuestion,
-          myAnswerExists: true,
-          partnerAnswerExists: true,
-          answerCount: 2,
-        ),
-      ),
+      todaySummary: _completedTodaySummary(),
       aiFeedbacks: {
         _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
           dailyQuestionId: _dailyQuestion.dailyQuestionId,
@@ -444,27 +429,13 @@ void main() {
   testWidgets('removes published feedback after its temporary display', (
     tester,
   ) async {
+    final impressionStore = _FakeHomeFeedbackImpressionStore();
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      todaySummary: sampleTodaySummary(
-        coupleDate: _today,
-        cards: [
-          samplePreviewCard(authorUserId: _profile.id),
-          samplePreviewCard(
-            id: 'card-2',
-            authorUserId: 'partner-id',
-            previewPath: 'previews/card-2.png',
-          ),
-        ],
-        question: StoryLoopQuestionSummary(
-          question: _dailyQuestion,
-          myAnswerExists: true,
-          partnerAnswerExists: true,
-          answerCount: 2,
-        ),
-      ),
+      todaySummary: _completedTodaySummary(),
+      feedbackImpressionStore: impressionStore,
       aiFeedbacks: {
         _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
           dailyQuestionId: _dailyQuestion.dailyQuestionId,
@@ -475,8 +446,39 @@ void main() {
     );
 
     expect(find.text(_aiFeedbackText), findsOneWidget);
+    expect(
+      impressionStore.lastShownByUser[_profile.id],
+      _dailyQuestion.dailyQuestionId,
+    );
 
-    await tester.pump(const Duration(seconds: 9));
+    await tester.pump(const Duration(seconds: 8));
+    await tester.pump(const Duration(milliseconds: 240));
+
+    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(find.byKey(_questionBubbleKey), findsNothing);
+  });
+
+  testWidgets('does not repeat feedback already shown to the user', (
+    tester,
+  ) async {
+    final impressionStore = _FakeHomeFeedbackImpressionStore(
+      lastShownByUser: {_profile.id: _dailyQuestion.dailyQuestionId},
+    );
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _completedTodaySummary(),
+      feedbackImpressionStore: impressionStore,
+      aiFeedbacks: {
+        _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
+          dailyQuestionId: _dailyQuestion.dailyQuestionId,
+          feedbackText: _aiFeedbackText,
+          publishedAt: DateTime.utc(2026, 5, 31, 12),
+        ),
+      },
+    );
 
     expect(find.text(_aiFeedbackText), findsNothing);
     expect(find.byKey(_questionBubbleKey), findsNothing);
@@ -877,6 +879,7 @@ Future<GoRouter> _pumpRoutedHome(
   Couple? couple,
   CoupleRecordingOverview? recordingOverview,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
+  HomeFeedbackImpressionStore? feedbackImpressionStore,
 }) async {
   final router = GoRouter(
     initialLocation: '/home',
@@ -926,6 +929,9 @@ Future<GoRouter> _pumpRoutedHome(
         aiQuestionFeedbackProvider.overrideWith(
           (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
         ),
+        homeFeedbackImpressionStoreProvider.overrideWithValue(
+          feedbackImpressionStore ?? _FakeHomeFeedbackImpressionStore(),
+        ),
         if (recordingOverview != null)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
@@ -946,6 +952,7 @@ Future<void> _pumpHome(
   StoryLoopReadRepository? storyLoopRepository,
   CoupleRecordingOverview? recordingOverview,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
+  HomeFeedbackImpressionStore? feedbackImpressionStore,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -965,6 +972,9 @@ Future<void> _pumpHome(
         aiQuestionFeedbackProvider.overrideWith(
           (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
         ),
+        homeFeedbackImpressionStoreProvider.overrideWithValue(
+          feedbackImpressionStore ?? _FakeHomeFeedbackImpressionStore(),
+        ),
         if (recordingOverview != null)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
@@ -978,6 +988,29 @@ Future<void> _pumpHome(
     await tester.pumpAndSettle();
   } else {
     await tester.pump();
+  }
+}
+
+class _FakeHomeFeedbackImpressionStore implements HomeFeedbackImpressionStore {
+  _FakeHomeFeedbackImpressionStore({Map<String, String>? lastShownByUser})
+    : lastShownByUser = {...?lastShownByUser};
+
+  final Map<String, String> lastShownByUser;
+
+  @override
+  Future<bool> hasShown({
+    required String userId,
+    required String dailyQuestionId,
+  }) async {
+    return lastShownByUser[userId] == dailyQuestionId;
+  }
+
+  @override
+  Future<void> markShown({
+    required String userId,
+    required String dailyQuestionId,
+  }) async {
+    lastShownByUser[userId] = dailyQuestionId;
   }
 }
 
@@ -1035,6 +1068,26 @@ final _profile = UserProfile(
 );
 
 final _dailyQuestion = sampleDailyQuestion(assignedDate: _today);
+
+TodayStoryLoopSummary _completedTodaySummary() {
+  return sampleTodaySummary(
+    coupleDate: _today,
+    cards: [
+      samplePreviewCard(authorUserId: _profile.id),
+      samplePreviewCard(
+        id: 'card-2',
+        authorUserId: 'partner-id',
+        previewPath: 'previews/card-2.png',
+      ),
+    ],
+    question: StoryLoopQuestionSummary(
+      question: _dailyQuestion,
+      myAnswerExists: true,
+      partnerAnswerExists: true,
+      answerCount: 2,
+    ),
+  );
+}
 
 const _emptyRecordingOverview = CoupleRecordingOverview(
   slotLimit: 5,

@@ -23,6 +23,7 @@ import '../../story_loops/data/today_story_loop_summary_state.dart';
 import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import 'widgets/home_hanging_story_cards.dart';
+import 'widgets/transient_home_feedback_presenter.dart';
 
 const _homeStatusLoadError =
     '\ucee4\ud50c \uc815\ubcf4\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694.';
@@ -287,29 +288,46 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
     final questionTargetLocation = guideText == null
         ? presentation.questionTargetLocation
         : null;
+    final normalizedFeedbackText = feedbackText?.trim();
+    final publishedFeedbackText = normalizedFeedbackText?.isNotEmpty == true
+        ? normalizedFeedbackText
+        : null;
 
-    return _HomeStoryLoopContent(
-      myCard: presentation.myCard,
-      partnerCard: presentation.partnerCard,
-      questionText: guideText ?? feedbackText ?? presentation.questionText,
-      cardsAreCompleted: presentation.cardsAreCompleted,
-      canAddCard: presentation.canAddCard,
-      onAddCard: presentation.canAddCard
-          ? () => context.go('/home/story')
+    return TransientHomeFeedbackPresenter(
+      userId: currentUserId,
+      dailyQuestionId: guideText == null && publishedFeedbackText != null
+          ? question?.question.dailyQuestionId
           : null,
-      onQuestionTap: questionTargetLocation == null
-          ? null
-          : () => context.go(questionTargetLocation),
-      onCardTap: (card) {
-        final editTargetLocation = presentation.editTargetLocationForCard(card);
-        if (editTargetLocation != null) {
-          context.go(editTargetLocation);
-          return;
-        }
-        showStoryCardDetailOverlay(
-          context: context,
-          cardId: card.id,
-          previewUrl: card.previewUrl,
+      feedbackText: guideText == null ? publishedFeedbackText : null,
+      builder: (visibleFeedbackText, feedbackOpacity) {
+        return _HomeStoryLoopContent(
+          myCard: presentation.myCard,
+          partnerCard: presentation.partnerCard,
+          questionText:
+              guideText ?? visibleFeedbackText ?? presentation.questionText,
+          questionOpacity: visibleFeedbackText == null ? 1 : feedbackOpacity,
+          cardsAreCompleted: presentation.cardsAreCompleted,
+          canAddCard: presentation.canAddCard,
+          onAddCard: presentation.canAddCard
+              ? () => context.go('/home/story')
+              : null,
+          onQuestionTap: questionTargetLocation == null
+              ? null
+              : () => context.go(questionTargetLocation),
+          onCardTap: (card) {
+            final editTargetLocation = presentation.editTargetLocationForCard(
+              card,
+            );
+            if (editTargetLocation != null) {
+              context.go(editTargetLocation);
+              return;
+            }
+            showStoryCardDetailOverlay(
+              context: context,
+              cardId: card.id,
+              previewUrl: card.previewUrl,
+            );
+          },
         );
       },
     );
@@ -321,6 +339,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.myCard,
     required this.partnerCard,
     required this.questionText,
+    required this.questionOpacity,
     required this.cardsAreCompleted,
     required this.canAddCard,
     required this.onAddCard,
@@ -331,6 +350,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
+  final double questionOpacity;
   final bool cardsAreCompleted;
   final bool canAddCard;
   final VoidCallback? onAddCard;
@@ -399,6 +419,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
                 alignment: Alignment.bottomCenter,
                 child: _HomeQuestionAction(
                   questionText: questionText,
+                  opacity: questionOpacity,
                   onTap: onQuestionTap,
                 ),
               ),
@@ -496,9 +517,14 @@ class _HomeStoryAddButton extends StatelessWidget {
 }
 
 class _HomeQuestionAction extends StatelessWidget {
-  const _HomeQuestionAction({required this.questionText, required this.onTap});
+  const _HomeQuestionAction({
+    required this.questionText,
+    required this.opacity,
+    required this.onTap,
+  });
 
   final String questionText;
+  final double opacity;
   final VoidCallback? onTap;
 
   @override
@@ -512,11 +538,17 @@ class _HomeQuestionAction extends StatelessWidget {
           child: _HomeQuestionBubble(questionText: questionText),
         ),
       ),
-      child: _HomeQuestionBubble(
-        questionText: questionText,
-        onTap: onTap,
-        actionKey: const Key('home-question-action'),
-        bubbleKey: const Key('home-question-speech-bubble'),
+      child: AnimatedOpacity(
+        key: const Key('home-question-opacity'),
+        opacity: opacity,
+        duration: TransientHomeFeedbackPresenter.fadeDuration,
+        curve: Curves.easeOut,
+        child: _HomeQuestionBubble(
+          questionText: questionText,
+          onTap: onTap,
+          actionKey: const Key('home-question-action'),
+          bubbleKey: const Key('home-question-speech-bubble'),
+        ),
       ),
     );
   }
