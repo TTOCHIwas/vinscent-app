@@ -11,7 +11,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
-import '../../questions/presentation/widgets/character_speech_prompt.dart';
+import '../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../recordings/application/couple_recording_overview_controller.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart';
