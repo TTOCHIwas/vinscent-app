@@ -26,6 +26,7 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_pr
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
+import '../../../support/text_finders.dart';
 
 const _storyDetailOverlayKey = Key('story-card-detail-overlay');
 const _storyDetailCloseButtonKey = Key('story-card-detail-close');
@@ -237,7 +238,10 @@ void main() {
         find.byKey(const Key('ai-question-feedback-prompt')),
         findsOneWidget,
       );
-      expect(find.text('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'), findsOneWidget);
+      expect(
+        findTextIgnoringWordJoiners('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('centers published feedback on phone and tablet widths', (

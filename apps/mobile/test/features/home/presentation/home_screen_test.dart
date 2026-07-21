@@ -28,6 +28,7 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_pr
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
+import '../../../support/text_finders.dart';
 
 const _storyAddButtonKey = Key('home-story-add-button');
 const _storyAddForegroundKey = Key('home-story-add-foreground');
@@ -129,7 +130,7 @@ void main() {
       recordingOverview: _emptyRecordingOverview,
     );
 
-    expect(find.text(_characterSetupPrompt), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(_characterSetupPrompt), findsOneWidget);
     final characterControl = tester.widget<CharacterRecordingControl>(
       find.byType(CharacterRecordingControl),
     );
@@ -154,7 +155,7 @@ void main() {
       recordingOverview: _emptyRecordingOverview,
     );
 
-    expect(find.text(_firstRecordingPrompt), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(_firstRecordingPrompt), findsOneWidget);
     expect(find.byKey(_questionBubbleKey), findsOneWidget);
   });
 
@@ -167,7 +168,7 @@ void main() {
       recordingOverview: _recordingOverviewWithCurrentAudio(),
     );
 
-    expect(find.text(_firstRecordingPrompt), findsNothing);
+    expect(findTextIgnoringWordJoiners(_firstRecordingPrompt), findsNothing);
   });
 
   testWidgets(
@@ -204,8 +205,11 @@ void main() {
         ),
       );
 
-      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
-      expect(find.text(_firstRecordingPrompt), findsNothing);
+      expect(
+        findTextIgnoringWordJoiners(_dailyQuestion.questionText),
+        findsOneWidget,
+      );
+      expect(findTextIgnoringWordJoiners(_firstRecordingPrompt), findsNothing);
       final questionBubble = find.byKey(_questionBubbleKey);
       final questionAction = find.byKey(_questionActionKey);
       final characterControl = find.byKey(CharacterRecordingControl.controlKey);
@@ -223,7 +227,7 @@ void main() {
         closeTo(8, 0.1),
       );
       final questionText = tester.widget<Text>(
-        find.text(_dailyQuestion.questionText),
+        findTextIgnoringWordJoiners(_dailyQuestion.questionText),
       );
       expect(questionText.style?.fontSize, 16);
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
@@ -245,7 +249,13 @@ void main() {
       expect(tester.getTopLeft(myCard).dy, tester.getTopLeft(partnerCard).dy);
       expect(
         tester.getBottomLeft(myCard).dy,
-        lessThan(tester.getTopLeft(find.text(_dailyQuestion.questionText)).dy),
+        lessThan(
+          tester
+              .getTopLeft(
+                findTextIgnoringWordJoiners(_dailyQuestion.questionText),
+              )
+              .dy,
+        ),
       );
       final cardToBubbleGap =
           tester.getTopLeft(questionBubble).dy -
@@ -342,7 +352,9 @@ void main() {
 
       await tester.tap(find.byKey(_storyDetailCloseButtonKey));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(_dailyQuestion.questionText));
+      await tester.tap(
+        findTextIgnoringWordJoiners(_dailyQuestion.questionText),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -396,7 +408,10 @@ void main() {
         tester.getCenter(myCard).dx,
         lessThan(tester.getCenter(partnerCard).dx),
       );
-      expect(find.text(_dailyQuestion.questionText), findsNothing);
+      expect(
+        findTextIgnoringWordJoiners(_dailyQuestion.questionText),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -416,7 +431,10 @@ void main() {
       },
     );
 
-    expect(find.text(_dailyQuestion.questionText), findsNothing);
+    expect(
+      findTextIgnoringWordJoiners(_dailyQuestion.questionText),
+      findsNothing,
+    );
     expect(find.text(_aiFeedbackText), findsOneWidget);
     expect(find.byKey(_questionBubbleKey), findsOneWidget);
 
@@ -861,13 +879,16 @@ void main() {
         );
 
         expect(
-          find.text(_dailyQuestion.questionText),
+          findTextIgnoringWordJoiners(_dailyQuestion.questionText),
           scenario.showsQuestion ? findsOneWidget : findsNothing,
         );
         expect(find.text(scenario.removedMessage), findsNothing);
         expect(find.text(_storyQuestionAction), findsNothing);
         expect(find.text(_storyAnswerAction), findsNothing);
-        expect(find.text(_firstRecordingPrompt), findsNothing);
+        expect(
+          findTextIgnoringWordJoiners(_firstRecordingPrompt),
+          findsNothing,
+        );
       },
     );
   }

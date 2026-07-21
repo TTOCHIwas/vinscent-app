@@ -29,6 +29,7 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_pr
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
+import '../../../support/text_finders.dart';
 
 void main() {
   testWidgets('shows current month without fetching detail before selection', (
@@ -286,7 +287,7 @@ void main() {
       find.byKey(const Key('ai-question-feedback-prompt')),
       findsOneWidget,
     );
-    expect(find.text('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
+    expect(findTextIgnoringWordJoiners('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
 

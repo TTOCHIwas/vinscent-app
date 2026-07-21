@@ -6,6 +6,9 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../characters/presentation/widgets/couple_character_avatar.dart';
 
 const _speechBubbleColor = Color(0xFFEFEFEF);
+const _wordJoiner = '\u2060';
+final _hangulPattern = RegExp(r'[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7A3]');
+final _whitespacePattern = RegExp(r'\s+');
 
 enum SpeechBubbleTailPosition { bottom, left }
 
@@ -99,6 +102,8 @@ class CharacterSpeechBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final textDirection = Directionality.of(context);
+        final textScaler = MediaQuery.textScalerOf(context);
         final tailWidth = tailPosition == SpeechBubbleTailPosition.left
             ? tailSize.width
             : 0.0;
@@ -111,9 +116,23 @@ class CharacterSpeechBubble extends StatelessWidget {
         final maxContentHeight = constraints.hasBoundedHeight
             ? math.max(0.0, constraints.maxHeight - tailHeight)
             : double.infinity;
+        final bubbleMaxWidth = math.min(maxWidth, maxContentWidth);
+        final resolvedPadding = contentPadding.resolve(textDirection);
+        final maxTextWidth = math.max(
+          0.0,
+          bubbleMaxWidth - resolvedPadding.horizontal,
+        );
+        final displayText = _keepWordsTogether(
+          speechText,
+          maxTextWidth: maxTextWidth,
+          style: textStyle,
+          textDirection: textDirection,
+          textScaler: textScaler,
+          locale: Localizations.maybeLocaleOf(context),
+        );
         final bubble = Container(
           constraints: BoxConstraints(
-            maxWidth: math.min(maxWidth, maxContentWidth),
+            maxWidth: bubbleMaxWidth,
             maxHeight: maxContentHeight,
           ),
           padding: contentPadding,
@@ -122,9 +141,10 @@ class CharacterSpeechBubble extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            speechText,
+            displayText,
             maxLines: maxLines,
             overflow: maxLines == null ? null : TextOverflow.ellipsis,
+            semanticsLabel: speechText,
             textAlign: TextAlign.center,
             style: textStyle,
           ),
@@ -165,6 +185,64 @@ class CharacterSpeechBubble extends StatelessWidget {
       },
     );
   }
+}
+
+String _keepWordsTogether(
+  String text, {
+  required double maxTextWidth,
+  required TextStyle style,
+  required TextDirection textDirection,
+  required TextScaler textScaler,
+  required Locale? locale,
+}) {
+  if (text.isEmpty || maxTextWidth <= 0) {
+    return text;
+  }
+
+  return text.splitMapJoin(
+    _whitespacePattern,
+    onMatch: (match) => match.group(0)!,
+    onNonMatch: (word) {
+      if (!_hangulPattern.hasMatch(word) ||
+          word.characters.length < 2 ||
+          !_fitsOnOneLine(
+            word,
+            maxWidth: maxTextWidth,
+            style: style,
+            textDirection: textDirection,
+            textScaler: textScaler,
+            locale: locale,
+          )) {
+        return word;
+      }
+
+      return word.characters.join(_wordJoiner);
+    },
+  );
+}
+
+bool _fitsOnOneLine(
+  String text, {
+  required double maxWidth,
+  required TextStyle style,
+  required TextDirection textDirection,
+  required TextScaler textScaler,
+  required Locale? locale,
+}) {
+  if (!maxWidth.isFinite) {
+    return true;
+  }
+
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: textDirection,
+    textScaler: textScaler,
+    locale: locale,
+    maxLines: 1,
+  )..layout();
+  final fits = painter.width <= maxWidth;
+  painter.dispose();
+  return fits;
 }
 
 class _SpeechBubbleTailPainter extends CustomPainter {
