@@ -1,7 +1,5 @@
-import {
-  createServiceRoleClient,
-  sendPushNotification,
-} from '../_shared/push.ts';
+import { sendPushNotification } from '../_shared/push.ts';
+import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
   isRecord,
   jsonResponse,
