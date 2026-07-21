@@ -164,6 +164,7 @@ cd apps/mobile
 .\flutterw.cmd pub get
 .\flutterw.cmd test
 .\flutterw.cmd analyze
+.\flutterw.cmd build apk --debug
 ..\..\scripts\verify_flutter_cache.cmd
 
 cd android
@@ -172,7 +173,7 @@ cd android
 
 - Flutter 전체 테스트 349개
 - Flutter analyzer
-- Android 앱 모듈 단위 테스트와 debug 컴파일
+- Android 앱 모듈 단위 테스트와 debug APK 패키징
 - Supabase DB pgTAP 테스트 154개
 - Edge 공용 모듈 테스트 8개와 함수 TypeScript 14개 구문 검사
 - AI API 테스트 39개
