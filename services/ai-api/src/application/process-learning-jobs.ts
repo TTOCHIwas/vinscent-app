@@ -101,7 +101,7 @@ const emptyUsage: LearningModelUsage = {
 };
 
 const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string> = {
-  extract_memories: 'memory-v4',
+  extract_memories: 'memory-v5',
   generate_feedback: 'feedback-v2',
   select_curated_question: 'question-ranking-v2',
   generate_personalized_question: 'personalized-question-v2',
@@ -334,7 +334,7 @@ function classifyFailure(
       retryable: error.retryable,
       providerHttpStatus: null,
       providerErrorStatus: null,
-      providerErrorDetail: null,
+      providerErrorDetail: error.validationDetail,
       retryAfterMs: null,
       usage: {
         inputTokenCount: null,

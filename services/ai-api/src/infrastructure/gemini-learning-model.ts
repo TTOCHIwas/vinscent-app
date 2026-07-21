@@ -33,10 +33,30 @@ const rankingSchema = objectSchema({
   rationale: { type: 'string' },
 }, ['question_key', 'rationale']);
 
+const memoryCandidateProperties = {
+  memory_key: { type: 'string' },
+  scope: { type: 'string' },
+  subject_participant_key: { type: 'string' },
+  kind: { type: 'string' },
+  learning_domain: { type: 'string' },
+  evidence_type: { type: 'string' },
+  sensitive_category: { type: 'string' },
+  statement: { type: 'string' },
+  confidence: { type: 'number' },
+  evidence_answer_ids: {
+    type: 'array',
+    items: { type: 'string' },
+  },
+};
+
 const memorySchema = objectSchema({
   memories: {
     type: 'array',
-    items: { type: 'object' },
+    items: {
+      type: 'object',
+      properties: memoryCandidateProperties,
+      required: Object.keys(memoryCandidateProperties),
+    },
   },
 }, ['memories']);
 
@@ -82,10 +102,14 @@ export class GeminiLearningModel implements LearningModelPort {
       prompt: buildMemoryExtractionPrompt(context),
       schema: memorySchema,
     });
-    const output = requireRecord(result.value);
-    const rawMemories = requireArray(output, 'memories');
+    const output = requireRecord(result.value, 'memory.output.invalid');
+    const rawMemories = requireArray(
+      output,
+      'memories',
+      'memory.memories.invalid',
+    );
     if (rawMemories.length > maximumMemoryCandidates) {
-      throw new GeminiOutputError();
+      throwInvalidOutput('memory.memories.count_invalid');
     }
     const memories = rawMemories.map(parseMemoryCandidate);
 
@@ -292,8 +316,13 @@ function buildTaskPrompt(
 }
 
 function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {
-  const record = requireRecord(value);
-  const scope = requireEnum(record, 'scope', ['personal', 'couple'] as const);
+  const record = requireRecord(value, 'memory.candidate.invalid');
+  const scope = requireEnum(
+    record,
+    'scope',
+    ['personal', 'couple'] as const,
+    'memory.scope.invalid',
+  );
   const subject = record.subject_participant_key;
   let subjectParticipantKey: ParticipantKey | null;
   if (subject === null || subject === 'couple') {
@@ -301,7 +330,7 @@ function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {
   } else if (subject === 'partner_a' || subject === 'partner_b') {
     subjectParticipantKey = subject;
   } else {
-    throw new GeminiOutputError();
+    throwInvalidOutput('memory.subject_participant_key.invalid');
   }
 
   const confidence = record.confidence;
@@ -311,27 +340,39 @@ function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {
     || confidence < 0
     || confidence > 1
   ) {
-    throw new GeminiOutputError();
+    throwInvalidOutput('memory.confidence.invalid');
   }
 
-  const evidenceAnswerIds = requireArray(record, 'evidence_answer_ids')
-    .map((answerId) => requireDirectString(answerId, 160));
+  const evidenceAnswerIds = requireArray(
+    record,
+    'evidence_answer_ids',
+    'memory.evidence_answer_ids.invalid',
+  ).map((answerId) => requireDirectString(
+    answerId,
+    160,
+    'memory.evidence_answer_ids.invalid',
+  ));
   if (evidenceAnswerIds.length < 1 || evidenceAnswerIds.length > 2) {
-    throw new GeminiOutputError();
+    throwInvalidOutput('memory.evidence_answer_ids.count_invalid');
   }
 
   if (
     (scope === 'personal' && subjectParticipantKey === null)
     || (scope === 'couple' && subjectParticipantKey !== null)
   ) {
-    throw new GeminiOutputError();
+    throwInvalidOutput('memory.scope_subject.invalid');
   }
 
   return {
-    memoryKey: requireString(record, 'memory_key', 160),
+    memoryKey: requireString(
+      record,
+      'memory_key',
+      160,
+      'memory.memory_key.invalid',
+    ),
     scope,
     subjectParticipantKey,
-    kind: requireString(record, 'kind', 100),
+    kind: requireString(record, 'kind', 100, 'memory.kind.invalid'),
     domain: requireEnum(record, 'learning_domain', [
       'personal_values',
       'emotional_support',
@@ -339,11 +380,11 @@ function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {
       'daily_life',
       'relationship_strength',
       'future_boundaries',
-    ] as const),
+    ] as const, 'memory.learning_domain.invalid'),
     evidenceType: requireEnum(record, 'evidence_type', [
       'explicit',
       'repeated_pattern',
-    ] as const),
+    ] as const, 'memory.evidence_type.invalid'),
     sensitiveCategory: requireEnum(record, 'sensitive_category', [
       'none',
       'sexual_health',
@@ -353,8 +394,13 @@ function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {
       'trauma',
       'religion_politics',
       'family_conflict',
-    ] as const) as SensitiveCategory,
-    statement: requireString(record, 'statement', 500),
+    ] as const, 'memory.sensitive_category.invalid') as SensitiveCategory,
+    statement: requireString(
+      record,
+      'statement',
+      500,
+      'memory.statement.invalid',
+    ),
     confidence,
     evidenceAnswerIds,
   };
@@ -379,9 +425,12 @@ function objectSchema(
   };
 }
 
-function requireRecord(value: unknown): Record<string, unknown> {
+function requireRecord(
+  value: unknown,
+  validationDetail: string | null = null,
+): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new GeminiOutputError();
+    throwInvalidOutput(validationDetail);
   }
   return value as Record<string, unknown>;
 }
@@ -389,10 +438,11 @@ function requireRecord(value: unknown): Record<string, unknown> {
 function requireArray(
   record: Record<string, unknown>,
   key: string,
+  validationDetail: string | null = null,
 ): unknown[] {
   const value = record[key];
   if (!Array.isArray(value)) {
-    throw new GeminiOutputError();
+    throwInvalidOutput(validationDetail);
   }
   return value;
 }
@@ -401,17 +451,22 @@ function requireString(
   record: Record<string, unknown>,
   key: string,
   maximum: number,
+  validationDetail: string | null = null,
 ): string {
-  return requireDirectString(record[key], maximum);
+  return requireDirectString(record[key], maximum, validationDetail);
 }
 
-function requireDirectString(value: unknown, maximum: number): string {
+function requireDirectString(
+  value: unknown,
+  maximum: number,
+  validationDetail: string | null = null,
+): string {
   if (typeof value !== 'string') {
-    throw new GeminiOutputError();
+    throwInvalidOutput(validationDetail);
   }
   const normalized = value.trim();
   if (normalized.length === 0 || normalized.length > maximum) {
-    throw new GeminiOutputError();
+    throwInvalidOutput(validationDetail);
   }
   return normalized;
 }
@@ -430,10 +485,15 @@ function requireEnum<const T extends readonly string[]>(
   record: Record<string, unknown>,
   key: string,
   allowed: T,
+  validationDetail: string | null = null,
 ): T[number] {
   const value = record[key];
   if (typeof value !== 'string' || !allowed.includes(value)) {
-    throw new GeminiOutputError();
+    throwInvalidOutput(validationDetail);
   }
   return value;
+}
+
+function throwInvalidOutput(validationDetail: string | null = null): never {
+  throw new GeminiOutputError(undefined, 0, validationDetail);
 }

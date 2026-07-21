@@ -8,6 +8,7 @@ const defaultModel = 'gemini-3.1-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
 const maximumProviderErrorDetailLength = 500;
+const outputValidationDetailPattern = /^[a-z][a-z0-9_.]{0,159}$/;
 
 export interface StructuredGenerationRequest {
   prompt: string;
@@ -69,11 +70,20 @@ export class GeminiOutputError extends Error {
   readonly code = 'gemini_invalid_output';
   readonly retryable = false;
   readonly latencyMs: number;
+  readonly validationDetail: string | null;
 
-  constructor(cause?: unknown, latencyMs = 0) {
+  constructor(
+    cause?: unknown,
+    latencyMs = 0,
+    validationDetail: string | null = null,
+  ) {
     super('gemini_invalid_output', { cause });
     this.name = 'GeminiOutputError';
     this.latencyMs = latencyMs;
+    this.validationDetail = validationDetail !== null
+      && outputValidationDetailPattern.test(validationDetail)
+      ? validationDetail
+      : null;
   }
 }
 
