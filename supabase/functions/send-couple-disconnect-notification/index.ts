@@ -1,10 +1,12 @@
 import {
   createServiceRoleClient,
+  sendPushNotification,
+} from '../_shared/push.ts';
+import {
   isRecord,
   jsonResponse,
-  sendPushNotification,
   verifyWebhookSecret,
-} from '../_shared/push.ts';
+} from '../_shared/webhook.ts';
 
 type CoupleRecord = {
   id: string;
