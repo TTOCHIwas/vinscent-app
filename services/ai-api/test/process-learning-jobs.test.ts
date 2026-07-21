@@ -17,7 +17,10 @@ import type {
   AnonymizedCompletedQuestionContext,
   CompletedQuestionContext,
 } from '../src/domain/learning-contract.ts';
-import { GeminiProviderError } from '../src/infrastructure/gemini-structured-generation-client.ts';
+import {
+  GeminiOutputError,
+  GeminiProviderError,
+} from '../src/infrastructure/gemini-structured-generation-client.ts';
 
 const completedContext: CompletedQuestionContext = {
   coupleId: 'couple-real-id',
@@ -236,6 +239,43 @@ test('processor records retryable model failures and continues the batch', async
   assert.equal(repository.failures[0]?.retryAfterMs, 45_000);
   assert.equal(repository.failures[0]?.usage.latencyMs, 275);
   assert.equal(repository.successes[0]?.runId, 'run-job-next');
+});
+
+test('processor records a safe model output validation detail', async () => {
+  const repository = new FakeRepository([
+    job('job-invalid-memory-output', 'extract_memories'),
+  ]);
+  const model = modelWith({
+    async extractMemoryCandidates() {
+      throw new GeminiOutputError(
+        undefined,
+        125,
+        'memory.confidence.invalid',
+      );
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 0,
+    retried: 0,
+    failed: 1,
+  });
+  assert.equal(repository.failures[0]?.errorCode, 'gemini_invalid_output');
+  assert.equal(
+    repository.failures[0]?.providerErrorDetail,
+    'memory.confidence.invalid',
+  );
+  assert.equal(repository.failures[0]?.usage.latencyMs, 125);
 });
 
 test('processor terminally rejects a recommendation outside candidates', async () => {

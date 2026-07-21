@@ -409,7 +409,7 @@ test('Gemini model maps memory output without real user identifiers', async () =
   assert.equal(result.usage.inputTokenCount, 30);
 });
 
-test('memory extraction uses a minimal provider schema and a complete prompt contract', async () => {
+test('memory extraction uses a typed provider schema and a complete prompt contract', async () => {
   let capturedPrompt = '';
   let capturedSchema: unknown;
   const model = new GeminiLearningModel({
@@ -448,7 +448,36 @@ test('memory extraction uses a minimal provider schema and a complete prompt con
     properties: {
       memories: {
         type: 'array',
-        items: { type: 'object' },
+        items: {
+          type: 'object',
+          properties: {
+            memory_key: { type: 'string' },
+            scope: { type: 'string' },
+            subject_participant_key: { type: 'string' },
+            kind: { type: 'string' },
+            learning_domain: { type: 'string' },
+            evidence_type: { type: 'string' },
+            sensitive_category: { type: 'string' },
+            statement: { type: 'string' },
+            confidence: { type: 'number' },
+            evidence_answer_ids: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+          required: [
+            'memory_key',
+            'scope',
+            'subject_participant_key',
+            'kind',
+            'learning_domain',
+            'evidence_type',
+            'sensitive_category',
+            'statement',
+            'confidence',
+            'evidence_answer_ids',
+          ],
+        },
       },
     },
     required: ['memories'],
@@ -470,6 +499,47 @@ test('memory extraction uses a minimal provider schema and a complete prompt con
   }
   assert.equal(result.value[0]?.scope, 'couple');
   assert.equal(result.value[0]?.subjectParticipantKey, null);
+});
+
+test('memory extraction reports the invalid field without exposing its value', async () => {
+  const model = new GeminiLearningModel({
+    generateStructured: async () => ({
+      value: {
+        memories: [
+          {
+            memory_key: 'partner_a_quiet_time',
+            scope: 'personal',
+            subject_participant_key: 'partner_a',
+            kind: 'personal_value',
+            learning_domain: 'personal_values',
+            evidence_type: 'explicit',
+            sensitive_category: 'none',
+            statement: 'Partner A values quiet time together.',
+            confidence: 'private-invalid-value',
+            evidence_answer_ids: ['answer-a'],
+          },
+        ],
+      },
+      usage: {
+        inputTokenCount: 30,
+        outputTokenCount: 20,
+        latencyMs: 150,
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => model.extractMemoryCandidates(context),
+    (error: unknown) => {
+      assert.ok(error instanceof GeminiOutputError);
+      const validationDetail = (
+        error as GeminiOutputError & { validationDetail?: string }
+      ).validationDetail;
+      assert.equal(validationDetail, 'memory.confidence.invalid');
+      assert.equal(validationDetail?.includes('private-invalid-value'), false);
+      return true;
+    },
+  );
 });
 
 test('memory extraction rejects more than twelve model candidates', async () => {
