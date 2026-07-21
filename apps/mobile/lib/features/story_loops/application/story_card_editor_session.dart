@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'story_card_draft.dart';
-import 'story_card_scene.dart';
+import '../data/story_card_draft.dart';
+import '../data/story_card_scene.dart';
 
 enum StoryCardEditorStage { camera, decorating }
 

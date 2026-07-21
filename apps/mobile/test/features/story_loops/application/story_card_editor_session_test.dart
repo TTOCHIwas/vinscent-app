@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
-import 'package:vinscent/features/story_loops/data/story_card_editor_session.dart';
+import 'package:vinscent/features/story_loops/application/story_card_editor_session.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {

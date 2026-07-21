@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
-import '../../data/story_card_editor_session.dart';
+import '../../application/story_card_editor_session.dart';
 import '../../data/story_card_scene.dart';
 
 class StoryCardEditorCanvas extends StatefulWidget {

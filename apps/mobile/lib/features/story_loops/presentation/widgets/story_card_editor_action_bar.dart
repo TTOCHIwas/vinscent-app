@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../data/story_card_editor_session.dart';
+import '../../application/story_card_editor_session.dart';
 import 'story_card_editor_icon_button.dart';
 
 class StoryCardEditorActionBar extends StatelessWidget {
