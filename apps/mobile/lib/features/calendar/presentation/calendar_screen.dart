@@ -22,14 +22,17 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  static const _minimumSwipeVelocity = 350.0;
+
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
-    final today = ref.read(coupleCurrentDateProvider);
+    final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
     _visibleMonth = _monthOnly(today);
+    _selectedDate = today;
 
     ref.listenManual<DateTime>(coupleCurrentDateProvider, (previous, next) {
       final todayMonth = _monthOnly(next);
@@ -77,43 +80,52 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext(todayMonth);
 
-        return Column(
-          children: [
-            _CalendarMonthHeader(
-              visibleMonth: _visibleMonth,
-              canGoPrevious: canGoPrevious,
-              canGoNext: canGoNext,
-              onPreviousPressed: canGoPrevious
-                  ? () => _showPreviousMonth(relationshipStartMonth)
-                  : null,
-              onNextPressed: canGoNext
-                  ? () => _showNextMonth(todayMonth)
-                  : null,
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  32,
-                  32,
-                  32,
-                  40 + bottomNavigationClearance,
-                ),
-                child: Column(
-                  children: [
-                    _CalendarGrid(
-                      visibleMonth: _visibleMonth,
-                      today: today,
-                      relationshipStartDate: couple.relationshipStartDate!,
-                      selectedDate: _selectedDate,
-                      onDatePressed: _handleDatePressed,
-                    ),
-                    const SizedBox(height: 48),
-                    _CalendarDetail(selectedDate: _selectedDate),
-                  ],
+        return GestureDetector(
+          key: const Key('calendar-date-swipe-region'),
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragEnd: (details) => _handleHorizontalDragEnd(
+            details,
+            relationshipStartDate: couple.relationshipStartDate!,
+            today: today,
+          ),
+          child: Column(
+            children: [
+              _CalendarMonthHeader(
+                visibleMonth: _visibleMonth,
+                canGoPrevious: canGoPrevious,
+                canGoNext: canGoNext,
+                onPreviousPressed: canGoPrevious
+                    ? () => _showPreviousMonth(relationshipStartMonth)
+                    : null,
+                onNextPressed: canGoNext
+                    ? () => _showNextMonth(todayMonth)
+                    : null,
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    32,
+                    32,
+                    32,
+                    40 + bottomNavigationClearance,
+                  ),
+                  child: Column(
+                    children: [
+                      _CalendarGrid(
+                        visibleMonth: _visibleMonth,
+                        today: today,
+                        relationshipStartDate: couple.relationshipStartDate!,
+                        selectedDate: _selectedDate,
+                        onDatePressed: _handleDatePressed,
+                      ),
+                      const SizedBox(height: 48),
+                      _CalendarDetail(selectedDate: _selectedDate),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -154,6 +166,50 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   void _handleDatePressed(DateTime date) {
     setState(() {
       _selectedDate = calendarDateOnly(date);
+    });
+  }
+
+  void _handleHorizontalDragEnd(
+    DragEndDetails details, {
+    required DateTime relationshipStartDate,
+    required DateTime today,
+  }) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < _minimumSwipeVelocity) {
+      return;
+    }
+
+    _moveSelectedDate(
+      velocity > 0 ? -1 : 1,
+      relationshipStartDate: relationshipStartDate,
+      today: today,
+    );
+  }
+
+  void _moveSelectedDate(
+    int dayOffset, {
+    required DateTime relationshipStartDate,
+    required DateTime today,
+  }) {
+    final selectedDate = _selectedDate;
+    if (selectedDate == null) {
+      return;
+    }
+
+    final targetDate = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day + dayOffset,
+    );
+    final firstDate = calendarDateOnly(relationshipStartDate);
+    final lastDate = calendarDateOnly(today);
+    if (targetDate.isBefore(firstDate) || targetDate.isAfter(lastDate)) {
+      return;
+    }
+
+    setState(() {
+      _selectedDate = targetDate;
+      _visibleMonth = _monthOnly(targetDate);
     });
   }
 }

@@ -97,6 +97,7 @@ void main() {
     expect(repository.requestedDetailDates, [
       DateTime(2026, 5, 10),
       DateTime(2026, 5, 9),
+      DateTime(2026, 5, 10),
     ]);
     expect(
       _circularDecorations(
@@ -145,7 +146,7 @@ void main() {
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('2026년 04월'), findsNothing);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
-    expect(repository.requestedDetailDates, isEmpty);
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
   });
 
   testWidgets('moves to previous month after relationship start month', (
@@ -166,7 +167,7 @@ void main() {
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(repository.requestedMonths, [DateTime(2026, 6), DateTime(2026, 5)]);
-    expect(repository.requestedDetailDates, isEmpty);
+    expect(repository.requestedDetailDates, [DateTime(2026, 6, 2)]);
   });
 
   testWidgets('does not move after today month', (tester) async {
@@ -180,7 +181,7 @@ void main() {
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(find.text('2026년 06월'), findsNothing);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
-    expect(repository.requestedDetailDates, isEmpty);
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
   });
 
   testWidgets(
@@ -322,7 +323,10 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
-    expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 5),
+    ]);
     expect(find.text('5월 5일'), findsOneWidget);
     expect(find.text('2026 · 화요일'), findsOneWidget);
     final cardStack = find.byType(CalendarStoryCardStack);
@@ -412,7 +416,10 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
-    expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 5),
+    ]);
     expect(find.byType(CalendarStoryCardStack), findsOneWidget);
     expect(find.text('스토리 카드가 먼저 도착했어요'), findsOneWidget);
     expect(find.text('두 사람의 카드가 모두 올라오면 질문이 생성돼요'), findsOneWidget);
@@ -429,7 +436,10 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
-    expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 5),
+    ]);
     expect(find.text('이 날의 질문 기록이 없어요'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
@@ -444,13 +454,17 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
-    expect(repository.requestedDetailDates, [DateTime(2026, 5, 5)]);
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 5),
+    ]);
     expect(find.text('기록을 불러오지 못했어요'), findsOneWidget);
 
     await tester.tap(find.text('다시 시도'));
     await tester.pumpAndSettle();
 
     expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
       DateTime(2026, 5, 5),
       DateTime(2026, 5, 5),
     ]);
@@ -601,6 +615,10 @@ class _FlakyStoryLoopReadRepository implements StoryLoopReadRepository {
   Future<StoryLoopDetail?> fetchDetail(DateTime date) async {
     final normalizedDate = calendarDateOnly(date);
     requestedDetailDates.add(normalizedDate);
+
+    if (normalizedDate != calendarDateOnly(entry.coupleDate)) {
+      return null;
+    }
 
     if (_shouldFail) {
       _shouldFail = false;
