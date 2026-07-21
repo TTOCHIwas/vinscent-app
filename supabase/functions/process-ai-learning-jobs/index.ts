@@ -3,10 +3,8 @@ import { GeminiStructuredGenerationClient } from '../../../services/ai-api/src/i
 import { GeminiLearningModel } from '../../../services/ai-api/src/infrastructure/gemini-learning-model.ts';
 import { SupabaseLearningJobRepository } from '../../../services/ai-api/src/infrastructure/supabase-learning-job-repository.ts';
 import { createLearningWorkerHttpHandler } from '../../../services/ai-api/src/presentation/learning-worker-http-handler.ts';
-import {
-  createServiceRoleClient,
-  requiredEnv,
-} from '../_shared/push.ts';
+import { requiredEnv } from '../_shared/environment.ts';
+import { createServiceRoleClient } from '../_shared/supabase.ts';
 
 const defaultModel = 'gemini-3.1-flash-lite';
 
