@@ -2,14 +2,6 @@ import { requiredEnv } from './environment.ts';
 import { createServiceRoleClient } from './supabase.ts';
 import { isRecord } from './webhook.ts';
 
-export { requiredEnv } from './environment.ts';
-export { createServiceRoleClient } from './supabase.ts';
-export {
-  isRecord,
-  jsonResponse,
-  verifyWebhookSecret,
-} from './webhook.ts';
-
 export type NotificationType =
   | 'partner_answer_completed'
   | 'daily_question_delivery'
