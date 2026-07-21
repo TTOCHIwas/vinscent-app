@@ -371,16 +371,7 @@ class _StoryCardEditorContentState
     }
 
     setState(() {
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            strokes: _draft.scene.strokes.sublist(
-              0,
-              _draft.scene.strokes.length - 1,
-            ),
-          ),
-        ),
-      );
+      _session = _session.undoLastStroke();
     });
   }
 
@@ -420,16 +411,8 @@ class _StoryCardEditorContentState
   }
 
   void _toggleCanvasBackground() {
-    final background =
-        _draft.scene.canvasBackground == StoryCardCanvasBackground.white
-        ? StoryCardCanvasBackground.black
-        : StoryCardCanvasBackground.white;
     setState(() {
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(canvasBackground: background),
-        ),
-      );
+      _session = _session.toggleCanvasBackground();
     });
   }
 
@@ -507,10 +490,7 @@ class _StoryCardEditorContentState
         _session = _session.selectTool(nextTool);
         return;
       }
-      _session = _session.updateDraft(
-        _draft.copyWith(scene: _draft.scene.copyWith(caption: nextCaption)),
-        tool: nextTool,
-      );
+      _session = _session.setCaption(nextCaption).selectTool(nextTool);
     });
   }
 
@@ -537,23 +517,17 @@ class _StoryCardEditorContentState
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _isTextInputActive = false;
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            textLayers: [
-              ..._draft.scene.textLayers,
-              StoryCardTextLayer(
-                id: const Uuid().v4(),
-                text: text,
-                x: 0.5,
-                y: 0.5,
-                color: color,
-              ),
-            ],
-          ),
-        ),
-        tool: StoryCardEditorTool.none,
-      );
+      _session = _session
+          .addTextLayer(
+            StoryCardTextLayer(
+              id: const Uuid().v4(),
+              text: text,
+              x: 0.5,
+              y: 0.5,
+              color: color,
+            ),
+          )
+          .selectTool(StoryCardEditorTool.none);
     });
   }
 
@@ -655,13 +629,7 @@ class _StoryCardEditorContentState
       _activePointer = null;
       _activeStroke = null;
       if (activeStroke != null) {
-        _session = _session.updateDraft(
-          _draft.copyWith(
-            scene: _draft.scene.copyWith(
-              strokes: [..._draft.scene.strokes, activeStroke],
-            ),
-          ),
-        );
+        _session = _session.appendStroke(activeStroke);
       }
     });
   }
@@ -692,15 +660,11 @@ class _StoryCardEditorContentState
         );
 
     setState(() {
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            backgroundTransform: StoryCardBackgroundTransform(
-              scale: scale,
-              offsetX: offset.dx,
-              offsetY: offset.dy,
-            ),
-          ),
+      _session = _session.setBackgroundTransform(
+        StoryCardBackgroundTransform(
+          scale: scale,
+          offsetX: offset.dx,
+          offsetY: offset.dy,
         ),
       );
     });
@@ -740,23 +704,11 @@ class _StoryCardEditorContentState
 
     setState(() {
       _isTextOverTrash = isOverTrash;
-      _session = _session.updateDraft(
-        _draft.copyWith(
-          scene: _draft.scene.copyWith(
-            textLayers: _draft.scene.textLayers
-                .map(
-                  (layer) => layer.id == layerId
-                      ? layer.copyWith(
-                          x: x,
-                          y: y,
-                          scale: scale,
-                          rotation: rotation,
-                        )
-                      : layer,
-                )
-                .toList(growable: false),
-          ),
-        ),
+      final layer = _draft.scene.textLayers.firstWhere(
+        (layer) => layer.id == layerId,
+      );
+      _session = _session.replaceTextLayer(
+        layer.copyWith(x: x, y: y, scale: scale, rotation: rotation),
       );
     });
   }
@@ -766,15 +718,7 @@ class _StoryCardEditorContentState
     final shouldDelete = _isTextOverTrash && layerId != null;
     setState(() {
       if (shouldDelete) {
-        _session = _session.updateDraft(
-          _draft.copyWith(
-            scene: _draft.scene.copyWith(
-              textLayers: _draft.scene.textLayers
-                  .where((layer) => layer.id != layerId)
-                  .toList(growable: false),
-            ),
-          ),
-        );
+        _session = _session.removeTextLayer(layerId);
       }
       _textLayerTransformStart = null;
       _isDraggingText = false;
