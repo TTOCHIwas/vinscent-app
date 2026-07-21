@@ -587,7 +587,7 @@ void main() {
   );
 
   testWidgets(
-    '\ub0b4 \ub2f5\ubcc0\uc774 \uc788\uc73c\uba74 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \uc77d\uae30 \uc804\uc6a9 route\ub97c \uc5f0\ub2e4',
+    '\ub0b4 \ub2f5\ubcc0\uc774 \uc788\uc73c\uba74 \uc9c8\ubb38 \uc77d\uae30 \uc804\uc6a9 route\ub97c \uc5f0\ub2e4',
     (tester) async {
       await _pumpApp(
         tester,
@@ -595,7 +595,8 @@ void main() {
         todayAnswerState: myAnswerOnlyState(),
       );
 
-      await tester.tap(find.text(_dailyQuestion.questionText));
+      expect(find.text(_dailyQuestion.questionText), findsNothing);
+      GoRouter.of(tester.element(find.byType(AppHeader))).go('/home/question');
       await tester.pumpAndSettle();
 
       expect(find.byType(AppHeader), findsNothing);
@@ -611,7 +612,7 @@ void main() {
   );
 
   testWidgets(
-    '\uc591\ucabd \ub2f5\ubcc0 \uc644\ub8cc \uc0c1\ud0dc\uc5d0\uc11c\ub3c4 \uc9c8\ubb38 \ud0ed\uc73c\ub85c \uc77d\uae30 route\ub97c \uc5f0\ub2e4',
+    '\uc591\ucabd \ub2f5\ubcc0 \uc644\ub8cc \uc0c1\ud0dc\uc758 \uc9c8\ubb38 \uc77d\uae30 route\ub97c \uc5f0\ub2e4',
     (tester) async {
       await _pumpApp(
         tester,
@@ -619,7 +620,7 @@ void main() {
         todayAnswerState: completedAnswerState,
       );
 
-      expect(find.text(_dailyQuestion.questionText), findsOneWidget);
+      expect(find.text(_dailyQuestion.questionText), findsNothing);
       expect(
         find.text(
           'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.',
@@ -627,7 +628,7 @@ void main() {
         findsNothing,
       );
 
-      await tester.tap(find.text(_dailyQuestion.questionText));
+      GoRouter.of(tester.element(find.byType(AppHeader))).go('/home/question');
       await tester.pumpAndSettle();
 
       expect(find.byType(AppHeader), findsNothing);
