@@ -22,6 +22,7 @@ import '../features/notifications/data/push_token_repository.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/recordings/application/couple_recording_overview_controller.dart';
 import '../features/story_loops/application/today_story_loop_summary_provider.dart';
+import 'application/latest_launch_dispatcher.dart';
 import 'router.dart';
 
 class VinscentApp extends ConsumerStatefulWidget {
@@ -37,10 +38,8 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<Map<String, dynamic>>? _notificationOpenSubscription;
   late final HomeWidgetSyncScheduler _widgetSyncScheduler;
-  Uri? _pendingWidgetUri;
-  String? _pendingNotificationLocation;
-  bool _isHandlingWidgetLaunch = false;
-  bool _isHandlingNotificationLaunch = false;
+  late final LatestLaunchDispatcher<Uri> _widgetLaunchDispatcher;
+  late final LatestLaunchDispatcher<String> _notificationLaunchDispatcher;
 
   @override
   void initState() {
@@ -48,6 +47,30 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     _widgetSyncScheduler = HomeWidgetSyncScheduler(
       synchronize: () =>
           ref.read(homeWidgetSyncServiceProvider).synchronizeSafely(),
+    );
+    _widgetLaunchDispatcher = LatestLaunchDispatcher<Uri>(
+      isReady: () =>
+          ref.read(authControllerProvider) == AuthStatus.authenticated,
+      handle: (uri) async {
+        final target = await ref
+            .read(homeWidgetLaunchCoordinatorProvider)
+            .resolveTarget(uri);
+        if (!mounted || target == null) {
+          return false;
+        }
+        ref.read(appRouterProvider).go(target);
+        return true;
+      },
+    );
+    _notificationLaunchDispatcher = LatestLaunchDispatcher<String>(
+      isReady: () =>
+          ref.read(authControllerProvider) == AuthStatus.authenticated &&
+          ref.read(profileControllerProvider).hasValue &&
+          ref.read(coupleControllerProvider).hasValue,
+      handle: (location) async {
+        ref.read(appRouterProvider).go(location);
+        return true;
+      },
     );
     WidgetsBinding.instance.addObserver(this);
     if (_supportsPushNotifications) {
@@ -71,6 +94,8 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     _foregroundMessageSubscription?.cancel();
     _notificationOpenSubscription?.cancel();
     _widgetSyncScheduler.dispose();
+    _widgetLaunchDispatcher.dispose();
+    _notificationLaunchDispatcher.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -97,34 +122,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       return;
     }
 
-    _pendingNotificationLocation = location;
-    unawaited(_drainNotificationLaunch());
-  }
-
-  Future<void> _drainNotificationLaunch() async {
-    if (_isHandlingNotificationLaunch ||
-        _pendingNotificationLocation == null ||
-        ref.read(authControllerProvider) != AuthStatus.authenticated ||
-        !ref.read(profileControllerProvider).hasValue ||
-        !ref.read(coupleControllerProvider).hasValue) {
-      return;
-    }
-
-    _isHandlingNotificationLaunch = true;
-    final location = _pendingNotificationLocation;
-    try {
-      if (_pendingNotificationLocation == location) {
-        _pendingNotificationLocation = null;
-      }
-      ref.read(appRouterProvider).go(location!);
-    } finally {
-      _isHandlingNotificationLaunch = false;
-      if (_pendingNotificationLocation != null &&
-          _pendingNotificationLocation != location &&
-          mounted) {
-        unawaited(_drainNotificationLaunch());
-      }
-    }
+    _notificationLaunchDispatcher.enqueue(location);
   }
 
   @override
@@ -140,8 +138,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     if (HomeWidgetLaunchAction.fromUri(uri) == null) {
       return;
     }
-    _pendingWidgetUri = uri;
-    unawaited(_drainWidgetLaunch());
+    _widgetLaunchDispatcher.enqueue(uri!);
   }
 
   Future<void> _initializeHomeWidgets() async {
@@ -158,34 +155,6 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     _scheduleWidgetSync();
   }
 
-  Future<void> _drainWidgetLaunch() async {
-    if (_isHandlingWidgetLaunch ||
-        _pendingWidgetUri == null ||
-        ref.read(authControllerProvider) != AuthStatus.authenticated) {
-      return;
-    }
-
-    _isHandlingWidgetLaunch = true;
-    final uri = _pendingWidgetUri;
-    try {
-      final target = await ref
-          .read(homeWidgetLaunchCoordinatorProvider)
-          .resolveTarget(uri);
-      if (!mounted || target == null) {
-        return;
-      }
-      if (_pendingWidgetUri == uri) {
-        _pendingWidgetUri = null;
-      }
-      ref.read(appRouterProvider).go(target);
-    } finally {
-      _isHandlingWidgetLaunch = false;
-      if (_pendingWidgetUri != null && _pendingWidgetUri != uri && mounted) {
-        unawaited(_drainWidgetLaunch());
-      }
-    }
-  }
-
   void _scheduleWidgetSync() {
     if (!_supportsHomeWidgets) {
       return;
@@ -200,21 +169,21 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     if (_supportsHomeWidgets) {
       ref.listen(authControllerProvider, (_, next) {
         if (next == AuthStatus.authenticated) {
-          unawaited(_drainWidgetLaunch());
-          unawaited(_drainNotificationLaunch());
+          unawaited(_widgetLaunchDispatcher.drain());
+          unawaited(_notificationLaunchDispatcher.drain());
         }
         _scheduleWidgetSync();
       });
       ref.listen(coupleControllerProvider, (_, next) {
         if (next.hasValue) {
           _scheduleWidgetSync();
-          unawaited(_drainNotificationLaunch());
+          unawaited(_notificationLaunchDispatcher.drain());
         }
       });
       ref.listen(profileControllerProvider, (_, next) {
         if (next.hasValue) {
           _scheduleWidgetSync();
-          unawaited(_drainNotificationLaunch());
+          unawaited(_notificationLaunchDispatcher.drain());
         }
       });
       ref.listen(coupleCharacterControllerProvider, (_, next) {
