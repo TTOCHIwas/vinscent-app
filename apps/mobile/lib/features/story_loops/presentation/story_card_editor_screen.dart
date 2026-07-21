@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image/image.dart' as image;
 import 'package:uuid/uuid.dart';
 
 import '../../../core/assets/app_icons.dart';
@@ -13,6 +12,7 @@ import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/story_card_editor_controller.dart';
+import '../application/story_card_image_normalizer.dart';
 import '../data/story_card_draft.dart';
 import '../data/story_card_editor_session.dart';
 import '../data/story_card_scene.dart';
@@ -563,7 +563,8 @@ class _StoryCardEditorContentState
     }
 
     try {
-      final normalizedImageBytes = await _normalizeBackgroundImage(sourceBytes);
+      final normalizedImageBytes = await const StoryCardImageNormalizer()
+          .normalize(sourceBytes);
       if (!mounted) {
         return;
       }
@@ -584,40 +585,6 @@ class _StoryCardEditorContentState
         _showSnackBar('사진을 불러오지 못했어요.');
       }
     }
-  }
-
-  Future<Uint8List> _normalizeBackgroundImage(Uint8List source) async {
-    final decoded = image.decodeImage(source);
-    if (decoded == null) {
-      throw const FormatException('Unsupported image format.');
-    }
-
-    var normalized = image.bakeOrientation(decoded);
-    const maximumDimension = 2048;
-    if (normalized.width > maximumDimension ||
-        normalized.height > maximumDimension) {
-      normalized = normalized.width >= normalized.height
-          ? image.copyResize(normalized, width: maximumDimension)
-          : image.copyResize(normalized, height: maximumDimension);
-    }
-
-    var encoded = Uint8List.fromList(image.encodeJpg(normalized, quality: 88));
-    while (encoded.length > 5 * 1024 * 1024 &&
-        normalized.width > 960 &&
-        normalized.height > 960) {
-      normalized = image.copyResize(
-        normalized,
-        width: (normalized.width * 0.8).round(),
-        height: (normalized.height * 0.8).round(),
-      );
-      encoded = Uint8List.fromList(image.encodeJpg(normalized, quality: 82));
-    }
-
-    if (encoded.length > 5 * 1024 * 1024) {
-      throw const FormatException('Image is too large.');
-    }
-
-    return encoded;
   }
 
   Future<void> _loadBackgroundImage(Uint8List? bytes) async {
