@@ -1,10 +1,13 @@
 import {
   createServiceRoleClient,
+  sendPushNotification,
+} from '../_shared/push.ts';
+import {
+  extractWebhookRecordId,
   isRecord,
   jsonResponse,
-  sendPushNotification,
   verifyWebhookSecret,
-} from '../_shared/push.ts';
+} from '../_shared/webhook.ts';
 
 type StoryLoopEventRecord = {
   id: string;
@@ -31,7 +34,7 @@ Deno.serve(async (request) => {
 
   let eventId: string;
   try {
-    eventId = extractEventId(await request.json());
+    eventId = extractWebhookRecordId(await request.json());
   } catch (error) {
     return jsonResponse(
       { error: 'invalid_payload', detail: String(error) },
@@ -71,19 +74,6 @@ Deno.serve(async (request) => {
     );
   }
 });
-
-function extractEventId(payload: unknown) {
-  if (!isRecord(payload)) {
-    throw new Error('payload must be an object');
-  }
-
-  const candidate = isRecord(payload.record) ? payload.record : payload;
-  if (typeof candidate.id !== 'string' || candidate.id === '') {
-    throw new Error('missing id');
-  }
-
-  return candidate.id;
-}
 
 async function loadEvent(
   supabase: ReturnType<typeof createServiceRoleClient>,
