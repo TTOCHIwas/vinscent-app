@@ -1,13 +1,12 @@
 import {
   createServiceRoleClient,
+} from '../_shared/push.ts';
+import {
+  extractWebhookRecordId,
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
-} from '../_shared/push.ts';
-
-type StorageCleanupRequestRecord = {
-  id: string;
-};
+} from '../_shared/webhook.ts';
 
 type StorageCleanupRequest = {
   id: string;
@@ -31,10 +30,9 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
-  let requestRecord: StorageCleanupRequestRecord;
+  let requestId: string;
   try {
-    const payload = await request.json();
-    requestRecord = extractStorageCleanupRequestRecord(payload);
+    requestId = extractWebhookRecordId(await request.json());
   } catch (error) {
     return jsonResponse(
       { error: 'invalid_payload', detail: String(error) },
@@ -46,7 +44,7 @@ Deno.serve(async (request) => {
     const supabase = createServiceRoleClient();
     const cleanupRequest = await loadStorageCleanupRequest(
       supabase,
-      requestRecord.id,
+      requestId,
     );
 
     if (!cleanupRequest) {
@@ -98,21 +96,6 @@ Deno.serve(async (request) => {
     );
   }
 });
-
-function extractStorageCleanupRequestRecord(
-  payload: unknown,
-): StorageCleanupRequestRecord {
-  if (!isRecord(payload)) {
-    throw new Error('payload must be an object');
-  }
-
-  const candidate = isRecord(payload.record) ? payload.record : payload;
-  if (typeof candidate.id !== 'string' || candidate.id === '') {
-    throw new Error('missing id');
-  }
-
-  return { id: candidate.id as string };
-}
 
 async function loadStorageCleanupRequest(
   supabase: ReturnType<typeof createServiceRoleClient>,
