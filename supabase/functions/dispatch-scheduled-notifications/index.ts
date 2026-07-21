@@ -1,8 +1,8 @@
 import {
   createFcmAccessToken,
-  createServiceRoleClient,
   sendPushNotification,
 } from '../_shared/push.ts';
+import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
   jsonResponse,
   verifyWebhookSecret,
