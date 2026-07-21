@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../application/story_card_editor_controller.dart';
 import '../application/story_card_image_normalizer.dart';
 import '../data/story_card_draft.dart';
@@ -21,6 +20,7 @@ import 'widgets/story_card_editor_action_bar.dart';
 import 'widgets/story_card_editor_canvas.dart';
 import 'widgets/story_card_editor_header.dart';
 import 'widgets/story_card_text_input_overlay.dart';
+import 'widgets/story_card_text_trash_target.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
   const StoryCardEditorScreen({super.key});
@@ -240,7 +240,7 @@ class _StoryCardEditorContentState
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _StoryCardTextTrashTarget(
+                  child: StoryCardTextTrashTarget(
                     key: _textTrashTargetKey,
                     isActive: _isTextOverTrash,
                   ),
@@ -934,36 +934,6 @@ class _StoryCardEditorContentState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-class _StoryCardTextTrashTarget extends StatelessWidget {
-  const _StoryCardTextTrashTarget({super.key, required this.isActive});
-
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      key: const ValueKey('story-card-text-trash-target'),
-      dimension: 72,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isActive ? const Color(0xE6000000) : const Color(0xB8000000),
-          border: Border.all(
-            color: isActive ? AppColors.actionPrimary : Colors.white54,
-          ),
-        ),
-        child: Icon(
-          Icons.delete_outline,
-          key: const ValueKey('story-card-text-trash-icon'),
-          color: isActive ? AppColors.actionPrimary : Colors.white,
-          size: isActive ? 36 : 32,
-        ),
-      ),
-    );
   }
 }
 
