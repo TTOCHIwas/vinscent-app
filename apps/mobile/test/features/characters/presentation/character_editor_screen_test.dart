@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/drawing/app_drawing_style.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_repository.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
-import 'package:vinscent/features/characters/presentation/widgets/character_canvas.dart';
-import 'package:vinscent/features/characters/presentation/widgets/character_toolbar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/data/couple_repository.dart';
@@ -28,7 +28,7 @@ void main() {
 
     expect(_saveButton(tester).onPressed, isNull);
 
-    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
     await tester.pump();
 
     expect(_saveButton(tester).onPressed, isNotNull);
@@ -51,7 +51,7 @@ void main() {
 
     expect(_saveButton(tester).onPressed, isNull);
 
-    await tester.tap(find.byType(CharacterCanvas));
+    await tester.tap(find.byType(AppDrawingCanvas));
     await tester.pump();
 
     expect(_saveButton(tester).onPressed, isNotNull);
@@ -64,8 +64,8 @@ void main() {
 
     await _pumpCharacterEditor(tester, repository);
 
-    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
-    await tester.drag(find.byType(CharacterCanvas), const Offset(-60, 30));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(-60, 30));
     await tester.pump();
 
     final undoButton = find.byKey(const ValueKey('character-drawing-undo'));
@@ -95,7 +95,7 @@ void main() {
 
     await _pumpCharacterEditor(tester, repository);
 
-    final canvas = find.byType(CharacterCanvas);
+    final canvas = find.byType(AppDrawingCanvas);
     final canvasRegion = find.byKey(
       const ValueKey('character-drawing-canvas-region'),
     );
@@ -138,7 +138,7 @@ void main() {
 
     await _pumpCharacterEditor(tester, repository);
 
-    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
     await tester.pump();
     expect(_saveButton(tester).onPressed, isNotNull);
 
@@ -152,9 +152,9 @@ void main() {
 
     expect(_saveButton(tester).onPressed, isNull);
 
-    await tester.ensureVisible(find.byType(CharacterCanvas));
+    await tester.ensureVisible(find.byType(AppDrawingCanvas));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(CharacterCanvas), const Offset(60, 30));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(60, 30));
     await tester.pump();
 
     expect(_saveButton(tester).onPressed, isNotNull);
@@ -166,11 +166,11 @@ void main() {
     await _pumpCharacterEditor(tester, repository);
 
     tester.widget<Slider>(find.byType(Slider)).onChanged!(
-      characterThickStrokeWidth,
+      AppDrawingStyle.thickStrokeWidth,
     );
     await tester.pump();
 
-    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
     await tester.pump();
 
     await tester.runAsync(() async {
@@ -185,7 +185,10 @@ void main() {
     final strokes = drawingJson['strokes'] as List<dynamic>;
     final stroke = Map<String, dynamic>.from(strokes.first as Map);
 
-    expect((stroke['width'] as num).toDouble(), characterThickStrokeWidth);
+    expect(
+      (stroke['width'] as num).toDouble(),
+      AppDrawingStyle.thickStrokeWidth,
+    );
   });
 
   testWidgets('returns to settings when back is pressed from a direct route', (

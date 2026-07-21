@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/drawing/app_drawing.dart';
+import '../../../core/drawing/app_drawing_style.dart';
+import '../../../core/drawing/widgets/app_drawing_canvas.dart';
+import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../characters/presentation/widgets/character_canvas.dart';
-import '../../characters/presentation/widgets/character_toolbar.dart';
 import '../../couple/application/couple_controller.dart';
 import '../application/couple_recording_overview_controller.dart';
 import '../application/recording_slot_artwork_codec.dart';
@@ -42,8 +43,8 @@ class _RecordingSlotArtworkEditorScreenState
   List<AppDrawingStroke> _strokes = [];
   AppDrawingStroke? _activeStroke;
   AppDrawingTool _selectedTool = AppDrawingTool.pen;
-  Color _selectedColor = characterColorPalette.first;
-  double _selectedStrokeWidth = characterNormalStrokeWidth;
+  Color _selectedColor = AppDrawingStyle.colorPalette.first;
+  double _selectedStrokeWidth = AppDrawingStyle.normalStrokeWidth;
   CoupleRecordingSlot? _slot;
   bool _isLoading = true;
   bool _loadFailed = false;
@@ -460,7 +461,7 @@ class _RecordingSlotArtworkEditorScreenState
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 520),
-                      child: CharacterToolbar(
+                      child: AppDrawingToolbar(
                         selectedTool: _selectedTool,
                         selectedColor: _selectedColor,
                         selectedStrokeWidth: _selectedStrokeWidth,
@@ -510,7 +511,7 @@ class _RecordingSlotArtworkEditorScreenState
       );
     }
 
-    return CharacterCanvas(
+    return AppDrawingCanvas(
       strokes: _visibleStrokes,
       isReadOnly: isReadOnly,
       onStrokeStart: _startStroke,

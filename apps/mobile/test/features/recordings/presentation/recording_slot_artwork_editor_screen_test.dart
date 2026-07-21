@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vinscent/features/characters/presentation/widgets/character_canvas.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
@@ -54,7 +54,7 @@ void main() {
     expect(find.text('슬롯 그림'), findsOneWidget);
     expect(_saveButton(tester).onPressed, isNull);
 
-    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
     await tester.pump();
     expect(_saveButton(tester).onPressed, isNotNull);
 
@@ -90,7 +90,7 @@ void main() {
     );
     tester.testTextInput.hide();
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
     await tester.pump();
 
     expect(_saveButton(tester).onPressed, isNotNull);
@@ -127,7 +127,7 @@ void main() {
       );
       tester.testTextInput.hide();
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(CharacterCanvas), const Offset(80, 40));
+      await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
       await tester.pump();
 
       await tester.runAsync(() async {

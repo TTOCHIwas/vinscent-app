@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/drawing/app_drawing.dart';
-import '../../../../core/drawing/app_drawing_painter.dart';
+import '../app_drawing.dart';
+import '../app_drawing_painter.dart';
 
-class CharacterCanvas extends StatefulWidget {
-  const CharacterCanvas({
+class AppDrawingCanvas extends StatefulWidget {
+  const AppDrawingCanvas({
     super.key,
     required this.strokes,
     required this.isReadOnly,
@@ -20,10 +20,10 @@ class CharacterCanvas extends StatefulWidget {
   final VoidCallback onStrokeEnd;
 
   @override
-  State<CharacterCanvas> createState() => _CharacterCanvasState();
+  State<AppDrawingCanvas> createState() => _AppDrawingCanvasState();
 }
 
-class _CharacterCanvasState extends State<CharacterCanvas> {
+class _AppDrawingCanvasState extends State<AppDrawingCanvas> {
   int? _activePointer;
 
   @override

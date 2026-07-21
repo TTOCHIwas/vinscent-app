@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/assets/app_icons.dart';
-import '../../../../core/drawing/app_drawing.dart';
-import '../../../../core/drawing/app_drawing_style.dart';
-import '../../../../core/presentation/widgets/app_svg_icon.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../assets/app_icons.dart';
+import '../../presentation/widgets/app_svg_icon.dart';
+import '../../theme/app_colors.dart';
+import '../app_drawing.dart';
+import '../app_drawing_style.dart';
 
-const characterColorPalette = AppDrawingStyle.colorPalette;
-const characterThinStrokeWidth = AppDrawingStyle.thinStrokeWidth;
-const characterNormalStrokeWidth = AppDrawingStyle.normalStrokeWidth;
-const characterThickStrokeWidth = AppDrawingStyle.thickStrokeWidth;
-const characterMinStrokeWidth = AppDrawingStyle.minStrokeWidth;
-const characterMaxStrokeWidth = AppDrawingStyle.maxStrokeWidth;
-
-class CharacterToolbar extends StatelessWidget {
-  const CharacterToolbar({
+class AppDrawingToolbar extends StatelessWidget {
+  const AppDrawingToolbar({
     super.key,
     required this.selectedTool,
     required this.selectedColor,
@@ -101,17 +94,18 @@ class CharacterToolbar extends StatelessWidget {
                 children: [
                   for (
                     var index = 0;
-                    index < characterColorPalette.length;
+                    index < AppDrawingStyle.colorPalette.length;
                     index++
                   )
                     _ColorSwatch(
                       swatchKey: ValueKey('character-drawing-color-$index'),
-                      color: characterColorPalette[index],
+                      color: AppDrawingStyle.colorPalette[index],
                       isEnabled: !isReadOnly,
                       isSelected:
                           selectedTool == AppDrawingTool.pen &&
-                          characterColorPalette[index] == selectedColor,
-                      onTap: () => onColorChanged(characterColorPalette[index]),
+                          AppDrawingStyle.colorPalette[index] == selectedColor,
+                      onTap: () =>
+                          onColorChanged(AppDrawingStyle.colorPalette[index]),
                     ),
                 ],
               ),
@@ -258,11 +252,11 @@ class _StrokeWidthSlider extends StatelessWidget {
         ),
         Expanded(
           child: Slider(
-            min: characterMinStrokeWidth,
-            max: characterMaxStrokeWidth,
+            min: AppDrawingStyle.minStrokeWidth,
+            max: AppDrawingStyle.maxStrokeWidth,
             value: selectedStrokeWidth.clamp(
-              characterMinStrokeWidth,
-              characterMaxStrokeWidth,
+              AppDrawingStyle.minStrokeWidth,
+              AppDrawingStyle.maxStrokeWidth,
             ),
             activeColor: Colors.white,
             inactiveColor: Colors.white38,

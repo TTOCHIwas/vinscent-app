@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_painter.dart';
+import '../../../core/drawing/app_drawing_style.dart';
+import '../../../core/drawing/widgets/app_drawing_canvas.dart';
+import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -15,8 +18,6 @@ import '../../couple/data/couple_failure.dart';
 import '../../profile/application/profile_controller.dart';
 import '../application/couple_character_controller.dart';
 import '../data/couple_character_failure.dart';
-import 'widgets/character_canvas.dart';
-import 'widgets/character_toolbar.dart';
 
 class CharacterEditorScreen extends ConsumerStatefulWidget {
   const CharacterEditorScreen({super.key}) : isInitialSetup = false;
@@ -36,8 +37,8 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   List<AppDrawingStroke> _strokes = [];
   AppDrawingStroke? _activeStroke;
   AppDrawingTool _selectedTool = AppDrawingTool.pen;
-  Color _selectedColor = characterColorPalette.first;
-  double _selectedStrokeWidth = characterNormalStrokeWidth;
+  Color _selectedColor = AppDrawingStyle.colorPalette.first;
+  double _selectedStrokeWidth = AppDrawingStyle.normalStrokeWidth;
   bool _isLoadingDrawing = true;
   bool _isSaving = false;
 
@@ -434,7 +435,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : CharacterCanvas(
+                                    : AppDrawingCanvas(
                                         strokes: _visibleStrokes,
                                         isReadOnly: isReadOnly,
                                         onStrokeStart: _startStroke,
@@ -451,7 +452,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
-                        child: CharacterToolbar(
+                        child: AppDrawingToolbar(
                           selectedTool: _selectedTool,
                           selectedColor: _selectedColor,
                           selectedStrokeWidth: _selectedStrokeWidth,
