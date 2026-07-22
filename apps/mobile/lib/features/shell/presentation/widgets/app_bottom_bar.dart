@@ -25,13 +25,11 @@ class AppBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
     return SizedBox(
-      height: height + bottomInset,
+      height: height,
       width: double.infinity,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 8, 18, 18 + bottomInset),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(_surfaceRadius),
