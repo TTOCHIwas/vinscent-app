@@ -480,38 +480,41 @@ class _CharacterEditorHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 56,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: showSkip
-                ? SizedBox(
-                    width: 84,
-                    child: TextButton(
-                      onPressed: canSkip ? onSkipPressed : null,
-                      child: const Text('건너뛰기'),
-                    ),
-                  )
-                : AppBackButton(onPressed: onBackPressed, iconSize: 32),
-          ),
-          const Text('캐릭터 그리기', style: AppTextStyles.shellTitle),
-          Align(
-            alignment: Alignment.centerRight,
-            child: SizedBox(
-              width: 72,
-              child: TextButton(
-                onPressed: canSave ? onSavePressed : null,
-                child: isSaving
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('저장'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: showSkip
+                  ? SizedBox(
+                      width: 84,
+                      child: TextButton(
+                        onPressed: canSkip ? onSkipPressed : null,
+                        child: const Text('건너뛰기'),
+                      ),
+                    )
+                  : AppBackButton(onPressed: onBackPressed, iconSize: 32),
+            ),
+            const Text('캐릭터 그리기', style: AppTextStyles.shellTitle),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: 72,
+                child: TextButton(
+                  onPressed: canSave ? onSavePressed : null,
+                  child: isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('저장'),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

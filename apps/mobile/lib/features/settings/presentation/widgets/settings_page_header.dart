@@ -18,18 +18,21 @@ class SettingsPageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 56,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: AppBackButton(
-              onPressed: onBackPressed,
-              color: AppColors.textPrimary,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppBackButton(
+                onPressed: onBackPressed,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-          Text(title, style: AppTextStyles.shellTitle),
-        ],
+            Text(title, style: AppTextStyles.shellTitle),
+          ],
+        ),
       ),
     );
   }
