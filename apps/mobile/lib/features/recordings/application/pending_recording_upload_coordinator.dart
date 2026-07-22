@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../couple/data/couple.dart';
+import 'couple_recording_overview_controller.dart';
 import 'pending_recording_draft_policy.dart';
 import 'pending_recording_draft_store.dart';
 
@@ -12,6 +15,23 @@ typedef PendingRecordingUploader =
     });
 
 enum PendingRecordingUploadOutcome { uploaded, retained, discarded }
+
+final pendingRecordingUploadCoordinatorProvider =
+    Provider<PendingRecordingUploadCoordinator>((ref) {
+      return PendingRecordingUploadCoordinator(
+        store: ref.watch(pendingRecordingDraftStoreProvider),
+        uploader: ({required couple, required draft, required audioBytes}) =>
+            ref
+                .read(coupleRecordingOverviewControllerProvider.notifier)
+                .uploadCurrentRecording(
+                  couple: couple,
+                  audioBytes: audioBytes,
+                  durationMs: draft.durationMs,
+                  recordingId: draft.recordingId,
+                  resumeExistingUpload: true,
+                ),
+      );
+    });
 
 class PendingRecordingUploadResult {
   const PendingRecordingUploadResult({required this.outcome, this.error});

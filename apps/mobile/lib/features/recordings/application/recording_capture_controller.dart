@@ -2,16 +2,15 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:record/record.dart';
 
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../data/couple_recording_failure.dart';
 import '../data/recording_id_generator.dart';
-import 'couple_recording_overview_controller.dart';
-import 'pending_recording_draft_policy.dart';
 import 'pending_recording_draft_store.dart';
+import 'pending_recording_upload_coordinator.dart';
 import 'recording_capture_error_messages.dart';
+import 'recording_capture_device.dart';
 import 'recording_draft_file.dart';
 
 final recordingCaptureControllerProvider =
@@ -61,10 +60,9 @@ class RecordingCaptureState {
 
 class RecordingCaptureController extends Notifier<RecordingCaptureState> {
   static const _tickInterval = Duration(milliseconds: 100);
-  static const _recordConfig = RecordConfig(encoder: AudioEncoder.aacLc);
 
-  late final AudioRecorder _recorder;
-  late final PendingRecordingDraftStore _draftStore;
+  late final RecordingCaptureDevice _recorder;
+  late final PendingRecordingUploadCoordinator _draftCoordinator;
   Timer? _ticker;
   DateTime? _startedAt;
   String? _filePath;
@@ -72,13 +70,12 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
   Couple? _couple;
   PendingRecordingDraft? _pendingDraft;
   Future<void>? _restoreFuture;
-  Future<void>? _pendingUpload;
   bool _pendingStopAfterPrepare = false;
 
   @override
   RecordingCaptureState build() {
-    _recorder = AudioRecorder();
-    _draftStore = ref.read(pendingRecordingDraftStoreProvider);
+    _recorder = ref.read(recordingCaptureDeviceFactoryProvider)();
+    _draftCoordinator = ref.read(pendingRecordingUploadCoordinatorProvider);
     _restoreFuture = Future<void>.microtask(_restorePendingRecording);
     ref.onDispose(() {
       _ticker?.cancel();
@@ -100,7 +97,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
       return;
     }
 
-    final pendingDraft = _pendingDraft ?? await _draftStore.load();
+    final pendingDraft = _pendingDraft ?? await _draftCoordinator.load();
     if (pendingDraft != null) {
       _pendingDraft = pendingDraft;
       if (pendingDraft.coupleId == couple.id) {
@@ -112,7 +109,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
         return;
       }
 
-      await _draftStore.remove(pendingDraft);
+      await _draftCoordinator.discard(pendingDraft);
       _pendingDraft = null;
     }
 
@@ -134,11 +131,11 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
       }
 
       final recordingId = generateRecordingId();
-      final filePath = await _draftStore.createFilePath(recordingId);
+      final filePath = await _draftCoordinator.createFilePath(recordingId);
 
       _recordingId = recordingId;
       _filePath = filePath;
-      await _recorder.start(_recordConfig, path: filePath);
+      await _recorder.start(path: filePath);
 
       if (_pendingStopAfterPrepare) {
         await _cancelRecording();
@@ -243,7 +240,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
         await deleteRecordingDraftFile(stoppedPath);
       }
 
-      await _draftStore.persist(draft);
+      await _draftCoordinator.persist(draft);
       _pendingDraft = draft;
       _clearActiveCaptureState();
 
@@ -266,7 +263,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
 
   Future<void> _restorePendingRecording() async {
     try {
-      final draft = await _draftStore.load();
+      final draft = await _draftCoordinator.load();
       if (!ref.mounted || draft == null) {
         return;
       }
@@ -277,7 +274,7 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
         return;
       }
       if (couple.id != draft.coupleId || !couple.canEditSharedData) {
-        await _draftStore.remove(draft);
+        await _draftCoordinator.discard(draft);
         _pendingDraft = null;
         return;
       }
@@ -295,32 +292,6 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
     required PendingRecordingDraft draft,
     required bool showError,
   }) async {
-    final existingUpload = _pendingUpload;
-    if (existingUpload != null) {
-      await existingUpload;
-      return;
-    }
-
-    final upload = _performPendingUpload(
-      couple: couple,
-      draft: draft,
-      showError: showError,
-    );
-    _pendingUpload = upload;
-    try {
-      await upload;
-    } finally {
-      if (identical(_pendingUpload, upload)) {
-        _pendingUpload = null;
-      }
-    }
-  }
-
-  Future<void> _performPendingUpload({
-    required Couple couple,
-    required PendingRecordingDraft draft,
-    required bool showError,
-  }) async {
     if (ref.mounted) {
       state = const RecordingCaptureState(
         phase: RecordingCapturePhase.uploading,
@@ -328,47 +299,20 @@ class RecordingCaptureController extends Notifier<RecordingCaptureState> {
       );
     }
 
-    try {
-      final audioBytes = await _draftStore.readAudioBytes(draft);
-      for (var attempt = 0; attempt < 2; attempt += 1) {
-        try {
-          await ref
-              .read(coupleRecordingOverviewControllerProvider.notifier)
-              .uploadCurrentRecording(
-                couple: couple,
-                audioBytes: audioBytes,
-                durationMs: draft.durationMs,
-                recordingId: draft.recordingId,
-                resumeExistingUpload: true,
-              );
-          break;
-        } catch (error) {
-          if (attempt == 1 || !shouldRetainPendingRecordingDraft(error)) {
-            rethrow;
-          }
-        }
-      }
-
-      await _draftStore.remove(draft);
-      _pendingDraft = null;
-      if (ref.mounted) {
-        state = const RecordingCaptureState.idle();
-      }
-    } catch (error) {
-      if (!shouldRetainPendingRecordingDraft(error)) {
-        try {
-          await _draftStore.remove(draft);
-        } catch (_) {}
-        _pendingDraft = null;
-      }
-      if (ref.mounted) {
-        state = showError
-            ? const RecordingCaptureState.idle().copyWith(
-                errorMessage: recordingCaptureErrorMessage(error),
-              )
-            : const RecordingCaptureState.idle();
-      }
+    final result = await _draftCoordinator.upload(couple: couple, draft: draft);
+    _pendingDraft = result.outcome == PendingRecordingUploadOutcome.retained
+        ? draft
+        : null;
+    if (!ref.mounted) {
+      return;
     }
+
+    final error = result.error;
+    state = showError && error != null
+        ? const RecordingCaptureState.idle().copyWith(
+            errorMessage: recordingCaptureErrorMessage(error),
+          )
+        : const RecordingCaptureState.idle();
   }
 
   Future<void> _disposeRecorderAndActiveDraft(String? filePath) async {
