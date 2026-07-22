@@ -147,6 +147,36 @@ void main() {
       );
     },
   );
+
+  test(
+    'forwards a stable recording id when resuming a pending upload',
+    () async {
+      final repository = _FakeRecordingRepository();
+      final changeSource = _FakeOverviewChangeSource();
+      final container = _buildContainer(
+        repository: repository,
+        changeSource: changeSource,
+      );
+      addTearDown(container.dispose);
+
+      await container.read(coupleRecordingOverviewControllerProvider.future);
+      await container
+          .read(coupleRecordingOverviewControllerProvider.notifier)
+          .uploadCurrentRecording(
+            couple: activeCouple(),
+            audioBytes: Uint8List.fromList([1, 2, 3]),
+            durationMs: 900,
+            recordingId: '30000000-0000-0000-0000-000000000001',
+            resumeExistingUpload: true,
+          );
+
+      expect(
+        repository.uploadedRecordingId,
+        '30000000-0000-0000-0000-000000000001',
+      );
+      expect(repository.didResumeExistingUpload, isTrue);
+    },
+  );
 }
 
 ProviderContainer _buildContainer({
@@ -208,6 +238,8 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
   int maxConcurrentFetchCount = 0;
   Completer<void>? fetchBarrier;
   Object? fetchError;
+  String? uploadedRecordingId;
+  bool didResumeExistingUpload = false;
 
   @override
   Future<CoupleRecordingOverview> fetchOverview() async {
@@ -280,7 +312,10 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
     required int durationMs,
     String? recordingId,
     bool resumeExistingUpload = false,
-  }) async {}
+  }) async {
+    uploadedRecordingId = recordingId;
+    didResumeExistingUpload = resumeExistingUpload;
+  }
 
   @override
   Future<void> upsertSlotPlacement({

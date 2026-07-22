@@ -200,6 +200,8 @@ class CoupleRecordingOverviewController
     required Couple couple,
     required Uint8List audioBytes,
     required int durationMs,
+    String? recordingId,
+    bool resumeExistingUpload = false,
   }) async {
     await ref
         .read(coupleRecordingRepositoryProvider)
@@ -207,6 +209,8 @@ class CoupleRecordingOverviewController
           coupleId: couple.id,
           audioBytes: audioBytes,
           durationMs: durationMs,
+          recordingId: recordingId,
+          resumeExistingUpload: resumeExistingUpload,
         );
     await _refreshAfterMutation();
   }

@@ -110,6 +110,14 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
         'recordingId=$resolvedRecordingId, path=$storagePath',
       );
     } on TimeoutException {
+      if (resumeExistingUpload &&
+          await _isCurrentRecording(resolvedRecordingId)) {
+        debugRecordingLog(
+          'Timed out widget upload was already finalized: '
+          'recordingId=$resolvedRecordingId',
+        );
+        return;
+      }
       debugRecordingLog(
         'Storage upload timed out: '
         'recordingId=$resolvedRecordingId, path=$storagePath',
@@ -158,6 +166,14 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
         'Finalize RPC completed: recordingId=$resolvedRecordingId',
       );
     } on TimeoutException {
+      if (resumeExistingUpload &&
+          await _isCurrentRecording(resolvedRecordingId)) {
+        debugRecordingLog(
+          'Timed out recording finalize was already completed: '
+          'recordingId=$resolvedRecordingId',
+        );
+        return;
+      }
       debugRecordingLog(
         'Finalize RPC timed out: recordingId=$resolvedRecordingId',
       );

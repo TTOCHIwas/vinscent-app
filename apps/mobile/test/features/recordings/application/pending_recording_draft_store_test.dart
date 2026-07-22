@@ -1,20 +1,20 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vinscent/features/recordings/application/pending_recording_draft_store.dart';
 
 void main() {
   late Directory supportDirectory;
   late SharedPreferencesPendingRecordingDraftStore store;
+  late _MemoryPendingRecordingDraftMetadataStore metadataStore;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
     supportDirectory = await Directory.systemTemp.createTemp(
       'vinscent-recording-draft-',
     );
+    metadataStore = _MemoryPendingRecordingDraftMetadataStore();
     store = SharedPreferencesPendingRecordingDraftStore(
-      preferences: SharedPreferencesAsync(),
+      metadataStore: metadataStore,
       supportDirectoryLoader: () async => supportDirectory,
     );
   });
@@ -25,20 +25,23 @@ void main() {
     }
   });
 
-  test('persists and restores a pending recording with its audio file', () async {
-    const draft = PendingRecordingDraft(
-      recordingId: '30000000-0000-0000-0000-000000000001',
-      coupleId: '20000000-0000-0000-0000-000000000001',
-      durationMs: 1200,
-    );
-    final filePath = await store.createFilePath(draft.recordingId);
-    await File(filePath).writeAsBytes([1, 2, 3]);
+  test(
+    'persists and restores a pending recording with its audio file',
+    () async {
+      const draft = PendingRecordingDraft(
+        recordingId: '30000000-0000-0000-0000-000000000001',
+        coupleId: '20000000-0000-0000-0000-000000000001',
+        durationMs: 1200,
+      );
+      final filePath = await store.createFilePath(draft.recordingId);
+      await File(filePath).writeAsBytes([1, 2, 3]);
 
-    await store.persist(draft);
+      await store.persist(draft);
 
-    expect(await store.load(), draft);
-    expect(await store.readAudioBytes(draft), [1, 2, 3]);
-  });
+      expect(await store.load(), draft);
+      expect(await store.readAudioBytes(draft), [1, 2, 3]);
+    },
+  );
 
   test('remove deletes both pending metadata and its audio file', () async {
     const draft = PendingRecordingDraft(
@@ -67,4 +70,22 @@ void main() {
     expect(await store.load(), isNull);
     expect(await store.load(), isNull);
   });
+}
+
+class _MemoryPendingRecordingDraftMetadataStore
+    implements PendingRecordingDraftMetadataStore {
+  String? value;
+
+  @override
+  Future<void> clear() async {
+    value = null;
+  }
+
+  @override
+  Future<String?> read() async => value;
+
+  @override
+  Future<void> write(String value) async {
+    this.value = value;
+  }
 }
