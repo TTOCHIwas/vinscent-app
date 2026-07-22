@@ -88,7 +88,7 @@ cmd /c npx --yes supabase@latest test db
 
 ```powershell
 cd D:\vinscent
-node --test supabase/tests/functions/environment.test.ts supabase/tests/functions/webhook.test.ts supabase/tests/functions/fcm.test.ts
+node --test supabase/tests/functions/environment.test.ts supabase/tests/functions/webhook.test.ts supabase/tests/functions/fcm.test.ts supabase/tests/functions/push_dispatch_repository.test.ts
 Get-ChildItem supabase/functions -Recurse -Filter *.ts | ForEach-Object { node --check $_.FullName }
 ```
 
