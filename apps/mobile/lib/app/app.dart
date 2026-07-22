@@ -21,6 +21,7 @@ import '../features/notifications/application/push_notification_route.dart';
 import '../features/notifications/data/push_token_repository.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/recordings/application/couple_recording_overview_controller.dart';
+import '../features/story_loops/application/story_loop_realtime_controller.dart';
 import '../features/story_loops/application/today_story_loop_summary_provider.dart';
 import 'application/latest_launch_dispatcher.dart';
 import 'router.dart';
@@ -80,6 +81,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     }
     if (_supportsHomeWidgets) {
       _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((_) {
+        ref
+            .read(storyLoopRealtimeControllerProvider.notifier)
+            .refreshReadModels();
         _scheduleWidgetSync();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -130,6 +134,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     if (state == AppLifecycleState.resumed) {
       ref.read(todayControllerProvider.notifier).refresh();
       ref.invalidate(coupleControllerProvider);
+      ref
+          .read(storyLoopRealtimeControllerProvider.notifier)
+          .refreshReadModels();
       _scheduleWidgetSync();
     }
   }
@@ -177,6 +184,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     ref.watch(pushTokenControllerProvider);
+    ref.watch(storyLoopRealtimeControllerProvider);
     if (_supportsHomeWidgets) {
       ref.listen(authControllerProvider, (_, next) {
         if (next == AuthStatus.authenticated) {

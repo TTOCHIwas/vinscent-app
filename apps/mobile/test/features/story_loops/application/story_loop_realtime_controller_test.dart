@@ -24,9 +24,7 @@ void main() {
     changeSource.emit();
     changeSource.emit();
 
-    await _waitUntil(
-      () => container.read(storyLoopReadRevisionProvider) == 1,
-    );
+    await _waitUntil(() => container.read(storyLoopReadRevisionProvider) == 1);
     await Future<void>.delayed(const Duration(milliseconds: 250));
 
     expect(container.read(storyLoopReadRevisionProvider), 1);

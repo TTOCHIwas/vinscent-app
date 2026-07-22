@@ -11,57 +11,60 @@ import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
 void main() {
-  test('refreshes every active story loop read model when revision changes', () async {
-    final date = DateTime(2026, 7, 6);
-    final month = DateTime(2026, 7);
-    final repository = FakeStoryLoopReadRepository(
-      todaySummary: sampleTodaySummary(),
-      details: {date: sampleStoryLoopDetail()},
-      monthSummaries: {
-        month: [sampleMonthSummaryDay()],
-      },
-    );
-    final container = ProviderContainer(
-      overrides: [
-        coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => activeCouple(currentDate: date),
-        ),
-        storyLoopReadRepositoryProvider.overrideWithValue(repository),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'refreshes every active story loop read model when revision changes',
+    () async {
+      final date = DateTime(2026, 7, 6);
+      final month = DateTime(2026, 7);
+      final repository = FakeStoryLoopReadRepository(
+        todaySummary: sampleTodaySummary(),
+        details: {date: sampleStoryLoopDetail()},
+        monthSummaries: {
+          month: [sampleMonthSummaryDay()],
+        },
+      );
+      final container = ProviderContainer(
+        overrides: [
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => activeCouple(currentDate: date),
+          ),
+          storyLoopReadRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final todaySubscription = container.listen(
-      todayStoryLoopSummaryProvider,
-      (_, _) {},
-    );
-    final detailSubscription = container.listen(
-      storyLoopDetailProvider(date),
-      (_, _) {},
-    );
-    final monthSubscription = container.listen(
-      storyLoopMonthSummaryProvider(month),
-      (_, _) {},
-    );
-    addTearDown(todaySubscription.close);
-    addTearDown(detailSubscription.close);
-    addTearDown(monthSubscription.close);
+      final todaySubscription = container.listen(
+        todayStoryLoopSummaryProvider,
+        (_, _) {},
+      );
+      final detailSubscription = container.listen(
+        storyLoopDetailProvider(date),
+        (_, _) {},
+      );
+      final monthSubscription = container.listen(
+        storyLoopMonthSummaryProvider(month),
+        (_, _) {},
+      );
+      addTearDown(todaySubscription.close);
+      addTearDown(detailSubscription.close);
+      addTearDown(monthSubscription.close);
 
-    await Future.wait([
-      container.read(todayStoryLoopSummaryProvider.future),
-      container.read(storyLoopDetailProvider(date).future),
-      container.read(storyLoopMonthSummaryProvider(month).future),
-    ]);
+      await Future.wait([
+        container.read(todayStoryLoopSummaryProvider.future),
+        container.read(storyLoopDetailProvider(date).future),
+        container.read(storyLoopMonthSummaryProvider(month).future),
+      ]);
 
-    container.read(storyLoopReadRevisionProvider.notifier).advance();
+      container.read(storyLoopReadRevisionProvider.notifier).advance();
 
-    await _waitUntil(
-      () =>
-          repository.todaySummaryCallCount == 2 &&
-          repository.requestedDetailDates.length == 2 &&
-          repository.requestedMonths.length == 2,
-    );
-  });
+      await _waitUntil(
+        () =>
+            repository.todaySummaryCallCount == 2 &&
+            repository.requestedDetailDates.length == 2 &&
+            repository.requestedMonths.length == 2,
+      );
+    },
+  );
 }
 
 Future<void> _waitUntil(bool Function() condition) async {

@@ -7,10 +7,14 @@ import '../../couple/data/couple.dart';
 import '../data/story_loop_detail.dart';
 import '../data/story_loop_detail_state.dart';
 import '../data/story_loop_read_repository.dart';
+import 'story_loop_realtime_controller.dart';
 
 final storyLoopDetailProvider = FutureProvider.autoDispose
     .family<StoryLoopDetailState, DateTime?>((ref, targetDate) async {
-      final fallbackToday = calendarDateOnly(ref.watch(todayControllerProvider));
+      ref.watch(storyLoopReadRevisionProvider);
+      final fallbackToday = calendarDateOnly(
+        ref.watch(todayControllerProvider),
+      );
       final couple = await ref.watch(coupleControllerProvider.future);
       final currentDate = calendarDateOnly(
         couple?.effectiveCurrentDate ?? fallbackToday,
