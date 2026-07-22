@@ -100,4 +100,33 @@ void main() {
 
     expect(tester.widget<Text>(find.byType(Text)).data, 'today question');
   });
+
+  testWidgets('does not ellipsize speech when system text is enlarged', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: const Scaffold(
+          body: SizedBox(
+            width: 180,
+            child: CharacterSpeechBubble(
+              speechText: '서로 좋아하는 시간을 천천히 이야기해 보자',
+              maxLines: 2,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final text = tester.widget<Text>(find.byType(Text));
+    expect(text.maxLines, isNull);
+    expect(text.overflow, isNull);
+    expect(tester.takeException(), isNull);
+  });
 }
