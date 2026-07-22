@@ -51,10 +51,7 @@ void main() {
       title: 'title',
       expectedSlotRevision: 3,
     );
-    await repository.deleteSlot(
-      slotId: 'slot-id',
-      expectedSlotRevision: 4,
-    );
+    await repository.deleteSlot(slotId: 'slot-id', expectedSlotRevision: 4);
     await repository.openNextSlot();
 
     expect(result, same(saveResult));
