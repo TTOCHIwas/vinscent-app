@@ -8,16 +8,16 @@ import '../recording_debug_log.dart';
 import 'couple_recording.dart';
 import 'couple_recording_data_gateways.dart';
 import 'couple_recording_failure.dart';
-import 'couple_recording_read_mapper.dart';
 import 'recording_id_generator.dart';
 import 'recording_slot_artwork_path.dart';
 import 'recording_upload_failure_policy.dart';
 import 'couple_recording_repository_contract.dart';
+import 'supabase_couple_recording_overview_reader.dart';
 
 class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
   const SupabaseCoupleRecordingRepository({
     CoupleRecordingOverviewReader overviewReader =
-        const _SupabaseCoupleRecordingDataGateway(),
+        const SupabaseCoupleRecordingOverviewReader(),
     CurrentCoupleRecordingWriter currentRecordingWriter =
         const _SupabaseCoupleRecordingDataGateway(),
     CoupleRecordingSlotWriter slotWriter =
@@ -144,70 +144,14 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
 
 class _SupabaseCoupleRecordingDataGateway
     implements
-        CoupleRecordingOverviewReader,
         CurrentCoupleRecordingWriter,
         CoupleRecordingSlotWriter,
         CoupleRecordingSlotArtworkStore,
         CoupleRecordingSlotPlacementStore {
-  const _SupabaseCoupleRecordingDataGateway({
-    CoupleRecordingReadMapper readMapper = const CoupleRecordingReadMapper(),
-  }) : _readMapper = readMapper;
+  const _SupabaseCoupleRecordingDataGateway();
 
   static const _bucketId = 'couple-recordings';
-  static const _signedUrlExpiresInSeconds = 60 * 60;
   static const _maxArtworkObjectBytes = 256 * 1024;
-
-  final CoupleRecordingReadMapper _readMapper;
-
-  @override
-  Future<CoupleRecordingOverview> fetchOverview() async {
-    _ensureSupabaseConfigured();
-
-    try {
-      final currentData = await Supabase.instance.client
-          .rpc('get_current_couple_recording')
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final currentRow = _asSingleRow(currentData);
-      if (currentRow == null) {
-        throw const CoupleRecordingRepositoryException(
-          CoupleRecordingFailureReason.unknown,
-        );
-      }
-
-      final slotData = await Supabase.instance.client
-          .rpc('list_couple_recording_slots')
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final slotRows = _asRows(slotData);
-
-      final currentRecording = await _readMapper.mapCurrentRecording(
-        currentRow,
-        resolveAudioUrl: _createSignedUrl,
-      );
-      final savedSlots = await Future.wait(
-        slotRows.map(
-          (row) => _readMapper.mapSavedSlot(
-            row,
-            resolveAudioUrl: _createSignedUrl,
-            resolveArtworkUrl: _createArtworkSignedUrl,
-          ),
-        ),
-      );
-
-      return CoupleRecordingOverview(
-        slotLimit: currentRow['slot_limit'] as int,
-        currentRecording: currentRecording,
-        savedSlots: savedSlots,
-      );
-    } on TimeoutException {
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    } on StorageException catch (error) {
-      throw _mapStorageError(error);
-    }
-  }
 
   @override
   Future<void> uploadCurrentRecording({
@@ -640,18 +584,6 @@ class _SupabaseCoupleRecordingDataGateway
     }
   }
 
-  Future<String> _createSignedUrl(String path) {
-    return _bucket
-        .createSignedUrl(path, _signedUrlExpiresInSeconds)
-        .timeout(AppConfig.supabaseRpcTimeout);
-  }
-
-  Future<String> _createArtworkSignedUrl(String path) {
-    return _artworkBucket
-        .createSignedUrl(path, _signedUrlExpiresInSeconds)
-        .timeout(AppConfig.supabaseRpcTimeout);
-  }
-
   Future<void> _discardUploadedSlotArtwork({
     required bool uploadAttempted,
     required String slotId,
@@ -707,30 +639,6 @@ class _SupabaseCoupleRecordingDataGateway
     throw const CoupleRecordingRepositoryException(
       CoupleRecordingFailureReason.unknown,
     );
-  }
-
-  List<Map<String, dynamic>> _asRows(Object? data) {
-    if (data == null) {
-      return const [];
-    }
-
-    if (data is List<Map<String, dynamic>>) {
-      return data;
-    }
-
-    if (data is List) {
-      return data
-          .whereType<Map>()
-          .map((row) => Map<String, dynamic>.from(row))
-          .toList(growable: false);
-    }
-
-    final row = _asSingleRow(data);
-    if (row == null) {
-      return const [];
-    }
-
-    return [row];
   }
 
   CoupleRecordingRepositoryException _mapPostgrestError(
