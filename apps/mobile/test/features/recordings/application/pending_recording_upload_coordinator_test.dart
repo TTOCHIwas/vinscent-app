@@ -152,8 +152,7 @@ void main() {
   });
 }
 
-class _MemoryPendingRecordingDraftStore
-    implements PendingRecordingDraftStore {
+class _MemoryPendingRecordingDraftStore implements PendingRecordingDraftStore {
   _MemoryPendingRecordingDraftStore({required this.draft});
 
   PendingRecordingDraft? draft;
@@ -187,10 +186,8 @@ class _MemoryPendingRecordingDraftStore
 }
 
 class _FakePendingRecordingUploader {
-  _FakePendingRecordingUploader({
-    List<Object> errors = const [],
-    this.barrier,
-  }) : _errors = List<Object>.from(errors);
+  _FakePendingRecordingUploader({List<Object> errors = const [], this.barrier})
+    : _errors = List<Object>.from(errors);
 
   final List<Object> _errors;
   final Completer<void>? barrier;
