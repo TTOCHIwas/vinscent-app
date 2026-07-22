@@ -65,6 +65,7 @@ class AppShell extends StatelessWidget {
   bool get _hidesMainHeader {
     return location == '/calendar' ||
         location == '/calendar/question' ||
+        location == '/ai' ||
         location.startsWith('/home/recordings') ||
         location == '/home/question' ||
         location == '/home/question/edit' ||

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/presentation/ai_screen.dart';
+import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 
 void main() {
   testWidgets('shows consent entry before the current member opts in', (
@@ -11,7 +12,7 @@ void main() {
   ) async {
     await _pump(tester, _dashboard(myConsent: AiConsentStatus.revoked));
 
-    expect(find.text('우리 둘의 AI'), findsOneWidget);
+    expect(_wordBoundaryText('우리 둘의 AI'), findsOneWidget);
     expect(find.byKey(const Key('ai-consent-start')), findsOneWidget);
     expect(find.text('AI 학습 시작하기'), findsOneWidget);
     expect(find.byKey(const Key('ai-learning-progress')), findsOneWidget);
@@ -22,7 +23,7 @@ void main() {
   ) async {
     await _pump(tester, _dashboard(partnerConsent: AiConsentStatus.revoked));
 
-    expect(find.text('상대방 동의 대기 중'), findsOneWidget);
+    expect(_wordBoundaryText('상대방 동의 대기 중'), findsOneWidget);
     expect(find.byKey(const Key('ai-consent-start')), findsNothing);
   });
 
@@ -32,8 +33,8 @@ void main() {
     await _pump(tester, _dashboard(memories: [_memory]));
 
     expect(find.text('8 / 24'), findsOneWidget);
-    expect(find.text('함께 산책하는 시간을 좋아해요.'), findsNothing);
-    expect(find.text('24개의 답변이 모이면 기억을 함께 확인할 수 있어'), findsOneWidget);
+    expect(_wordBoundaryText('함께 산책하는 시간을 좋아해요.'), findsNothing);
+    expect(_wordBoundaryText('24개의 답변이 모이면 기억을 함께 확인할 수 있어'), findsOneWidget);
   });
 
   testWidgets('shows only yes and no actions during foundation memory review', (
@@ -50,7 +51,7 @@ void main() {
     );
 
     expect(find.text('24 / 24'), findsOneWidget);
-    expect(find.text('함께 산책하는 시간을 좋아해요.'), findsOneWidget);
+    expect(_wordBoundaryText('함께 산책하는 시간을 좋아해요.'), findsOneWidget);
     expect(
       find.byKey(const Key('ai-memory-confirm-memory-id')),
       findsOneWidget,
@@ -72,11 +73,34 @@ void main() {
       ),
     );
 
-    expect(find.text('상대방이 기억을 확인하는 중'), findsOneWidget);
+    expect(_wordBoundaryText('상대방이 기억을 확인하는 중'), findsOneWidget);
+  });
+
+  testWidgets('wraps dashboard status text at a large system text size', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pump(tester, _dashboard(), textScaleFactor: 2);
+
+    expect(tester.takeException(), isNull);
   });
 }
 
-Future<void> _pump(WidgetTester tester, AiLearningDashboard dashboard) async {
+Finder _wordBoundaryText(String text) {
+  return find.byWidgetPredicate(
+    (widget) => widget is WordBoundaryText && widget.text == text,
+  );
+}
+
+Future<void> _pump(
+  WidgetTester tester,
+  AiLearningDashboard dashboard, {
+  double textScaleFactor = 1,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -84,7 +108,15 @@ Future<void> _pump(WidgetTester tester, AiLearningDashboard dashboard) async {
           (ref, notifier) async => dashboard,
         ),
       ],
-      child: const MaterialApp(home: Scaffold(body: AiScreen())),
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+          child: child!,
+        ),
+        home: const Scaffold(body: AiScreen()),
+      ),
     ),
   );
   await tester.pumpAndSettle();

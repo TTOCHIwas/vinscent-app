@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../application/ai_learning_controller.dart';
 import 'widgets/ai_learning_dashboard_view.dart';
 import 'widgets/ai_learning_error_message.dart';
+import 'widgets/ai_tab_header.dart';
 
 class AiScreen extends ConsumerWidget {
   const AiScreen({super.key});
@@ -14,15 +15,22 @@ class AiScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(aiLearningControllerProvider);
 
-    return dashboard.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.textPrimary),
-      ),
-      error: (error, stackTrace) => _AiErrorView(
-        message: aiLearningErrorMessage(error),
-        onRetry: () => ref.invalidate(aiLearningControllerProvider),
-      ),
-      data: (data) => AiLearningDashboardView(dashboard: data),
+    return Column(
+      children: [
+        const AiTabHeader(),
+        Expanded(
+          child: dashboard.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppColors.textPrimary),
+            ),
+            error: (error, stackTrace) => _AiErrorView(
+              message: aiLearningErrorMessage(error),
+              onRetry: () => ref.invalidate(aiLearningControllerProvider),
+            ),
+            data: (data) => AiLearningDashboardView(dashboard: data),
+          ),
+        ),
+      ],
     );
   }
 }

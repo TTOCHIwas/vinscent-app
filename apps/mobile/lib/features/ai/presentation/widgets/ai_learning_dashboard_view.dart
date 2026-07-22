@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/widgets/app_action_button.dart';
+import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../application/ai_learning_controller.dart';
@@ -24,17 +25,6 @@ class AiLearningDashboardView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 128),
         children: [
-          const Text(
-            '우리 둘의 AI',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              height: 1.3,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 32),
           _LearningProgressSection(progress: dashboard.progress),
           const SizedBox(height: 32),
           _ConsentSection(progress: dashboard.progress),
@@ -142,11 +132,15 @@ class _LearningProgressSection extends StatelessWidget {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _stageLabel(progress.stage),
-              style: AppTextStyles.homeBodyMedium,
+            Expanded(
+              child: WordBoundaryText(
+                _stageLabel(progress.stage),
+                style: AppTextStyles.homeBodyMedium,
+              ),
             ),
+            const SizedBox(width: 16),
             Text(
               '${progress.completedCount} / ${progress.totalCount}',
               style: AppTextStyles.homeBodyMedium,
@@ -231,10 +225,13 @@ class _StatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 22, color: AppColors.textPrimary),
         const SizedBox(width: 10),
-        Text(label, style: AppTextStyles.homeBodyMedium),
+        Expanded(
+          child: WordBoundaryText(label, style: AppTextStyles.homeBodyMedium),
+        ),
       ],
     );
   }

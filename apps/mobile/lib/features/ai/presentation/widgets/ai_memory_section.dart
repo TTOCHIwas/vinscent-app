@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../data/ai_learning_dashboard.dart';
 
 typedef AiMemoryDecisionCallback =
@@ -83,7 +84,10 @@ class _MemoryRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(memory.statement, style: AppTextStyles.homeBody),
+                WordBoundaryText(
+                  memory.statement,
+                  style: AppTextStyles.homeBody,
+                ),
                 if (!memory.canConfirm) ...[
                   const SizedBox(height: 8),
                   Text(

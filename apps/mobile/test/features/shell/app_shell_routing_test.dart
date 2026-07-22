@@ -10,6 +10,7 @@ import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
+import 'package:vinscent/features/ai/presentation/widgets/ai_tab_header.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
@@ -311,9 +312,18 @@ void main() {
       await tester.tap(find.byType(ShellTab).at(2));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AppHeader), findsOneWidget);
+      expect(find.byType(AppHeader), findsNothing);
+      expect(find.byType(AiTabHeader), findsOneWidget);
       expect(find.byType(AppBottomBar), findsOneWidget);
       expect(_tabs(tester)[2].isSelected, isTrue);
+      expect(
+        find.byKey(const Key('app-header-recording-library')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('app-header-settings')), findsNothing);
+
+      await tester.tap(find.byType(ShellTab).at(0));
+      await tester.pumpAndSettle();
 
       final settingsControl = find.byKey(const Key('app-header-settings'));
       await tester.tap(settingsControl);
