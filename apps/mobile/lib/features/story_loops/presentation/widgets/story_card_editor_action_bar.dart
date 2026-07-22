@@ -17,7 +17,7 @@ class StoryCardEditorActionBar extends StatelessWidget {
   final StoryCardEditorTool interactionMode;
   final bool hasBackground;
   final VoidCallback onAddTextPressed;
-  final VoidCallback onEditCaptionPressed;
+  final VoidCallback? onEditCaptionPressed;
   final VoidCallback onDrawingModePressed;
   final VoidCallback? onBackgroundColorPressed;
 
@@ -32,13 +32,15 @@ class StoryCardEditorActionBar extends StatelessWidget {
           isSelected: interactionMode == StoryCardEditorTool.text,
           onPressed: onAddTextPressed,
         ),
-        const SizedBox(height: 8),
-        StoryCardEditorIconButton(
-          key: const ValueKey('story-card-caption-tool'),
-          tooltip: '짧은 글',
-          icon: Icons.short_text,
-          onPressed: onEditCaptionPressed,
-        ),
+        if (onEditCaptionPressed != null) ...[
+          const SizedBox(height: 8),
+          StoryCardEditorIconButton(
+            key: const ValueKey('story-card-caption-tool'),
+            tooltip: '짧은 글',
+            icon: Icons.short_text,
+            onPressed: onEditCaptionPressed,
+          ),
+        ],
         const SizedBox(height: 8),
         StoryCardEditorIconButton(
           tooltip: '그리기',

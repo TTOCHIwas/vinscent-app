@@ -5,7 +5,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../application/story_card_editor_session.dart';
 import 'story_card_camera_controller.dart';
+import 'story_card_editor_action_bar.dart';
 
 class StoryCardCameraStage extends StatefulWidget {
   const StoryCardCameraStage({
@@ -165,80 +167,116 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                     icon: const Icon(Icons.close, size: 30),
                   ),
                 ),
-                if (_camera.alternateCamera != null || _camera.isSwitching)
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: IconButton(
-                      key: const ValueKey('story-card-camera-switch'),
-                      tooltip: '카메라 전환',
-                      onPressed:
-                          _camera.isSwitching || _isCapturing || _isPickingImage
-                          ? null
-                          : _switchCamera,
-                      color: Colors.white,
-                      disabledColor: Colors.white,
-                      icon: _camera.isSwitching
-                          ? const SizedBox.square(
-                              dimension: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.cameraswitch_outlined, size: 30),
-                    ),
-                  ),
                 Align(
-                  alignment: Alignment.bottomLeft,
+                  alignment: Alignment.centerRight,
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: IconButton.filledTonal(
-                      tooltip: '갤러리',
-                      onPressed: _isPickingImage ? null : _pickFromGallery,
-                      icon: const Icon(Icons.photo_library_outlined),
+                    padding: const EdgeInsets.only(right: 12),
+                    child: StoryCardEditorActionBar(
+                      interactionMode: StoryCardEditorTool.none,
+                      hasBackground: true,
+                      onAddTextPressed: widget.onTextSelected,
+                      onEditCaptionPressed: null,
+                      onDrawingModePressed: widget.onDrawingSelected,
+                      onBackgroundColorPressed: null,
                     ),
                   ),
                 ),
                 Align(
                   alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: _CaptureButton(
-                      isEnabled:
-                          controller != null &&
-                          controller.value.isInitialized &&
-                          !_isCapturing,
-                      isCapturing: _isCapturing,
-                      onPressed: _capturePhoto,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 16, 16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton.filledTonal(
-                          tooltip: '텍스트로 시작',
-                          onPressed: widget.onTextSelected,
-                          icon: const Icon(Icons.text_fields),
-                        ),
-                        const SizedBox(height: 10),
-                        IconButton.filledTonal(
-                          tooltip: '그리기로 시작',
-                          onPressed: widget.onDrawingSelected,
-                          icon: const Icon(Icons.brush_outlined),
-                        ),
-                      ],
-                    ),
+                  child: _CameraBottomControls(
+                    canCapture:
+                        controller != null &&
+                        controller.value.isInitialized &&
+                        !_isCapturing,
+                    isCapturing: _isCapturing,
+                    isPickingImage: _isPickingImage,
+                    canSwitchCamera:
+                        _camera.alternateCamera != null || _camera.isSwitching,
+                    isSwitchingCamera: _camera.isSwitching,
+                    onGalleryPressed: _pickFromGallery,
+                    onCapturePressed: _capturePhoto,
+                    onSwitchCameraPressed: _switchCamera,
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CameraBottomControls extends StatelessWidget {
+  const _CameraBottomControls({
+    required this.canCapture,
+    required this.isCapturing,
+    required this.isPickingImage,
+    required this.canSwitchCamera,
+    required this.isSwitchingCamera,
+    required this.onGalleryPressed,
+    required this.onCapturePressed,
+    required this.onSwitchCameraPressed,
+  });
+
+  final bool canCapture;
+  final bool isCapturing;
+  final bool isPickingImage;
+  final bool canSwitchCamera;
+  final bool isSwitchingCamera;
+  final VoidCallback onGalleryPressed;
+  final VoidCallback onCapturePressed;
+  final VoidCallback onSwitchCameraPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      child: SizedBox(
+        height: 88,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton.filledTonal(
+                  tooltip: '갤러리',
+                  onPressed: isPickingImage ? null : onGalleryPressed,
+                  icon: const Icon(Icons.photo_library_outlined),
+                ),
+              ),
+            ),
+            _CaptureButton(
+              isEnabled: canCapture,
+              isCapturing: isCapturing,
+              onPressed: onCapturePressed,
+            ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: canSwitchCamera
+                    ? IconButton.filledTonal(
+                        key: const ValueKey('story-card-camera-switch'),
+                        tooltip: '카메라 전환',
+                        onPressed:
+                            isSwitchingCamera || isCapturing || isPickingImage
+                            ? null
+                            : onSwitchCameraPressed,
+                        icon: isSwitchingCamera
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.cameraswitch_outlined),
+                      )
+                    : const SizedBox.square(dimension: 48),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
