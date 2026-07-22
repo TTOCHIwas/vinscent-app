@@ -142,7 +142,11 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   }
 
   Future<void> _initializeHomeWidgets() async {
-    await configureHomeWidgetPlatform();
+    try {
+      await configureHomeWidgetPlatform();
+    } catch (error) {
+      debugPrint('[widget] initial platform configuration failed: $error');
+    }
     if (!mounted) {
       return;
     }
@@ -150,8 +154,15 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     final coordinator = ref.read(homeWidgetLaunchCoordinatorProvider);
     _widgetClickSubscription = coordinator.widgetClicks.listen(
       _queueWidgetLaunch,
+      onError: (Object error) {
+        debugPrint('[widget] launch stream failed: $error');
+      },
     );
-    _queueWidgetLaunch(await coordinator.initiallyLaunchedFromWidget());
+    try {
+      _queueWidgetLaunch(await coordinator.initiallyLaunchedFromWidget());
+    } catch (error) {
+      debugPrint('[widget] initial launch lookup failed: $error');
+    }
     _scheduleWidgetSync();
   }
 

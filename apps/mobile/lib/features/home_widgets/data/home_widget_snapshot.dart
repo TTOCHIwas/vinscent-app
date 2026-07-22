@@ -5,9 +5,35 @@ class HomeWidgetSnapshot {
     required this.partnerCardImage,
   });
 
-  final HomeWidgetRemoteAsset? characterImage;
-  final HomeWidgetRemoteAsset? recordingAudio;
-  final HomeWidgetRemoteAsset? partnerCardImage;
+  final HomeWidgetAssetUpdate characterImage;
+  final HomeWidgetAssetUpdate recordingAudio;
+  final HomeWidgetAssetUpdate partnerCardImage;
+
+  bool get requiresRetry =>
+      characterImage.shouldPreserve ||
+      recordingAudio.shouldPreserve ||
+      partnerCardImage.shouldPreserve;
+}
+
+enum HomeWidgetAssetUpdateType { replace, remove, preserve }
+
+class HomeWidgetAssetUpdate {
+  const HomeWidgetAssetUpdate.replace(this.asset)
+    : type = HomeWidgetAssetUpdateType.replace,
+      assert(asset != null);
+
+  const HomeWidgetAssetUpdate.remove()
+    : type = HomeWidgetAssetUpdateType.remove,
+      asset = null;
+
+  const HomeWidgetAssetUpdate.preserve()
+    : type = HomeWidgetAssetUpdateType.preserve,
+      asset = null;
+
+  final HomeWidgetAssetUpdateType type;
+  final HomeWidgetRemoteAsset? asset;
+
+  bool get shouldPreserve => type == HomeWidgetAssetUpdateType.preserve;
 }
 
 class HomeWidgetRemoteAsset {

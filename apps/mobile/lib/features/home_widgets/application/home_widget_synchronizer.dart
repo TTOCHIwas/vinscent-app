@@ -1,5 +1,8 @@
-import 'dart:typed_data';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
+import '../data/home_widget_asset_validator.dart';
 import '../data/home_widget_snapshot.dart';
 
 abstract interface class HomeWidgetAssetDownloader {
@@ -13,11 +16,13 @@ abstract interface class HomeWidgetStore {
 
   Future<void> remove(String key);
 
-  Future<void> saveFile({
+  Future<String> saveFile({
     required String key,
     required Uint8List bytes,
     required String extension,
   });
+
+  Future<bool> isFileUsable(String path, {required String extension});
 
   Future<void> refreshWidget(HomeWidgetTarget target);
 }
@@ -33,58 +38,119 @@ class HomeWidgetSynchronizer {
   final HomeWidgetAssetDownloader _downloader;
 
   Future<void> synchronize(HomeWidgetSnapshot? snapshot) async {
-    await Future.wait([
+    final updates = await Future.wait([
       _synchronizeAsset(
-        asset: snapshot?.characterImage,
+        update:
+            snapshot?.characterImage ?? const HomeWidgetAssetUpdate.remove(),
         pathKey: HomeWidgetStorage.characterImagePathKey,
         versionKey: HomeWidgetStorage.characterImageVersionKey,
       ),
       _synchronizeAsset(
-        asset: snapshot?.recordingAudio,
+        update:
+            snapshot?.recordingAudio ?? const HomeWidgetAssetUpdate.remove(),
         pathKey: HomeWidgetStorage.recordingAudioPathKey,
         versionKey: HomeWidgetStorage.recordingAudioVersionKey,
       ),
       _synchronizeAsset(
-        asset: snapshot?.partnerCardImage,
+        update:
+            snapshot?.partnerCardImage ?? const HomeWidgetAssetUpdate.remove(),
         pathKey: HomeWidgetStorage.partnerCardImagePathKey,
         versionKey: HomeWidgetStorage.partnerCardImageVersionKey,
       ),
     ]);
 
-    await _store.refreshWidget(HomeWidgetStorage.characterTarget);
-    await _store.refreshWidget(HomeWidgetStorage.cardTarget);
+    final refreshes = await Future.wait([
+      _refreshWidget(HomeWidgetStorage.characterTarget),
+      _refreshWidget(HomeWidgetStorage.cardTarget),
+    ]);
+    final failedOperations = <String>[
+      for (var index = 0; index < updates.length; index++)
+        if (!updates[index]) 'asset-$index',
+      for (var index = 0; index < refreshes.length; index++)
+        if (!refreshes[index]) 'refresh-$index',
+    ];
+    if (failedOperations.isNotEmpty) {
+      throw HomeWidgetSynchronizationException(failedOperations);
+    }
   }
 
-  Future<void> _synchronizeAsset({
-    required HomeWidgetRemoteAsset? asset,
+  Future<bool> _synchronizeAsset({
+    required HomeWidgetAssetUpdate update,
     required String pathKey,
     required String versionKey,
   }) async {
-    if (asset == null) {
-      await _store.remove(pathKey);
-      await _store.remove(versionKey);
-      return;
-    }
-
-    final currentVersion = await _store.read(versionKey);
-    final currentPath = await _store.read(pathKey);
-    if (currentVersion == asset.version && currentPath != null) {
-      return;
+    if (update.type == HomeWidgetAssetUpdateType.preserve) {
+      return true;
     }
 
     try {
+      if (update.type == HomeWidgetAssetUpdateType.remove) {
+        await _store.remove(pathKey);
+        await _store.remove(versionKey);
+        return true;
+      }
+
+      final asset = update.asset!;
+      final currentVersion = await _store.read(versionKey);
+      final currentPath = await _store.read(pathKey);
+      if (currentVersion == asset.version &&
+          currentPath != null &&
+          await _store.isFileUsable(currentPath, extension: asset.extension)) {
+        return true;
+      }
+
       final bytes = await _downloader.download(
         asset.url,
         maxBytes: asset.maxBytes,
       );
-      await _store.saveFile(
+      if (!isValidHomeWidgetAsset(bytes, asset.extension)) {
+        throw FormatException(
+          'Invalid ${asset.extension} payload for $pathKey',
+        );
+      }
+      final savedPath = await _store.saveFile(
         key: pathKey,
         bytes: bytes,
         extension: asset.extension,
       );
+      if (!await _store.isFileUsable(savedPath, extension: asset.extension)) {
+        throw FileSystemException('Saved widget asset is unusable', savedPath);
+      }
       await _store.write(versionKey, asset.version);
-    } catch (_) {
-      return;
+      return true;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[widget] asset synchronization failed for $pathKey: $error',
+        );
+      }
+      return false;
     }
+  }
+
+  Future<bool> _refreshWidget(HomeWidgetTarget target) async {
+    try {
+      await _store.refreshWidget(target);
+      return true;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[widget] widget refresh failed for ${target.iOSName}: $error',
+        );
+      }
+      return false;
+    }
+  }
+}
+
+class HomeWidgetSynchronizationException implements Exception {
+  const HomeWidgetSynchronizationException(this.failedOperations);
+
+  final List<String> failedOperations;
+
+  @override
+  String toString() {
+    return 'Home widget synchronization failed: '
+        '${failedOperations.join(', ')}';
   }
 }

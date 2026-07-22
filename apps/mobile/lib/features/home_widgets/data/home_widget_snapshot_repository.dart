@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,23 +27,20 @@ abstract interface class HomeWidgetSnapshotRepository {
 
 class SupabaseHomeWidgetSnapshotRepository
     implements HomeWidgetSnapshotRepository {
-  const SupabaseHomeWidgetSnapshotRepository({
+  SupabaseHomeWidgetSnapshotRepository({
     required CoupleRepository coupleRepository,
     required CoupleCharacterRepository characterRepository,
     required CoupleRecordingRepository recordingRepository,
     required HomeWidgetPartnerCardRepository partnerCardRepository,
   }) : _coupleRepository = coupleRepository,
-       _characterRepository = characterRepository,
-       _recordingRepository = recordingRepository,
-       _partnerCardRepository = partnerCardRepository;
-
-  static const _maximumImageBytes = 5 * 1024 * 1024;
-  static const _maximumAudioBytes = 4 * 1024 * 1024;
+       _assetLoader = HomeWidgetSnapshotAssetLoader(
+         characterRepository: characterRepository,
+         recordingRepository: recordingRepository,
+         partnerCardRepository: partnerCardRepository,
+       );
 
   final CoupleRepository _coupleRepository;
-  final CoupleCharacterRepository _characterRepository;
-  final CoupleRecordingRepository _recordingRepository;
-  final HomeWidgetPartnerCardRepository _partnerCardRepository;
+  final HomeWidgetSnapshotAssetLoader _assetLoader;
 
   @override
   Future<HomeWidgetSnapshot?> fetchSnapshot() async {
@@ -59,45 +57,122 @@ class SupabaseHomeWidgetSnapshotRepository
       return null;
     }
 
-    final characterFuture = _characterRepository.fetchCurrentCharacter();
-    final recordingFuture = _recordingRepository.fetchOverview();
-    final partnerCardFuture = _partnerCardRepository.fetchLatestPartnerCard(
+    return _assetLoader.fetch(
       coupleId: couple.id,
       currentUserId: currentUserId,
     );
+  }
+}
 
-    final character = await characterFuture;
-    final recording = (await recordingFuture).currentRecording;
-    final partnerCard = await partnerCardFuture;
+class HomeWidgetSnapshotAssetLoader {
+  const HomeWidgetSnapshotAssetLoader({
+    required CoupleCharacterRepository characterRepository,
+    required CoupleRecordingRepository recordingRepository,
+    required HomeWidgetPartnerCardRepository partnerCardRepository,
+  }) : _characterRepository = characterRepository,
+       _recordingRepository = recordingRepository,
+       _partnerCardRepository = partnerCardRepository;
+
+  static const _maximumImageBytes = 5 * 1024 * 1024;
+  static const _maximumAudioBytes = 4 * 1024 * 1024;
+
+  final CoupleCharacterRepository _characterRepository;
+  final CoupleRecordingRepository _recordingRepository;
+  final HomeWidgetPartnerCardRepository _partnerCardRepository;
+
+  Future<HomeWidgetSnapshot> fetch({
+    required String coupleId,
+    required String currentUserId,
+  }) async {
+    final updates = await Future.wait([
+      _fetchCharacterImage(),
+      _fetchRecordingAudio(),
+      _fetchPartnerCardImage(coupleId: coupleId, currentUserId: currentUserId),
+    ]);
 
     return HomeWidgetSnapshot(
-      characterImage: switch (character?.imageUrl) {
-        final String url when url.isNotEmpty => HomeWidgetRemoteAsset(
-          url: url,
-          version: character!.updatedAt.microsecondsSinceEpoch.toString(),
+      characterImage: updates[0],
+      recordingAudio: updates[1],
+      partnerCardImage: updates[2],
+    );
+  }
+
+  Future<HomeWidgetAssetUpdate> _fetchCharacterImage() async {
+    try {
+      final character = await _characterRepository.fetchCurrentCharacter();
+      final imageUrl = character?.imageUrl;
+      if (character == null || imageUrl == null || imageUrl.isEmpty) {
+        return const HomeWidgetAssetUpdate.remove();
+      }
+
+      return HomeWidgetAssetUpdate.replace(
+        HomeWidgetRemoteAsset(
+          url: imageUrl,
+          version: character.updatedAt.microsecondsSinceEpoch.toString(),
           extension: 'png',
           maxBytes: _maximumImageBytes,
         ),
-        _ => null,
-      },
-      recordingAudio: recording == null
-          ? null
-          : HomeWidgetRemoteAsset(
-              url: recording.audioUrl,
-              version: '${recording.recordingId}:${recording.revision}',
-              extension: 'm4a',
-              maxBytes: _maximumAudioBytes,
-            ),
-      partnerCardImage: partnerCard == null
-          ? null
-          : HomeWidgetRemoteAsset(
-              url: partnerCard.previewUrl,
-              version:
-                  '${partnerCard.id}:${partnerCard.revision}:'
-                  '${partnerCard.updatedAt.microsecondsSinceEpoch}',
-              extension: 'png',
-              maxBytes: _maximumImageBytes,
-            ),
-    );
+      );
+    } catch (error) {
+      _logSourceFailure('character', error);
+      return const HomeWidgetAssetUpdate.preserve();
+    }
+  }
+
+  Future<HomeWidgetAssetUpdate> _fetchRecordingAudio() async {
+    try {
+      final recording =
+          (await _recordingRepository.fetchOverview()).currentRecording;
+      if (recording == null) {
+        return const HomeWidgetAssetUpdate.remove();
+      }
+
+      return HomeWidgetAssetUpdate.replace(
+        HomeWidgetRemoteAsset(
+          url: recording.audioUrl,
+          version: '${recording.recordingId}:${recording.revision}',
+          extension: 'm4a',
+          maxBytes: _maximumAudioBytes,
+        ),
+      );
+    } catch (error) {
+      _logSourceFailure('recording', error);
+      return const HomeWidgetAssetUpdate.preserve();
+    }
+  }
+
+  Future<HomeWidgetAssetUpdate> _fetchPartnerCardImage({
+    required String coupleId,
+    required String currentUserId,
+  }) async {
+    try {
+      final partnerCard = await _partnerCardRepository.fetchLatestPartnerCard(
+        coupleId: coupleId,
+        currentUserId: currentUserId,
+      );
+      if (partnerCard == null) {
+        return const HomeWidgetAssetUpdate.remove();
+      }
+
+      return HomeWidgetAssetUpdate.replace(
+        HomeWidgetRemoteAsset(
+          url: partnerCard.previewUrl,
+          version:
+              '${partnerCard.id}:${partnerCard.revision}:'
+              '${partnerCard.updatedAt.microsecondsSinceEpoch}',
+          extension: 'png',
+          maxBytes: _maximumImageBytes,
+        ),
+      );
+    } catch (error) {
+      _logSourceFailure('partner-card', error);
+      return const HomeWidgetAssetUpdate.preserve();
+    }
+  }
+
+  void _logSourceFailure(String source, Object error) {
+    if (kDebugMode) {
+      debugPrint('[widget] $source snapshot fetch failed: $error');
+    }
   }
 }

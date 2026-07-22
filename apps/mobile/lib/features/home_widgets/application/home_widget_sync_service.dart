@@ -23,31 +23,59 @@ final homeWidgetSyncServiceProvider = Provider<HomeWidgetSyncService>((ref) {
 });
 
 class HomeWidgetSyncService {
-  const HomeWidgetSyncService({
+  HomeWidgetSyncService({
     required HomeWidgetSnapshotRepository snapshotRepository,
     required HomeWidgetSynchronizer synchronizer,
+    this.maxAttempts = 2,
+    this.retryDelay = const Duration(milliseconds: 750),
+    bool? isSupportedPlatform,
   }) : _snapshotRepository = snapshotRepository,
-       _synchronizer = synchronizer;
+       _synchronizer = synchronizer,
+       _isSupportedPlatform =
+           isSupportedPlatform ?? (Platform.isAndroid || Platform.isIOS),
+       assert(maxAttempts > 0);
 
   final HomeWidgetSnapshotRepository _snapshotRepository;
   final HomeWidgetSynchronizer _synchronizer;
+  final bool _isSupportedPlatform;
+  final int maxAttempts;
+  final Duration retryDelay;
 
   Future<void> synchronize() async {
-    if (!Platform.isAndroid && !Platform.isIOS) {
+    if (!_isSupportedPlatform) {
       return;
     }
 
     final snapshot = await _snapshotRepository.fetchSnapshot();
     await _synchronizer.synchronize(snapshot);
+    if (snapshot?.requiresRetry ?? false) {
+      throw const HomeWidgetSnapshotIncompleteException();
+    }
   }
 
   Future<void> synchronizeSafely() async {
-    try {
-      await synchronize();
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint('[widget] synchronization failed: $error');
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await synchronize();
+        return;
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint(
+            '[widget] synchronization attempt $attempt/$maxAttempts failed: '
+            '$error',
+          );
+        }
+        if (attempt < maxAttempts) {
+          await Future<void>.delayed(retryDelay);
+        }
       }
     }
   }
+}
+
+class HomeWidgetSnapshotIncompleteException implements Exception {
+  const HomeWidgetSnapshotIncompleteException();
+
+  @override
+  String toString() => 'Home widget snapshot contains deferred assets';
 }
