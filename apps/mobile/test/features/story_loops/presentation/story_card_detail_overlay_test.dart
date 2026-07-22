@@ -9,19 +9,13 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: _OverlayLauncher(),
-        ),
-      ),
+      const ProviderScope(child: MaterialApp(home: _OverlayLauncher())),
     );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    final download = find.byKey(
-      const Key('story-card-detail-download'),
-    );
+    final download = find.byKey(const Key('story-card-detail-download'));
     final close = find.byKey(const Key('story-card-detail-close'));
 
     expect(download, findsOneWidget);
@@ -36,20 +30,14 @@ void main() {
     final downloader = _FakeStoryCardDownloader();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          storyCardDownloaderProvider.overrideWithValue(downloader),
-        ],
-        child: const MaterialApp(
-          home: _OverlayLauncher(),
-        ),
+        overrides: [storyCardDownloaderProvider.overrideWithValue(downloader)],
+        child: const MaterialApp(home: _OverlayLauncher()),
       ),
     );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const Key('story-card-detail-download')),
-    );
+    await tester.tap(find.byKey(const Key('story-card-detail-download')));
     await tester.pumpAndSettle();
 
     expect(downloader.cardIds, ['card-1']);
@@ -63,13 +51,17 @@ class _OverlayLauncher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: () => showStoryCardDetailOverlay(
-        context: context,
-        cardId: 'card-1',
-        previewUrl: null,
+    return Scaffold(
+      body: Center(
+        child: TextButton(
+          onPressed: () => showStoryCardDetailOverlay(
+            context: context,
+            cardId: 'card-1',
+            previewUrl: null,
+          ),
+          child: const Text('open'),
+        ),
       ),
-      child: const Text('open'),
     );
   }
 }
