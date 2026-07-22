@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_camera_stage.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_action_bar.dart';
 
 void main() {
   late CameraPlatform originalPlatform;
@@ -82,6 +83,34 @@ void main() {
       _FakeCameraPlatform.frontCamera,
       _FakeCameraPlatform.frontCamera,
     ]);
+  });
+
+  testWidgets('촬영 전 텍스트와 그리기 도구도 편집 화면 액션 바를 사용한다', (tester) async {
+    await tester.pumpWidget(_subject());
+    await tester.pumpAndSettle();
+
+    final actionBar = find.byType(StoryCardEditorActionBar);
+    expect(actionBar, findsOneWidget);
+
+    final stageCenter = tester.getCenter(find.byType(StoryCardCameraStage));
+    final actionBarCenter = tester.getCenter(actionBar);
+    expect(actionBarCenter.dy, closeTo(stageCenter.dy, 1));
+    expect(actionBarCenter.dx, greaterThan(stageCenter.dx));
+  });
+
+  testWidgets('카메라 전환 버튼을 촬영 버튼 오른쪽에 배치한다', (tester) async {
+    await tester.pumpWidget(_subject());
+    await tester.pumpAndSettle();
+
+    final switchCenter = tester.getCenter(
+      find.byKey(const ValueKey('story-card-camera-switch')),
+    );
+    final captureCenter = tester.getCenter(
+      find.byIcon(Icons.radio_button_unchecked),
+    );
+
+    expect(switchCenter.dx, greaterThan(captureCenter.dx));
+    expect(switchCenter.dy, closeTo(captureCenter.dy, 8));
   });
 }
 
