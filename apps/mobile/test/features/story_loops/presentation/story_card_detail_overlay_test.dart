@@ -43,6 +43,12 @@ void main() {
     expect(downloader.cardIds, ['card-1']);
     expect(find.byKey(const Key('story-card-detail-overlay')), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
+    expect(
+      find.text(
+        '\uce74\ub4dc\ub97c \uac24\ub7ec\ub9ac\uc5d0 \uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4.',
+      ),
+      findsOneWidget,
+    );
   });
 }
 

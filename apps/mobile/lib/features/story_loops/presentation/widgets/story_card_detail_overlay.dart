@@ -13,7 +13,7 @@ const _closeTooltip = '\uce74\ub4dc \uc0c1\uc138 \ub2eb\uae30';
 const _downloadTooltip = '\uce74\ub4dc \ub2e4\uc6b4\ub85c\ub4dc';
 const _cardSemanticsLabel = '\uc2a4\ud1a0\ub9ac \uce74\ub4dc \uc0c1\uc138';
 const _downloadSuccessMessage =
-    '\uce74\ub4dc\ub97c \uc0ac\uc9c4 \ubcf4\uad00\ud568\uc5d0 \uc800\uc7a5\ud588\uc5b4\uc694.';
+    '\uce74\ub4dc\ub97c \uac24\ub7ec\ub9ac\uc5d0 \uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4.';
 
 Future<void> showStoryCardDetailOverlay({
   required BuildContext context,
