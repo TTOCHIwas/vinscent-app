@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'application/app_router_refresh_notifier.dart';
 import 'application/app_route_redirect_policy.dart';
 import '../features/ai/presentation/ai_screen.dart';
 import '../features/auth/application/auth_controller.dart';
@@ -27,19 +29,29 @@ import '../features/shell/presentation/app_shell.dart';
 import '../features/shell/presentation/widgets/shell_root_back_scope.dart';
 import '../features/story_loops/presentation/story_card_editor_screen.dart';
 
-final appRouterProvider = Provider<GoRouter>((ref) {
-  final authStatus = ref.watch(authControllerProvider);
-  final profile = ref.watch(profileControllerProvider);
-  final couple = ref.watch(coupleControllerProvider);
+final appRouterRefreshNotifierProvider = Provider<AppRouterRefreshNotifier>((
+  ref,
+) {
+  final notifier = AppRouterRefreshNotifier();
+  ref.listen(authControllerProvider, (_, _) => notifier.refresh());
+  ref.listen(profileControllerProvider, (_, _) => notifier.refresh());
+  ref.listen(coupleControllerProvider, (_, _) => notifier.refresh());
+  ref.onDispose(notifier.dispose);
+  return notifier;
+});
 
-  return GoRouter(
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final refreshNotifier = ref.watch(appRouterRefreshNotifierProvider);
+
+  final router = GoRouter(
     initialLocation: '/home',
     overridePlatformDefaultLocation: true,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) => AppRouteRedirectPolicy.resolve(
       path: state.uri.path,
-      authStatus: authStatus,
-      profile: profile,
-      couple: couple,
+      authStatus: ref.read(authControllerProvider),
+      profile: ref.read(profileControllerProvider),
+      couple: ref.read(coupleControllerProvider),
     ),
     routes: [
       GoRoute(path: '/', redirect: (context, state) => '/home'),
@@ -89,9 +101,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const StoryCardEditorScreen(),
       ),
       ShellRoute(
-        builder: (context, state, child) {
-          return AppShell(location: state.uri.path, child: child);
-        },
+        pageBuilder: (context, state, child) => MaterialPage<void>(
+          key: state.pageKey,
+          canPop: false,
+          child: AppShell(location: state.uri.path, child: child),
+        ),
         routes: [
           GoRoute(
             path: '/home',
@@ -210,4 +224,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(router.dispose);
+  return router;
 });
