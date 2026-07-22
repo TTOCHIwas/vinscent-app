@@ -5,6 +5,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'story_card_camera_controller.dart';
+
 class StoryCardCameraStage extends StatefulWidget {
   const StoryCardCameraStage({
     super.key,
@@ -27,79 +29,56 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
     with WidgetsBindingObserver {
   final _imagePicker = ImagePicker();
 
-  CameraController? _cameraController;
-  Object? _cameraError;
+  late final StoryCardCameraController _camera;
+  Object? _captureError;
   bool _isCapturing = false;
   bool _isPickingImage = false;
 
   @override
   void initState() {
     super.initState();
+    _camera = StoryCardCameraController()..addListener(_handleCameraChanged);
     WidgetsBinding.instance.addObserver(this);
-    _initializeCamera();
+    unawaited(_camera.initialize());
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
-      unawaited(_disposeCamera());
+      unawaited(_camera.deactivate());
     } else if (state == AppLifecycleState.resumed) {
-      unawaited(_initializeCamera());
+      unawaited(_camera.initialize());
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _cameraController?.dispose();
+    _camera.removeListener(_handleCameraChanged);
+    _camera.dispose();
     super.dispose();
   }
 
-  Future<void> _initializeCamera() async {
-    await _disposeCamera();
-
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        throw CameraException('camera_unavailable', 'No camera found.');
-      }
-
-      final description = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
-        orElse: () => cameras.first,
-      );
-      final controller = CameraController(
-        description,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-      await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
-
-      setState(() {
-        _cameraController = controller;
-        _cameraError = null;
-      });
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _cameraError = error;
-        });
-      }
+  void _handleCameraChanged() {
+    if (!mounted) {
+      return;
     }
+    setState(() {
+      if (_camera.controller != null) {
+        _captureError = null;
+      }
+    });
   }
 
-  Future<void> _disposeCamera() async {
-    final controller = _cameraController;
-    _cameraController = null;
-    await controller?.dispose();
+  Future<void> _switchCamera() async {
+    if (_isCapturing || _isPickingImage) {
+      return;
+    }
+    await _camera.switchCamera();
   }
 
   Future<void> _capturePhoto() async {
-    final controller = _cameraController;
+    final controller = _camera.controller;
     if (_isCapturing ||
         controller == null ||
         !controller.value.isInitialized ||
@@ -116,7 +95,7 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
     } catch (error) {
       if (mounted) {
         setState(() {
-          _cameraError = error;
+          _captureError = error;
         });
       }
     } finally {
@@ -157,16 +136,23 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
 
   @override
   Widget build(BuildContext context) {
-    final controller = _cameraController;
+    final controller = _camera.controller;
     return ColoredBox(
       color: Colors.black,
       child: Stack(
         fit: StackFit.expand,
         children: [
           if (controller != null && controller.value.isInitialized)
-            _CoveringCameraPreview(controller: controller)
+            _CoveringCameraPreview(
+              controller: controller,
+              onPointerDown: (_) => _camera.addPointer(),
+              onPointerUp: (_) => _camera.removePointer(),
+              onPointerCancel: (_) => _camera.removePointer(),
+              onScaleStart: (_) => _camera.beginScale(),
+              onScaleUpdate: (details) => _camera.updateScale(details.scale),
+            )
           else
-            _CameraUnavailable(error: _cameraError),
+            _CameraUnavailable(error: _captureError ?? _camera.error),
           SafeArea(
             child: Stack(
               children: [
@@ -179,6 +165,29 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                     icon: const Icon(Icons.close, size: 30),
                   ),
                 ),
+                if (_camera.alternateCamera != null || _camera.isSwitching)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      key: const ValueKey('story-card-camera-switch'),
+                      tooltip: '카메라 전환',
+                      onPressed:
+                          _camera.isSwitching || _isCapturing || _isPickingImage
+                          ? null
+                          : _switchCamera,
+                      color: Colors.white,
+                      disabledColor: Colors.white,
+                      icon: _camera.isSwitching
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.cameraswitch_outlined, size: 30),
+                    ),
+                  ),
                 Align(
                   alignment: Alignment.bottomLeft,
                   child: Padding(
@@ -236,9 +245,21 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
 }
 
 class _CoveringCameraPreview extends StatelessWidget {
-  const _CoveringCameraPreview({required this.controller});
+  const _CoveringCameraPreview({
+    required this.controller,
+    required this.onPointerDown,
+    required this.onPointerUp,
+    required this.onPointerCancel,
+    required this.onScaleStart,
+    required this.onScaleUpdate,
+  });
 
   final CameraController controller;
+  final PointerDownEventListener onPointerDown;
+  final PointerUpEventListener onPointerUp;
+  final PointerCancelEventListener onPointerCancel;
+  final GestureScaleStartCallback onScaleStart;
+  final GestureScaleUpdateCallback onScaleUpdate;
 
   @override
   Widget build(BuildContext context) {
@@ -247,13 +268,25 @@ class _CoveringCameraPreview extends StatelessWidget {
       return const SizedBox.expand();
     }
 
-    return ClipRect(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: previewSize.height,
-          height: previewSize.width,
-          child: CameraPreview(controller),
+    return Listener(
+      key: const ValueKey('story-card-camera-preview'),
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: onPointerDown,
+      onPointerUp: onPointerUp,
+      onPointerCancel: onPointerCancel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onScaleStart: onScaleStart,
+        onScaleUpdate: onScaleUpdate,
+        child: ClipRect(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: previewSize.height,
+              height: previewSize.width,
+              child: CameraPreview(controller),
+            ),
+          ),
         ),
       ),
     );
