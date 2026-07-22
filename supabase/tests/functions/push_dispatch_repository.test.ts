@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  completePushNotificationDelivery,
   parsePushDispatchClaim,
   runPushPersistenceOperation,
 } from '../../functions/_shared/push_dispatch_repository.ts';
@@ -77,4 +78,41 @@ test('requires an ownership token in every push dispatch claim', () => {
     }).claim_token,
     'claim-token',
   );
+});
+
+test('completes a delivery through the atomic ownership-aware RPC', async () => {
+  const calls: Array<{ name: string; params: Record<string, unknown> }> = [];
+  const supabase = {
+    rpc(name: string, params: Record<string, unknown>) {
+      calls.push({ name, params });
+      return Promise.resolve({ data: 'completed', error: null });
+    },
+  };
+
+  await completePushNotificationDelivery(supabase as never, {
+    notificationType: 'recording_activity',
+    sourceId: 'source-id',
+    receiverUserId: 'receiver-id',
+    claimToken: 'claim-token',
+    targetTokenCount: 2,
+    successCount: 1,
+    failureCount: 1,
+    status: 'partial_failure',
+    errorMessage: 'one token failed',
+  });
+
+  assert.deepEqual(calls, [{
+    name: 'complete_push_notification_delivery',
+    params: {
+      requested_notification_type: 'recording_activity',
+      requested_source_id: 'source-id',
+      requested_receiver_user_id: 'receiver-id',
+      requested_claim_token: 'claim-token',
+      requested_target_token_count: 2,
+      requested_success_count: 1,
+      requested_failure_count: 1,
+      requested_status: 'partial_failure',
+      requested_error_message: 'one token failed',
+    },
+  }]);
 });

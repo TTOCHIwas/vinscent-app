@@ -1,4 +1,9 @@
 import { createFcmAccessToken, sendFcmMessage } from './fcm.ts';
+import {
+  claimPushNotificationDispatch,
+  completePushNotificationDelivery,
+  type PushDeliveryStatus,
+} from './push_dispatch_repository.ts';
 import { createServiceRoleClient } from './supabase.ts';
 import { isRecord } from './webhook.ts';
 
@@ -13,11 +18,7 @@ export type NotificationType =
   | 'couple_activity'
   | 'ai_update';
 
-export type DeliveryStatus =
-  | 'sent'
-  | 'partial_failure'
-  | 'failed'
-  | 'skipped';
+export type DeliveryStatus = PushDeliveryStatus;
 
 export type PreferenceColumn =
   | 'partner_answer_enabled'
@@ -32,15 +33,6 @@ export type PreferenceColumn =
 type PushTokenRow = {
   id: string;
   token: string;
-};
-
-type DispatchClaimRow = {
-  claim_result: 'claimed' | 'duplicate';
-  notification_type: string;
-  source_id: string;
-  receiver_user_id: string;
-  dispatch_status: string;
-  claimed_at: string;
 };
 
 export type NotificationDispatchResult = {
@@ -66,7 +58,7 @@ type SendPushNotificationParams = {
 export async function sendPushNotification(
   params: SendPushNotificationParams,
 ): Promise<NotificationDispatchResult> {
-  const dispatchClaim = await claimNotificationDispatch(params.supabase, {
+  const dispatchClaim = await claimPushNotificationDispatch(params.supabase, {
     notificationType: params.notificationType,
     sourceId: params.sourceId,
     receiverUserId: params.receiverUserId,
@@ -90,10 +82,11 @@ export async function sendPushNotification(
     );
 
     if (!isEnabled) {
-      await recordDeliveryAndCompleteDispatch(params.supabase, {
+      await completePushNotificationDelivery(params.supabase, {
         notificationType: params.notificationType,
         sourceId: params.sourceId,
         receiverUserId: params.receiverUserId,
+        claimToken: dispatchClaim.claim_token,
         targetTokenCount: 0,
         successCount: 0,
         failureCount: 0,
@@ -117,10 +110,11 @@ export async function sendPushNotification(
     .eq('is_active', true);
 
   if (tokenError) {
-    await recordDeliveryAndCompleteDispatch(params.supabase, {
+    await completePushNotificationDelivery(params.supabase, {
       notificationType: params.notificationType,
       sourceId: params.sourceId,
       receiverUserId: params.receiverUserId,
+      claimToken: dispatchClaim.claim_token,
       targetTokenCount: 0,
       successCount: 0,
       failureCount: 0,
@@ -133,10 +127,11 @@ export async function sendPushNotification(
 
   const pushTokens = (pushTokenRows ?? []) as PushTokenRow[];
   if (pushTokens.length === 0) {
-    await recordDeliveryAndCompleteDispatch(params.supabase, {
+    await completePushNotificationDelivery(params.supabase, {
       notificationType: params.notificationType,
       sourceId: params.sourceId,
       receiverUserId: params.receiverUserId,
+      claimToken: dispatchClaim.claim_token,
       targetTokenCount: 0,
       successCount: 0,
       failureCount: 0,
@@ -154,14 +149,22 @@ export async function sendPushNotification(
 
   const accessToken = params.accessToken ?? (await createFcmAccessToken());
   const results = await Promise.all(
-    pushTokens.map((pushToken) =>
-      sendFcmMessage(accessToken, pushToken.token, {
-        title: params.title,
-        body: params.body,
-        type: params.notificationType,
-        data: params.data,
-      }),
-    ),
+    pushTokens.map(async (pushToken) => {
+      try {
+        return await sendFcmMessage(accessToken, pushToken.token, {
+          title: params.title,
+          body: params.body,
+          type: params.notificationType,
+          data: params.data,
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          invalidToken: false,
+          errorMessage: `fcm_send_failed:${formatError(error)}`,
+        };
+      }
+    }),
   );
 
   const successCount = results.filter((result) => result.ok).length;
@@ -171,20 +174,25 @@ export async function sendPushNotification(
     .map((pushToken) => pushToken.id);
 
   if (invalidTokenIds.length > 0) {
-    await params.supabase
+    const { error } = await params.supabase
       .from('user_push_tokens')
       .update({
         is_active: false,
         last_seen_at: new Date().toISOString(),
       })
       .in('id', invalidTokenIds);
+
+    if (error) {
+      console.error('push_token_deactivation_failed', error.message);
+    }
   }
 
   const status = resolveDeliveryStatus(successCount, failureCount);
-  await recordDeliveryAndCompleteDispatch(params.supabase, {
+  await completePushNotificationDelivery(params.supabase, {
     notificationType: params.notificationType,
     sourceId: params.sourceId,
     receiverUserId: params.receiverUserId,
+    claimToken: dispatchClaim.claim_token,
     targetTokenCount: pushTokens.length,
     successCount,
     failureCount,
@@ -222,104 +230,6 @@ async function isNotificationEnabled(
   return Reflect.get(data, preferenceColumn) !== false;
 }
 
-async function claimNotificationDispatch(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  params: {
-    notificationType: NotificationType;
-    sourceId: string;
-    receiverUserId: string;
-  },
-): Promise<DispatchClaimRow> {
-  const { data, error } = await supabase
-    .rpc('claim_push_notification_dispatch', {
-      requested_notification_type: params.notificationType,
-      requested_source_id: params.sourceId,
-      requested_receiver_user_id: params.receiverUserId,
-    })
-    .single();
-
-  if (error) {
-    throw new Error(`dispatch_claim_failed:${error.message}`);
-  }
-
-  if (!isRecord(data) || typeof data.claim_result !== 'string') {
-    throw new Error('dispatch_claim_missing');
-  }
-
-  return data as DispatchClaimRow;
-}
-
-async function recordDeliveryAndCompleteDispatch(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  params: {
-    notificationType: NotificationType;
-    sourceId: string;
-    receiverUserId: string;
-    targetTokenCount: number;
-    successCount: number;
-    failureCount: number;
-    status: DeliveryStatus;
-    errorMessage: string | null;
-  },
-) {
-  await logDelivery(supabase, params);
-  await completeNotificationDispatch(supabase, {
-    notificationType: params.notificationType,
-    sourceId: params.sourceId,
-    receiverUserId: params.receiverUserId,
-    status: params.status,
-    errorMessage: params.errorMessage,
-  });
-}
-
-async function logDelivery(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  params: {
-    notificationType: NotificationType;
-    sourceId: string;
-    receiverUserId: string;
-    targetTokenCount: number;
-    successCount: number;
-    failureCount: number;
-    status: DeliveryStatus;
-    errorMessage: string | null;
-  },
-) {
-  await supabase.from('push_notification_deliveries').insert({
-    notification_type: params.notificationType,
-    source_id: params.sourceId,
-    receiver_user_id: params.receiverUserId,
-    target_token_count: params.targetTokenCount,
-    success_count: params.successCount,
-    failure_count: params.failureCount,
-    status: params.status,
-    error_message: params.errorMessage,
-  });
-}
-
-async function completeNotificationDispatch(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  params: {
-    notificationType: NotificationType;
-    sourceId: string;
-    receiverUserId: string;
-    status: DeliveryStatus;
-    errorMessage: string | null;
-  },
-) {
-  const { error } = await supabase.rpc('complete_push_notification_dispatch', {
-    requested_notification_type: params.notificationType,
-    requested_source_id: params.sourceId,
-    requested_receiver_user_id: params.receiverUserId,
-    requested_status: params.status,
-    requested_error_message: params.errorMessage,
-  });
-
-  if (error) {
-    console.error('complete_push_notification_dispatch_failed', error.message);
-  }
-}
-
 function resolveDeliveryStatus(
   successCount: number,
   failureCount: number,
@@ -347,4 +257,8 @@ function summarizeErrors(
   }
 
   return messages.slice(0, 3).join('\n');
+}
+
+function formatError(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
