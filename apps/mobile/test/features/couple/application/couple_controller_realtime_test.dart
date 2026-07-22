@@ -7,6 +7,7 @@ import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/data/couple_change_source.dart';
+import 'package:vinscent/features/couple/data/couple_failure.dart';
 import 'package:vinscent/features/couple/data/couple_repository.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
@@ -48,6 +49,74 @@ void main() {
     expect(refreshed?.isActive, isTrue);
     expect(refreshed?.userBId, 'partner-id');
   });
+
+  test('treats an already deleted archive as a completed deletion', () async {
+    final repository = _FakeCoupleRepository()
+      ..currentCouple = archivedReadOnlyCouple()
+      ..deleteError = const CoupleRepositoryException(
+        CoupleFailureReason.archivedCoupleRequired,
+      );
+    final changeSource = _FakeCoupleChangeSource();
+    final container = _createContainer(repository, changeSource);
+    addTearDown(container.dispose);
+    addTearDown(changeSource.close);
+
+    await container.read(coupleControllerProvider.future);
+    await container
+        .read(coupleControllerProvider.notifier)
+        .deleteDisconnectedArchiveNow();
+
+    expect(container.read(coupleControllerProvider).requireValue, isNull);
+  });
+
+  test('preserves the archived couple when deletion actually fails', () async {
+    final repository = _FakeCoupleRepository()
+      ..currentCouple = archivedReadOnlyCouple()
+      ..deleteError = const CoupleRepositoryException(
+        CoupleFailureReason.configMissing,
+      );
+    final changeSource = _FakeCoupleChangeSource();
+    final container = _createContainer(repository, changeSource);
+    addTearDown(container.dispose);
+    addTearDown(changeSource.close);
+
+    await container.read(coupleControllerProvider.future);
+
+    await expectLater(
+      container
+          .read(coupleControllerProvider.notifier)
+          .deleteDisconnectedArchiveNow(),
+      throwsA(
+        isA<CoupleRepositoryException>().having(
+          (error) => error.reason,
+          'reason',
+          CoupleFailureReason.configMissing,
+        ),
+      ),
+    );
+    expect(
+      container.read(coupleControllerProvider).requireValue?.isArchivedReadOnly,
+      isTrue,
+    );
+  });
+}
+
+ProviderContainer _createContainer(
+  CoupleRepository repository,
+  CoupleChangeSource changeSource,
+) {
+  return ProviderContainer(
+    overrides: [
+      authControllerProvider.overrideWithBuild(
+        (ref, notifier) => AuthStatus.authenticated,
+      ),
+      profileControllerProvider.overrideWithBuild(
+        (ref, notifier) async => _profile,
+      ),
+      coupleRepositoryProvider.overrideWithValue(repository),
+      coupleChangeSourceProvider.overrideWithValue(changeSource),
+    ],
+  );
 }
 
 class _FakeCoupleChangeSource implements CoupleChangeSource {
@@ -67,6 +136,7 @@ class _FakeCoupleChangeSource implements CoupleChangeSource {
 
 class _FakeCoupleRepository implements CoupleRepository {
   Couple? currentCouple;
+  Object? deleteError;
 
   @override
   Future<Couple?> fetchCurrentCouple() async => currentCouple;
@@ -94,7 +164,14 @@ class _FakeCoupleRepository implements CoupleRepository {
   Future<Couple> disconnectCouple() => throw UnimplementedError();
 
   @override
-  Future<void> deleteDisconnectedArchiveNow() => throw UnimplementedError();
+  Future<void> deleteDisconnectedArchiveNow() async {
+    final deleteError = this.deleteError;
+    if (deleteError != null) {
+      throw deleteError;
+    }
+
+    currentCouple = null;
+  }
 }
 
 final _profile = UserProfile(

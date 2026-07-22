@@ -7,6 +7,7 @@ import '../../auth/application/auth_status.dart';
 import '../../profile/application/profile_controller.dart';
 import '../data/couple.dart';
 import '../data/couple_change_source.dart';
+import '../data/couple_failure.dart';
 import '../data/couple_repository.dart';
 
 final coupleControllerProvider =
@@ -98,7 +99,13 @@ class CoupleController extends AsyncNotifier<Couple?> {
   }
 
   Future<void> deleteDisconnectedArchiveNow() async {
-    await ref.read(coupleRepositoryProvider).deleteDisconnectedArchiveNow();
+    try {
+      await ref.read(coupleRepositoryProvider).deleteDisconnectedArchiveNow();
+    } on CoupleRepositoryException catch (error) {
+      if (error.reason != CoupleFailureReason.archivedCoupleRequired) {
+        rethrow;
+      }
+    }
     _setCouple(null);
   }
 
