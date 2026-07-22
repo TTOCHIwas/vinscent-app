@@ -12,6 +12,7 @@ import 'recording_id_generator.dart';
 import 'recording_slot_artwork_path.dart';
 import 'couple_recording_repository_contract.dart';
 import 'supabase_couple_recording_overview_reader.dart';
+import 'supabase_couple_recording_slot_writer.dart';
 import 'supabase_current_couple_recording_writer.dart';
 
 class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
@@ -21,7 +22,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     CurrentCoupleRecordingWriter currentRecordingWriter =
         const SupabaseCurrentCoupleRecordingWriter(),
     CoupleRecordingSlotWriter slotWriter =
-        const _SupabaseCoupleRecordingDataGateway(),
+        const SupabaseCoupleRecordingSlotWriter(),
     CoupleRecordingSlotArtworkStore artworkStore =
         const _SupabaseCoupleRecordingDataGateway(),
     CoupleRecordingSlotPlacementStore placementStore =
@@ -144,102 +145,11 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
 
 class _SupabaseCoupleRecordingDataGateway
     implements
-        CoupleRecordingSlotWriter,
         CoupleRecordingSlotArtworkStore,
         CoupleRecordingSlotPlacementStore {
   const _SupabaseCoupleRecordingDataGateway();
 
   static const _maxArtworkObjectBytes = 256 * 1024;
-
-  @override
-  Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
-    required int slotIndex,
-    required String title,
-    required int? expectedSlotRevision,
-  }) async {
-    _ensureSupabaseConfigured();
-
-    try {
-      final data = await Supabase.instance.client
-          .rpc(
-            'save_current_couple_recording_to_slot',
-            params: {
-              'requested_slot_index': slotIndex,
-              'requested_title': title,
-              'expected_slot_revision': expectedSlotRevision,
-            },
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final row = _asSingleRow(data);
-      if (row == null) {
-        throw const CoupleRecordingRepositoryException(
-          CoupleRecordingFailureReason.unknown,
-        );
-      }
-      return CoupleRecordingSlotSaveResult.fromJson(row);
-    } on TimeoutException {
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    }
-  }
-
-  @override
-  Future<void> deleteSlot({
-    required String slotId,
-    required int expectedSlotRevision,
-  }) async {
-    _ensureSupabaseConfigured();
-
-    try {
-      await Supabase.instance.client
-          .rpc(
-            'delete_couple_recording_slot',
-            params: {
-              'requested_slot_id': slotId,
-              'expected_slot_revision': expectedSlotRevision,
-            },
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-    } on TimeoutException {
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    }
-  }
-
-  @override
-  Future<void> openNextSlot() async {
-    _ensureSupabaseConfigured();
-
-    try {
-      debugRecordingLog('Open slot RPC started');
-      final response = await Supabase.instance.client
-          .rpc('open_next_couple_recording_slot')
-          .timeout(AppConfig.supabaseRpcTimeout);
-      debugRecordingLog('Open slot RPC completed: response=$response');
-    } on TimeoutException {
-      debugRecordingLog('Open slot RPC timed out');
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      final mappedError = _mapPostgrestError(error);
-      debugRecordingLog(
-        'Open slot RPC failed: '
-        'code=${error.code}, message=${error.message}, details=${error.details}, '
-        'hint=${error.hint}, mappedError=$mappedError',
-      );
-      throw mappedError;
-    } catch (error) {
-      debugRecordingLog('Open slot RPC failed with unexpected error: $error');
-      rethrow;
-    }
-  }
 
   @override
   Future<Uint8List> fetchSlotArtworkDrawingData({
@@ -447,39 +357,6 @@ class _SupabaseCoupleRecordingDataGateway
     } catch (error) {
       debugRecordingLog('Slot artwork cleanup failed: $error');
     }
-  }
-
-  Map<String, dynamic>? _asSingleRow(Object? data) {
-    if (data == null) {
-      return null;
-    }
-
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
-    }
-
-    if (data is List) {
-      if (data.isEmpty) {
-        return null;
-      }
-
-      final first = data.first;
-      if (first is Map<String, dynamic>) {
-        return first;
-      }
-
-      if (first is Map) {
-        return Map<String, dynamic>.from(first);
-      }
-    }
-
-    throw const CoupleRecordingRepositoryException(
-      CoupleRecordingFailureReason.unknown,
-    );
   }
 
   CoupleRecordingRepositoryException _mapPostgrestError(
