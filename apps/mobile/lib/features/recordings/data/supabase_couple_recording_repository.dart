@@ -10,16 +10,16 @@ import 'couple_recording_data_gateways.dart';
 import 'couple_recording_failure.dart';
 import 'recording_id_generator.dart';
 import 'recording_slot_artwork_path.dart';
-import 'recording_upload_failure_policy.dart';
 import 'couple_recording_repository_contract.dart';
 import 'supabase_couple_recording_overview_reader.dart';
+import 'supabase_current_couple_recording_writer.dart';
 
 class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
   const SupabaseCoupleRecordingRepository({
     CoupleRecordingOverviewReader overviewReader =
         const SupabaseCoupleRecordingOverviewReader(),
     CurrentCoupleRecordingWriter currentRecordingWriter =
-        const _SupabaseCoupleRecordingDataGateway(),
+        const SupabaseCurrentCoupleRecordingWriter(),
     CoupleRecordingSlotWriter slotWriter =
         const _SupabaseCoupleRecordingDataGateway(),
     CoupleRecordingSlotArtworkStore artworkStore =
@@ -144,168 +144,12 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
 
 class _SupabaseCoupleRecordingDataGateway
     implements
-        CurrentCoupleRecordingWriter,
         CoupleRecordingSlotWriter,
         CoupleRecordingSlotArtworkStore,
         CoupleRecordingSlotPlacementStore {
   const _SupabaseCoupleRecordingDataGateway();
 
-  static const _bucketId = 'couple-recordings';
   static const _maxArtworkObjectBytes = 256 * 1024;
-
-  @override
-  Future<void> uploadCurrentRecording({
-    required String coupleId,
-    required Uint8List audioBytes,
-    required int durationMs,
-    String? recordingId,
-    bool resumeExistingUpload = false,
-  }) async {
-    _ensureSupabaseConfigured();
-
-    final resolvedRecordingId = recordingId ?? generateRecordingId();
-    final storagePath = '$coupleId/recordings/$resolvedRecordingId.m4a';
-
-    debugRecordingLog(
-      'Current recording upload started: '
-      'coupleId=$coupleId, recordingId=$resolvedRecordingId, '
-      'bytes=${audioBytes.length}, durationMs=$durationMs',
-    );
-
-    try {
-      await _bucket
-          .uploadBinary(
-            storagePath,
-            audioBytes,
-            fileOptions: const FileOptions(
-              upsert: false,
-              contentType: 'audio/mp4',
-              cacheControl: '60',
-            ),
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      debugRecordingLog(
-        'Storage upload completed: '
-        'recordingId=$resolvedRecordingId, path=$storagePath',
-      );
-    } on TimeoutException {
-      if (resumeExistingUpload &&
-          await _isCurrentRecording(resolvedRecordingId)) {
-        debugRecordingLog(
-          'Timed out widget upload was already finalized: '
-          'recordingId=$resolvedRecordingId',
-        );
-        return;
-      }
-      debugRecordingLog(
-        'Storage upload timed out: '
-        'recordingId=$resolvedRecordingId, path=$storagePath',
-      );
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on StorageException catch (error) {
-      if (resumeExistingUpload && _isExistingStorageObject(error)) {
-        if (await _isCurrentRecording(resolvedRecordingId)) {
-          debugRecordingLog(
-            'Existing widget upload already finalized: '
-            'recordingId=$resolvedRecordingId',
-          );
-          return;
-        }
-        debugRecordingLog(
-          'Existing widget upload will resume finalization: '
-          'recordingId=$resolvedRecordingId',
-        );
-      } else {
-        final mappedError = _mapStorageError(error);
-        debugRecordingLog(
-          'Storage upload failed: '
-          'recordingId=$resolvedRecordingId, error=$mappedError',
-        );
-        throw mappedError;
-      }
-    }
-
-    try {
-      debugRecordingLog(
-        'Finalize RPC started: recordingId=$resolvedRecordingId',
-      );
-      await Supabase.instance.client
-          .rpc(
-            'replace_current_couple_recording',
-            params: {
-              'requested_recording_id': resolvedRecordingId,
-              'requested_storage_path': storagePath,
-              'requested_duration_ms': durationMs,
-            },
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      debugRecordingLog(
-        'Finalize RPC completed: recordingId=$resolvedRecordingId',
-      );
-    } on TimeoutException {
-      if (resumeExistingUpload &&
-          await _isCurrentRecording(resolvedRecordingId)) {
-        debugRecordingLog(
-          'Timed out recording finalize was already completed: '
-          'recordingId=$resolvedRecordingId',
-        );
-        return;
-      }
-      debugRecordingLog(
-        'Finalize RPC timed out: recordingId=$resolvedRecordingId',
-      );
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      if (resumeExistingUpload &&
-          await _isCurrentRecording(resolvedRecordingId)) {
-        debugRecordingLog(
-          'Widget upload finalize retry already completed: '
-          'recordingId=$resolvedRecordingId',
-        );
-        return;
-      }
-      final mappedError = _mapPostgrestError(error);
-      debugRecordingLog(
-        'Finalize RPC failed: '
-        'recordingId=$resolvedRecordingId, error=$mappedError',
-      );
-      await _discardUploadedRecordingIfNeeded(
-        recordingId: resolvedRecordingId,
-        storagePath: storagePath,
-        error: mappedError,
-      );
-      throw mappedError;
-    } catch (error) {
-      debugRecordingLog(
-        'Finalize RPC failed with unexpected error: '
-        'recordingId=$resolvedRecordingId, error=$error',
-      );
-      rethrow;
-    }
-  }
-
-  bool _isExistingStorageObject(StorageException error) {
-    final normalized = '${error.error} ${error.message}'.toLowerCase();
-    return error.statusCode == '409' ||
-        normalized.contains('duplicate') ||
-        normalized.contains('already exists');
-  }
-
-  Future<bool> _isCurrentRecording(String recordingId) async {
-    try {
-      final data = await Supabase.instance.client
-          .rpc('get_current_couple_recording')
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final row = _asSingleRow(data);
-      return row?['current_recording_id'] == recordingId;
-    } catch (_) {
-      return false;
-    }
-  }
 
   @override
   Future<CoupleRecordingSlotSaveResult> saveCurrentRecordingToSlot({
@@ -570,9 +414,6 @@ class _SupabaseCoupleRecordingDataGateway
     }
   }
 
-  StorageFileApi get _bucket =>
-      Supabase.instance.client.storage.from(_bucketId);
-
   StorageFileApi get _artworkBucket =>
       Supabase.instance.client.storage.from(RecordingSlotArtworkPath.bucketId);
 
@@ -655,49 +496,6 @@ class _SupabaseCoupleRecordingDataGateway
       CoupleRecordingFailureReason.storage,
       error.message,
     );
-  }
-
-  Future<void> _discardUploadedRecordingIfNeeded({
-    required String recordingId,
-    required String storagePath,
-    required CoupleRecordingRepositoryException error,
-  }) async {
-    if (!shouldDiscardUploadedRecording(error)) {
-      debugRecordingLog(
-        'Cleanup skipped: recordingId=$recordingId, reason=${error.reason}',
-      );
-      return;
-    }
-
-    debugRecordingLog(
-      'Cleanup RPC started: '
-      'recordingId=$recordingId, path=$storagePath, reason=${error.reason}',
-    );
-
-    try {
-      await Supabase.instance.client
-          .rpc(
-            'discard_uploaded_couple_recording',
-            params: {
-              'requested_recording_id': recordingId,
-              'requested_storage_path': storagePath,
-            },
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      debugRecordingLog('Cleanup RPC completed: recordingId=$recordingId');
-    } on TimeoutException {
-      debugRecordingLog('Cleanup RPC timed out: recordingId=$recordingId');
-    } on PostgrestException catch (cleanupError) {
-      debugRecordingLog(
-        'Cleanup RPC failed: '
-        'recordingId=$recordingId, error=${cleanupError.message}',
-      );
-    } catch (cleanupError) {
-      debugRecordingLog(
-        'Cleanup RPC failed with unexpected error: '
-        'recordingId=$recordingId, error=$cleanupError',
-      );
-    }
   }
 
   CoupleRecordingFailureReason _reasonFromMessage(String message) {
