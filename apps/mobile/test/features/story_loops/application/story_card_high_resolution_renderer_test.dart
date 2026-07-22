@@ -7,11 +7,7 @@ import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {
   testWidgets('defaults to 1440 by 1800 and renders a PNG', (tester) async {
-    const defaultRenderer = StoryCardHighResolutionRenderer();
-    const renderer = StoryCardHighResolutionRenderer(
-      outputWidth: 144,
-      outputHeight: 180,
-    );
+    const renderer = StoryCardHighResolutionRenderer();
     final source = StoryCardDownloadSource(
       scene: StoryCardScene.empty().copyWith(
         caption: 'our day',
@@ -28,8 +24,8 @@ void main() {
       backgroundImageBytes: null,
     );
 
-    expect(defaultRenderer.outputWidth, 1440);
-    expect(defaultRenderer.outputHeight, 1800);
+    expect(renderer.outputWidth, 1440);
+    expect(renderer.outputHeight, 1800);
 
     final dimensions = await tester.runAsync<(int, int)>(() async {
       final bytes = await renderer.render(source);
@@ -41,6 +37,6 @@ void main() {
       return result;
     });
 
-    expect(dimensions, (144, 180));
+    expect(dimensions, (1440, 1800));
   });
 }
