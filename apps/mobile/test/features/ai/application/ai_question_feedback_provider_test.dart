@@ -22,11 +22,35 @@ void main() {
     );
     addTearDown(subscription.close);
 
-    final feedback = await container.read(provider.future);
+    final feedbackState = await container.read(provider.future);
 
-    expect(feedback, isNull);
+    expect(feedbackState, isA<AiQuestionFeedbackDisabled>());
     expect(repository.dashboardRequestCount, 1);
     expect(repository.feedbackRequestCount, 0);
+  });
+
+  test('reports processing while enabled feedback is not published', () async {
+    final repository = _FeedbackRepository(
+      dashboard: _dashboard(isEnabled: true),
+    );
+    final container = ProviderContainer(
+      overrides: [aiLearningRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    final provider = aiQuestionFeedbackProvider('daily-question-id');
+    final subscription = container.listen(
+      provider,
+      (previous, next) {},
+      fireImmediately: true,
+    );
+    addTearDown(subscription.close);
+
+    final feedbackState = await container.read(provider.future);
+
+    expect(feedbackState, isA<AiQuestionFeedbackProcessing>());
+    expect(repository.dashboardRequestCount, 1);
+    expect(repository.feedbackRequestCount, 1);
   });
 
   test('stops polling after published feedback is returned', () async {
@@ -52,9 +76,13 @@ void main() {
     );
     addTearDown(subscription.close);
 
-    final feedback = await container.read(provider.future);
+    final feedbackState = await container.read(provider.future);
 
-    expect(feedback, same(publishedFeedback));
+    expect(feedbackState, isA<AiQuestionFeedbackPublished>());
+    expect(
+      (feedbackState as AiQuestionFeedbackPublished).feedback,
+      same(publishedFeedback),
+    );
     expect(repository.dashboardRequestCount, 1);
     expect(repository.feedbackRequestCount, 1);
   });

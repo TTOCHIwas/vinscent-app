@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../ai/application/ai_learning_controller.dart';
 import '../../ai/application/ai_question_feedback_provider.dart';
+import '../../ai/data/ai_learning_dashboard.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
@@ -22,7 +24,9 @@ import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
 import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
+import '../application/home_guide.dart';
 import 'widgets/home_hanging_story_cards.dart';
+import 'widgets/home_guide_rotator.dart';
 import 'widgets/transient_home_feedback_presenter.dart';
 
 const _homeStatusLoadError =
@@ -37,8 +41,9 @@ const _homeStatusArchivedHeadline = '\uae30\ub85d \ubcf4\uad00 \uc911';
 const _homeStoryCreateTooltip = '\uce74\ub4dc \uc791\uc131';
 const _homeStoryCardSemantics = '\uc2a4\ud1a0\ub9ac \uce74\ub4dc';
 const _homeStoryRetryTooltip = '\ub2e4\uc2dc \uc2dc\ub3c4';
+const _homeFeedbackProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!';
+const _homeFeedbackProcessingDuration = Duration(seconds: 3);
 const _homeCharacterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
-const _homeFirstRecordingPrompt = '나를 길게 눌러 상대방에게 녹음해보세요!';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -246,16 +251,17 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
       currentUserId: currentUserId,
     );
     final question = summary.question;
-    String? feedbackText;
+    _HomeAiMessage? aiMessage;
     if (question != null &&
         question.myAnswerExists &&
         question.partnerAnswerExists) {
-      feedbackText = ref
+      final feedbackState = ref
           .watch(aiQuestionFeedbackProvider(question.question.dailyQuestionId))
-          .maybeWhen(
-            data: (feedback) => feedback?.feedbackText,
-            orElse: () => null,
-          );
+          .maybeWhen(data: (state) => state, orElse: () => null);
+      aiMessage = _HomeAiMessage.fromState(
+        dailyQuestionId: question.question.dailyQuestionId,
+        state: feedbackState,
+      );
     }
     final characterPromptState = ref.watch(
       coupleControllerProvider.select(
@@ -269,69 +275,178 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
         ),
       ),
     );
-    final hasNoCurrentRecording = ref.watch(
+    final recordingGuideState = ref.watch(
       coupleRecordingOverviewControllerProvider.select(
         (state) => state.maybeWhen(
-          data: (overview) =>
-              overview != null && overview.currentRecording == null,
+          data: (overview) => (
+            isReady: overview != null,
+            hasCurrentRecording: overview?.currentRecording != null,
+            hasSavedRecordingSlot: overview?.savedSlots.isNotEmpty ?? false,
+          ),
+          orElse: () => (
+            isReady: false,
+            hasCurrentRecording: false,
+            hasSavedRecordingSlot: false,
+          ),
+        ),
+      ),
+    );
+    final needsAiConsent = ref.watch(
+      aiLearningControllerProvider.select(
+        (state) => state.maybeWhen(
+          data: (dashboard) =>
+              dashboard.progress.myConsent == AiConsentStatus.revoked,
           orElse: () => false,
         ),
       ),
     );
-    final guideText = characterPromptState.needsSetup
+    final characterGuideText = characterPromptState.needsSetup
         ? _homeCharacterSetupPrompt
-        : characterPromptState.canGuideRecording &&
-              question == null &&
-              hasNoCurrentRecording
-        ? _homeFirstRecordingPrompt
         : null;
-    final questionTargetLocation = guideText == null
+    final questionTargetLocation = characterGuideText == null
         ? presentation.questionTargetLocation
         : null;
-    final normalizedFeedbackText = feedbackText?.trim();
-    final publishedFeedbackText = normalizedFeedbackText?.isNotEmpty == true
-        ? normalizedFeedbackText
-        : null;
+    final visibleAiMessage = characterGuideText == null ? aiMessage : null;
+    final featureGuides =
+        characterGuideText == null &&
+            visibleAiMessage == null &&
+            presentation.questionText == null
+        ? selectEligibleHomeGuides(
+            canCreateCard: presentation.canAddCard,
+            canRecord:
+                characterPromptState.canGuideRecording &&
+                question == null &&
+                recordingGuideState.isReady,
+            hasCurrentRecording: recordingGuideState.hasCurrentRecording,
+            hasSavedRecordingSlot: recordingGuideState.hasSavedRecordingSlot,
+            needsAiConsent: needsAiConsent,
+          )
+        : const <HomeGuide>[];
 
     return TransientHomeFeedbackPresenter(
       userId: currentUserId,
-      dailyQuestionId: guideText == null && publishedFeedbackText != null
-          ? question?.question.dailyQuestionId
-          : null,
-      feedbackText: guideText == null ? publishedFeedbackText : null,
+      dailyQuestionId: visibleAiMessage?.impressionId,
+      feedbackText: visibleAiMessage?.text,
+      visibleDuration:
+          visibleAiMessage?.duration ??
+          TransientHomeFeedbackPresenter.displayDuration,
       builder: (visibleFeedbackText, feedbackOpacity) {
-        return _HomeStoryLoopContent(
-          myCard: presentation.myCard,
-          partnerCard: presentation.partnerCard,
-          questionText:
-              guideText ?? visibleFeedbackText ?? presentation.questionText,
-          questionOpacity: visibleFeedbackText == null ? 1 : feedbackOpacity,
-          cardsAreCompleted: presentation.cardsAreCompleted,
-          canAddCard: presentation.canAddCard,
-          onAddCard: presentation.canAddCard
-              ? () => context.go('/home/story')
-              : null,
-          onQuestionTap: questionTargetLocation == null
-              ? null
-              : () => context.go(questionTargetLocation),
-          onCardTap: (card) {
-            final editTargetLocation = presentation.editTargetLocationForCard(
-              card,
-            );
-            if (editTargetLocation != null) {
-              context.go(editTargetLocation);
-              return;
-            }
-            showStoryCardDetailOverlay(
-              context: context,
-              cardId: card.id,
-              previewUrl: card.previewUrl,
+        return HomeGuideRotator(
+          guides: featureGuides,
+          onGuideTap: (guide) => _openHomeGuide(context, guide),
+          builder: (guide, guideOpacity, onGuideTap) {
+            final questionText =
+                characterGuideText ??
+                visibleFeedbackText ??
+                presentation.questionText ??
+                guide?.message;
+            final questionOpacity = visibleFeedbackText != null
+                ? feedbackOpacity
+                : guide != null
+                ? guideOpacity
+                : 1.0;
+            final onQuestionTap =
+                onGuideTap ??
+                (questionTargetLocation == null
+                    ? null
+                    : () => context.go(questionTargetLocation));
+
+            return _HomeStoryLoopContent(
+              myCard: presentation.myCard,
+              partnerCard: presentation.partnerCard,
+              questionText: questionText,
+              questionOpacity: questionOpacity,
+              cardsAreCompleted: presentation.cardsAreCompleted,
+              canAddCard: presentation.canAddCard,
+              onAddCard: presentation.canAddCard
+                  ? () => context.go('/home/story')
+                  : null,
+              onQuestionTap: onQuestionTap,
+              onCardTap: (card) {
+                final editTargetLocation = presentation
+                    .editTargetLocationForCard(card);
+                if (editTargetLocation != null) {
+                  context.go(editTargetLocation);
+                  return;
+                }
+                showStoryCardDetailOverlay(
+                  context: context,
+                  cardId: card.id,
+                  previewUrl: card.previewUrl,
+                );
+              },
             );
           },
         );
       },
     );
   }
+
+  void _openHomeGuide(BuildContext context, HomeGuide guide) {
+    switch (guide.action) {
+      case HomeGuideAction.none:
+        return;
+      case HomeGuideAction.openStoryEditor:
+        context.go('/home/story');
+      case HomeGuideAction.openRecordingLibrary:
+        context.push('/home/recordings');
+      case HomeGuideAction.openAi:
+        context.go('/ai');
+    }
+  }
+}
+
+class _HomeAiMessage {
+  const _HomeAiMessage({
+    required this.impressionId,
+    required this.text,
+    required this.duration,
+  });
+
+  factory _HomeAiMessage.processing(String dailyQuestionId) {
+    return _HomeAiMessage(
+      impressionId: '$dailyQuestionId:processing',
+      text: _homeFeedbackProcessingPrompt,
+      duration: _homeFeedbackProcessingDuration,
+    );
+  }
+
+  static _HomeAiMessage? fromState({
+    required String dailyQuestionId,
+    required AiQuestionFeedbackState? state,
+  }) {
+    return switch (state) {
+      AiQuestionFeedbackProcessing() => _HomeAiMessage.processing(
+        dailyQuestionId,
+      ),
+      AiQuestionFeedbackDelayed() => null,
+      AiQuestionFeedbackPublished(feedback: final feedback) => _published(
+        dailyQuestionId,
+        feedback.feedbackText,
+      ),
+      AiQuestionFeedbackDisabled() || null => null,
+    };
+  }
+
+  static _HomeAiMessage? _published(
+    String dailyQuestionId,
+    String feedbackText,
+  ) {
+    final normalizedText = feedbackText.trim();
+    if (normalizedText.isEmpty) {
+      return null;
+    }
+
+    return _HomeAiMessage(
+      impressionId: dailyQuestionId,
+      text: normalizedText,
+      duration: TransientHomeFeedbackPresenter.displayDuration,
+    );
+  }
+
+  final String impressionId;
+  final String text;
+  final Duration duration;
 }
 
 class _HomeStoryLoopContent extends StatelessWidget {

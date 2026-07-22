@@ -15,6 +15,7 @@ class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
     required this.dailyQuestionId,
     required this.feedbackText,
     required this.builder,
+    this.visibleDuration = displayDuration,
   });
 
   static const displayDuration = Duration(seconds: 8);
@@ -24,6 +25,7 @@ class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
   final String? dailyQuestionId;
   final String? feedbackText;
   final TransientHomeFeedbackBuilder builder;
+  final Duration visibleDuration;
 
   @override
   ConsumerState<TransientHomeFeedbackPresenter> createState() =>
@@ -49,7 +51,8 @@ class _TransientHomeFeedbackPresenterState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId ||
         oldWidget.dailyQuestionId != widget.dailyQuestionId ||
-        oldWidget.feedbackText != widget.feedbackText) {
+        oldWidget.feedbackText != widget.feedbackText ||
+        oldWidget.visibleDuration != widget.visibleDuration) {
       _synchronizeFeedback();
     }
   }
@@ -126,10 +129,7 @@ class _TransientHomeFeedbackPresenterState
         dailyQuestionId: dailyQuestionId,
       ),
     );
-    _displayTimer = Timer(
-      TransientHomeFeedbackPresenter.displayDuration,
-      _beginFadeOut,
-    );
+    _displayTimer = Timer(widget.visibleDuration, _beginFadeOut);
   }
 
   Future<void> _markShown({

@@ -244,6 +244,59 @@ void main() {
       );
     });
 
+    testWidgets('shows a character status while feedback is processing', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        processingAiFeedbackIds: {'daily-question-id'},
+        settle: false,
+      );
+
+      expect(
+        find.byKey(const Key('ai-question-feedback-status')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ai-question-feedback-thinking-dots')),
+        findsOneWidget,
+      );
+      expect(
+        findTextIgnoringWordJoiners('둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('ai-question-feedback')), findsNothing);
+    });
+
+    testWidgets('changes the character status when feedback is delayed', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        delayedAiFeedbackIds: {'daily-question-id'},
+        settle: false,
+      );
+
+      expect(
+        findTextIgnoringWordJoiners('조금만 더 기다려줘. 다 읽으면 바로 알려줄게!'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ai-question-feedback-thinking-dots')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('centers published feedback on phone and tablet widths', (
       tester,
     ) async {
@@ -899,6 +952,9 @@ Future<GoRouter> _pumpRouter(
   DateTime? relationshipStartDate,
   double viewInsetsBottom = 0,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
+  Set<String> processingAiFeedbackIds = const {},
+  Set<String> delayedAiFeedbackIds = const {},
+  bool settle = true,
 }) async {
   final today = DateTime(2026, 5, 31);
   final normalizedDetails = <DateTime, StoryLoopDetail?>{
@@ -968,7 +1024,14 @@ Future<GoRouter> _pumpRouter(
         ),
         dailyQuestionAnswerRepositoryProvider.overrideWithValue(repository),
         aiQuestionFeedbackProvider.overrideWith(
-          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
+          (ref, dailyQuestionId) => Stream.value(
+            _aiFeedbackState(
+              dailyQuestionId,
+              aiFeedbacks: aiFeedbacks,
+              processingIds: processingAiFeedbackIds,
+              delayedIds: delayedAiFeedbackIds,
+            ),
+          ),
         ),
         storyLoopReadRepositoryProvider.overrideWithValue(
           resolvedStoryLoopRepository,
@@ -986,8 +1049,36 @@ Future<GoRouter> _pumpRouter(
     ),
   );
 
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    for (var pumpCount = 0; pumpCount < 5; pumpCount++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+  }
   return router;
+}
+
+AiQuestionFeedbackState _aiFeedbackState(
+  String dailyQuestionId, {
+  required Map<String, AiQuestionFeedback> aiFeedbacks,
+  required Set<String> processingIds,
+  required Set<String> delayedIds,
+}) {
+  final feedback = aiFeedbacks[dailyQuestionId];
+  if (feedback != null) {
+    return AiQuestionFeedbackPublished(feedback);
+  }
+
+  if (processingIds.contains(dailyQuestionId)) {
+    return const AiQuestionFeedbackProcessing();
+  }
+
+  if (delayedIds.contains(dailyQuestionId)) {
+    return const AiQuestionFeedbackDelayed();
+  }
+
+  return const AiQuestionFeedbackDisabled();
 }
 
 class _FailingOnceStoryLoopReadRepository implements StoryLoopReadRepository {

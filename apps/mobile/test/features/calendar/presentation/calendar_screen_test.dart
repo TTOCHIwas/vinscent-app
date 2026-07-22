@@ -592,9 +592,14 @@ Future<void> _pumpCalendar(
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
         ),
-        aiQuestionFeedbackProvider.overrideWith(
-          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
-        ),
+        aiQuestionFeedbackProvider.overrideWith((ref, dailyQuestionId) {
+          final feedback = aiFeedbacks[dailyQuestionId];
+          return Stream.value(
+            feedback == null
+                ? const AiQuestionFeedbackDisabled()
+                : AiQuestionFeedbackPublished(feedback),
+          );
+        }),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
       ],
       child: MaterialApp.router(routerConfig: router),

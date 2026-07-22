@@ -1,18 +1,42 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'ai_learning_controller.dart';
 import '../data/ai_learning_dashboard.dart';
 import '../data/ai_learning_repository.dart';
 
 const _feedbackPollInterval = Duration(seconds: 10);
 const _maximumFeedbackPollAttempts = 36;
+const _delayedFeedbackPollAttempt = 12;
+
+sealed class AiQuestionFeedbackState {
+  const AiQuestionFeedbackState();
+}
+
+final class AiQuestionFeedbackDisabled extends AiQuestionFeedbackState {
+  const AiQuestionFeedbackDisabled();
+}
+
+final class AiQuestionFeedbackProcessing extends AiQuestionFeedbackState {
+  const AiQuestionFeedbackProcessing();
+}
+
+final class AiQuestionFeedbackDelayed extends AiQuestionFeedbackState {
+  const AiQuestionFeedbackDelayed();
+}
+
+final class AiQuestionFeedbackPublished extends AiQuestionFeedbackState {
+  const AiQuestionFeedbackPublished(this.feedback);
+
+  final AiQuestionFeedback feedback;
+}
 
 final aiQuestionFeedbackProvider = StreamProvider.autoDispose
-    .family<AiQuestionFeedback?, String>((ref, dailyQuestionId) async* {
+    .family<AiQuestionFeedbackState, String>((ref, dailyQuestionId) async* {
       final repository = ref.watch(aiLearningRepositoryProvider);
-      final dashboard = await repository.fetchDashboard();
+      final dashboard = await ref.watch(aiLearningControllerProvider.future);
 
       if (!dashboard.progress.isEnabled) {
-        yield null;
+        yield const AiQuestionFeedbackDisabled();
         return;
       }
 
@@ -20,9 +44,17 @@ final aiQuestionFeedbackProvider = StreamProvider.autoDispose
         final feedback = await repository.fetchQuestionFeedback(
           dailyQuestionId,
         );
-        yield feedback;
 
-        if (feedback != null || attempt == _maximumFeedbackPollAttempts - 1) {
+        if (feedback != null) {
+          yield AiQuestionFeedbackPublished(feedback);
+          return;
+        }
+
+        yield attempt >= _delayedFeedbackPollAttempt
+            ? const AiQuestionFeedbackDelayed()
+            : const AiQuestionFeedbackProcessing();
+
+        if (attempt == _maximumFeedbackPollAttempts - 1) {
           return;
         }
 

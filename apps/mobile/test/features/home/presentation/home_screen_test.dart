@@ -5,13 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/home/application/home_guide.dart';
 import 'package:vinscent/features/home/data/home_feedback_impression_store.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
+import 'package:vinscent/features/home/presentation/widgets/home_guide_rotator.dart';
+import 'package:vinscent/features/home/presentation/widgets/transient_home_feedback_presenter.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
@@ -59,7 +63,7 @@ const _storyWaitingAnswer =
 const _storyAiPlaceholder =
     'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
 const _characterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
-const _firstRecordingPrompt = '나를 길게 눌러 상대방에게 녹음해보세요!';
+const _aiProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
 Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
@@ -92,6 +96,10 @@ void main() {
       expect(find.text(_storyLabel), findsNothing);
       expect(find.text(_storyEmptyMessage), findsNothing);
       expect(find.text(_storyCreateAction), findsNothing);
+      expect(
+        findTextIgnoringWordJoiners(HomeGuide.card.message),
+        findsOneWidget,
+      );
       expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
       expect(
         tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),
@@ -99,6 +107,19 @@ void main() {
       );
     },
   );
+
+  testWidgets('카드 안내 말풍선을 누르면 카드 작성 화면을 연다', (tester) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    await tester.tap(findTextIgnoringWordJoiners(HomeGuide.card.message));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home/story');
+  });
 
   testWidgets(
     '\uc9e7\uc740 \ud654\uba74\uc5d0\uc11c\ub3c4 \uc138\ub85c \uc2a4\ud06c\ub864\uacfc \uc624\ubc84\ud50c\ub85c\uc6b0\uac00 \uc5c6\ub2e4',
@@ -146,29 +167,68 @@ void main() {
     expect(router.canPop(), isTrue);
   });
 
-  testWidgets('커스텀 캐릭터에 질문과 녹음이 없으면 첫 녹음을 안내한다', (tester) async {
+  testWidgets('내 카드를 작성했고 녹음이 없으면 첫 녹음을 안내한다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
       today: _today,
-      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      todaySummary: _todaySummaryWithMyCard(),
       recordingOverview: _emptyRecordingOverview,
     );
 
-    expect(findTextIgnoringWordJoiners(_firstRecordingPrompt), findsOneWidget);
+    expect(
+      tester.widget<HomeGuideRotator>(find.byType(HomeGuideRotator)).guides,
+      contains(HomeGuide.recording),
+    );
+    expect(
+      findTextIgnoringWordJoiners(HomeGuide.recording.message),
+      findsOneWidget,
+    );
     expect(find.byKey(_questionBubbleKey), findsOneWidget);
   });
 
-  testWidgets('현재 녹음이 있으면 첫 녹음 안내를 표시하지 않는다', (tester) async {
-    await _pumpHome(
+  testWidgets('현재 녹음이 있으면 보관함 사용을 안내하고 이동한다', (tester) async {
+    final router = await _pumpRoutedHome(
       tester,
-      couple: _activeCouple,
-      today: _today,
-      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      todaySummary: _todaySummaryWithMyCard(),
       recordingOverview: _recordingOverviewWithCurrentAudio(),
     );
 
-    expect(findTextIgnoringWordJoiners(_firstRecordingPrompt), findsNothing);
+    expect(
+      findTextIgnoringWordJoiners(HomeGuide.recording.message),
+      findsNothing,
+    );
+    expect(
+      findTextIgnoringWordJoiners(HomeGuide.recordingLibrary.message),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      findTextIgnoringWordJoiners(HomeGuide.recordingLibrary.message),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('recording library route'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+  });
+
+  testWidgets('AI 동의 안내를 누르면 AI 탭으로 이동한다', (tester) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      todaySummary: _todaySummaryWithMyCard(),
+      recordingOverview: _recordingOverviewWithSavedSlot(),
+      aiDashboard: _aiDashboard(myConsent: AiConsentStatus.revoked),
+    );
+
+    expect(
+      findTextIgnoringWordJoiners(HomeGuide.aiConsent.message),
+      findsOneWidget,
+    );
+
+    await tester.tap(findTextIgnoringWordJoiners(HomeGuide.aiConsent.message));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/ai');
   });
 
   testWidgets(
@@ -209,7 +269,10 @@ void main() {
         findTextIgnoringWordJoiners(_dailyQuestion.questionText),
         findsOneWidget,
       );
-      expect(findTextIgnoringWordJoiners(_firstRecordingPrompt), findsNothing);
+      expect(
+        findTextIgnoringWordJoiners(HomeGuide.recording.message),
+        findsNothing,
+      );
       final questionBubble = find.byKey(_questionBubbleKey);
       final questionAction = find.byKey(_questionActionKey);
       final characterControl = find.byKey(CharacterRecordingControl.controlKey);
@@ -442,6 +505,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home/question');
+  });
+
+  testWidgets('briefly announces that completed answers are being read', (
+    tester,
+  ) async {
+    final impressionStore = _FakeHomeFeedbackImpressionStore();
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _completedTodaySummary(),
+      processingAiFeedbackIds: {_dailyQuestion.dailyQuestionId},
+      feedbackImpressionStore: impressionStore,
+      settle: false,
+    );
+    await tester.pump();
+
+    expect(findTextIgnoringWordJoiners(_aiProcessingPrompt), findsOneWidget);
+    expect(
+      impressionStore.lastShownByUser[_profile.id],
+      '${_dailyQuestion.dailyQuestionId}:processing',
+    );
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(TransientHomeFeedbackPresenter.fadeDuration);
+
+    expect(findTextIgnoringWordJoiners(_aiProcessingPrompt), findsNothing);
   });
 
   testWidgets('removes published feedback after its temporary display', (
@@ -886,7 +976,7 @@ void main() {
         expect(find.text(_storyQuestionAction), findsNothing);
         expect(find.text(_storyAnswerAction), findsNothing);
         expect(
-          findTextIgnoringWordJoiners(_firstRecordingPrompt),
+          findTextIgnoringWordJoiners(HomeGuide.recording.message),
           findsNothing,
         );
       },
@@ -900,7 +990,9 @@ Future<GoRouter> _pumpRoutedHome(
   Couple? couple,
   CoupleRecordingOverview? recordingOverview,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
+  Set<String> processingAiFeedbackIds = const {},
   HomeFeedbackImpressionStore? feedbackImpressionStore,
+  AiLearningDashboard? aiDashboard,
 }) async {
   final router = GoRouter(
     initialLocation: '/home',
@@ -930,6 +1022,17 @@ Future<GoRouter> _pumpRoutedHome(
           body: Center(child: Text('character settings route')),
         ),
       ),
+      GoRoute(
+        path: '/home/recordings',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('recording library route')),
+        ),
+      ),
+      GoRoute(
+        path: '/ai',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('AI route'))),
+      ),
     ],
   );
   addTearDown(router.dispose);
@@ -944,11 +1047,20 @@ Future<GoRouter> _pumpRoutedHome(
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
         ),
+        aiLearningControllerProvider.overrideWithBuild(
+          (ref, notifier) async => aiDashboard ?? _aiDashboard(),
+        ),
         storyLoopReadRepositoryProvider.overrideWithValue(
           FakeStoryLoopReadRepository(todaySummary: todaySummary),
         ),
         aiQuestionFeedbackProvider.overrideWith(
-          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
+          (ref, dailyQuestionId) => Stream.value(
+            _aiFeedbackState(
+              dailyQuestionId,
+              aiFeedbacks: aiFeedbacks,
+              processingIds: processingAiFeedbackIds,
+            ),
+          ),
         ),
         homeFeedbackImpressionStoreProvider.overrideWithValue(
           feedbackImpressionStore ?? _FakeHomeFeedbackImpressionStore(),
@@ -973,7 +1085,9 @@ Future<void> _pumpHome(
   StoryLoopReadRepository? storyLoopRepository,
   CoupleRecordingOverview? recordingOverview,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
+  Set<String> processingAiFeedbackIds = const {},
   HomeFeedbackImpressionStore? feedbackImpressionStore,
+  AiLearningDashboard? aiDashboard,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -986,12 +1100,21 @@ Future<void> _pumpHome(
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
         ),
+        aiLearningControllerProvider.overrideWithBuild(
+          (ref, notifier) async => aiDashboard ?? _aiDashboard(),
+        ),
         storyLoopReadRepositoryProvider.overrideWithValue(
           storyLoopRepository ??
               FakeStoryLoopReadRepository(todaySummary: todaySummary),
         ),
         aiQuestionFeedbackProvider.overrideWith(
-          (ref, dailyQuestionId) => Stream.value(aiFeedbacks[dailyQuestionId]),
+          (ref, dailyQuestionId) => Stream.value(
+            _aiFeedbackState(
+              dailyQuestionId,
+              aiFeedbacks: aiFeedbacks,
+              processingIds: processingAiFeedbackIds,
+            ),
+          ),
         ),
         homeFeedbackImpressionStoreProvider.overrideWithValue(
           feedbackImpressionStore ?? _FakeHomeFeedbackImpressionStore(),
@@ -1008,8 +1131,27 @@ Future<void> _pumpHome(
   if (settle) {
     await tester.pumpAndSettle();
   } else {
-    await tester.pump();
+    for (var pumpCount = 0; pumpCount < 5; pumpCount++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
   }
+}
+
+AiQuestionFeedbackState _aiFeedbackState(
+  String dailyQuestionId, {
+  required Map<String, AiQuestionFeedback> aiFeedbacks,
+  required Set<String> processingIds,
+}) {
+  final feedback = aiFeedbacks[dailyQuestionId];
+  if (feedback != null) {
+    return AiQuestionFeedbackPublished(feedback);
+  }
+
+  if (processingIds.contains(dailyQuestionId)) {
+    return const AiQuestionFeedbackProcessing();
+  }
+
+  return const AiQuestionFeedbackDisabled();
 }
 
 class _FakeHomeFeedbackImpressionStore implements HomeFeedbackImpressionStore {
@@ -1110,6 +1252,45 @@ TodayStoryLoopSummary _completedTodaySummary() {
   );
 }
 
+TodayStoryLoopSummary _todaySummaryWithMyCard() {
+  return _summaryWithoutQuestion(
+    coupleDate: _today,
+    loopStatus: StoryLoopStatus.waitingPartnerCard,
+    cardCount: 1,
+    storyEditLocked: false,
+    canEditStory: true,
+    canAnswerQuestion: false,
+    cards: [samplePreviewCard(authorUserId: _profile.id)],
+  );
+}
+
+AiLearningDashboard _aiDashboard({
+  AiConsentStatus myConsent = AiConsentStatus.granted,
+  AiConsentStatus partnerConsent = AiConsentStatus.granted,
+}) {
+  return AiLearningDashboard(
+    progress: AiLearningProgress(
+      curriculumVersion: 1,
+      completedCount: 0,
+      totalCount: 24,
+      stage: AiLearningStage.collecting,
+      domainProgress: const {},
+      myConsent: myConsent,
+      partnerConsent: partnerConsent,
+      isEnabled:
+          myConsent == AiConsentStatus.granted &&
+          partnerConsent == AiConsentStatus.granted,
+      foundationComplete: false,
+      memoryProcessingComplete: false,
+      personalizationStatus: AiPersonalizationStatus.collecting,
+      personalizationEnabled: false,
+      myPendingReviewCount: 0,
+      partnerPendingReviewCount: 0,
+    ),
+    memories: const [],
+  );
+}
+
 const _emptyRecordingOverview = CoupleRecordingOverview(
   slotLimit: 5,
   currentRecording: null,
@@ -1130,6 +1311,32 @@ CoupleRecordingOverview _recordingOverviewWithCurrentAudio() {
       audioUrl: 'https://example.com/current.m4a',
     ),
     savedSlots: const [],
+  );
+}
+
+CoupleRecordingOverview _recordingOverviewWithSavedSlot() {
+  final overview = _recordingOverviewWithCurrentAudio();
+  final recordedAt = DateTime.utc(2026, 5, 31, 9);
+  return CoupleRecordingOverview(
+    slotLimit: overview.slotLimit,
+    currentRecording: overview.currentRecording,
+    savedSlots: [
+      CoupleRecordingSlot(
+        slotId: 'slot-id',
+        slotIndex: 1,
+        title: '첫 녹음',
+        recordingId: 'saved-recording-id',
+        senderUserId: _profile.id,
+        durationMs: 1200,
+        recordedAt: recordedAt,
+        slotRevision: 1,
+        createdByUserId: _profile.id,
+        updatedByUserId: _profile.id,
+        createdAt: recordedAt,
+        updatedAt: recordedAt,
+        audioUrl: 'https://example.com/saved.m4a',
+      ),
+    ],
   );
 }
 
