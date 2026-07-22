@@ -57,4 +57,15 @@ class CoupleCharacterStoragePaths {
   static String drawingDataPathFor(String coupleId) {
     return '$coupleId/current.json';
   }
+
+  static String imageRevisionPathFor(String coupleId, String artifactRevision) {
+    return '$coupleId/revisions/$artifactRevision/preview.png';
+  }
+
+  static String drawingDataRevisionPathFor(
+    String coupleId,
+    String artifactRevision,
+  ) {
+    return '$coupleId/revisions/$artifactRevision/drawing.json';
+  }
 }
