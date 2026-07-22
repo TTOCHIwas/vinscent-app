@@ -6,8 +6,12 @@ import 'package:vinscent/features/story_loops/data/story_card_download_source.da
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {
-  testWidgets('renders a card as a 1440 by 1800 PNG', (tester) async {
-    const renderer = StoryCardHighResolutionRenderer();
+  testWidgets('defaults to 1440 by 1800 and renders a PNG', (tester) async {
+    const defaultRenderer = StoryCardHighResolutionRenderer();
+    const renderer = StoryCardHighResolutionRenderer(
+      outputWidth: 144,
+      outputHeight: 180,
+    );
     final source = StoryCardDownloadSource(
       scene: StoryCardScene.empty().copyWith(
         caption: 'our day',
@@ -24,15 +28,19 @@ void main() {
       backgroundImageBytes: null,
     );
 
-    final bytes = await renderer.render(source);
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    addTearDown(() {
+    expect(defaultRenderer.outputWidth, 1440);
+    expect(defaultRenderer.outputHeight, 1800);
+
+    final dimensions = await tester.runAsync<(int, int)>(() async {
+      final bytes = await renderer.render(source);
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final result = (frame.image.width, frame.image.height);
       frame.image.dispose();
       codec.dispose();
+      return result;
     });
 
-    expect(frame.image.width, 1440);
-    expect(frame.image.height, 1800);
+    expect(dimensions, (144, 180));
   });
 }

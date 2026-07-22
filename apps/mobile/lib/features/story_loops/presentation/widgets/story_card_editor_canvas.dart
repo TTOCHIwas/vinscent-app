@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
+import '../../application/story_card_canvas_renderer.dart';
 import '../../application/story_card_editor_session.dart';
 import '../../data/story_card_scene.dart';
 
@@ -85,9 +86,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                     child: CustomPaint(
                       painter: _StoryCardPainter(
                         backgroundImage: widget.backgroundImage,
-                        backgroundTransform: widget.scene.backgroundTransform,
-                        canvasBackground: widget.scene.canvasBackground,
-                        caption: widget.scene.caption,
+                        scene: widget.scene,
                         strokes: widget.visibleStrokes,
                       ),
                     ),
@@ -128,6 +127,8 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                                   textAlign: TextAlign.center,
                                   style: AppTextStyles.homeBodyMedium.copyWith(
                                     color: layer.color,
+                                    fontSize:
+                                        size.width * storyCardTextFontSizeRatio,
                                     shadows: const [],
                                   ),
                                 ),
@@ -231,144 +232,35 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
 class _StoryCardPainter extends CustomPainter {
   const _StoryCardPainter({
     required this.backgroundImage,
-    required this.backgroundTransform,
-    required this.canvasBackground,
-    required this.caption,
+    required this.scene,
     required this.strokes,
   });
 
   final ui.Image? backgroundImage;
-  final StoryCardBackgroundTransform backgroundTransform;
-  final StoryCardCanvasBackground canvasBackground;
-  final String? caption;
+  final StoryCardScene scene;
   final List<StoryCardStroke> strokes;
+
+  StoryCardBackgroundTransform get backgroundTransform =>
+      scene.backgroundTransform;
+
+  String? get caption => scene.caption;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final layout = StoryCardPolaroidLayout.fromSize(size);
-    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
-
-    canvas.save();
-    canvas.clipRect(layout.photoRect);
-    canvas.drawRect(layout.photoRect, Paint()..color = canvasBackground.color);
-    final image = backgroundImage;
-    if (image != null) {
-      final coverScale =
-          (layout.photoRect.width / image.width).compareTo(
-                layout.photoRect.height / image.height,
-              ) >=
-              0
-          ? layout.photoRect.width / image.width
-          : layout.photoRect.height / image.height;
-      final drawWidth = image.width * coverScale * backgroundTransform.scale;
-      final drawHeight = image.height * coverScale * backgroundTransform.scale;
-      final offsetX =
-          layout.photoRect.left +
-          (layout.photoRect.width - drawWidth) / 2 +
-          backgroundTransform.offsetX * layout.photoRect.width;
-      final offsetY =
-          layout.photoRect.top +
-          (layout.photoRect.height - drawHeight) / 2 +
-          backgroundTransform.offsetY * layout.photoRect.height;
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        Rect.fromLTWH(offsetX, offsetY, drawWidth, drawHeight),
-        Paint(),
-      );
-    }
-    canvas.restore();
-
-    _drawCaption(canvas, size, layout.captionRect);
-
-    if (strokes.isNotEmpty) {
-      final bounds = Offset.zero & size;
-      canvas.saveLayer(bounds, Paint());
-      for (final stroke in strokes) {
-        _drawStroke(canvas, size, stroke);
-      }
-      canvas.restore();
-    }
-  }
-
-  void _drawCaption(Canvas canvas, Size size, Rect captionRect) {
-    final value = caption;
-    if (value == null || value.isEmpty || captionRect.isEmpty) {
-      return;
-    }
-
-    final painter = TextPainter(
-      text: TextSpan(
-        text: value,
-        style: TextStyle(
-          color: const Color(0xFF222222),
-          fontSize: size.width * storyCardCaptionFontSizeRatio,
-          fontWeight: FontWeight.w500,
-          height: 1.3,
-          letterSpacing: 0,
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-      maxLines: storyCardMaxCaptionLines,
-      ellipsis: '…',
-    )..layout(minWidth: captionRect.width, maxWidth: captionRect.width);
-    painter.paint(
-      canvas,
-      Offset(
-        captionRect.left,
-        captionRect.top + (captionRect.height - painter.height) / 2,
-      ),
+    StoryCardCanvasRenderer.paint(
+      canvas: canvas,
+      size: size,
+      scene: scene,
+      backgroundImage: backgroundImage,
+      strokes: strokes,
+      includeTextLayers: false,
     );
-  }
-
-  void _drawStroke(Canvas canvas, Size size, StoryCardStroke stroke) {
-    if (stroke.points.isEmpty) {
-      return;
-    }
-
-    final paint = Paint()
-      ..strokeWidth = stroke.width * size.shortestSide
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke
-      ..color = stroke.tool == StoryCardDrawingTool.pen
-          ? stroke.color
-          : Colors.transparent
-      ..blendMode = stroke.tool == StoryCardDrawingTool.eraser
-          ? BlendMode.clear
-          : BlendMode.srcOver;
-
-    if (stroke.points.length == 1) {
-      final point = _denormalize(stroke.points.first, size);
-      final fillPaint = Paint()
-        ..style = PaintingStyle.fill
-        ..color = paint.color
-        ..blendMode = paint.blendMode;
-      canvas.drawCircle(point, paint.strokeWidth / 2, fillPaint);
-      return;
-    }
-
-    final path = Path();
-    final first = _denormalize(stroke.points.first, size);
-    path.moveTo(first.dx, first.dy);
-    for (final point in stroke.points.skip(1)) {
-      final offset = _denormalize(point, size);
-      path.lineTo(offset.dx, offset.dy);
-    }
-    canvas.drawPath(path, paint);
-  }
-
-  Offset _denormalize(StoryCardPoint point, Size size) {
-    return Offset(point.x * size.width, point.y * size.height);
   }
 
   @override
   bool shouldRepaint(covariant _StoryCardPainter oldDelegate) {
     return oldDelegate.backgroundImage != backgroundImage ||
-        oldDelegate.backgroundTransform != backgroundTransform ||
-        oldDelegate.canvasBackground != canvasBackground ||
-        oldDelegate.caption != caption ||
+        oldDelegate.scene != scene ||
         oldDelegate.strokes != strokes;
   }
 }
