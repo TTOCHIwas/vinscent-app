@@ -4,14 +4,12 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
-import '../recording_debug_log.dart';
 import 'couple_recording.dart';
 import 'couple_recording_data_gateways.dart';
 import 'couple_recording_failure.dart';
-import 'recording_id_generator.dart';
-import 'recording_slot_artwork_path.dart';
 import 'couple_recording_repository_contract.dart';
 import 'supabase_couple_recording_overview_reader.dart';
+import 'supabase_couple_recording_slot_artwork_store.dart';
 import 'supabase_couple_recording_slot_writer.dart';
 import 'supabase_current_couple_recording_writer.dart';
 
@@ -24,7 +22,7 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
     CoupleRecordingSlotWriter slotWriter =
         const SupabaseCoupleRecordingSlotWriter(),
     CoupleRecordingSlotArtworkStore artworkStore =
-        const _SupabaseCoupleRecordingDataGateway(),
+        const SupabaseCoupleRecordingSlotArtworkStore(),
     CoupleRecordingSlotPlacementStore placementStore =
         const _SupabaseCoupleRecordingDataGateway(),
   }) : _overviewReader = overviewReader,
@@ -144,129 +142,8 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
 }
 
 class _SupabaseCoupleRecordingDataGateway
-    implements
-        CoupleRecordingSlotArtworkStore,
-        CoupleRecordingSlotPlacementStore {
+    implements CoupleRecordingSlotPlacementStore {
   const _SupabaseCoupleRecordingDataGateway();
-
-  static const _maxArtworkObjectBytes = 256 * 1024;
-
-  @override
-  Future<Uint8List> fetchSlotArtworkDrawingData({
-    required String drawingDataPath,
-  }) async {
-    _ensureSupabaseConfigured();
-
-    try {
-      return await _artworkBucket
-          .download(drawingDataPath)
-          .timeout(AppConfig.supabaseRpcTimeout);
-    } on TimeoutException {
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on StorageException catch (error) {
-      throw _mapStorageError(error);
-    }
-  }
-
-  @override
-  Future<void> saveSlotArtwork({
-    required String coupleId,
-    required String slotId,
-    required int expectedSlotRevision,
-    required Uint8List previewBytes,
-    required Uint8List drawingDataBytes,
-  }) async {
-    _ensureSupabaseConfigured();
-    if (previewBytes.isEmpty ||
-        drawingDataBytes.isEmpty ||
-        previewBytes.length > _maxArtworkObjectBytes ||
-        drawingDataBytes.length > _maxArtworkObjectBytes) {
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.invalidRecordingArtwork,
-      );
-    }
-
-    final artifactId = generateRecordingId();
-    final paths = RecordingSlotArtworkPath(
-      coupleId: coupleId,
-      slotId: slotId,
-      artifactId: artifactId,
-    );
-    var uploadAttempted = false;
-
-    try {
-      uploadAttempted = true;
-      await _artworkBucket
-          .uploadBinary(
-            paths.previewPath,
-            previewBytes,
-            fileOptions: const FileOptions(
-              upsert: false,
-              contentType: 'image/webp',
-              cacheControl: '31536000',
-            ),
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      await _artworkBucket
-          .uploadBinary(
-            paths.drawingDataPath,
-            drawingDataBytes,
-            fileOptions: const FileOptions(
-              upsert: false,
-              contentType: 'application/gzip',
-              cacheControl: '31536000',
-            ),
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      await Supabase.instance.client
-          .rpc(
-            'save_couple_recording_slot_artwork',
-            params: {
-              'requested_slot_id': slotId,
-              'requested_artifact_id': artifactId,
-              'expected_slot_revision': expectedSlotRevision,
-            },
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-    } on TimeoutException {
-      await _discardUploadedSlotArtwork(
-        uploadAttempted: uploadAttempted,
-        slotId: slotId,
-        artifactId: artifactId,
-      );
-      throw const CoupleRecordingRepositoryException(
-        CoupleRecordingFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      await _discardUploadedSlotArtwork(
-        uploadAttempted: uploadAttempted,
-        slotId: slotId,
-        artifactId: artifactId,
-      );
-      throw _mapPostgrestError(error);
-    } on StorageException catch (error) {
-      debugRecordingLog(
-        'Slot artwork storage request failed: '
-        'statusCode=${error.statusCode}, error=${error.error}, '
-        'message=${error.message}',
-      );
-      await _discardUploadedSlotArtwork(
-        uploadAttempted: uploadAttempted,
-        slotId: slotId,
-        artifactId: artifactId,
-      );
-      throw _mapStorageError(error);
-    } catch (_) {
-      await _discardUploadedSlotArtwork(
-        uploadAttempted: uploadAttempted,
-        slotId: slotId,
-        artifactId: artifactId,
-      );
-      rethrow;
-    }
-  }
 
   @override
   Future<void> upsertSlotPlacement({
@@ -324,9 +201,6 @@ class _SupabaseCoupleRecordingDataGateway
     }
   }
 
-  StorageFileApi get _artworkBucket =>
-      Supabase.instance.client.storage.from(RecordingSlotArtworkPath.bucketId);
-
   void _ensureSupabaseConfigured() {
     if (!AppConfig.isSupabaseConfigured) {
       throw const CoupleRecordingRepositoryException(
@@ -335,42 +209,11 @@ class _SupabaseCoupleRecordingDataGateway
     }
   }
 
-  Future<void> _discardUploadedSlotArtwork({
-    required bool uploadAttempted,
-    required String slotId,
-    required String artifactId,
-  }) async {
-    if (!uploadAttempted) {
-      return;
-    }
-
-    try {
-      await Supabase.instance.client
-          .rpc(
-            'discard_uploaded_couple_recording_slot_artwork',
-            params: {
-              'requested_slot_id': slotId,
-              'requested_artifact_id': artifactId,
-            },
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-    } catch (error) {
-      debugRecordingLog('Slot artwork cleanup failed: $error');
-    }
-  }
-
   CoupleRecordingRepositoryException _mapPostgrestError(
     PostgrestException error,
   ) {
     return CoupleRecordingRepositoryException(
       _reasonFromMessage(error.message),
-      error.message,
-    );
-  }
-
-  CoupleRecordingRepositoryException _mapStorageError(StorageException error) {
-    return CoupleRecordingRepositoryException(
-      CoupleRecordingFailureReason.storage,
       error.message,
     );
   }
