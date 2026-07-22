@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(14);
+select plan(19);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -91,6 +91,69 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select lives_ok(
+  $$
+    insert into storage.objects (bucket_id, name)
+    values
+      (
+        'couple-characters',
+        '20000000-0000-0000-0000-000000000001/revisions/30000000-0000-0000-0000-000000000004/preview.png'
+      ),
+      (
+        'couple-characters',
+        '20000000-0000-0000-0000-000000000001/revisions/30000000-0000-0000-0000-000000000004/drawing.json'
+      )
+  $$,
+  'a member can upload an immutable character artifact revision'
+);
+
+select is(
+  (
+    select count(*)
+    from storage.objects
+    where bucket_id = 'couple-characters'
+      and name like '20000000-0000-0000-0000-000000000001/revisions/30000000-0000-0000-0000-000000000004/%'
+  ),
+  2::bigint,
+  'a member can read an uploaded character artifact revision'
+);
+
+select lives_ok(
+  $$
+    update storage.objects
+    set metadata = '{"verified": true}'::jsonb
+    where bucket_id = 'couple-characters'
+      and name = '20000000-0000-0000-0000-000000000001/revisions/30000000-0000-0000-0000-000000000004/preview.png'
+  $$,
+  'a member can update an owned character artifact revision'
+);
+
+select throws_ok(
+  $$
+    insert into storage.objects (bucket_id, name)
+    values (
+      'couple-characters',
+      '20000000-0000-0000-0000-000000000001/revisions/not-a-uuid/preview.png'
+    )
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "objects"',
+  'a malformed character artifact revision is rejected'
+);
+
+select throws_ok(
+  $$
+    insert into storage.objects (bucket_id, name)
+    values (
+      'couple-characters',
+      '20000000-0000-0000-0000-000000000002/revisions/30000000-0000-0000-0000-000000000005/preview.png'
+    )
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "objects"',
+  'another couple character artifact revision is rejected'
+);
 
 select throws_ok(
   $$

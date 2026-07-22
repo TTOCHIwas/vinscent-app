@@ -9,6 +9,7 @@ import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
+import 'package:vinscent/features/characters/data/couple_character_failure.dart';
 import 'package:vinscent/features/characters/data/couple_character_repository.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -56,6 +57,34 @@ void main() {
 
     expect(_saveButton(tester).onPressed, isNotNull);
   });
+
+  testWidgets(
+    'describes storage failures without assuming a permission issue',
+    (tester) async {
+      final repository = _FakeCoupleCharacterRepository(
+        saveError: const CoupleCharacterRepositoryException(
+          CoupleCharacterFailureReason.storage,
+          'storage request failed',
+        ),
+      );
+
+      await _pumpCharacterEditor(tester, repository);
+      await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
+      await tester.pump();
+
+      expect(_saveButton(tester).onPressed, isNotNull);
+
+      await tester.tap(find.text('저장'));
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('캐릭터 파일을 저장하지 못했어요.'), findsOneWidget);
+      expect(find.text('캐릭터 저장 권한을 확인해 주세요.'), findsNothing);
+    },
+  );
 
   testWidgets('undo removes completed strokes from newest to oldest', (
     tester,
@@ -270,7 +299,9 @@ Future<void> _pumpCharacterEditor(
           routes: [
             GoRoute(
               path: '/settings/character',
-              builder: (context, state) => const CharacterEditorScreen(),
+              builder: (context, state) => const Scaffold(
+                body: CharacterEditorScreen(),
+              ),
             ),
             GoRoute(
               path: '/settings',
@@ -308,6 +339,9 @@ Future<void> _waitForRoute(
 }
 
 class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
+  _FakeCoupleCharacterRepository({this.saveError});
+
+  final Object? saveError;
   Uint8List? savedImageBytes;
   String? savedDrawingDataJson;
 
@@ -327,6 +361,10 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
     required Uint8List imageBytes,
     required String drawingDataJson,
   }) async {
+    if (saveError != null) {
+      throw saveError!;
+    }
+
     savedImageBytes = imageBytes;
     savedDrawingDataJson = drawingDataJson;
 

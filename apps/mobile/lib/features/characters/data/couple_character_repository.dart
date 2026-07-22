@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/config/app_config.dart';
+import '../character_debug_log.dart';
 import 'couple_character.dart';
 import 'couple_character_failure.dart';
 
@@ -115,6 +116,13 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
         );
     final drawingDataBytes = Uint8List.fromList(utf8.encode(drawingDataJson));
     var uploadAttempted = false;
+    var stage = 'preview-upload';
+
+    debugCharacterLog(
+      'Save started: artifactRevision=$artifactRevision, '
+      'previewBytes=${imageBytes.length}, '
+      'drawingBytes=${drawingDataBytes.length}',
+    );
 
     try {
       uploadAttempted = true;
@@ -123,26 +131,37 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
         bytes: imageBytes,
         contentType: 'image/png',
       );
+      stage = 'drawing-upload';
       await _uploadArtifact(
         path: drawingDataPath,
         bytes: drawingDataBytes,
         contentType: 'application/json',
       );
 
+      stage = 'finalize-rpc';
       final data = await _finalizeCharacter(
         imagePath: imagePath,
         drawingDataPath: drawingDataPath,
       );
       final row = _asRow(data);
+      stage = 'signed-url';
       final imageUrl = await _createSignedUrl(row['image_path'] as String);
+
+      debugCharacterLog('Save completed: artifactRevision=$artifactRevision');
 
       return CoupleCharacter.fromJson(row, imageUrl: imageUrl);
     } on TimeoutException {
+      debugCharacterLog(
+        'Save timed out: stage=$stage, artifactRevision=$artifactRevision',
+      );
       final finalizedCharacter = await _tryFetchFinalizedCharacter(
         imagePath: imagePath,
         drawingDataPath: drawingDataPath,
       );
       if (finalizedCharacter != null) {
+        debugCharacterLog(
+          'Save recovered after timeout: artifactRevision=$artifactRevision',
+        );
         return finalizedCharacter;
       }
 
@@ -150,17 +169,32 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
         CoupleCharacterFailureReason.requestTimeout,
       );
     } on PostgrestException catch (error) {
+      debugCharacterLog(
+        'Save RPC failed: stage=$stage, artifactRevision=$artifactRevision, '
+        'code=${error.code}, message=${error.message}',
+      );
       await _discardUploadedRevisionIfNeeded(
         uploadAttempted: uploadAttempted,
         artifactRevision: artifactRevision,
       );
       throw _mapPostgrestError(error);
     } on StorageException catch (error) {
+      debugCharacterLog(
+        'Storage request failed: stage=$stage, '
+        'artifactRevision=$artifactRevision, statusCode=${error.statusCode}, '
+        'error=${error.error}, message=${error.message}',
+      );
       await _discardUploadedRevisionIfNeeded(
         uploadAttempted: uploadAttempted,
         artifactRevision: artifactRevision,
       );
       throw _mapStorageError(error);
+    } catch (error) {
+      debugCharacterLog(
+        'Save failed unexpectedly: stage=$stage, '
+        'artifactRevision=$artifactRevision, error=$error',
+      );
+      rethrow;
     }
   }
 

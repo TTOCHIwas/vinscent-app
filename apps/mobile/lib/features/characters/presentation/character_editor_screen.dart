@@ -323,7 +323,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
           '만난 날짜를 먼저 저장해주세요.',
         CoupleCharacterFailureReason.invalidPath => '캐릭터 저장 경로가 올바르지 않아요.',
         CoupleCharacterFailureReason.requestTimeout => '요청 시간이 초과됐어요.',
-        CoupleCharacterFailureReason.storage => '캐릭터 저장 권한을 확인해 주세요.',
+        CoupleCharacterFailureReason.storage => '캐릭터 파일을 저장하지 못했어요.',
         CoupleCharacterFailureReason.unknown => '캐릭터를 저장하지 못했어요.',
       };
     }
