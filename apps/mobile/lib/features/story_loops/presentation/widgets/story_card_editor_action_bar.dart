@@ -32,6 +32,13 @@ class StoryCardEditorActionBar extends StatelessWidget {
           isSelected: interactionMode == StoryCardEditorTool.text,
           onPressed: onAddTextPressed,
         ),
+        const SizedBox(height: 8),
+        StoryCardEditorIconButton(
+          tooltip: '그리기',
+          icon: Icons.brush_outlined,
+          isSelected: interactionMode == StoryCardEditorTool.drawing,
+          onPressed: onDrawingModePressed,
+        ),
         if (onEditCaptionPressed != null) ...[
           const SizedBox(height: 8),
           StoryCardEditorIconButton(
@@ -41,13 +48,6 @@ class StoryCardEditorActionBar extends StatelessWidget {
             onPressed: onEditCaptionPressed,
           ),
         ],
-        const SizedBox(height: 8),
-        StoryCardEditorIconButton(
-          tooltip: '그리기',
-          icon: Icons.brush_outlined,
-          isSelected: interactionMode == StoryCardEditorTool.drawing,
-          onPressed: onDrawingModePressed,
-        ),
         if (!hasBackground) ...[
           const SizedBox(height: 8),
           StoryCardEditorIconButton(
