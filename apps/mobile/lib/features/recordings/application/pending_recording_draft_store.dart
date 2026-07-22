@@ -93,22 +93,26 @@ class SharedPreferencesPendingRecordingDraftMetadataStore
     implements PendingRecordingDraftMetadataStore {
   SharedPreferencesPendingRecordingDraftMetadataStore({
     SharedPreferencesAsync? preferences,
-  }) : _preferences = preferences ?? SharedPreferencesAsync();
+  }) : _preferences = preferences;
 
   static const _metadataKey = 'vinscent.recording.pending_upload';
 
-  final SharedPreferencesAsync _preferences;
+  SharedPreferencesAsync? _preferences;
 
-  @override
-  Future<String?> read() => _preferences.getString(_metadataKey);
-
-  @override
-  Future<void> write(String value) {
-    return _preferences.setString(_metadataKey, value);
+  SharedPreferencesAsync get _client {
+    return _preferences ??= SharedPreferencesAsync();
   }
 
   @override
-  Future<void> clear() => _preferences.remove(_metadataKey);
+  Future<String?> read() => _client.getString(_metadataKey);
+
+  @override
+  Future<void> write(String value) {
+    return _client.setString(_metadataKey, value);
+  }
+
+  @override
+  Future<void> clear() => _client.remove(_metadataKey);
 }
 
 class SharedPreferencesPendingRecordingDraftStore

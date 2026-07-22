@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/recordings/application/pending_recording_draft_store.dart';
 
@@ -23,6 +24,16 @@ void main() {
     if (await supportDirectory.exists()) {
       await supportDirectory.delete(recursive: true);
     }
+  });
+
+  test('default provider construction does not require platform I/O', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    expect(
+      () => container.read(pendingRecordingDraftStoreProvider),
+      returnsNormally,
+    );
   });
 
   test(
