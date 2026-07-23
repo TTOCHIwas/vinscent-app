@@ -603,6 +603,72 @@ test('foundation ranking receives metadata but not answers or memories', async (
   assert.equal(capturedPrompt.includes('question_depth'), true);
 });
 
+test('feedback prompt requests a shared character reaction instead of an answer summary', async () => {
+  const prompts: string[] = [];
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ prompt }) => {
+      prompts.push(prompt);
+      return {
+        value: { feedback_text: '소중한 걸 고르는 데도 시간이 조금 필요한가 봐!' },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+
+  await model.generateCoupleFeedback(context);
+  await model.generateCoupleFeedback(context, {
+    rejectedText: '너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐',
+  });
+  const capturedPrompt = prompts[0] ?? '';
+  const retryPrompt = prompts[1] ?? '';
+
+  assert.equal(
+    capturedPrompt.includes('The same reaction is shown unchanged to both participants.'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes("React as the couple's small app character"),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('Do not summarize, list, quote back, or merely label'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('a small connection, gentle wordplay, a concrete scene, or a warm observation'),
+    true,
+  );
+  assert.equal(capturedPrompt.includes('몰라'), true);
+  assert.equal(capturedPrompt.includes('Never identify who wrote either answer'), true);
+  assert.equal(capturedPrompt.includes('Do not use a period'), true);
+  assert.equal(
+    capturedPrompt.includes('End with no punctuation, one "!", one "?", or exactly "..."'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('Do not erase, avoid, or force a positive spin on negative answers'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('오늘은 둘의 하루가 평소보다 조금 무거운 날인가 봐...'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('소중한 걸 고르는 데도 시간이 조금 필요한가 봐!'),
+    true,
+  );
+  assert.equal(capturedPrompt.includes('"rejected_feedback":'), false);
+  assert.equal(retryPrompt.includes('"rejected_feedback":'), true);
+  assert.equal(
+    retryPrompt.includes('너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐'),
+    true,
+  );
+});
+
 test('feedback uses profile and recent six answers only after personalization opens', async () => {
   const prompts: string[] = [];
   const model = new GeminiLearningModel({

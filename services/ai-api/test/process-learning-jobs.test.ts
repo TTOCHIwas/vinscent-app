@@ -108,7 +108,7 @@ test('processor handles every learning job and restores IDs only at persistence'
     },
     async generateCoupleFeedback(context) {
       seenModelContexts.push(context);
-      return result({ text: 'You can make room for both preferences.' });
+      return result({ text: '둘의 휴식은 집과 새로운 길 사이를 오가나 봐!' });
     },
     async rankFoundationQuestions(context) {
       seenModelContexts.push(context);
@@ -163,7 +163,7 @@ test('processor handles every learning job and restores IDs only at persistence'
     ],
   });
   assert.deepEqual(repository.successes[1]?.output, {
-    feedback_text: 'You can make room for both preferences.',
+    feedback_text: '둘의 휴식은 집과 새로운 길 사이를 오가나 봐!',
   });
   assert.deepEqual(repository.successes[2]?.output, {
     question_key: 'foundation_v1_personal_values_02',
@@ -206,7 +206,7 @@ test('processor records retryable model failures and continues the batch', async
           latencyMs: 275,
         });
       }
-      return result({ text: 'The second job succeeds.' });
+      return result({ text: '둘의 휴식은 집과 새로운 길 사이를 오가나 봐!' });
     },
   });
   const processor = new LearningJobProcessor({
@@ -239,6 +239,75 @@ test('processor records retryable model failures and continues the batch', async
   assert.equal(repository.failures[0]?.retryAfterMs, 45_000);
   assert.equal(repository.failures[0]?.usage.latencyMs, 275);
   assert.equal(repository.successes[0]?.runId, 'run-job-next');
+});
+
+test('processor regenerates shared feedback once after a contract violation', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-regeneration', 'generate_feedback'),
+  ]);
+  const rejectedFeedbacks: Array<string | null> = [];
+  const invalidFeedback = '너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐';
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      rejectedFeedbacks.push(options?.rejectedText ?? null);
+      if (rejectedFeedbacks.length === 1) {
+        return result({ text: invalidFeedback });
+      }
+      return result({ text: '소중한 걸 고르는 데도 시간이 조금 필요한가 봐!' });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 1,
+    retried: 0,
+    failed: 0,
+  });
+  assert.deepEqual(rejectedFeedbacks, [null, invalidFeedback]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '소중한 걸 고르는 데도 시간이 조금 필요한가 봐!',
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 40,
+    outputTokenCount: 20,
+    latencyMs: 240,
+  });
+});
+
+test('processor stops after one invalid shared feedback regeneration', async () => {
+  const repository = new FakeRepository([
+    job('job-invalid-feedback', 'generate_feedback'),
+  ]);
+  let calls = 0;
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      calls += 1;
+      return result({ text: '서로의 답이 다르네.' });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.equal(summary.failed, 1);
+  assert.equal(repository.failures[0]?.errorCode, 'model_contract_invalid');
+  assert.equal(repository.successes.length, 0);
 });
 
 test('processor records a safe model output validation detail', async () => {
@@ -423,7 +492,7 @@ function modelWith(
       return result([]);
     },
     async generateCoupleFeedback() {
-      return result({ text: 'Default feedback.' });
+      return result({ text: '둘의 답이 작은 장면 하나를 만들었네!' });
     },
     async generatePersonalizedQuestion() {
       return result({

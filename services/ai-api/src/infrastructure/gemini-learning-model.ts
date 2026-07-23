@@ -1,4 +1,5 @@
 import type {
+  CoupleFeedbackGenerationOptions,
   FoundationQuestionRecommendation,
   LearningModelPort,
   LearningModelResult,
@@ -118,9 +119,10 @@ export class GeminiLearningModel implements LearningModelPort {
 
   async generateCoupleFeedback(
     context: AnonymizedCompletedQuestionContext,
+    options?: CoupleFeedbackGenerationOptions,
   ): Promise<LearningModelResult<CoupleFeedbackCandidate>> {
     const result = await this.#client.generateStructured({
-      prompt: buildFeedbackPrompt(context),
+      prompt: buildFeedbackPrompt(context, options?.rejectedText ?? null),
       schema: feedbackSchema,
     });
     const output = requireRecord(result.value);
@@ -230,6 +232,7 @@ function buildMemoryExtractionPrompt(
 
 function buildFeedbackPrompt(
   context: AnonymizedCompletedQuestionContext,
+  rejectedText: string | null,
 ): string {
   const data: Record<string, unknown> = {
     current_question: {
@@ -238,6 +241,10 @@ function buildFeedbackPrompt(
     },
     current_answers: context.answers,
   };
+
+  if (rejectedText !== null) {
+    data.rejected_feedback = rejectedText;
+  }
 
   if (context.foundationProgress.personalizationEnabled) {
     data.confirmed_profile = context.confirmedMemories.map((memory) => ({
@@ -254,10 +261,23 @@ function buildFeedbackPrompt(
 
   return buildTaskPrompt(
     [
-      'Write exactly one friendly Korean sentence within 80 characters including spaces.',
-      'Use casual speech that sounds like the app character, without honorifics, teasing, exaggeration, or forced sentiment.',
-      'Do not advise or evaluate. Point out one concrete similarity or difference grounded in the supplied answers.',
-      'When confirmed_profile is present, you may connect the current answers to only its confirmed facts and recent answers.',
+      'Write exactly one short Korean reaction within 80 characters including spaces.',
+      "The same reaction is shown unchanged to both participants. React as the couple's small app character, not as an analyst, counselor, or narrator.",
+      'Use meaningful signals from both current answers, including answers such as "몰라", "없어", or "글쎄".',
+      'Do not summarize, list, quote back, or merely label the answers as similar or different. Reusing a key word for a fresh expression is allowed.',
+      'Add one grounded angle through a small connection, gentle wordplay, a concrete scene, or a warm observation.',
+      'Never identify who wrote either answer. Do not use labels such as 너, 네가, 상대방, 한 사람, 다른 사람, partner_a, or partner_b in the reaction. It must remain valid if answer ownership is swapped.',
+      'You may interpret uncertainty or absence expressed by an answer, but never turn it into disinterest, avoidance, a personality trait, an emotion, or an unspoken intention.',
+      'Use light wordplay or a small scene for playful everyday answers, a warm connection for affectionate answers, and a calm observation without jokes for heavy answers.',
+      'Do not erase, avoid, or force a positive spin on negative answers. Acknowledge their tone gently without dramatizing, and use "..." when it naturally softens the reaction.',
+      'Use friendly casual speech without honorifics, baby talk, teasing, exaggeration, forced sentiment, advice, or evaluation.',
+      'Do not use a period "." by itself. End with no punctuation, one "!", one "?", or exactly "...". Never use combinations or repetitions such as "?!", "!?", "!!", "??", "..", or "....".',
+      'Do not force ordinary answers into a grand lesson or a statement about the relationship.',
+      'For the question "요즘 네가 가장 소중하게 지키고 싶은 건 뭐야?" with answers "몰라" and "시간", a good reaction is "소중한 걸 고르는 데도 시간이 조금 필요한가 봐!".',
+      'For heavy answers such as "회사에서 버티기 힘들어" and "아무 말도 하기 싫어", a fitting reaction is "오늘은 둘의 하루가 평소보다 조금 무거운 날인가 봐...".',
+      'Bad reactions include "서로 답변이 시간과 몰라로 달라", "너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐", and "서로를 알아가는 소중한 과정이네".',
+      'When rejected_feedback is present, create a genuinely different reaction that follows every rule instead of paraphrasing the rejected text.',
+      'When confirmed_profile is present, use only its confirmed shared-approved personal and couple memories plus recent answers, without revealing memory ownership.',
     ].join(' '),
     data,
   );

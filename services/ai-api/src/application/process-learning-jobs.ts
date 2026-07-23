@@ -102,7 +102,7 @@ const emptyUsage: LearningModelUsage = {
 
 const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string> = {
   extract_memories: 'memory-v5',
-  generate_feedback: 'feedback-v2',
+  generate_feedback: 'feedback-v3',
   select_curated_question: 'question-ranking-v2',
   generate_personalized_question: 'personalized-question-v2',
 };
@@ -262,8 +262,7 @@ export class LearningJobProcessor {
     }
 
     if (jobType === 'generate_feedback') {
-      const result = await this.#model.generateCoupleFeedback(modelContext);
-      validateCoupleFeedback(result.value);
+      const result = await this.#generateValidatedCoupleFeedback(modelContext);
       return {
         output: { feedback_text: result.value.text },
         usage: result.usage,
@@ -305,6 +304,59 @@ export class LearningJobProcessor {
       usage: result.usage,
     };
   }
+
+  async #generateValidatedCoupleFeedback(
+    modelContext: ReturnType<typeof anonymizeCompletedQuestionContext>,
+  ) {
+    let rejectedText: string | null = null;
+    let combinedUsage: LearningModelUsage | null = null;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const result = await this.#model.generateCoupleFeedback(
+        modelContext,
+        { rejectedText },
+      );
+      combinedUsage = combinedUsage === null
+        ? result.usage
+        : combineUsage(combinedUsage, result.usage);
+
+      try {
+        validateCoupleFeedback(result.value);
+        return { value: result.value, usage: combinedUsage };
+      } catch (error) {
+        if (attempt === 1) {
+          throw error;
+        }
+        rejectedText = result.value.text;
+      }
+    }
+
+    throw new Error('couple feedback generation exhausted');
+  }
+}
+
+function combineUsage(
+  first: LearningModelUsage,
+  second: LearningModelUsage,
+): LearningModelUsage {
+  return {
+    inputTokenCount: sumKnownCounts(
+      first.inputTokenCount,
+      second.inputTokenCount,
+    ),
+    outputTokenCount: sumKnownCounts(
+      first.outputTokenCount,
+      second.outputTokenCount,
+    ),
+    latencyMs: first.latencyMs + second.latencyMs,
+  };
+}
+
+function sumKnownCounts(
+  first: number | null,
+  second: number | null,
+): number | null {
+  return first === null || second === null ? null : first + second;
 }
 
 function classifyFailure(

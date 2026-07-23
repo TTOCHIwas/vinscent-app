@@ -512,10 +512,36 @@ export function validateCoupleFeedback(
   candidate: CoupleFeedbackCandidate,
 ): void {
   requireNonBlank(candidate.text, 'couple feedback', 80);
+  const reactionBody = candidate.text.endsWith('...')
+    ? candidate.text.slice(0, -3)
+    : /[!?]$/u.test(candidate.text)
+    ? candidate.text.slice(0, -1)
+    : candidate.text;
+  if (/[.!?]/u.test(reactionBody)) {
+    throw new Error(
+      'couple feedback punctuation allowed endings are !, ?, ..., or none',
+    );
+  }
+  if (
+    feedbackAnswerOwnerPatterns.some((pattern) => pattern.test(candidate.text))
+  ) {
+    throw new Error('couple feedback cannot identify an answer owner');
+  }
   if (containsBlockedAiTopic(candidate.text)) {
     throw new Error('couple feedback contains a blocked topic');
   }
 }
+
+const feedbackAnswerOwnerPatterns = [
+  /(?:^|\s)(?:너는|넌|너가|네가|니가|너도|너만|너의|너랑|너와|너에게|너를|널|네\s*답|네\s*마음|당신은)(?=$|\s|[!?,'"‘’“”])/u,
+  /상대방/u,
+  /(?:한|다른)\s*사람/u,
+  /(?:한|다른)\s*쪽(?:은|이|도|의|에서|에게|으로)?/u,
+  /누군가는/u,
+  /파트너\s*[ab]/iu,
+  /partner[_\s-]?[ab]/iu,
+  /\b(?:you|your|the other partner)\b/iu,
+];
 
 export function validatePersonalizedQuestion(
   candidate: PersonalizedQuestionCandidate,

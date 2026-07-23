@@ -22,6 +22,10 @@ export interface LearningModelResult<T> {
   usage: LearningModelUsage;
 }
 
+export interface CoupleFeedbackGenerationOptions {
+  rejectedText: string | null;
+}
+
 export interface LearningModelPort {
   rankFoundationQuestions(
     context: AnonymizedCompletedQuestionContext,
@@ -34,6 +38,7 @@ export interface LearningModelPort {
 
   generateCoupleFeedback(
     context: AnonymizedCompletedQuestionContext,
+    options?: CoupleFeedbackGenerationOptions,
   ): Promise<LearningModelResult<CoupleFeedbackCandidate>>;
 
   generatePersonalizedQuestion(
