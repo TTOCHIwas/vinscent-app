@@ -22,7 +22,7 @@ npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 - `GEMINI_MODEL`: 기본값 `gemini-3.1-flash-lite`
 - `GEMINI_GENERATE_CONTENT_ENDPOINT`: Gemini `generateContent` 전체 주소 교체용
 - `GEMINI_TIMEOUT_MS`: 기본값 `30000`
-- `AI_WORKER_MAX_BATCH_SIZE`: 기본값 `1`, 허용 범위 `1~5`
+- `AI_WORKER_MAX_BATCH_SIZE`: 기본값 `3`, 허용 범위 `1~5`
 
 ## Deploy
 
@@ -45,12 +45,17 @@ Supabase Cron에서 1분 간격 HTTP 작업을 만들고 다음 요청을 보낸
 - URL: `https://<project-ref>.supabase.co/functions/v1/process-ai-learning-jobs`
 - Header: `x-ai-worker-secret: <AI_WORKER_SECRET 또는 SCHEDULE_WEBHOOK_SECRET>`
 - Header: `content-type: application/json`
-- Body: `{"limit":1}`
+- Body: `{"limit":3}`
 
 요청 범위는 1~5건이지만 실제 처리량은 `AI_WORKER_MAX_BATCH_SIZE`로 제한된다.
-무료 테스트 환경에서는 공급자 요청이 몰리지 않도록 기본 1건을 유지한다. 중복
-스케줄 실행이 발생해도 DB의 원자적 claim과 lease가 같은 작업의 중복 처리를
-막는다.
+한 질문이 완료될 때 생성되는 사용자 피드백, 다음 질문 준비, 기억 추출을 한 번의
+호출에서 순차 처리할 수 있도록 기본값은 3건이다. 공급자 제한이 낮은 환경에서는
+시크릿과 Cron 요청의 값을 함께 낮춘다. 중복 스케줄 실행이 발생해도 DB의 원자적
+claim과 lease가 같은 작업의 중복 처리를 막는다.
+
+준비된 작업은 프로필 재구축, 사용자 피드백, 다음 질문 준비, 기억 추출 순으로
+처리한다. 같은 종류 안에서는 재시도 가능 시각과 생성 시각이 빠른 작업을 먼저
+처리한다.
 
 ## Privacy
 

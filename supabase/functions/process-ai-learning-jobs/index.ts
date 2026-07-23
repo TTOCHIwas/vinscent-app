@@ -29,7 +29,7 @@ Deno.serve(createLearningWorkerHttpHandler({
   serviceRoleKey: requiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
   workerSecret: optionalEnv('AI_WORKER_SECRET')
     ?? optionalEnv('SCHEDULE_WEBHOOK_SECRET'),
-  maximumBatchSize: optionalPositiveIntegerEnv('AI_WORKER_MAX_BATCH_SIZE') ?? 1,
+  maximumBatchSize: optionalPositiveIntegerEnv('AI_WORKER_MAX_BATCH_SIZE') ?? 3,
   processor,
 }));
 
