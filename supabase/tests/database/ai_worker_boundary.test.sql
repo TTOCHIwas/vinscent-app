@@ -361,7 +361,7 @@ select
     '81000000-0000-0000-0000-000000000001',
     'google',
     'gemini-test',
-    'memory-v1'
+    'memory-v6'
   );
 
 select ok(
@@ -402,7 +402,7 @@ select is(
           'learning_domain', 'personal_values',
           'evidence_type', 'explicit',
           'sensitive_category', 'none',
-          'statement', 'Partner A values quiet time together.',
+          'statement', '함께 보내는 조용한 시간을 중요하게 여겨',
           'confidence', 0.91,
           'evidence_answer_ids', jsonb_build_array(
             '51000000-0000-0000-0000-000000000001'
