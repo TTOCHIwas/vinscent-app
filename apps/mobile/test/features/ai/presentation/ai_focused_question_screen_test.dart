@@ -5,6 +5,7 @@ import 'package:vinscent/features/ai/application/ai_focused_question_controller.
 import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/presentation/ai_focused_question_screen.dart';
+import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
 
 void main() {
   testWidgets('shows one question and separate progress values', (
@@ -17,6 +18,19 @@ void main() {
     expect(find.byKey(const Key('ai-focused-couple-progress')), findsOneWidget);
     expect(find.byKey(const Key('ai-focused-answer-input')), findsOneWidget);
     expect(find.byKey(const Key('ai-focused-submit')), findsOneWidget);
+    expect(
+      tester.getCenter(find.byKey(const Key('ai-focused-submit'))).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('ai-focused-answer-input'))).dy,
+      ),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SettingsPageHeader),
+        matching: find.byKey(const Key('ai-focused-submit')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('wraps a long question at a large system text size', (

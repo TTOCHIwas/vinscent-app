@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/presentation/widgets/app_answer_input.dart';
+import '../../../core/presentation/widgets/app_header_text_action.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -53,6 +53,7 @@ class _AiFocusedQuestionScreenState
 
     return SettingsPageLayout(
       title: '집중 질문',
+      action: _buildHeaderAction(flow),
       onBackPressed: () {
         ref.invalidate(aiLearningControllerProvider);
         if (context.canPop()) {
@@ -74,6 +75,31 @@ class _AiFocusedQuestionScreenState
         ),
         data: (flow) => _buildFlow(flow, history),
       ),
+    );
+  }
+
+  Widget? _buildHeaderAction(AsyncValue<AiFocusedQuestionFlow> flow) {
+    final value = flow.asData?.value;
+    final question = value?.status == AiFocusedQuestionStatus.answering
+        ? value?.question
+        : null;
+    if (question == null) {
+      return null;
+    }
+
+    final normalizedAnswer = _answerController.text.trim();
+    final characterCount = _answerController.text.characters.length;
+    final canSubmit =
+        !_isSubmitting && normalizedAnswer.isNotEmpty && characterCount <= 500;
+
+    return AppHeaderTextAction(
+      key: const Key('ai-focused-submit'),
+      label: '다음',
+      loadingLabel: '처리 중',
+      enabled: canSubmit,
+      isLoading: _isSubmitting,
+      onPressed: () =>
+          _submitAnswer(questionId: question.id, answerText: normalizedAnswer),
     );
   }
 
@@ -105,10 +131,7 @@ class _AiFocusedQuestionScreenState
     AsyncValue<List<AiFocusedQuestionHistoryEntry>> history,
   ) {
     final question = flow.question!;
-    final normalizedAnswer = _answerController.text.trim();
     final characterCount = _answerController.text.characters.length;
-    final canSubmit =
-        !_isSubmitting && normalizedAnswer.isNotEmpty && characterCount <= 500;
     final keyboardVisible = View.of(context).viewInsets.bottom > 0;
 
     final content = ListView(
@@ -147,19 +170,6 @@ class _AiFocusedQuestionScreenState
             characterCount: characterCount,
             maxLength: 500,
           ),
-        const SizedBox(height: 16),
-        AppActionButton(
-          key: const Key('ai-focused-submit'),
-          label: '다음',
-          enabled: canSubmit,
-          isLoading: _isSubmitting,
-          onPressed: canSubmit
-              ? () => _submitAnswer(
-                  questionId: question.id,
-                  answerText: normalizedAnswer,
-                )
-              : null,
-        ),
         _FocusedQuestionHistory(history: history),
       ],
     );

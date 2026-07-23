@@ -9,10 +9,12 @@ class SettingsPageHeader extends StatelessWidget {
     super.key,
     required this.title,
     required this.onBackPressed,
+    this.action,
   });
 
   final String title;
   final VoidCallback onBackPressed;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,8 @@ class SettingsPageHeader extends StatelessWidget {
               ),
             ),
             Text(title, style: AppTextStyles.shellTitle),
+            if (action case final action?)
+              Align(alignment: Alignment.centerRight, child: action),
           ],
         ),
       ),

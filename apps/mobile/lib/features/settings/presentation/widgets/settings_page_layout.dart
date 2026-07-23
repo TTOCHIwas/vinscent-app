@@ -9,11 +9,13 @@ class SettingsPageLayout extends StatelessWidget {
     required this.title,
     required this.onBackPressed,
     required this.child,
+    this.action,
   });
 
   final String title;
   final VoidCallback onBackPressed;
   final Widget child;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,11 @@ class SettingsPageLayout extends StatelessWidget {
         top: false,
         child: Column(
           children: [
-            SettingsPageHeader(title: title, onBackPressed: onBackPressed),
+            SettingsPageHeader(
+              title: title,
+              onBackPressed: onBackPressed,
+              action: action,
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

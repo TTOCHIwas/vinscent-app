@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/presentation/widgets/app_answer_input.dart';
+import '../../../core/presentation/widgets/app_header_text_action.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../ai/presentation/widgets/ai_question_feedback_section.dart';
@@ -507,10 +508,13 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
     return _QuestionPageFrame(
       question: widget.question,
       onBackPressed: () => _goBackToQuestion(context, widget.routeContext),
-      headerAction: _AnswerHeaderSaveAction(
-        canSave: _canSubmit,
+      headerAction: AppHeaderTextAction(
+        key: const Key('answer-save-action'),
+        label: '저장',
+        loadingLabel: '저장 중',
+        enabled: _canSubmit,
         isLoading: _isSubmitting,
-        onSave: _submit,
+        onPressed: _submit,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -698,49 +702,6 @@ class _QuestionAnswerCardPair {
   final StoryLoopCardDetail? partnerCard;
 
   bool get hasCard => myCard != null || partnerCard != null;
-}
-
-class _AnswerHeaderSaveAction extends StatelessWidget {
-  const _AnswerHeaderSaveAction({
-    required this.canSave,
-    required this.isLoading,
-    required this.onSave,
-  });
-
-  final bool canSave;
-  final bool isLoading;
-  final VoidCallback onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      key: const Key('answer-save-action'),
-      button: true,
-      enabled: canSave,
-      label: isLoading ? '저장 중' : '저장',
-      excludeSemantics: true,
-      child: SizedBox(
-        width: 72,
-        height: 44,
-        child: TextButton(
-          onPressed: canSave ? onSave : null,
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.textPrimary,
-            disabledForegroundColor: AppColors.textPlaceholder,
-          ),
-          child: isLoading
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(
-                    color: AppColors.textPrimary,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text('저장'),
-        ),
-      ),
-    );
-  }
 }
 
 class _CenteredLoader extends StatelessWidget {
