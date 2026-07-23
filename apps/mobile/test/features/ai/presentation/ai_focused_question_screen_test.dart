@@ -73,9 +73,21 @@ void main() {
 
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const Key('ai-focused-history-question-history-id')),
+    final historyRow = find.byKey(
+      const Key('ai-focused-history-question-history-id'),
     );
+    final historyRowRect = tester.getRect(historyRow);
+    final historyQuestionRect = tester.getRect(
+      find.byKey(
+        const Key('ai-focused-history-question-question-history-id'),
+      ),
+    );
+    expect(
+      historyQuestionRect.left - historyRowRect.left,
+      greaterThanOrEqualTo(16),
+    );
+
+    await tester.tap(historyRow);
     await tester.pumpAndSettle();
 
     expect(find.text('내 답변'), findsOneWidget);

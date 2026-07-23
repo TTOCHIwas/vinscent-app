@@ -50,14 +50,15 @@ class _FocusedQuestionHistoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExpansionTile(
       key: Key('ai-focused-history-${entry.questionId}'),
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(bottom: 20),
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       iconColor: AppColors.textPrimary,
       collapsedIconColor: AppColors.textMuted,
       shape: const Border(),
       collapsedShape: const Border(),
       title: WordBoundaryText(
         entry.questionText,
+        key: Key('ai-focused-history-question-${entry.questionId}'),
         style: AppTextStyles.homeBodyMedium,
       ),
       children: [
