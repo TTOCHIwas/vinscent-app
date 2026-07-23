@@ -88,6 +88,27 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('shows a permanent unlock action before focused access', (
+    tester,
+  ) async {
+    await _pump(tester, _dashboard());
+
+    expect(find.byKey(const Key('ai-focused-unlock')), findsOneWidget);
+    expect(find.byKey(const Key('ai-focused-continue')), findsNothing);
+  });
+
+  testWidgets('shows a continue action after focused access is unlocked', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _dashboard(enabledFeatures: const {AiFeatureKeys.focusedQuestions}),
+    );
+
+    expect(find.byKey(const Key('ai-focused-unlock')), findsNothing);
+    expect(find.byKey(const Key('ai-focused-continue')), findsOneWidget);
+  });
 }
 
 Finder _wordBoundaryText(String text) {
@@ -131,6 +152,7 @@ AiLearningDashboard _dashboard({
       AiPersonalizationStatus.collecting,
   int myPendingReviewCount = 0,
   int partnerPendingReviewCount = 0,
+  Set<String> enabledFeatures = const {},
 }) {
   return AiLearningDashboard(
     progress: AiLearningProgress(
@@ -152,6 +174,7 @@ AiLearningDashboard _dashboard({
       myPendingReviewCount: myPendingReviewCount,
       partnerPendingReviewCount: partnerPendingReviewCount,
     ),
+    enabledFeatures: enabledFeatures,
     memories: memories,
   );
 }

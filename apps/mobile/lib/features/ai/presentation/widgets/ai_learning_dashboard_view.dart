@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/presentation/widgets/app_action_button.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
@@ -29,6 +30,10 @@ class AiLearningDashboardView extends ConsumerWidget {
           const SizedBox(height: 32),
           _ConsentSection(progress: dashboard.progress),
           if (dashboard.progress.isEnabled) ...[
+            if (!dashboard.progress.foundationComplete) ...[
+              const SizedBox(height: 40),
+              _FocusedQuestionSection(dashboard: dashboard),
+            ],
             const SizedBox(height: 40),
             _PersonalizationSection(
               progress: dashboard.progress,
@@ -44,6 +49,70 @@ class AiLearningDashboardView extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _FocusedQuestionSection extends ConsumerWidget {
+  const _FocusedQuestionSection({required this.dashboard});
+
+  final AiLearningDashboard dashboard;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isUnlocked = dashboard.hasFeature(AiFeatureKeys.focusedQuestions);
+
+    return Column(
+      key: const Key('ai-focused-question-section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '집중 질문',
+          style: AppTextStyles.homeBodyMedium.copyWith(fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        WordBoundaryText(
+          isUnlocked
+              ? '남은 질문을 기다리지 않고 이어서 답할 수 있어'
+              : '24개의 질문을 기다리지 않고 차례로 답할 수 있어',
+          style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: Key(isUnlocked ? 'ai-focused-continue' : 'ai-focused-unlock'),
+            onPressed: () => isUnlocked
+                ? context.push('/ai/focused')
+                : _unlock(context, ref),
+            icon: Icon(
+              isUnlocked
+                  ? Icons.arrow_forward_rounded
+                  : Icons.lock_open_rounded,
+              size: 20,
+            ),
+            label: Text(isUnlocked ? '이어서 답하기' : '잠금 해제'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _unlock(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref
+          .read(aiLearningControllerProvider.notifier)
+          .unlockFocusedQuestions();
+      if (context.mounted) {
+        context.push('/ai/focused');
+      }
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(aiLearningErrorMessage(error))));
+    }
   }
 }
 

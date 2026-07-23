@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'application/app_router_refresh_notifier.dart';
 import 'application/app_route_redirect_policy.dart';
 import '../features/ai/presentation/ai_screen.dart';
+import '../features/ai/presentation/ai_focused_question_screen.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/boot/presentation/boot_screen.dart';
@@ -197,6 +198,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'ai',
             builder: (context, state) =>
                 const ShellRootBackScope.secondaryTab(child: AiScreen()),
+            routes: [
+              GoRoute(
+                path: 'focused',
+                name: 'aiFocusedQuestions',
+                builder: (context, state) => const AiFocusedQuestionScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/settings',
