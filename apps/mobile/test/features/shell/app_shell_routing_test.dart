@@ -335,6 +335,21 @@ void main() {
     },
   );
 
+  testWidgets('집중 질문 경로에는 전용 헤더만 보여준다', (tester) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(tester.element(find.byType(AppHeader))).go('/ai/focused');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppHeader), findsNothing);
+    expect(find.byType(SettingsPageHeader), findsOneWidget);
+    expect(find.text('집중 질문'), findsOneWidget);
+  });
+
   testWidgets('system back returns from secondary tabs to home', (
     tester,
   ) async {

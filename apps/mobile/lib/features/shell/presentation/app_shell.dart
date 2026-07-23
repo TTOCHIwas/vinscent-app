@@ -66,6 +66,7 @@ class AppShell extends StatelessWidget {
     return location == '/calendar' ||
         location == '/calendar/question' ||
         location == '/ai' ||
+        location.startsWith('/ai/') ||
         location.startsWith('/home/recordings') ||
         location == '/home/question' ||
         location == '/home/question/edit' ||
