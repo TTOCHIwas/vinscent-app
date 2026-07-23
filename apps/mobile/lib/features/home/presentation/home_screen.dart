@@ -20,6 +20,7 @@ import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart'
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
+import '../../story_loops/data/story_loop_status.dart';
 import '../../story_loops/data/today_story_loop_summary.dart';
 import '../../story_loops/data/today_story_loop_summary_state.dart';
 import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
@@ -44,6 +45,7 @@ const _homeStoryRetryTooltip = '\ub2e4\uc2dc \uc2dc\ub3c4';
 const _homeFeedbackProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!';
 const _homeFeedbackProcessingDuration = Duration(seconds: 3);
 const _homeCharacterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
+const _homeQuestionPreparingPrompt = '둘에게 어울릴 질문을 고르고 있어!';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -865,9 +867,13 @@ class _HomeStoryLoopPresentation {
     return _HomeStoryLoopPresentation(
       myCard: myCard,
       partnerCard: partnerCard,
-      questionText: question?.myAnswerExists == true
-          ? null
-          : question?.question.questionText,
+      questionText: switch ((summary.loopStatus, question)) {
+        (_, final question?) when question.myAnswerExists => null,
+        (_, final question?) => question.question.questionText,
+        (StoryLoopStatus.questionPreparing, null) =>
+          _homeQuestionPreparingPrompt,
+        _ => null,
+      },
       cardsAreCompleted:
           myCard != null &&
           partnerCard != null &&

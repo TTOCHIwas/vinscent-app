@@ -427,6 +427,41 @@ void main() {
     expect(find.text('09:00'), findsNothing);
   });
 
+  testWidgets('shows a distinct message while an AI question is preparing', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository(
+      details: {
+        DateTime(2026, 5, 5): _twoCardDetail(StoryLoopStatus.questionPreparing),
+      },
+    );
+
+    await _pumpCalendar(tester, repository: repository);
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('둘의 카드가 모두 모였어요'), findsOneWidget);
+    expect(find.text('둘에게 어울릴 질문을 고르고 있어요'), findsOneWidget);
+  });
+
+  testWidgets('does not promise a question for a card-only date', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository(
+      details: {
+        DateTime(2026, 5, 5): _twoCardDetail(StoryLoopStatus.cardOnlyCompleted),
+      },
+    );
+
+    await _pumpCalendar(tester, repository: repository);
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('이 날은 카드만 남겼어요'), findsOneWidget);
+    expect(find.text('두 사람이 남긴 카드를 그대로 간직할 수 있어요'), findsOneWidget);
+    expect(find.text('질문이 준비되면 이 자리에서 함께 볼 수 있어요'), findsNothing);
+  });
+
   testWidgets('shows empty state when selected date has no loop', (
     tester,
   ) async {
@@ -719,6 +754,29 @@ final _cardOnlyDetail = StoryLoopDetail(
   ],
   question: null,
 );
+
+StoryLoopDetail _twoCardDetail(StoryLoopStatus status) {
+  return StoryLoopDetail(
+    coupleId: 'couple-id',
+    coupleDate: DateTime(2026, 5, 5),
+    accessMode: CoupleAccessMode.active,
+    loopId: 'loop-id',
+    loopStatus: status,
+    storyEditLocked: true,
+    canEditStory: false,
+    canAnswerQuestion: false,
+    cardCount: 2,
+    cards: [
+      sampleDetailCard(id: 'card-1', submittedAt: DateTime(2026, 5, 5, 9)),
+      sampleDetailCard(
+        id: 'card-2',
+        authorUserId: 'partner-id',
+        submittedAt: DateTime(2026, 5, 5, 9, 10),
+      ),
+    ],
+    question: null,
+  );
+}
 
 final _partnerOnlyDetail = sampleStoryLoopDetail(
   coupleDate: DateTime(2026, 5, 5),

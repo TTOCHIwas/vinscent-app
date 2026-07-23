@@ -10,6 +10,7 @@ import '../../../questions/presentation/widgets/question_answer_sections.dart';
 import '../../../questions/presentation/widgets/question_detail_title.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
+import '../../../story_loops/data/story_loop_status.dart';
 import '../../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import 'calendar_story_card_stack.dart';
 
@@ -179,6 +180,20 @@ class _CardOnlyMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (detail.loopStatus == StoryLoopStatus.cardOnlyCompleted) {
+      return const _StateMessage(
+        title: '이 날은 카드만 남겼어요',
+        message: '두 사람이 남긴 카드를 그대로 간직할 수 있어요',
+      );
+    }
+
+    if (detail.loopStatus == StoryLoopStatus.questionPreparing) {
+      return const _StateMessage(
+        title: '둘의 카드가 모두 모였어요',
+        message: '둘에게 어울릴 질문을 고르고 있어요',
+      );
+    }
+
     return _StateMessage(
       title: switch (detail.cardCount) {
         0 => '이 날의 질문 기록이 없어요',

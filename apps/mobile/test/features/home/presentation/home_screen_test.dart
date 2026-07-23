@@ -64,6 +64,7 @@ const _storyAiPlaceholder =
     'AI \ud55c \uc904 \ud3c9\uc774 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub420 \uc608\uc815\uc774\uc5d0\uc694.';
 const _characterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
 const _aiProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!';
+const _questionPreparingPrompt = '둘에게 어울릴 질문을 고르고 있어!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
 Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
@@ -906,6 +907,72 @@ void main() {
       expect(find.text(_storyGenerating), findsNothing);
     },
   );
+
+  testWidgets('AI 질문을 준비하는 동안 탭할 수 없는 안내를 보여준다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: StoryLoopStatus.questionPreparing,
+        cardCount: 2,
+        storyEditLocked: true,
+        canEditStory: false,
+        canAnswerQuestion: false,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      findTextIgnoringWordJoiners(_questionPreparingPrompt),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<InkWell>(find.byKey(_questionActionKey)).onTap,
+      isNull,
+    );
+    expect(find.byType(HomeGuideRotator), findsOneWidget);
+    expect(
+      tester.widget<HomeGuideRotator>(find.byType(HomeGuideRotator)).guides,
+      isEmpty,
+    );
+  });
+
+  testWidgets('집중 질문 중 완성된 카드 날짜에는 질문 안내를 만들지 않는다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: StoryLoopStatus.cardOnlyCompleted,
+        cardCount: 2,
+        storyEditLocked: true,
+        canEditStory: false,
+        canAnswerQuestion: false,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+      ),
+    );
+
+    expect(findTextIgnoringWordJoiners(_questionPreparingPrompt), findsNothing);
+    expect(find.byKey(_questionActionKey), findsNothing);
+    expect(find.byKey(_storyAddButtonKey), findsNothing);
+  });
 
   for (final scenario
       in <
