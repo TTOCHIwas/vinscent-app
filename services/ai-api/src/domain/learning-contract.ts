@@ -203,6 +203,20 @@ export interface PersonalizedQuestionCandidate {
   rationale: string;
 }
 
+export interface GeneralQuestionContext {
+  foundationProgress: {
+    completedCount: number;
+    totalCount: number;
+  };
+  recentQuestions: Array<{
+    questionKey: string;
+    text: string;
+    category: string;
+    mood: string | null;
+    domain: LearningDomain | null;
+  }>;
+}
+
 function requireNonBlank(value: string, field: string, maximum: number): void {
   const length = value.trim().length;
   if (length === 0 || length > maximum) {
@@ -546,10 +560,26 @@ const feedbackAnswerOwnerPatterns = [
 export function validatePersonalizedQuestion(
   candidate: PersonalizedQuestionCandidate,
 ): void {
-  requireNonBlank(candidate.questionKey, 'personalized question key', 120);
-  requireNonBlank(candidate.text, 'personalized question', 300);
-  requireNonBlank(candidate.category, 'personalized question category', 100);
-  requireNonBlank(candidate.rationale, 'personalized question rationale', 500);
+  validateGeneratedQuestion(candidate);
+}
+
+export function validateGeneralQuestion(
+  candidate: PersonalizedQuestionCandidate,
+): void {
+  validateGeneratedQuestion(candidate);
+
+  if (!/^general_[a-z0-9_]+_[a-z0-9]{8}$/.test(candidate.questionKey)) {
+    throw new Error('general question key has an invalid format');
+  }
+}
+
+function validateGeneratedQuestion(
+  candidate: PersonalizedQuestionCandidate,
+): void {
+  requireNonBlank(candidate.questionKey, 'generated question key', 120);
+  requireNonBlank(candidate.text, 'generated question', 300);
+  requireNonBlank(candidate.category, 'generated question category', 100);
+  requireNonBlank(candidate.rationale, 'generated question rationale', 500);
 
   if (
     containsBlockedAiTopic(candidate.text)
@@ -559,7 +589,7 @@ export function validatePersonalizedQuestion(
   }
 
   if (candidate.mood !== null) {
-    requireNonBlank(candidate.mood, 'personalized question mood', 100);
+    requireNonBlank(candidate.mood, 'generated question mood', 100);
   }
 }
 

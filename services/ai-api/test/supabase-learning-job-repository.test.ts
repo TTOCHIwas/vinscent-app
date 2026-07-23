@@ -77,11 +77,30 @@ test('repository maps claimed jobs and worker context', async () => {
       },
       error: null,
     },
+    get_ai_general_question_job_context: {
+      data: {
+        foundation_progress: {
+          completed_count: 24,
+          total_count: 24,
+        },
+        recent_questions: [
+          {
+            question_key: 'foundation_v1_daily_life_04',
+            text: 'Recent question?',
+            category: 'daily_life',
+            mood: 'calm',
+            domain: 'daily_life',
+          },
+        ],
+      },
+      error: null,
+    },
   });
   const repository = new SupabaseLearningJobRepository(client);
 
   const jobs = await repository.claimJobs('edge-worker', 3);
   const context = await repository.loadContext('job-1');
+  const generalContext = await repository.loadGeneralQuestionContext('job-2');
 
   assert.deepEqual(jobs, [
     {
@@ -105,9 +124,18 @@ test('repository maps claimed jobs and worker context', async () => {
     context.remainingFoundationQuestions[0]?.questionKey,
     'foundation_v1_personal_values_02',
   );
+  assert.equal(generalContext.foundationProgress.completedCount, 24);
+  assert.equal(
+    generalContext.recentQuestions[0]?.questionKey,
+    'foundation_v1_daily_life_04',
+  );
   assert.deepEqual(client.calls[0], {
     name: 'claim_ai_processing_jobs',
     params: { requested_worker: 'edge-worker', requested_limit: 3 },
+  });
+  assert.deepEqual(client.calls[2], {
+    name: 'get_ai_general_question_job_context',
+    params: { requested_job_id: 'job-2' },
   });
 });
 

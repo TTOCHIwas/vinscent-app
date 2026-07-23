@@ -8,6 +8,7 @@ import type {
   AnonymizedCompletedQuestionContext,
   CoupleFeedbackCandidate,
   FoundationQuestionCandidate,
+  GeneralQuestionContext,
   ModelMemoryCandidate,
   ParticipantKey,
   PersonalizedQuestionCandidate,
@@ -132,6 +133,24 @@ export class GeminiLearningModel implements LearningModelPort {
     });
   }
 
+  async generateGeneralQuestion(
+    context: GeneralQuestionContext,
+  ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
+    const result = await this.#client.generateStructured({
+      prompt: buildGeneralQuestionPrompt(context),
+      schema: personalizedQuestionSchema,
+    });
+    const output = requireRecord(result.value);
+
+    return withUsage(result, {
+      questionKey: requireString(output, 'question_key', 120),
+      text: requireString(output, 'question_text', 300),
+      category: requireString(output, 'category', 100),
+      mood: requireNullableString(output, 'mood', 100),
+      rationale: requireString(output, 'rationale', 500),
+    });
+  }
+
   async generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
@@ -149,6 +168,34 @@ export class GeminiLearningModel implements LearningModelPort {
       rationale: requireString(output, 'rationale', 500),
     });
   }
+}
+
+function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
+  return buildTaskPrompt(
+    [
+      'Create one answerable, non-leading Korean question for both partners.',
+      'This is a general question before personalization is approved. Never imply that you know either participant, their answers, preferences, memories, or relationship traits.',
+      'Use only recent question metadata to avoid repeating a topic, scene, category, or wording.',
+      'Choose a fresh everyday or relationship topic that can gradually deepen mutual understanding without requiring private or sensitive information.',
+      'Avoid all blocked sensitive categories and do not ask for diagnosis, relationship judgment, hidden intention, or personality labels.',
+      'Keep the same friendly casual tone as the foundation questions.',
+      'The key must be lowercase snake_case beginning with general_ and ending with an 8 character lowercase alphanumeric suffix.',
+      'The rationale is internal and should only explain how the topic avoids recent repetition.',
+    ].join(' '),
+    {
+      foundation_progress: {
+        completed_count: context.foundationProgress.completedCount,
+        total_count: context.foundationProgress.totalCount,
+      },
+      recent_questions: context.recentQuestions.map((question) => ({
+        question_key: question.questionKey,
+        text: question.text,
+        category: question.category,
+        mood: question.mood,
+        domain: question.domain,
+      })),
+    },
+  );
 }
 
 function buildFoundationRankingPrompt(

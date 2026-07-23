@@ -2,9 +2,11 @@ import {
   anonymizeCompletedQuestionContext,
   resolveMemoryCandidates,
   validateCoupleFeedback,
+  validateGeneralQuestion,
   validatePersonalizedQuestion,
   validateQuestionRecommendation,
   type CompletedQuestionContext,
+  type GeneralQuestionContext,
 } from '../domain/learning-contract.ts';
 import {
   GeminiOutputError,
@@ -19,6 +21,7 @@ export type LearningJobType =
   | 'extract_memories'
   | 'generate_feedback'
   | 'select_curated_question'
+  | 'generate_general_question'
   | 'generate_personalized_question'
   | 'rebuild_profile';
 
@@ -52,6 +55,7 @@ export interface RunFailure {
 export interface LearningJobRepository {
   claimJobs(workerId: string, limit: number): Promise<ClaimedLearningJob[]>;
   loadContext(jobId: string): Promise<CompletedQuestionContext>;
+  loadGeneralQuestionContext(jobId: string): Promise<GeneralQuestionContext>;
   startRun(
     job: ClaimedLearningJob,
     provider: string,
@@ -104,6 +108,7 @@ const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string
   extract_memories: 'memory-v5',
   generate_feedback: 'feedback-v3',
   select_curated_question: 'question-ranking-v2',
+  generate_general_question: 'general-question-v1',
   generate_personalized_question: 'personalized-question-v2',
 };
 
@@ -164,20 +169,37 @@ export class LearningJobProcessor {
           continue;
         }
 
-        const context = await this.#repository.loadContext(job.jobId);
-        const modelContext = anonymizeCompletedQuestionContext(context);
-        runId = await this.#repository.startRun(
-          job,
-          this.#provider,
-          this.#modelName,
-          promptVersions[job.jobType],
-        );
+        let execution: {
+          output: Record<string, unknown>;
+          usage: LearningModelUsage;
+        };
 
-        const execution = await this.#executeModelTask(
-          job.jobType,
-          context,
-          modelContext,
-        );
+        if (job.jobType === 'generate_general_question') {
+          const context = await this.#repository.loadGeneralQuestionContext(
+            job.jobId,
+          );
+          runId = await this.#repository.startRun(
+            job,
+            this.#provider,
+            this.#modelName,
+            promptVersions[job.jobType],
+          );
+          execution = await this.#executeGeneralQuestionTask(context);
+        } else {
+          const context = await this.#repository.loadContext(job.jobId);
+          const modelContext = anonymizeCompletedQuestionContext(context);
+          runId = await this.#repository.startRun(
+            job,
+            this.#provider,
+            this.#modelName,
+            promptVersions[job.jobType],
+          );
+          execution = await this.#executeModelTask(
+            job.jobType,
+            context,
+            modelContext,
+          );
+        }
         usage = execution.usage;
         const completed = await this.#repository.succeedRun({
           runId,
@@ -227,7 +249,10 @@ export class LearningJobProcessor {
   }
 
   async #executeModelTask(
-    jobType: Exclude<LearningJobType, 'rebuild_profile'>,
+    jobType: Exclude<
+      LearningJobType,
+      'rebuild_profile' | 'generate_general_question'
+    >,
     context: CompletedQuestionContext,
     modelContext: ReturnType<typeof anonymizeCompletedQuestionContext>,
   ): Promise<{
@@ -293,6 +318,26 @@ export class LearningJobProcessor {
 
     const result = await this.#model.generatePersonalizedQuestion(modelContext);
     validatePersonalizedQuestion(result.value);
+    return {
+      output: {
+        question_key: result.value.questionKey,
+        question_text: result.value.text,
+        category: result.value.category,
+        mood: result.value.mood,
+        rationale: result.value.rationale,
+      },
+      usage: result.usage,
+    };
+  }
+
+  async #executeGeneralQuestionTask(
+    context: GeneralQuestionContext,
+  ): Promise<{
+    output: Record<string, unknown>;
+    usage: LearningModelUsage;
+  }> {
+    const result = await this.#model.generateGeneralQuestion(context);
+    validateGeneralQuestion(result.value);
     return {
       output: {
         question_key: result.value.questionKey,

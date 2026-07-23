@@ -16,6 +16,7 @@ import {
 import type {
   AnonymizedCompletedQuestionContext,
   CompletedQuestionContext,
+  GeneralQuestionContext,
 } from '../src/domain/learning-contract.ts';
 import {
   GeminiOutputError,
@@ -78,16 +79,34 @@ const usage = {
   latencyMs: 120,
 };
 
+const generalQuestionContext: GeneralQuestionContext = {
+  foundationProgress: {
+    completedCount: 24,
+    totalCount: 24,
+  },
+  recentQuestions: [
+    {
+      questionKey: 'foundation_v1_daily_life_04',
+      text: 'What part of an ordinary day do you want to share more often?',
+      category: 'daily_life',
+      mood: 'calm',
+      domain: 'daily_life',
+    },
+  ],
+};
+
 test('processor handles every learning job and restores IDs only at persistence', async () => {
   const jobs: ClaimedLearningJob[] = [
     job('job-memory', 'extract_memories'),
     job('job-feedback', 'generate_feedback'),
     job('job-rank', 'select_curated_question'),
+    job('job-general', 'generate_general_question'),
     job('job-personalized', 'generate_personalized_question'),
     job('job-rebuild', 'rebuild_profile', null),
   ];
   const repository = new FakeRepository(jobs);
   const seenModelContexts: AnonymizedCompletedQuestionContext[] = [];
+  const seenGeneralContexts: GeneralQuestionContext[] = [];
   const model: LearningModelPort = {
     async extractMemoryCandidates(context) {
       seenModelContexts.push(context);
@@ -117,6 +136,16 @@ test('processor handles every learning job and restores IDs only at persistence'
         rationale: 'It fills a foundation gap.',
       });
     },
+    async generateGeneralQuestion(context) {
+      seenGeneralContexts.push(context);
+      return result({
+        questionKey: 'general_small_ritual_ab12cd34',
+        text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: 'warm',
+        rationale: 'Recent questions have not covered shared rituals.',
+      });
+    },
     async generatePersonalizedQuestion(context) {
       seenModelContexts.push(context);
       return result({
@@ -136,16 +165,16 @@ test('processor handles every learning job and restores IDs only at persistence'
     modelName: 'gemini-test',
   });
 
-  const summary = await processor.processBatch(5);
+  const summary = await processor.processBatch(6);
 
   assert.deepEqual(summary, {
-    claimed: 5,
-    succeeded: 5,
+    claimed: 6,
+    succeeded: 6,
     retried: 0,
     failed: 0,
   });
   assert.equal(repository.rebuildJobIds.includes('job-rebuild'), true);
-  assert.equal(repository.successes.length, 4);
+  assert.equal(repository.successes.length, 5);
   assert.deepEqual(repository.successes[0]?.output, {
     memories: [
       {
@@ -170,6 +199,13 @@ test('processor handles every learning job and restores IDs only at persistence'
     rationale: 'It fills a foundation gap.',
   });
   assert.deepEqual(repository.successes[3]?.output, {
+    question_key: 'general_small_ritual_ab12cd34',
+    question_text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
+    category: 'daily_life',
+    mood: 'warm',
+    rationale: 'Recent questions have not covered shared rituals.',
+  });
+  assert.deepEqual(repository.successes[4]?.output, {
     question_key: 'personalized_shared_weekend_ab12cd34',
     question_text: 'What would make this weekend feel balanced for both?',
     category: 'personalized',
@@ -184,6 +220,9 @@ test('processor handles every learning job and restores IDs only at persistence'
     JSON.stringify(seenModelContexts).includes('user-real-a'),
     false,
   );
+  assert.deepEqual(seenGeneralContexts, [generalQuestionContext]);
+  assert.deepEqual(repository.generalContextJobIds, ['job-general']);
+  assert.equal(repository.contextJobIds.includes('job-general'), false);
 });
 
 test('processor records retryable model failures and continues the batch', async () => {
@@ -408,6 +447,8 @@ class FakeRepository implements LearningJobRepository {
   readonly successes: RunSuccess[] = [];
   readonly failures: RunFailure[] = [];
   readonly rebuildJobIds: string[] = [];
+  readonly contextJobIds: string[] = [];
+  readonly generalContextJobIds: string[] = [];
   readonly claimFailures: Array<{
     jobId: string;
     errorCode: string;
@@ -423,11 +464,17 @@ class FakeRepository implements LearningJobRepository {
     return this.#jobs.slice(0, limit);
   }
 
-  async loadContext(_jobId: string) {
+  async loadContext(jobId: string) {
+    this.contextJobIds.push(jobId);
     if (this.contextError) {
       throw this.contextError;
     }
     return completedContext;
+  }
+
+  async loadGeneralQuestionContext(jobId: string) {
+    this.generalContextJobIds.push(jobId);
+    return generalQuestionContext;
   }
 
   async startRun(job: ClaimedLearningJob) {
@@ -493,6 +540,15 @@ function modelWith(
     },
     async generateCoupleFeedback() {
       return result({ text: '둘의 답이 작은 장면 하나를 만들었네!' });
+    },
+    async generateGeneralQuestion() {
+      return result({
+        questionKey: 'general_default_question_ab12cd34',
+        text: 'Default general question?',
+        category: 'daily_life',
+        mood: null,
+        rationale: 'Default rationale.',
+      });
     },
     async generatePersonalizedQuestion() {
       return result({

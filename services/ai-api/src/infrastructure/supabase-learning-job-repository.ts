@@ -8,6 +8,7 @@ import {
 } from '../application/process-learning-jobs.ts';
 import type {
   CompletedQuestionContext,
+  GeneralQuestionContext,
   LearningDomain,
   MemoryCandidateState,
   MemoryEvidenceType,
@@ -40,6 +41,7 @@ const learningJobTypes = new Set<LearningJobType>([
   'extract_memories',
   'generate_feedback',
   'select_curated_question',
+  'generate_general_question',
   'generate_personalized_question',
   'rebuild_profile',
 ]);
@@ -111,6 +113,28 @@ export class SupabaseLearningJobRepository implements LearningJobRepository {
         throw error;
       }
       throw repositoryContractError('ai_context_invalid', error);
+    }
+  }
+
+  async loadGeneralQuestionContext(
+    jobId: string,
+  ): Promise<GeneralQuestionContext> {
+    const data = await this.#rpc(
+      'get_ai_general_question_job_context',
+      { requested_job_id: jobId },
+      'ai_general_question_context_unavailable',
+    );
+
+    try {
+      return parseGeneralQuestionContext(data);
+    } catch (error) {
+      if (error instanceof AiRepositoryError) {
+        throw error;
+      }
+      throw repositoryContractError(
+        'ai_general_question_context_invalid',
+        error,
+      );
     }
   }
 
@@ -391,6 +415,35 @@ function parseCompletedQuestionContext(
         domain: requireLearningDomain(item.domain),
         depth: requireQuestionDepth(item.depth),
         promptAngle: requirePromptAngle(item.prompt_angle),
+      };
+    }),
+  };
+}
+
+function parseGeneralQuestionContext(value: unknown): GeneralQuestionContext {
+  const record = requireRecord(value);
+  const progress = requireRecord(record.foundation_progress);
+  const recentQuestions = requireArray(record.recent_questions);
+  const completedCount = requireInteger(progress.completed_count, 0);
+  const totalCount = requireInteger(progress.total_count, 1);
+
+  if (completedCount > totalCount) {
+    throw new TypeError('invalid general question foundation progress');
+  }
+
+  return {
+    foundationProgress: {
+      completedCount,
+      totalCount,
+    },
+    recentQuestions: recentQuestions.map((question) => {
+      const item = requireRecord(question);
+      return {
+        questionKey: requireString(item.question_key, 120),
+        text: requireString(item.text, 4000),
+        category: requireString(item.category, 100),
+        mood: requireNullableString(item.mood, 100),
+        domain: requireNullableLearningDomain(item.domain),
       };
     }),
   };

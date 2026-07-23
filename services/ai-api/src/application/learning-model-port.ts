@@ -2,6 +2,7 @@ import type {
   AnonymizedCompletedQuestionContext,
   CoupleFeedbackCandidate,
   FoundationQuestionCandidate,
+  GeneralQuestionContext,
   ModelMemoryCandidate,
   PersonalizedQuestionCandidate,
 } from '../domain/learning-contract.ts';
@@ -40,6 +41,10 @@ export interface LearningModelPort {
     context: AnonymizedCompletedQuestionContext,
     options?: CoupleFeedbackGenerationOptions,
   ): Promise<LearningModelResult<CoupleFeedbackCandidate>>;
+
+  generateGeneralQuestion(
+    context: GeneralQuestionContext,
+  ): Promise<LearningModelResult<PersonalizedQuestionCandidate>>;
 
   generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,

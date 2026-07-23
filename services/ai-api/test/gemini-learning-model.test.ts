@@ -9,6 +9,7 @@ import {
 import { GeminiLearningModel } from '../src/infrastructure/gemini-learning-model.ts';
 import type {
   AnonymizedCompletedQuestionContext,
+  GeneralQuestionContext,
 } from '../src/domain/learning-contract.ts';
 
 const context: AnonymizedCompletedQuestionContext = {
@@ -56,6 +57,22 @@ const context: AnonymizedCompletedQuestionContext = {
       domain: 'personal_values',
       depth: 'exploratory',
       promptAngle: 'lived_experience',
+    },
+  ],
+};
+
+const generalQuestionContext: GeneralQuestionContext = {
+  foundationProgress: {
+    completedCount: 24,
+    totalCount: 24,
+  },
+  recentQuestions: [
+    {
+      questionKey: 'foundation_v1_daily_life_04',
+      text: 'What part of an ordinary day do you want to share more often?',
+      category: 'daily_life',
+      mood: 'calm',
+      domain: 'daily_life',
     },
   ],
 };
@@ -739,6 +756,36 @@ test('feedback uses profile and recent six answers only after personalization op
   assert.equal(prompts[1]?.includes('함께 공원을 걸었어.'), true);
 });
 
+test('general question prompt contains history metadata but no answer or memory', async () => {
+  let prompt = '';
+  const model = new GeminiLearningModel({
+    generateStructured: async (request) => {
+      prompt = request.prompt;
+      return {
+        value: {
+          question_key: 'general_small_ritual_ab12cd34',
+          question_text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: 'warm',
+          rationale: 'Recent questions have not covered shared rituals.',
+        },
+        usage: {
+          inputTokenCount: 10,
+          outputTokenCount: 5,
+          latencyMs: 20,
+        },
+      };
+    },
+  });
+
+  await model.generateGeneralQuestion(generalQuestionContext);
+
+  assert.equal(prompt.includes('foundation_v1_daily_life_04'), true);
+  assert.equal(prompt.includes('Quiet time at home matters to me.'), false);
+  assert.equal(prompt.includes('confirmed_profile'), false);
+  assert.equal(prompt.includes('current_answers'), false);
+});
+
 test('Gemini model maps feedback and question outputs', async () => {
   const outputs = [
     {
@@ -747,6 +794,13 @@ test('Gemini model maps feedback and question outputs', async () => {
     {
       question_key: 'foundation_v1_personal_values_02',
       rationale: 'It explores how each partner feels understood.',
+    },
+    {
+      question_key: 'general_small_ritual_ab12cd34',
+      question_text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
+      category: 'daily_life',
+      mood: 'warm',
+      rationale: 'Recent questions have not covered shared rituals.',
     },
     {
       question_key: 'personalized_shared_weekend_ab12cd34',
@@ -772,6 +826,7 @@ test('Gemini model maps feedback and question outputs', async () => {
     context,
     context.remainingFoundationQuestions,
   );
+  const general = await model.generateGeneralQuestion(generalQuestionContext);
   const personalized = await model.generatePersonalizedQuestion(context);
 
   assert.equal(
@@ -781,6 +836,10 @@ test('Gemini model maps feedback and question outputs', async () => {
   assert.equal(
     ranking.value.questionKey,
     'foundation_v1_personal_values_02',
+  );
+  assert.equal(
+    general.value.questionKey,
+    'general_small_ritual_ab12cd34',
   );
   assert.equal(
     personalized.value.questionKey,
