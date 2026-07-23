@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -105,11 +106,14 @@ class _AiFocusedQuestionScreenState
   ) {
     final question = flow.question!;
     final normalizedAnswer = _answerController.text.trim();
-    final canSubmit = !_isSubmitting && normalizedAnswer.isNotEmpty;
+    final characterCount = _answerController.text.characters.length;
+    final canSubmit =
+        !_isSubmitting && normalizedAnswer.isNotEmpty && characterCount <= 500;
+    final keyboardVisible = View.of(context).viewInsets.bottom > 0;
 
-    return ListView(
+    final content = ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: EdgeInsets.only(bottom: keyboardVisible ? 48 : 32),
       children: [
         _FocusedQuestionProgressView(progress: flow.progress),
         const SizedBox(height: 44),
@@ -129,29 +133,20 @@ class _AiFocusedQuestionScreenState
           ),
         ],
         const SizedBox(height: 32),
-        TextField(
+        AppAnswerInput(
           key: const Key('ai-focused-answer-input'),
           controller: _answerController,
           enabled: !_isSubmitting,
           minLines: 5,
           maxLines: 8,
           maxLength: 500,
-          textInputAction: TextInputAction.newline,
-          style: AppTextStyles.homeBody.copyWith(height: 1.55),
-          decoration: InputDecoration(
-            hintText: '답변을 남겨봐',
-            hintStyle: AppTextStyles.homeBody.copyWith(
-              color: AppColors.textPlaceholder,
-            ),
-            filled: true,
-            fillColor: AppColors.settingsIconBackground,
-            contentPadding: const EdgeInsets.all(18),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
         ),
+        if (!keyboardVisible)
+          AppAnswerCharacterCount(
+            key: const Key('ai-focused-character-count'),
+            characterCount: characterCount,
+            maxLength: 500,
+          ),
         const SizedBox(height: 16),
         AppActionButton(
           key: const Key('ai-focused-submit'),
@@ -166,6 +161,29 @@ class _AiFocusedQuestionScreenState
               : null,
         ),
         _FocusedQuestionHistory(history: history),
+      ],
+    );
+
+    if (!keyboardVisible) {
+      return content;
+    }
+
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: ColoredBox(
+            color: AppColors.background,
+            child: AppAnswerCharacterCount(
+              key: const Key('ai-focused-character-count'),
+              characterCount: characterCount,
+              maxLength: 500,
+            ),
+          ),
+        ),
       ],
     );
   }

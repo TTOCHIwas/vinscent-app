@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -702,7 +703,14 @@ void main() {
       final characterCount = find.byKey(const Key('answer-character-count'));
       final saveAction = find.byKey(const Key('answer-save-action'));
       final textFieldRect = tester.getRect(find.byType(TextField));
-      expect(textFieldRect.contains(tester.getCenter(characterCount)), isTrue);
+      final characterCountRect = tester.getRect(characterCount);
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      expect(
+        characterCountRect.top,
+        greaterThanOrEqualTo(textFieldRect.bottom),
+      );
+      expect(characterCountRect.bottom, lessThanOrEqualTo(screenHeight - 300));
       expect(tester.getCenter(saveAction).dy, lessThan(textFieldRect.top));
       expect(find.byKey(const Key('answer-save-bar')), findsNothing);
       expect(tester.takeException(), isNull);
@@ -756,6 +764,15 @@ void main() {
       expect(find.text('캐릭터'), findsOneWidget);
       expect(find.text('답변 입력'), findsOneWidget);
       expect(find.text('0 / 500'), findsOneWidget);
+      final decoration = tester
+          .widget<TextField>(find.byType(TextField))
+          .decoration!;
+      expect(decoration.filled, isTrue);
+      expect(decoration.fillColor, AppColors.settingsIconBackground);
+      expect(
+        (decoration.border! as OutlineInputBorder).borderSide,
+        BorderSide.none,
+      );
 
       await tester.tap(find.text('저장'));
       await tester.pump();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../ai/presentation/widgets/ai_question_feedback_section.dart';
@@ -503,10 +504,6 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       widget.cards,
       currentUserId: widget.currentUserId,
     );
-    final countColor = _characterCount > _maxAnswerLength
-        ? Colors.redAccent
-        : AppColors.textMuted;
-
     return _QuestionPageFrame(
       question: widget.question,
       onBackPressed: () => _goBackToQuestion(context, widget.routeContext),
@@ -541,68 +538,20 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: TextField(
-                                  controller: _controller,
-                                  expands: true,
-                                  minLines: null,
-                                  maxLines: null,
-                                  keyboardType: TextInputType.multiline,
-                                  textInputAction: TextInputAction.newline,
-                                  textAlignVertical: TextAlignVertical.top,
-                                  style: AppTextStyles.homeBody.copyWith(
-                                    height: 1.5,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: '답변 입력',
-                                    hintStyle: AppTextStyles.homeBody.copyWith(
-                                      color: AppColors.textPlaceholder,
-                                    ),
-                                    filled: true,
-                                    fillColor: AppColors.background,
-                                    contentPadding: const EdgeInsets.fromLTRB(
-                                      24,
-                                      20,
-                                      24,
-                                      44,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                      borderSide: const BorderSide(
-                                        color: AppColors.textPlaceholder,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                      borderSide: const BorderSide(
-                                        color: AppColors.textPlaceholder,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                      borderSide: const BorderSide(
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                right: 14,
-                                bottom: 10,
-                                child: IgnorePointer(
-                                  child: Text(
-                                    '$_characterCount / $_maxAnswerLength',
-                                    key: const Key('answer-character-count'),
-                                    style: AppTextStyles.homeCharacterLabel
-                                        .copyWith(color: countColor),
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: AppAnswerInput(
+                            controller: _controller,
+                            expands: true,
+                            minLines: null,
+                            maxLines: null,
+                            maxLength: _maxAnswerLength,
+                            enforceMaxLength: false,
+                            hintText: '답변 입력',
                           ),
+                        ),
+                        AppAnswerCharacterCount(
+                          key: const Key('answer-character-count'),
+                          characterCount: _characterCount,
+                          maxLength: _maxAnswerLength,
                         ),
                         if (_submitErrorMessage != null) ...[
                           const SizedBox(height: 12),

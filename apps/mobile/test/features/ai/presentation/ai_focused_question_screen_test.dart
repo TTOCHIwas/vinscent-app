@@ -36,6 +36,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('shows the character count above the keyboard', (tester) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    await _pump(tester, _flow());
+
+    final characterCount = find.byKey(const Key('ai-focused-character-count'));
+    expect(characterCount, findsOneWidget);
+    final characterCountRect = tester.getRect(characterCount);
+    expect(characterCountRect.bottom, lessThanOrEqualTo(400));
+  });
+
   testWidgets('shows both answers in completed focused history', (
     tester,
   ) async {
