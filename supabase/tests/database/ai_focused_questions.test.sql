@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(32);
+select plan(36);
 
 insert into auth.users (
   id,
@@ -137,7 +137,7 @@ select lives_ok(
   $$
     select public.submit_ai_focused_question_answer(
       (public.get_ai_focused_question_flow()->'question'->>'question_id')::uuid,
-      '첫 번째 사용자의 집중 질문 답변'
+      'first member focused answer'
     )
   $$,
   'the first member can answer without waiting for the partner'
@@ -152,6 +152,11 @@ select is(
     ->'question'->>'curriculum_position',
   '2',
   'the first member immediately receives the next unanswered question'
+);
+select is(
+  jsonb_array_length(public.get_ai_focused_question_history()),
+  0,
+  'focused history hides a question until both members answer'
 );
 
 reset role;
@@ -172,7 +177,7 @@ select lives_ok(
   $$
     select public.submit_ai_focused_question_answer(
       (public.get_ai_focused_question_flow()->'question'->>'question_id')::uuid,
-      '두 번째 사용자의 집중 질문 답변'
+      'second member focused answer'
     )
   $$,
   'the partner can complete the same focused question'
@@ -182,6 +187,23 @@ select is(
     ->'progress'->>'couple_completed_count',
   '1',
   'a question counts as complete after both answers'
+);
+select is(
+  jsonb_array_length(public.get_ai_focused_question_history()),
+  1,
+  'focused history reveals a question after both members answer'
+);
+select is(
+  public.get_ai_focused_question_history()
+    ->0->>'my_answer_text',
+  'second member focused answer',
+  'focused history orients the current member answer as mine'
+);
+select is(
+  public.get_ai_focused_question_history()
+    ->0->>'partner_answer_text',
+  'first member focused answer',
+  'focused history orients the other member answer as partner'
 );
 
 reset role;
