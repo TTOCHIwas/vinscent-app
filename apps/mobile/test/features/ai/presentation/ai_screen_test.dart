@@ -61,6 +61,68 @@ void main() {
     expect(find.text('아니야'), findsOneWidget);
   });
 
+  testWidgets('shows at most five actionable memories in one review batch', (
+    tester,
+  ) async {
+    final memories = List.generate(
+      6,
+      (index) => _memory.copyWith(
+        id: 'memory-$index',
+        statement: '기억 문장 $index',
+      ),
+    );
+
+    await _pump(
+      tester,
+      _dashboard(
+        completedCount: 24,
+        personalizationStatus: AiPersonalizationStatus.reviewing,
+        memories: memories,
+        myPendingReviewCount: memories.length,
+      ),
+    );
+
+    expect(find.byKey(const Key('ai-memory-confirm-memory-0')), findsOneWidget);
+    expect(find.byKey(const Key('ai-memory-confirm-memory-4')), findsOneWidget);
+    expect(find.byKey(const Key('ai-memory-confirm-memory-5')), findsNothing);
+    expect(_wordBoundaryText('기억 문장 5'), findsNothing);
+  });
+
+  testWidgets('labels personal memories relative to the current member', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _dashboard(
+        completedCount: 24,
+        personalizationStatus: AiPersonalizationStatus.ready,
+        memories: [
+          _memory.copyWith(
+            id: 'mine',
+            scope: AiMemoryScope.personal,
+            subjectUserId: 'current-user',
+            isMine: true,
+            state: AiMemoryState.active,
+            canConfirm: false,
+          ),
+          _memory.copyWith(
+            id: 'partner',
+            scope: AiMemoryScope.personal,
+            subjectUserId: 'partner-user',
+            isMine: false,
+            state: AiMemoryState.active,
+            canConfirm: false,
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('너에 대해'), findsOneWidget);
+    expect(find.text('상대에 대해'), findsOneWidget);
+    expect(find.textContaining('파트너 A'), findsNothing);
+    expect(find.textContaining('파트너 B'), findsNothing);
+  });
+
   testWidgets('shows partner wait until both reviews are resolved', (
     tester,
   ) async {
@@ -182,6 +244,7 @@ AiLearningDashboard _dashboard({
 final _memory = AiMemory(
   id: 'memory-id',
   scope: AiMemoryScope.couple,
+  isMine: false,
   kind: 'relationship_pattern',
   statement: '함께 산책하는 시간을 좋아해요.',
   confidence: 0.85,
@@ -193,3 +256,33 @@ final _memory = AiMemory(
   createdAt: DateTime.utc(2026, 7, 20),
   updatedAt: DateTime.utc(2026, 7, 20),
 );
+
+extension on AiMemory {
+  AiMemory copyWith({
+    String? id,
+    AiMemoryScope? scope,
+    String? subjectUserId,
+    bool? isMine,
+    String? statement,
+    AiMemoryState? state,
+    bool? canConfirm,
+  }) {
+    return AiMemory(
+      id: id ?? this.id,
+      scope: scope ?? this.scope,
+      subjectUserId: subjectUserId ?? this.subjectUserId,
+      isMine: isMine ?? this.isMine,
+      kind: kind,
+      statement: statement ?? this.statement,
+      confidence: confidence,
+      state: state ?? this.state,
+      myDecision: myDecision,
+      confirmedCount: confirmedCount,
+      requiredConfirmationCount: requiredConfirmationCount,
+      canConfirm: canConfirm ?? this.canConfirm,
+      evidenceCount: evidenceCount,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+}

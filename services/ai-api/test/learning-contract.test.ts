@@ -103,7 +103,7 @@ test('기억 후보는 입력 답변을 근거로 사용해야 한다', () => {
         domain: 'emotional_support',
         evidenceType: 'explicit',
         sensitiveCategory: 'none',
-        statement: '힘든 날에는 조언보다 먼저 이야기를 들어주는 것을 선호한다.',
+        statement: '힘든 날에는 조언보다 먼저 이야기를 들어주면 좋아',
         confidence: 0.78,
         evidenceAnswerIds: ['answer-a'],
       },
@@ -128,6 +128,124 @@ test('기억 후보는 입력 답변을 근거로 사용해야 한다', () => {
       ]);
     },
     /unknown evidence answer/i,
+  );
+});
+
+test('사용자에게 보이는 기억 문장에서 내부 역할명과 보고서 말투를 거부한다', () => {
+  const candidate = {
+    memoryKey: 'support_listening_first_user_a',
+    scope: 'personal' as const,
+    subjectUserId: 'user-a',
+    kind: 'support_preference',
+    domain: 'emotional_support' as const,
+    evidenceType: 'explicit' as const,
+    sensitiveCategory: 'none' as const,
+    confidence: 0.78,
+    evidenceAnswerIds: ['answer-a'],
+  };
+
+  assert.throws(
+    () => validateMemoryCandidates(context, [
+      {
+        ...candidate,
+        statement: '파트너 A는 이야기를 먼저 들어주는 것을 선호합니다.',
+      },
+    ]),
+    /memory statement cannot expose an internal participant/i,
+  );
+  assert.throws(
+    () => validateMemoryCandidates(context, [
+      {
+        ...candidate,
+        statement: '이야기를 먼저 들어주는 것을 선호합니다',
+      },
+    ]),
+    /memory statement must use casual speech/i,
+  );
+});
+
+test('커플 기억은 두 사람의 현재 답변을 모두 근거로 사용해야 한다', () => {
+  assert.throws(
+    () => validateMemoryCandidates(context, [
+      {
+        memoryKey: 'shared_support_preference',
+        scope: 'couple',
+        subjectUserId: null,
+        kind: 'shared_preference',
+        domain: 'emotional_support',
+        evidenceType: 'explicit',
+        sensitiveCategory: 'none',
+        statement: '힘든 날에는 먼저 마음을 정리할 시간이 중요해',
+        confidence: 0.8,
+        evidenceAnswerIds: ['answer-a'],
+      },
+    ]),
+    /couple memory requires both participant answers/i,
+  );
+});
+
+test('반복 패턴은 다른 질문에서 같은 기억이 관찰된 경우에만 허용한다', () => {
+  const repeatedCandidate = {
+    memoryKey: 'support_listening_first_user_a',
+    scope: 'personal' as const,
+    subjectUserId: 'user-a',
+    kind: 'support_preference',
+    domain: 'emotional_support' as const,
+    evidenceType: 'repeated_pattern' as const,
+    sensitiveCategory: 'none' as const,
+    statement: '힘든 날에는 이야기를 먼저 들어주면 좋아',
+    confidence: 0.86,
+    evidenceAnswerIds: ['answer-a'],
+  };
+
+  assert.throws(
+    () => validateMemoryCandidates(context, [repeatedCandidate]),
+    /repeated memory requires prior question evidence/i,
+  );
+
+  assert.doesNotThrow(() => {
+    validateMemoryCandidates(
+      {
+        ...context,
+        memoryCandidates: [
+          {
+            memoryKey: repeatedCandidate.memoryKey,
+            scope: repeatedCandidate.scope,
+            subjectUserId: repeatedCandidate.subjectUserId,
+            kind: repeatedCandidate.kind,
+            domain: repeatedCandidate.domain,
+            evidenceType: 'explicit',
+            statement: '힘든 날에는 이야기를 먼저 들어주면 좋아',
+            confidence: 0.78,
+            state: 'pending',
+            evidenceQuestionCount: 1,
+          },
+        ],
+      },
+      [repeatedCandidate],
+    );
+  });
+});
+
+test('한 질문에서 기억 후보를 세 개보다 많이 만들 수 없다', () => {
+  const candidates = Array.from({ length: 4 }, (_, index) => ({
+    memoryKey: `support_preference_${index}`,
+    scope: 'personal' as const,
+    subjectUserId: index.isEven ? 'user-a' : 'user-b',
+    kind: 'support_preference',
+    domain: 'emotional_support' as const,
+    evidenceType: 'explicit' as const,
+    sensitiveCategory: 'none' as const,
+    statement: index.isEven
+        ? '힘든 날에는 이야기를 먼저 들어주면 좋아'
+        : '마음을 정리할 시간을 먼저 가지면 좋아',
+    confidence: 0.8,
+    evidenceAnswerIds: [index.isEven ? 'answer-a' : 'answer-b'],
+  }));
+
+  assert.throws(
+    () => validateMemoryCandidates(context, candidates),
+    /at most three memory candidates/i,
   );
 });
 

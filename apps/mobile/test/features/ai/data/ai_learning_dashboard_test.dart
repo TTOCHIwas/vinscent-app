@@ -28,6 +28,7 @@ void main() {
           'memory_id': 'memory-id',
           'scope': 'couple',
           'subject_user_id': null,
+          'is_mine': false,
           'kind': 'relationship_pattern',
           'statement': '함께 산책하는 시간을 좋아해요.',
           'confidence': 0.85,
@@ -61,6 +62,7 @@ void main() {
       const AiDomainProgress(completedCount: 2, totalCount: 4),
     );
     expect(dashboard.memories.single.scope, AiMemoryScope.couple);
+    expect(dashboard.memories.single.isMine, false);
     expect(dashboard.memories.single.myDecision, AiMemoryDecision.confirmed);
     expect(dashboard.memories.single.isWaitingForPartner, true);
   });

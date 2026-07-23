@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(36);
+select plan(39);
 
 insert into auth.users (
   id,
@@ -304,7 +304,7 @@ select
     ),
     'google',
     'gemini-test',
-    'memory-v5'
+    'memory-v6'
   );
 
 select ok(
@@ -346,7 +346,7 @@ select is(
           'learning_domain', 'personal_values',
           'evidence_type', 'explicit',
           'sensitive_category', 'none',
-          'statement', '파트너 A는 첫 번째 답변의 선택을 중요하게 생각한다',
+          'statement', '첫 번째 답변에서 고른 선택을 중요하게 여겨',
           'confidence', 0.9,
           'evidence_answer_ids', jsonb_build_array(
             (
@@ -376,6 +376,173 @@ select is(
   1::bigint,
   'focused memory evidence remains in the focused source table'
 );
+
+insert into public.daily_story_loops (
+  id,
+  couple_id,
+  couple_date,
+  status
+)
+values (
+  '31000000-0000-0000-0000-000000000099',
+  '22000000-0000-0000-0000-000000000001',
+  current_date - 1,
+  'question_generated'
+);
+
+insert into public.daily_questions (
+  id,
+  couple_id,
+  question_id,
+  assigned_date,
+  status,
+  story_loop_id
+)
+select
+  '32000000-0000-0000-0000-000000000099',
+  '22000000-0000-0000-0000-000000000001',
+  q.id,
+  current_date - 1,
+  'pending',
+  '31000000-0000-0000-0000-000000000099'
+from public.questions as q
+where q.curriculum_version = 1
+  and q.curriculum_position = 1;
+
+insert into public.daily_question_answers (
+  id,
+  daily_question_id,
+  user_id,
+  answer_text
+)
+values
+  (
+    '42000000-0000-0000-0000-000000000098',
+    '32000000-0000-0000-0000-000000000099',
+    '12000000-0000-0000-0000-000000000001',
+    '이 선택을 다른 질문에서도 중요하게 생각해'
+  ),
+  (
+    '42000000-0000-0000-0000-000000000099',
+    '32000000-0000-0000-0000-000000000099',
+    '12000000-0000-0000-0000-000000000002',
+    '나는 다른 선택을 중요하게 생각해'
+  );
+
+insert into public.ai_memory_evidence (memory_id, answer_id)
+select
+  aim.id,
+  '42000000-0000-0000-0000-000000000098'
+from public.ai_memories as aim
+where aim.memory_key = 'focused_partner_a_preference';
+
+update public.ai_processing_jobs
+set
+  status = 'succeeded',
+  completed_at = now()
+where daily_question_id = '32000000-0000-0000-0000-000000000099';
+
+update public.ai_processing_jobs
+set
+  status = 'processing',
+  attempts = attempts + 1,
+  claimed_at = now(),
+  claimed_by = 'focused-repeat-test-worker',
+  lease_expires_at = now() + interval '5 minutes',
+  completed_at = null,
+  last_error = null
+where couple_id = '22000000-0000-0000-0000-000000000001'
+  and job_type = 'extract_memories'
+  and focused_question_id is not null;
+
+insert into ai_focused_worker_values (value_key, value_uuid)
+select
+  'repeat_extract_run',
+  public.start_ai_processing_run(
+    (
+      select id
+      from public.ai_processing_jobs
+      where couple_id = '22000000-0000-0000-0000-000000000001'
+        and job_type = 'extract_memories'
+        and focused_question_id is not null
+    ),
+    'google',
+    'gemini-test',
+    'memory-v6'
+  );
+
+select is(
+  public.succeed_ai_processing_run(
+    (
+      select value_uuid
+      from ai_focused_worker_values
+      where value_key = 'repeat_extract_run'
+    ),
+    jsonb_build_object(
+      'memories',
+      jsonb_build_array(
+        jsonb_build_object(
+          'memory_key', 'focused_partner_a_preference',
+          'scope', 'personal',
+          'subject_user_id', '12000000-0000-0000-0000-000000000001',
+          'kind', 'personal_value',
+          'learning_domain', 'personal_values',
+          'evidence_type', 'repeated_pattern',
+          'sensitive_category', 'none',
+          'statement', '같은 선택을 여러 질문에서 중요하게 여겨',
+          'confidence', 0.88,
+          'evidence_answer_ids', jsonb_build_array(
+            (
+              select aifqa.id
+              from public.ai_focused_question_answers as aifqa
+              where aifqa.user_id =
+                '12000000-0000-0000-0000-000000000001'
+            )
+          )
+        )
+      )
+    ),
+    110,
+    32,
+    210
+  ),
+  true,
+  'a repeated focused observation updates the same memory'
+);
+select is(
+  (
+    select count(*)
+    from public.ai_memory_evidence as aime
+    join public.ai_memories as aim on aim.id = aime.memory_id
+    where aim.memory_key = 'focused_partner_a_preference'
+  ),
+  1::bigint,
+  'updating a memory keeps evidence from a different daily question'
+);
+select is(
+  (
+    select count(distinct evidence.question_instance_id)
+    from (
+      select dqa.daily_question_id as question_instance_id
+      from public.ai_memory_evidence as aime
+      join public.daily_question_answers as dqa on dqa.id = aime.answer_id
+      join public.ai_memories as aim on aim.id = aime.memory_id
+      where aim.memory_key = 'focused_partner_a_preference'
+
+      union
+
+      select aifqa.focused_question_id
+      from public.ai_focused_memory_evidence as aifme
+      join public.ai_focused_question_answers as aifqa
+        on aifqa.id = aifme.answer_id
+      join public.ai_memories as aim on aim.id = aifme.memory_id
+      where aim.memory_key = 'focused_partner_a_preference'
+    ) as evidence
+  ),
+  2::bigint,
+  'a repeated pattern retains evidence from two distinct questions'
+);
+
 select is(
   (
     select status

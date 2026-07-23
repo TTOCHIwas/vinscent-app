@@ -394,7 +394,7 @@ test('Gemini model maps memory output without real user identifiers', async () =
               learning_domain: 'personal_values',
               evidence_type: 'explicit',
               sensitive_category: 'none',
-              statement: 'Partner A values quiet time together.',
+              statement: '함께 조용히 보내는 시간을 소중하게 여겨',
               confidence: 0.82,
               evidence_answer_ids: ['answer-a'],
             },
@@ -422,7 +422,7 @@ test('Gemini model maps memory output without real user identifiers', async () =
       domain: 'personal_values',
       evidenceType: 'explicit',
       sensitiveCategory: 'none',
-      statement: 'Partner A values quiet time together.',
+      statement: '함께 조용히 보내는 시간을 소중하게 여겨',
       confidence: 0.82,
       evidenceAnswerIds: ['answer-a'],
     },
@@ -448,7 +448,7 @@ test('memory extraction uses a typed provider schema and a complete prompt contr
               learning_domain: 'daily_life',
               evidence_type: 'explicit',
               sensitive_category: 'none',
-              statement: 'Both partners value quiet time together.',
+              statement: '함께 조용히 보내는 시간을 좋아해',
               confidence: 0.84,
               evidence_answer_ids: ['answer-a', 'answer-b'],
             },
@@ -518,6 +518,25 @@ test('memory extraction uses a typed provider schema and a complete prompt contr
   ]) {
     assert.equal(capturedPrompt.includes(field), true, `${field} is documented`);
   }
+  assert.equal(capturedPrompt.includes('at most 3 objects'), true);
+  assert.equal(
+    capturedPrompt.includes(
+      'Never include partner_a, partner_b, participant labels, nicknames, or user identifiers in statement',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      'A couple memory requires both current answers to directly support the same shared fact',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      'Write statement in friendly Korean casual speech',
+    ),
+    true,
+  );
   assert.equal(result.value[0]?.scope, 'couple');
   assert.equal(result.value[0]?.subjectParticipantKey, null);
 });
@@ -563,11 +582,11 @@ test('memory extraction reports the invalid field without exposing its value', a
   );
 });
 
-test('memory extraction rejects more than twelve model candidates', async () => {
+test('memory extraction rejects more than three model candidates', async () => {
   const model = new GeminiLearningModel({
     generateStructured: async () => ({
       value: {
-        memories: Array.from({ length: 13 }, (_, index) => ({
+        memories: Array.from({ length: 4 }, (_, index) => ({
           memory_key: `partner_a_preference_${index}`,
           scope: 'personal',
           subject_participant_key: 'partner_a',
@@ -575,7 +594,7 @@ test('memory extraction rejects more than twelve model candidates', async () => 
           learning_domain: 'personal_values',
           evidence_type: 'explicit',
           sensitive_category: 'none',
-          statement: `Partner A preference ${index}.`,
+          statement: `조용한 시간을 중요하게 여겨 ${index}`,
           confidence: 0.8,
           evidence_answer_ids: ['answer-a'],
         })),
