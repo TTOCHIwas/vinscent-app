@@ -153,8 +153,9 @@ AiLearningDashboard _dashboard({
 final _pendingMemory = AiMemory(
   id: 'memory-id',
   scope: AiMemoryScope.personal,
+  isMine: true,
   kind: 'personal_value',
-  statement: '함께 있는 조용한 시간을 중요하게 생각해요.',
+  statement: '함께 있는 조용한 시간을 중요하게 여겨',
   confidence: 0.9,
   state: AiMemoryState.pending,
   confirmedCount: 0,
@@ -168,8 +169,9 @@ final _pendingMemory = AiMemory(
 final _activeMemory = AiMemory(
   id: 'memory-id',
   scope: AiMemoryScope.personal,
+  isMine: true,
   kind: 'personal_value',
-  statement: '함께 있는 조용한 시간을 중요하게 생각해요.',
+  statement: '함께 있는 조용한 시간을 중요하게 여겨',
   confidence: 0.9,
   state: AiMemoryState.active,
   myDecision: AiMemoryDecision.confirmed,

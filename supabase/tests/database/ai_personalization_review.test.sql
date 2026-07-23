@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(21);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -341,6 +341,19 @@ select is(
   jsonb_array_length(public.get_ai_learning_dashboard()->'memories'),
   3,
   'the current member sees own and couple memories but not partner personal memory'
+);
+
+select is(
+  (
+    select (memory->>'is_mine')::boolean
+    from jsonb_array_elements(
+      public.get_ai_learning_dashboard()->'memories'
+    ) as memory
+    where memory->>'memory_id' =
+      '72000000-0000-0000-0000-000000000001'
+  ),
+  true,
+  'the dashboard identifies a personal memory owned by the current member'
 );
 
 select is(

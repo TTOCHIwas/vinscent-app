@@ -11,6 +11,8 @@ import '../../data/ai_learning_dashboard.dart';
 import 'ai_learning_error_message.dart';
 import 'ai_memory_section.dart';
 
+const _memoryReviewBatchSize = 5;
+
 class AiLearningDashboardView extends ConsumerWidget {
   const AiLearningDashboardView({super.key, required this.dashboard});
 
@@ -143,7 +145,10 @@ class _PersonalizationSection extends StatelessWidget {
         message: '기억을 정리하지 못했어. 잠시 후 다시 확인해 줘',
       ),
       AiPersonalizationStatus.reviewing => AiMemorySection(
-        memories: memories,
+        memories: memories
+            .where((memory) => memory.canConfirm)
+            .take(_memoryReviewBatchSize)
+            .toList(growable: false),
         onDecision: onDecision,
       ),
       AiPersonalizationStatus.waitingPartner => Column(

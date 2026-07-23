@@ -24,7 +24,7 @@ class AiMemorySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'AI가 정리한 기억',
+          '이렇게 기억했어',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
@@ -36,7 +36,7 @@ class AiMemorySection extends StatelessWidget {
         const SizedBox(height: 12),
         if (memories.isEmpty)
           Text(
-            '답변이 쌓이면 확인할 기억이 여기에 나타납니다.',
+            '지금 확인할 기억은 없어',
             style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
           )
         else
@@ -76,9 +76,7 @@ class _MemoryRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  memory.scope == AiMemoryScope.personal
-                      ? '나에 대한 기억'
-                      : '우리 둘의 기억',
+                  _memorySubjectLabel(memory),
                   style: AppTextStyles.homeCharacterLabel.copyWith(
                     color: AppColors.textMuted,
                   ),
@@ -136,6 +134,13 @@ class _MemoryRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _memorySubjectLabel(AiMemory memory) {
+  if (memory.scope == AiMemoryScope.couple) {
+    return '둘에 대해';
+  }
+  return memory.isMine ? '너에 대해' : '상대에 대해';
 }
 
 String _memoryStateLabel(AiMemory memory) {

@@ -230,6 +230,7 @@ class AiMemory {
   const AiMemory({
     required this.id,
     required this.scope,
+    required this.isMine,
     required this.kind,
     required this.statement,
     required this.confidence,
@@ -246,21 +247,31 @@ class AiMemory {
 
   factory AiMemory.fromJson(Map<String, dynamic> json) {
     final rawDecision = json['my_decision'];
+    final scope = AiMemoryScope.fromJson(_readString(json, 'scope'));
+    final subjectUserId = json['subject_user_id'] as String?;
+    final myDecision = rawDecision == null
+        ? null
+        : AiMemoryDecision.fromJson(rawDecision as String);
+    final canConfirm = _readBool(json, 'can_confirm');
+    final rawIsMine = json['is_mine'];
+    final isMine = rawIsMine is bool
+        ? rawIsMine
+        : scope == AiMemoryScope.personal &&
+              (canConfirm || myDecision != null);
 
     return AiMemory(
       id: _readString(json, 'memory_id'),
-      scope: AiMemoryScope.fromJson(_readString(json, 'scope')),
-      subjectUserId: json['subject_user_id'] as String?,
+      scope: scope,
+      subjectUserId: subjectUserId,
+      isMine: isMine,
       kind: _readString(json, 'kind'),
       statement: _readString(json, 'statement'),
       confidence: _readNum(json, 'confidence').toDouble(),
       state: AiMemoryState.fromJson(_readString(json, 'state')),
-      myDecision: rawDecision == null
-          ? null
-          : AiMemoryDecision.fromJson(rawDecision as String),
+      myDecision: myDecision,
       confirmedCount: _readInt(json, 'confirmed_count'),
       requiredConfirmationCount: _readInt(json, 'required_confirmation_count'),
-      canConfirm: _readBool(json, 'can_confirm'),
+      canConfirm: canConfirm,
       evidenceCount: _readInt(json, 'evidence_count'),
       createdAt: DateTime.parse(_readString(json, 'created_at')),
       updatedAt: DateTime.parse(_readString(json, 'updated_at')),
@@ -270,6 +281,7 @@ class AiMemory {
   final String id;
   final AiMemoryScope scope;
   final String? subjectUserId;
+  final bool isMine;
   final String kind;
   final String statement;
   final double confidence;
