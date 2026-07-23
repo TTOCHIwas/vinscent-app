@@ -118,6 +118,10 @@ test('Gemini client sends structured generateContent request and reports usage',
   );
   const body = JSON.parse(String(capturedInit?.body));
   assert.equal(body.contents[0].parts[0].text, 'Return a short response.');
+  assert.equal(
+    Object.hasOwn(body.generationConfig, 'temperature'),
+    false,
+  );
   assert.equal(body.generationConfig.responseMimeType, 'application/json');
   assert.equal(
     body.generationConfig.responseJsonSchema.additionalProperties,
