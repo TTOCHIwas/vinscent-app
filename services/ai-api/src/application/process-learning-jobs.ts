@@ -105,7 +105,7 @@ const emptyUsage: LearningModelUsage = {
 };
 
 const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string> = {
-  extract_memories: 'memory-v5',
+  extract_memories: 'memory-v6',
   generate_feedback: 'feedback-v3',
   select_curated_question: 'question-ranking-v2',
   generate_general_question: 'general-question-v1',

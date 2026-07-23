@@ -393,14 +393,21 @@ export function validateMemoryCandidates(
   context: CompletedQuestionContext,
   candidates: MemoryCandidate[],
 ): void {
+  if (candidates.length > 3) {
+    throw new RangeError('at most three memory candidates are allowed');
+  }
+
   const answersById = validateContextAnswers(context);
   const participantIds = new Set(context.answers.map((answer) => answer.userId));
   const memoryKeys = new Set<string>();
+  const personalSubjects = new Set<string>();
+  let coupleMemoryCount = 0;
 
   for (const candidate of candidates) {
     requireNonBlank(candidate.memoryKey, 'memory key', 160);
     requireNonBlank(candidate.kind, 'memory kind', 100);
     requireNonBlank(candidate.statement, 'memory statement', 500);
+    validateMemoryStatement(candidate.statement);
 
     if (candidate.sensitiveCategory !== 'none') {
       throw new Error('sensitive memory candidate is not allowed');
@@ -429,9 +436,19 @@ export function validateMemoryCandidates(
       ) {
         throw new Error('unknown personal subject');
       }
+      if (personalSubjects.has(candidate.subjectUserId)) {
+        throw new Error(
+          'only one personal memory per participant is allowed',
+        );
+      }
+      personalSubjects.add(candidate.subjectUserId);
     } else if (candidate.scope === 'couple') {
       if (candidate.subjectUserId !== null) {
         throw new Error('couple memory cannot have a personal subject');
+      }
+      coupleMemoryCount += 1;
+      if (coupleMemoryCount > 1) {
+        throw new Error('only one couple memory is allowed');
       }
     } else {
       throw new Error('unknown memory scope');
@@ -446,6 +463,19 @@ export function validateMemoryCandidates(
       throw new Error('duplicate evidence answer');
     }
 
+    if (
+      candidate.scope === 'personal'
+      && candidate.evidenceAnswerIds.length !== 1
+    ) {
+      throw new Error('personal memory requires exactly one participant answer');
+    }
+    if (
+      candidate.scope === 'couple'
+      && candidate.evidenceAnswerIds.length !== context.answers.length
+    ) {
+      throw new Error('couple memory requires both participant answers');
+    }
+
     for (const evidenceAnswerId of candidate.evidenceAnswerIds) {
       const evidence = answersById.get(evidenceAnswerId);
       if (evidence === undefined) {
@@ -458,6 +488,48 @@ export function validateMemoryCandidates(
         throw new Error('personal memory evidence belongs to another participant');
       }
     }
+
+    if (candidate.evidenceType === 'repeated_pattern') {
+      const previousCandidate = context.memoryCandidates.find(
+        (memory) =>
+          memory.memoryKey === candidate.memoryKey
+          && memory.scope === candidate.scope
+          && memory.subjectUserId === candidate.subjectUserId
+          && memory.kind === candidate.kind
+          && memory.domain === candidate.domain
+          && memory.state !== 'rejected'
+          && memory.state !== 'superseded'
+          && memory.evidenceQuestionCount >= 1,
+      );
+      if (previousCandidate === undefined) {
+        throw new Error('repeated memory requires prior question evidence');
+      }
+    }
+  }
+}
+
+const internalMemoryParticipantPatterns = [
+  /파트너\s*[ab]/iu,
+  /partner[_\s-]?[ab]/iu,
+  /사용자\s*[ab]/iu,
+  /(?:첫|두)\s*번째\s*(?:사용자|사람|파트너)/u,
+  /\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/iu,
+];
+
+const reportStyleMemoryEndingPattern =
+  /(?:습니다|ㅂ니다|합니다|입니다|됩니다|드립니다|바랍니다|한다|이다|된다|있다|없다)[.!?]?$/u;
+
+function validateMemoryStatement(statement: string): void {
+  if (
+    internalMemoryParticipantPatterns.some((pattern) => pattern.test(statement))
+  ) {
+    throw new Error('memory statement cannot expose an internal participant');
+  }
+  if (
+    reportStyleMemoryEndingPattern.test(statement)
+    || statement.endsWith('.')
+  ) {
+    throw new Error('memory statement must use casual speech');
   }
 }
 

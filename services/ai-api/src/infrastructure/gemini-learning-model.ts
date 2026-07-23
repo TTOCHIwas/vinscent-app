@@ -28,7 +28,7 @@ const commonPolicy = [
   'Return all user-facing text in natural Korean.',
 ].join(' ');
 
-const maximumMemoryCandidates = 12;
+const maximumMemoryCandidates = 3;
 
 const rankingSchema = objectSchema({
   question_key: { type: 'string' },
@@ -242,6 +242,7 @@ function buildMemoryExtractionPrompt(
     [
       'Extract zero or more atomic memory candidates from only the current two answers.',
       `Return one JSON object with a memories array containing at most ${maximumMemoryCandidates} objects.`,
+      'Prefer zero to two durable memories. Return at most one personal memory per participant and at most one couple memory.',
       'Every memory object must contain exactly these fields: memory_key, scope, subject_participant_key, kind, learning_domain, evidence_type, sensitive_category, statement, confidence, evidence_answer_ids.',
       'Use scope personal or couple. Use subject_participant_key partner_a or partner_b for personal memories and couple for couple memories.',
       'Use learning_domain personal_values, emotional_support, communication_repair, daily_life, relationship_strength, or future_boundaries.',
@@ -250,8 +251,13 @@ function buildMemoryExtractionPrompt(
       'Each memory must contain exactly one explicit fact, preference, or repeated pattern and cite its supporting current answer IDs.',
       'Use evidence_type explicit when the answer directly states the fact.',
       'Use evidence_type repeated_pattern only when a matching existing candidate was observed in another question; reuse its memory_key.',
+      'For a semantically equivalent existing candidate with the same subject and domain, reuse its memory_key instead of creating a synonym or splitting it into overlapping memories.',
       'A single answer cannot establish a personality or repeated tendency.',
-      'A personal memory may cite only that participant answer. A couple memory may cite either or both answers.',
+      'A personal memory must cite exactly that participant answer.',
+      'A couple memory requires both current answers to directly support the same shared fact and must cite both answer IDs. Different or merely related answers are not a couple memory.',
+      'Never include partner_a, partner_b, participant labels, nicknames, or user identifiers in statement. Identity belongs only in subject_participant_key.',
+      'Write statement in friendly Korean casual speech without an explicit grammatical subject. Use a short natural predicate such as 좋아해, 중요하게 여겨, 필요해, or 편이야. Do not use honorifics, report-style endings, or a period.',
+      'Calibrate confidence instead of defaulting to 1. Use 0.75 to 0.85 for a clear contextual preference, 0.86 to 0.94 for an unambiguous durable fact, and reserve values above 0.94 for exceptionally explicit wording.',
       'Do not save transient moods, unsupported interpretations, or rejected candidate keys.',
       'Classify the blocked categories sexual health, pregnancy or fertility, finance or debt, physical or mental health, trauma, religion or politics, and family conflict in sensitive_category so the server can discard them.',
     ].join(' '),
