@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import 'ai_focused_question_flow.dart';
 import 'ai_learning_dashboard.dart';
 import 'ai_learning_failure.dart';
 
@@ -21,6 +22,15 @@ abstract interface class AiLearningRepository {
   Future<void> confirmMemory({
     required String memoryId,
     required AiMemoryDecision decision,
+  });
+
+  Future<AiFocusedQuestionFlow> unlockFocusedQuestions();
+
+  Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow();
+
+  Future<AiFocusedQuestionFlow> submitFocusedQuestionAnswer({
+    required String questionId,
+    required String answerText,
   });
 
   Future<AiQuestionFeedback?> fetchQuestionFeedback(String dailyQuestionId);
@@ -64,6 +74,30 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
       params: {
         'requested_memory_id': memoryId,
         'requested_decision': decision.jsonValue,
+      },
+    );
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> unlockFocusedQuestions() {
+    return _focusedQuestionRpc('unlock_ai_focused_questions');
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow() {
+    return _focusedQuestionRpc('get_ai_focused_question_flow');
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> submitFocusedQuestionAnswer({
+    required String questionId,
+    required String answerText,
+  }) {
+    return _focusedQuestionRpc(
+      'submit_ai_focused_question_answer',
+      params: {
+        'requested_question_id': questionId,
+        'requested_answer_text': answerText,
       },
     );
   }
@@ -117,6 +151,22 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
     }
   }
 
+  Future<AiFocusedQuestionFlow> _focusedQuestionRpc(
+    String functionName, {
+    Map<String, Object?>? params,
+  }) async {
+    final data = await _rpc(functionName, params: params);
+
+    try {
+      return AiFocusedQuestionFlow.fromJson(_asRow(data));
+    } on FormatException catch (error) {
+      throw AiLearningRepositoryException(
+        AiLearningFailureReason.invalidResponse,
+        error.message,
+      );
+    }
+  }
+
   Map<String, dynamic> _asRow(Object? data) {
     if (data is Map<String, dynamic>) {
       return data;
@@ -158,6 +208,11 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
         AiLearningFailureReason.personalizationNotReady,
       'ai_curriculum_unavailable' =>
         AiLearningFailureReason.curriculumUnavailable,
+      'ai_focused_questions_locked' =>
+        AiLearningFailureReason.focusedQuestionsLocked,
+      'answer_required' => AiLearningFailureReason.answerRequired,
+      'answer_too_long' => AiLearningFailureReason.answerTooLong,
+      'question_not_ready' => AiLearningFailureReason.questionNotReady,
       'invalid_daily_question' => AiLearningFailureReason.invalidQuestion,
       _ => AiLearningFailureReason.unknown,
     };

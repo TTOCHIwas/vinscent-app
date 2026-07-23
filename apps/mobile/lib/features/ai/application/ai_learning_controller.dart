@@ -38,6 +38,12 @@ class AiLearningController extends AsyncNotifier<AiLearningDashboard> {
     });
   }
 
+  Future<void> unlockFocusedQuestions() async {
+    await _runAndReload(() async {
+      await ref.read(aiLearningRepositoryProvider).unlockFocusedQuestions();
+    });
+  }
+
   Future<void> _runAndReload(Future<void> Function() command) async {
     final previousState = state;
     state = const AsyncValue.loading();

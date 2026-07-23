@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
+import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_learning_repository.dart';
 
@@ -108,6 +109,24 @@ class _FeedbackRepository implements AiLearningRepository {
   ) async {
     feedbackRequestCount += 1;
     return feedback;
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> submitFocusedQuestionAnswer({
+    required String questionId,
+    required String answerText,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> unlockFocusedQuestions() {
+    throw UnimplementedError();
   }
 
   @override
