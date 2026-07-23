@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(27);
+select plan(32);
 
 insert into auth.users (
   id,
@@ -404,7 +404,51 @@ values (
   'waiting_partner_card'
 );
 
-select private.assign_question_to_story_loop(
+insert into public.story_loop_cards (
+  id,
+  story_loop_id,
+  couple_id,
+  couple_date,
+  author_user_id,
+  preview_path,
+  scene_data_path,
+  has_drawing
+)
+values
+  (
+    '42000000-0000-0000-0000-000000000001',
+    '32000000-0000-0000-0000-000000000001',
+    '22000000-0000-0000-0000-000000000001',
+    current_date,
+    '12000000-0000-0000-0000-000000000001',
+    '22000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/12000000-0000-0000-0000-000000000001/preview.png',
+    '22000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/12000000-0000-0000-0000-000000000001/scene.json',
+    true
+  ),
+  (
+    '42000000-0000-0000-0000-000000000002',
+    '32000000-0000-0000-0000-000000000001',
+    '22000000-0000-0000-0000-000000000001',
+    current_date,
+    '12000000-0000-0000-0000-000000000002',
+    '22000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/12000000-0000-0000-0000-000000000002/preview.png',
+    '22000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/12000000-0000-0000-0000-000000000002/scene.json',
+    true
+  );
+
+create temporary table focused_card_pair_result
+on commit drop
+as
+select *
+from private.finalize_story_loop_after_card_pair(
   (
     select c
     from public.couples as c
@@ -414,19 +458,65 @@ select private.assign_question_to_story_loop(
     select dsl
     from public.daily_story_loops as dsl
     where dsl.id = '32000000-0000-0000-0000-000000000001'
-  )
+  ),
+  '12000000-0000-0000-0000-000000000002',
+  '42000000-0000-0000-0000-000000000002'
 );
 
 select is(
   (
-    select dq.status
+    select result.story_loop_status
+    from focused_card_pair_result as result
+  ),
+  'card_only_completed',
+  'focused foundation progress finalizes a card pair without a question'
+);
+select is(
+  (
+    select result.question_generated
+    from focused_card_pair_result as result
+  ),
+  false,
+  'card-only completion does not report a generated question'
+);
+select is(
+  (
+    select count(*)
     from public.daily_questions as dq
-    join public.questions as q on q.id = dq.question_id
     where dq.story_loop_id = '32000000-0000-0000-0000-000000000001'
+  ),
+  0::bigint,
+  'focused foundation progress does not assign a daily question'
+);
+select ok(
+  (
+    select dsl.story_edit_locked_at is not null
+    from public.daily_story_loops as dsl
+    where dsl.id = '32000000-0000-0000-0000-000000000001'
+  ),
+  'card-only completion locks both cards'
+);
+select is(
+  (
+    select count(*)
+    from public.story_loop_notification_events as slne
+    where slne.story_loop_id =
+      '32000000-0000-0000-0000-000000000001'
+      and slne.event_type = 'question_generated'
+  ),
+  0::bigint,
+  'card-only completion emits no question notification'
+);
+select is(
+  (
+    select aifq.status
+    from public.ai_focused_questions as aifq
+    join public.questions as q on q.id = aifq.question_id
+    where aifq.couple_id = '22000000-0000-0000-0000-000000000001'
       and q.curriculum_position = 2
   ),
   'answered_by_one',
-  'a card question adopts an existing focused answer instead of being blocked'
+  'an in-progress focused answer remains in the focused flow'
 );
 
 select * from finish();

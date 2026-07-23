@@ -12,6 +12,14 @@ void main() {
       StoryLoopStatus.questionGenerated,
     );
     expect(
+      StoryLoopStatus.fromJson('card_only_completed'),
+      StoryLoopStatus.cardOnlyCompleted,
+    );
+    expect(
+      StoryLoopStatus.fromJson('question_preparing'),
+      StoryLoopStatus.questionPreparing,
+    );
+    expect(
       StoryLoopStatus.fromJson('answered_by_one'),
       StoryLoopStatus.answeredByOne,
     );
