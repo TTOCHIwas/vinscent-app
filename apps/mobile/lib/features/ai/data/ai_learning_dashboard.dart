@@ -1,3 +1,9 @@
+final class AiFeatureKeys {
+  const AiFeatureKeys._();
+
+  static const focusedQuestions = 'focused_questions';
+}
+
 enum AiConsentStatus {
   granted,
   revoked;
@@ -285,7 +291,11 @@ class AiMemory {
 }
 
 class AiLearningDashboard {
-  const AiLearningDashboard({required this.progress, required this.memories});
+  const AiLearningDashboard({
+    required this.progress,
+    required this.memories,
+    this.enabledFeatures = const <String>{},
+  });
 
   factory AiLearningDashboard.fromJson(Map<String, dynamic> json) {
     final rawMemories = json['memories'];
@@ -295,6 +305,7 @@ class AiLearningDashboard {
 
     return AiLearningDashboard(
       progress: AiLearningProgress.fromJson(_readMap(json, 'progress')),
+      enabledFeatures: _readFeatureKeys(json['enabled_features']),
       memories: List.unmodifiable(
         rawMemories.map(
           (memory) => AiMemory.fromJson(_asMap(memory, 'memory')),
@@ -304,7 +315,10 @@ class AiLearningDashboard {
   }
 
   final AiLearningProgress progress;
+  final Set<String> enabledFeatures;
   final List<AiMemory> memories;
+
+  bool hasFeature(String featureKey) => enabledFeatures.contains(featureKey);
 }
 
 class AiQuestionFeedback {
@@ -372,4 +386,23 @@ bool _readBool(Map<String, dynamic> json, String key) {
   }
 
   throw FormatException('Invalid AI boolean field: $key');
+}
+
+Set<String> _readFeatureKeys(Object? value) {
+  if (value == null) {
+    return const <String>{};
+  }
+  if (value is! List) {
+    throw const FormatException('Invalid AI enabled features payload');
+  }
+
+  final features = <String>{};
+  final featureKeyPattern = RegExp(r'^[a-z][a-z0-9_]{2,63}$');
+  for (final feature in value) {
+    if (feature is! String || !featureKeyPattern.hasMatch(feature)) {
+      throw const FormatException('Invalid AI feature key');
+    }
+    features.add(feature);
+  }
+  return Set.unmodifiable(features);
 }

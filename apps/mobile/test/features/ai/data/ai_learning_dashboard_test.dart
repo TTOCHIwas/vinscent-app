@@ -22,6 +22,7 @@ void main() {
         'my_pending_review_count': 0,
         'partner_pending_review_count': 1,
       },
+      'enabled_features': ['focused_questions'],
       'memories': [
         {
           'memory_id': 'memory-id',
@@ -43,6 +44,8 @@ void main() {
     });
 
     expect(dashboard.progress.completedCount, 8);
+    expect(dashboard.hasFeature(AiFeatureKeys.focusedQuestions), true);
+    expect(dashboard.hasFeature('monthly_report'), false);
     expect(dashboard.progress.totalCount, 24);
     expect(dashboard.progress.stage, AiLearningStage.exploring);
     expect(dashboard.progress.isEnabled, true);
@@ -82,5 +85,29 @@ void main() {
       }),
       throwsFormatException,
     );
+  });
+
+  test('keeps feature access backward compatible when the field is absent', () {
+    final dashboard = AiLearningDashboard.fromJson({
+      'progress': {
+        'curriculum_version': 1,
+        'completed_count': 0,
+        'total_count': 24,
+        'stage': 'collecting',
+        'domain_progress': <String, Object?>{},
+        'my_consent_status': 'revoked',
+        'partner_consent_status': 'revoked',
+        'ai_enabled': false,
+        'foundation_complete': false,
+        'memory_processing_complete': false,
+        'personalization_status': 'collecting',
+        'personalization_enabled': false,
+        'my_pending_review_count': 0,
+        'partner_pending_review_count': 0,
+      },
+      'memories': <Object?>[],
+    });
+
+    expect(dashboard.enabledFeatures, isEmpty);
   });
 }
