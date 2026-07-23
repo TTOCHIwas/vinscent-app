@@ -63,3 +63,35 @@ claim과 lease가 같은 작업의 중복 처리를 막는다.
 원문 질문과 답변은 실행 로그에 저장하지 않으며, 로그에는 작업 종류,
 모델, 토큰 수, 지연 시간, 제한된 오류 코드, HTTP 상태, 공급자 상태와
 재시도 대기 시간만 남긴다. 공급자 오류 메시지와 응답 본문은 저장하지 않는다.
+
+## Feature Entitlements
+
+`public.ai_feature_entitlements`는 결제 내역이 아니라 기능 접근 권한만 관리한다.
+앱 사용자는 원본 테이블을 직접 읽거나 수정할 수 없고, 활성 상태이면서 만료되지
+않은 기능 키만 AI 대시보드 응답으로 받는다.
+
+개발 환경에서 집중 질문 기능을 열 때는 SQL Editor에서 대상 커플에 다음 권한을
+부여한다.
+
+```sql
+insert into public.ai_feature_entitlements (
+  couple_id,
+  feature_key,
+  source,
+  is_enabled
+)
+values (
+  '<couple-id>',
+  'focused_questions',
+  'development',
+  true
+)
+on conflict (couple_id, feature_key)
+do update set
+  source = excluded.source,
+  is_enabled = true,
+  expires_at = null;
+```
+
+추후 결제를 붙일 때 영수증과 구독 상태는 별도 결제 경계에서 검증하고, 검증된
+결과만 이 테이블의 기능 권한으로 반영한다.
