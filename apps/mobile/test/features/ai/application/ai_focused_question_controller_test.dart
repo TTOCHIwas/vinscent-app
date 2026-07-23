@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/application/ai_focused_question_controller.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
+import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_learning_repository.dart';
 
@@ -49,6 +50,12 @@ class _FocusedRepository implements AiLearningRepository {
     final index = _flowIndex.clamp(0, flows.length - 1);
     _flowIndex += 1;
     return flows[index];
+  }
+
+  @override
+  Future<List<AiFocusedQuestionHistoryEntry>>
+  fetchFocusedQuestionHistory() async {
+    return const [];
   }
 
   @override

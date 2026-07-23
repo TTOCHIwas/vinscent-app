@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
+import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_learning_repository.dart';
 
@@ -99,6 +100,12 @@ class _FakeAiLearningRepository implements AiLearningRepository {
   @override
   Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow() {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<List<AiFocusedQuestionHistoryEntry>>
+  fetchFocusedQuestionHistory() async {
+    return const [];
   }
 
   @override

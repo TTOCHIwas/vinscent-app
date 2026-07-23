@@ -10,6 +10,8 @@ import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/ai_focused_question_controller.dart';
 import '../application/ai_learning_controller.dart';
 import '../data/ai_focused_question_flow.dart';
+import '../data/ai_focused_question_history_entry.dart';
+import 'widgets/ai_focused_question_history_section.dart';
 import 'widgets/ai_learning_error_message.dart';
 
 class AiFocusedQuestionScreen extends ConsumerStatefulWidget {
@@ -46,6 +48,7 @@ class _AiFocusedQuestionScreenState
   @override
   Widget build(BuildContext context) {
     final flow = ref.watch(aiFocusedQuestionControllerProvider);
+    final history = ref.watch(aiFocusedQuestionHistoryProvider);
 
     return SettingsPageLayout(
       title: '집중 질문',
@@ -68,30 +71,38 @@ class _AiFocusedQuestionScreenState
           message: aiLearningErrorMessage(error),
           onRetry: () => ref.invalidate(aiFocusedQuestionControllerProvider),
         ),
-        data: _buildFlow,
+        data: (flow) => _buildFlow(flow, history),
       ),
     );
   }
 
-  Widget _buildFlow(AiFocusedQuestionFlow flow) {
+  Widget _buildFlow(
+    AiFocusedQuestionFlow flow,
+    AsyncValue<List<AiFocusedQuestionHistoryEntry>> history,
+  ) {
     return switch (flow.status) {
-      AiFocusedQuestionStatus.answering => _buildQuestion(flow),
+      AiFocusedQuestionStatus.answering => _buildQuestion(flow, history),
       AiFocusedQuestionStatus.waitingPartner => _FocusedQuestionStatusView(
         icon: Icons.hourglass_top_rounded,
         title: '내 질문은 모두 답했어',
         message: '상대방이 남은 질문에 답하면 함께 완료돼',
         progress: flow.progress,
+        history: history,
       ),
       AiFocusedQuestionStatus.completed => _FocusedQuestionStatusView(
         icon: Icons.check_circle_outline_rounded,
         title: '24개의 질문을 모두 완료했어',
         message: '둘의 답변을 정리하고 있어',
         progress: flow.progress,
+        history: history,
       ),
     };
   }
 
-  Widget _buildQuestion(AiFocusedQuestionFlow flow) {
+  Widget _buildQuestion(
+    AiFocusedQuestionFlow flow,
+    AsyncValue<List<AiFocusedQuestionHistoryEntry>> history,
+  ) {
     final question = flow.question!;
     final normalizedAnswer = _answerController.text.trim();
     final canSubmit = !_isSubmitting && normalizedAnswer.isNotEmpty;
@@ -154,6 +165,7 @@ class _AiFocusedQuestionScreenState
                 )
               : null,
         ),
+        _FocusedQuestionHistory(history: history),
       ],
     );
   }
@@ -244,19 +256,22 @@ class _FocusedQuestionStatusView extends StatelessWidget {
     required this.title,
     required this.message,
     required this.progress,
+    required this.history,
   });
 
   final IconData icon;
   final String title;
   final String message;
   final AiFocusedQuestionProgress progress;
+  final AsyncValue<List<AiFocusedQuestionHistoryEntry>> history;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 32),
       children: [
         _FocusedQuestionProgressView(progress: progress),
-        const Spacer(),
+        const SizedBox(height: 72),
         Icon(icon, size: 36, color: AppColors.textPrimary),
         const SizedBox(height: 16),
         WordBoundaryText(
@@ -270,8 +285,43 @@ class _FocusedQuestionStatusView extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
         ),
-        const Spacer(),
+        _FocusedQuestionHistory(history: history),
       ],
+    );
+  }
+}
+
+class _FocusedQuestionHistory extends StatelessWidget {
+  const _FocusedQuestionHistory({required this.history});
+
+  final AsyncValue<List<AiFocusedQuestionHistoryEntry>> history;
+
+  @override
+  Widget build(BuildContext context) {
+    return history.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: 40),
+        child: Center(
+          child: SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ),
+      ),
+      error: (error, stackTrace) => const SizedBox.shrink(),
+      data: (entries) {
+        if (entries.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 48),
+          child: AiFocusedQuestionHistorySection(entries: entries),
+        );
+      },
     );
   }
 }

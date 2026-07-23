@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
 import 'ai_focused_question_flow.dart';
+import 'ai_focused_question_history_entry.dart';
 import 'ai_learning_dashboard.dart';
 import 'ai_learning_failure.dart';
 
@@ -27,6 +28,8 @@ abstract interface class AiLearningRepository {
   Future<AiFocusedQuestionFlow> unlockFocusedQuestions();
 
   Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow();
+
+  Future<List<AiFocusedQuestionHistoryEntry>> fetchFocusedQuestionHistory();
 
   Future<AiFocusedQuestionFlow> submitFocusedQuestionAnswer({
     required String questionId,
@@ -86,6 +89,32 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
   @override
   Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow() {
     return _focusedQuestionRpc('get_ai_focused_question_flow');
+  }
+
+  @override
+  Future<List<AiFocusedQuestionHistoryEntry>>
+  fetchFocusedQuestionHistory() async {
+    final data = await _rpc('get_ai_focused_question_history');
+
+    if (data is! List) {
+      throw const AiLearningRepositoryException(
+        AiLearningFailureReason.invalidResponse,
+      );
+    }
+
+    try {
+      return data
+          .map(
+            (entry) =>
+                AiFocusedQuestionHistoryEntry.fromJson(_asHistoryRow(entry)),
+          )
+          .toList(growable: false);
+    } on FormatException catch (error) {
+      throw AiLearningRepositoryException(
+        AiLearningFailureReason.invalidResponse,
+        error.message,
+      );
+    }
   }
 
   @override
@@ -190,6 +219,18 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
     throw const AiLearningRepositoryException(
       AiLearningFailureReason.invalidResponse,
     );
+  }
+
+  Map<String, dynamic> _asHistoryRow(Object? data) {
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw const FormatException('Invalid focused question history entry');
   }
 
   AiLearningFailureReason _reasonFromMessage(String message) {

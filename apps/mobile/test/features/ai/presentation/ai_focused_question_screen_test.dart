@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/application/ai_focused_question_controller.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
+import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/presentation/ai_focused_question_screen.dart';
 
 void main() {
@@ -34,12 +35,31 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('shows both answers in completed focused history', (
+    tester,
+  ) async {
+    await _pump(tester, _flow(), history: const [_historyEntry]);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('ai-focused-history-question-history-id')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('내 답변'), findsOneWidget);
+    expect(find.bySemanticsLabel('함께 보내는 시간이야'), findsOneWidget);
+    expect(find.text('상대방 답변'), findsOneWidget);
+    expect(find.bySemanticsLabel('평온한 일상이야'), findsOneWidget);
+  });
 }
 
 Future<void> _pump(
   WidgetTester tester,
   AiFocusedQuestionFlow flow, {
   double textScaleFactor = 1,
+  List<AiFocusedQuestionHistoryEntry> history = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -47,6 +67,7 @@ Future<void> _pump(
         aiFocusedQuestionControllerProvider.overrideWithBuild(
           (ref, notifier) async => flow,
         ),
+        aiFocusedQuestionHistoryProvider.overrideWith((ref) async => history),
       ],
       child: MaterialApp(
         builder: (context, child) => MediaQuery(
@@ -61,6 +82,17 @@ Future<void> _pump(
   );
   await tester.pumpAndSettle();
 }
+
+const _historyEntry = AiFocusedQuestionHistoryEntry(
+  questionId: 'question-history-id',
+  questionKey: 'question_history',
+  questionText: '서로에게 가장 편안한 순간은 언제야?',
+  learningDomain: 'daily_life',
+  depth: 'light',
+  curriculumPosition: 1,
+  myAnswerText: '함께 보내는 시간이야',
+  partnerAnswerText: '평온한 일상이야',
+);
 
 AiFocusedQuestionFlow _flow({String questionText = '요즘 가장 기대되는 건 뭐야?'}) {
   return AiFocusedQuestionFlow(
