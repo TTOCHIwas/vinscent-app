@@ -14,6 +14,7 @@ const learningDomains = new Set<LearningDomain>([
   'relationship_strength',
   'future_boundaries',
 ]);
+const maximumMemoriesPerSubject = 16;
 
 export function parseDirectQuestionContext(
   value: unknown,
@@ -31,6 +32,7 @@ export function parseProactiveSuggestionBaseContext(
   value: unknown,
 ): ProactiveSuggestionBaseContext {
   const record = requireRecord(value);
+  const personalization = parsePersonalizationContext(record);
   const localHour = record.local_hour;
   if (!Number.isInteger(localHour) || Number(localHour) < 0 || Number(localHour) > 23) {
     throw new TypeError('invalid local hour');
@@ -41,7 +43,10 @@ export function parseProactiveSuggestionBaseContext(
     localHour: Number(localHour),
     timezone: requireString(record.timezone, 100),
     hasCardToday: requireBoolean(record.has_card_today),
-    ...parsePersonalizationContext(record),
+    ...personalization,
+    confirmedMemories: takeBalancedMemories(
+      personalization.confirmedMemories,
+    ),
   };
 }
 
@@ -54,21 +59,23 @@ function parsePersonalizationContext(
   const memories = requireArray(record.confirmed_memories);
   const recentQuestions = requireArray(record.recent_completed_questions);
 
+  const parsedMemories = memories.map((memory) => {
+    const item = requireRecord(memory);
+    const subject = item.subject;
+    if (subject !== 'me' && subject !== 'partner' && subject !== 'couple') {
+      throw new TypeError('invalid personalization memory subject');
+    }
+    return {
+      subject,
+      kind: requireString(item.kind, 100),
+      domain: requireLearningDomain(item.learning_domain),
+      statement: requireString(item.statement, 500),
+      confidence: requireConfidence(item.confidence),
+    };
+  });
+
   return {
-    confirmedMemories: memories.map((memory) => {
-      const item = requireRecord(memory);
-      const subject = item.subject;
-      if (subject !== 'me' && subject !== 'partner' && subject !== 'couple') {
-        throw new TypeError('invalid personalization memory subject');
-      }
-      return {
-        subject,
-        kind: requireString(item.kind, 100),
-        domain: requireLearningDomain(item.learning_domain),
-        statement: requireString(item.statement, 500),
-        confidence: requireConfidence(item.confidence),
-      };
-    }),
+    confirmedMemories: parsedMemories,
     recentCompletedQuestions: recentQuestions.map((question) => {
       const item = requireRecord(question);
       const answers = requireArray(item.answers);
@@ -91,6 +98,20 @@ function parsePersonalizationContext(
       };
     }),
   };
+}
+
+function takeBalancedMemories(
+  memories: DirectQuestionContext['confirmedMemories'],
+): DirectQuestionContext['confirmedMemories'] {
+  const counts = new Map<string, number>();
+  return memories.filter((memory) => {
+    const count = counts.get(memory.subject) ?? 0;
+    if (count >= maximumMemoriesPerSubject) {
+      return false;
+    }
+    counts.set(memory.subject, count + 1);
+    return true;
+  });
 }
 
 function requireRecord(value: unknown): Record<string, unknown> {

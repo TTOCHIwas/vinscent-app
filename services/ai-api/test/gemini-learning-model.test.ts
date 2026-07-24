@@ -982,6 +982,8 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
       nearSunset: true,
       sunsetLocalTime: '19:42',
     },
+  }, {
+    rejectedText: '오늘은 산책해봐',
   });
 
   assert.equal(direct.value.text.includes('산책'), true);
@@ -991,4 +993,5 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
   assert.equal(prompts[1]?.includes('near_sunset'), true);
   assert.equal(prompts[1]?.includes('latitude'), false);
   assert.equal(prompts[1]?.includes('longitude'), false);
+  assert.equal(prompts[1]?.includes('"rejected_suggestion":"오늘은 산책해봐"'), true);
 });

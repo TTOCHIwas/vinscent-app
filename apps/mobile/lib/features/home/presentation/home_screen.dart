@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -379,13 +378,12 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                   : null,
               feedbackText: canShowProactive ? proactiveSuggestion?.text : null,
               visibleDuration: const Duration(seconds: 12),
-              onShown: proactiveSuggestion == null || proactiveRequest == null
+              beforeShow:
+                  proactiveSuggestion == null || proactiveRequest == null
                   ? null
-                  : () => unawaited(
-                      ref
-                          .read(aiProactiveSuggestionCoordinatorProvider)
-                          .markShown(proactiveRequest, proactiveSuggestion),
-                    ),
+                  : () => ref
+                        .read(aiProactiveSuggestionCoordinatorProvider)
+                        .claimShown(proactiveRequest, proactiveSuggestion),
               builder: (visibleSuggestionText, suggestionOpacity) {
                 final questionText =
                     characterGuideText ??

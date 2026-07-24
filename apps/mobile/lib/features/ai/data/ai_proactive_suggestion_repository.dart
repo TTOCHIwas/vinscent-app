@@ -16,11 +16,18 @@ abstract interface class AiProactiveSuggestionRepository {
   Future<AiProactiveSuggestion> generate({
     required AiCurrentLocation? location,
   });
+
+  Future<bool> claimImpression({
+    required String contextDate,
+    required String sessionId,
+  });
 }
 
 class SupabaseAiProactiveSuggestionRepository
     implements AiProactiveSuggestionRepository {
   const SupabaseAiProactiveSuggestionRepository();
+
+  static const requestTimeout = Duration(seconds: 45);
 
   @override
   Future<AiProactiveSuggestion> generate({
@@ -41,7 +48,7 @@ class SupabaseAiProactiveSuggestionRepository
                     'longitude': location.longitude,
                   },
           )
-          .timeout(AppConfig.supabaseRpcTimeout);
+          .timeout(requestTimeout);
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return AiProactiveSuggestion.fromJson(data);
@@ -53,6 +60,38 @@ class SupabaseAiProactiveSuggestionRepository
     } on TimeoutException {
       throw const AiProactiveSuggestionException();
     } on FunctionException {
+      throw const AiProactiveSuggestionException();
+    } on FormatException {
+      throw const AiProactiveSuggestionException();
+    }
+  }
+
+  @override
+  Future<bool> claimImpression({
+    required String contextDate,
+    required String sessionId,
+  }) async {
+    if (!AppConfig.isSupabaseConfigured) {
+      throw const AiProactiveSuggestionException();
+    }
+
+    try {
+      final data = await Supabase.instance.client
+          .rpc(
+            'claim_my_ai_proactive_suggestion_impression',
+            params: {
+              'requested_context_date': contextDate,
+              'requested_session_id': sessionId,
+            },
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+      if (data is bool) {
+        return data;
+      }
+      throw const FormatException('Invalid proactive impression claim');
+    } on TimeoutException {
+      throw const AiProactiveSuggestionException();
+    } on PostgrestException {
       throw const AiProactiveSuggestionException();
     } on FormatException {
       throw const AiProactiveSuggestionException();

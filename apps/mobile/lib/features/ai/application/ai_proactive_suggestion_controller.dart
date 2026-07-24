@@ -50,7 +50,7 @@ final aiProactiveSuggestionProvider = FutureProvider.autoDispose
     }, retry: (_, _) => null);
 
 class AiProactiveSuggestionCoordinator {
-  const AiProactiveSuggestionCoordinator({
+  AiProactiveSuggestionCoordinator({
     required AiProactiveSuggestionRepository repository,
     required AiProactiveSuggestionStore store,
     required AiCurrentLocationService locationService,
@@ -61,53 +61,107 @@ class AiProactiveSuggestionCoordinator {
   final AiProactiveSuggestionRepository _repository;
   final AiProactiveSuggestionStore _store;
   final AiCurrentLocationService _locationService;
+  final Map<String, Future<void>> _resolutionTails = {};
 
-  Future<AiProactiveSuggestion?> resolve(
+  Future<AiProactiveSuggestion?> resolve(AiProactiveSuggestionRequest request) {
+    final previous = _resolutionTails[request.userId] ?? Future<void>.value();
+    final result = previous.then((_) => _resolveNext(request));
+    final tail = result.then<void>((_) {}, onError: (_, _) {});
+    _resolutionTails[request.userId] = tail;
+    tail.whenComplete(() {
+      if (identical(_resolutionTails[request.userId], tail)) {
+        _resolutionTails.remove(request.userId);
+      }
+    });
+    return result;
+  }
+
+  Future<AiProactiveSuggestion?> _resolveNext(
     AiProactiveSuggestionRequest request,
   ) async {
     final now = DateTime.now();
-    final cached = await _store.loadSuggestion(request.userId);
+    final cached = await _loadSuggestion(request.userId);
     if (cached != null &&
         cached.isValid(now: now, currentHasCardToday: request.hasCardToday)) {
-      return await _canShow(request, cached) ? cached : null;
+      return await _hasShownInSession(request) ? null : cached;
     }
 
-    if (await _store.hasShownInSession(
-      userId: request.userId,
-      sessionId: request.sessionId,
-    )) {
+    if (await _hasShownInSession(request)) {
       return null;
     }
 
     try {
       final location = await _locationService.getCurrentLocation();
       final suggestion = await _repository.generate(location: location);
-      await _store.saveSuggestion(request.userId, suggestion);
-      return await _canShow(request, suggestion) ? suggestion : null;
+      if (!suggestion.isValid(
+        now: DateTime.now(),
+        currentHasCardToday: request.hasCardToday,
+      )) {
+        return null;
+      }
+      await _saveSuggestion(request.userId, suggestion);
+      return suggestion;
     } on Object {
       return null;
     }
   }
 
-  Future<void> markShown(
+  Future<bool> claimShown(
     AiProactiveSuggestionRequest request,
     AiProactiveSuggestion suggestion,
-  ) {
-    return _store.markShown(
-      userId: request.userId,
-      sessionId: request.sessionId,
-      contextDate: suggestion.contextDate,
-    );
+  ) async {
+    late final bool claimed;
+    try {
+      claimed = await _repository.claimImpression(
+        contextDate: suggestion.contextDate,
+        sessionId: request.sessionId,
+      );
+    } on Object {
+      return false;
+    }
+    if (!claimed) {
+      return false;
+    }
+
+    try {
+      await _store.markShown(
+        userId: request.userId,
+        sessionId: request.sessionId,
+        contextDate: suggestion.contextDate,
+      );
+    } on Object {
+      return true;
+    }
+    return true;
   }
 
-  Future<bool> _canShow(
-    AiProactiveSuggestionRequest request,
+  Future<AiProactiveSuggestion?> _loadSuggestion(String userId) async {
+    try {
+      return await _store.loadSuggestion(userId);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<bool> _hasShownInSession(AiProactiveSuggestionRequest request) async {
+    try {
+      return await _store.hasShownInSession(
+        userId: request.userId,
+        sessionId: request.sessionId,
+      );
+    } on Object {
+      return false;
+    }
+  }
+
+  Future<void> _saveSuggestion(
+    String userId,
     AiProactiveSuggestion suggestion,
-  ) {
-    return _store.canShow(
-      userId: request.userId,
-      sessionId: request.sessionId,
-      contextDate: suggestion.contextDate,
-    );
+  ) async {
+    try {
+      await _store.saveSuggestion(userId, suggestion);
+    } on Object {
+      return;
+    }
   }
 }

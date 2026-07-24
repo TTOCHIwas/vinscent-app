@@ -19,12 +19,6 @@ abstract interface class AiProactiveSuggestionStore {
     required String sessionId,
   });
 
-  Future<bool> canShow({
-    required String userId,
-    required String sessionId,
-    required String contextDate,
-  });
-
   Future<void> markShown({
     required String userId,
     required String sessionId,
@@ -41,7 +35,6 @@ class SharedPreferencesAiProactiveSuggestionStore
 
   static const _suggestionPrefix = 'vinscent.ai.proactive.suggestion';
   static const _impressionPrefix = 'vinscent.ai.proactive.impressions';
-  static const maximumDailyImpressions = 3;
 
   final AiProactiveSuggestionPreferences _preferences;
 
@@ -81,20 +74,6 @@ class SharedPreferencesAiProactiveSuggestionStore
   }
 
   @override
-  Future<bool> canShow({
-    required String userId,
-    required String sessionId,
-    required String contextDate,
-  }) async {
-    final record = await _loadImpressions(userId);
-    if (record.contextDate != contextDate) {
-      return true;
-    }
-    return !record.sessionIds.contains(sessionId) &&
-        record.sessionIds.length < maximumDailyImpressions;
-  }
-
-  @override
   Future<void> markShown({
     required String userId,
     required String sessionId,
@@ -104,9 +83,6 @@ class SharedPreferencesAiProactiveSuggestionStore
     final sessionIds = record.contextDate == contextDate
         ? {...record.sessionIds}
         : <String>{};
-    if (sessionIds.length >= maximumDailyImpressions) {
-      return;
-    }
     sessionIds.add(sessionId);
     await _preferences.setString(
       '$_impressionPrefix.$userId',

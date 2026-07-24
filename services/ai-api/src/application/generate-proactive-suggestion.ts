@@ -8,6 +8,7 @@ import {
 } from '../domain/learning-contract.ts';
 import type {
   LearningModelResult,
+  ProactiveSuggestionGenerationOptions,
 } from './learning-model-port.ts';
 
 export interface ProactiveSuggestionBaseContext {
@@ -28,9 +29,14 @@ export interface ProactiveSuggestionContextSource {
   loadForUser(userId: string): Promise<ProactiveSuggestionBaseContext>;
 }
 
+export interface ProactiveSuggestionQuota {
+  claimGeneration(userId: string, contextDate: string): Promise<boolean>;
+}
+
 export interface ProactiveSuggestionModel {
   generateProactiveSuggestion(
     context: ProactiveSuggestionContext,
+    options?: ProactiveSuggestionGenerationOptions,
   ): Promise<LearningModelResult<ProactiveSuggestionCandidate>>;
 }
 
@@ -54,6 +60,7 @@ export interface GeneratedProactiveSuggestion {
 
 export type ProactiveSuggestionContextErrorCode =
   | 'ai_personalization_not_ready'
+  | 'ai_proactive_daily_limit_reached'
   | 'ai_suggestion_context_unavailable';
 
 export class ProactiveSuggestionContextError extends Error {
@@ -68,6 +75,7 @@ export class ProactiveSuggestionContextError extends Error {
 
 interface GenerateProactiveSuggestionOptions {
   contextSource: ProactiveSuggestionContextSource;
+  quota: ProactiveSuggestionQuota;
   model: ProactiveSuggestionModel;
   weatherClient: ProactiveSuggestionWeatherClient | null;
   now?: () => Date;
@@ -76,6 +84,7 @@ interface GenerateProactiveSuggestionOptions {
 
 export class GenerateProactiveSuggestionUseCase {
   readonly #contextSource: ProactiveSuggestionContextSource;
+  readonly #quota: ProactiveSuggestionQuota;
   readonly #model: ProactiveSuggestionModel;
   readonly #weatherClient: ProactiveSuggestionWeatherClient | null;
   readonly #now: () => Date;
@@ -83,6 +92,7 @@ export class GenerateProactiveSuggestionUseCase {
 
   constructor(options: GenerateProactiveSuggestionOptions) {
     this.#contextSource = options.contextSource;
+    this.#quota = options.quota;
     this.#model = options.model;
     this.#weatherClient = options.weatherClient;
     this.#now = options.now ?? (() => new Date());
@@ -96,6 +106,7 @@ export class GenerateProactiveSuggestionUseCase {
     const userId = requireNonBlank(input.userId, 'user id', 160);
     validateCoordinates(input.coordinates);
     const baseContext = await this.#contextSource.loadForUser(userId);
+    await this.#claimGeneration(userId, baseContext.localDate);
     const generatedAt = this.#now();
     if (!Number.isFinite(generatedAt.getTime())) {
       throw new RangeError('current time must be valid');
@@ -110,10 +121,13 @@ export class GenerateProactiveSuggestionUseCase {
       recentCompletedQuestions: baseContext.recentCompletedQuestions,
       weather,
     };
-    const result = await this.#model.generateProactiveSuggestion(context);
-    validateProactiveSuggestion(context, result.value);
+    const candidate = await this.#generateValidCandidate(
+      context,
+      userId,
+      baseContext.localDate,
+    );
 
-    const lifetimeMinutes = result.value.kind === 'sunset_card' ? 45 : 180;
+    const lifetimeMinutes = candidate.kind === 'sunset_card' ? 45 : 180;
     const desiredValidUntil = new Date(
       generatedAt.getTime() + lifetimeMinutes * 60 * 1000,
     );
@@ -130,13 +144,51 @@ export class GenerateProactiveSuggestionUseCase {
         'suggestion id',
         160,
       ),
-      text: result.value.text,
-      kind: result.value.kind,
+      text: candidate.text,
+      kind: candidate.kind,
       generatedAt: generatedAt.toISOString(),
       validUntil: validUntil.toISOString(),
       contextDate: baseContext.localDate,
       hasCardToday: baseContext.hasCardToday,
     };
+  }
+
+  async #generateValidCandidate(
+    context: ProactiveSuggestionContext,
+    userId: string,
+    contextDate: string,
+  ): Promise<ProactiveSuggestionCandidate> {
+    let rejectedText: string | null = null;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (attempt > 0) {
+        await this.#claimGeneration(userId, contextDate);
+      }
+      const result = await this.#model.generateProactiveSuggestion(
+        context,
+        { rejectedText },
+      );
+
+      try {
+        validateProactiveSuggestion(context, result.value);
+        return result.value;
+      } catch (error) {
+        if (attempt === 1) {
+          throw error;
+        }
+        rejectedText = result.value.text;
+      }
+    }
+
+    throw new Error('proactive suggestion generation exhausted');
+  }
+
+  async #claimGeneration(userId: string, contextDate: string): Promise<void> {
+    if (!await this.#quota.claimGeneration(userId, contextDate)) {
+      throw new ProactiveSuggestionContextError(
+        'ai_proactive_daily_limit_reached',
+      );
+    }
   }
 
   async #loadWeather(

@@ -72,6 +72,37 @@ void main() {
     expect(shownCount, 0);
     expect(store.markedQuestionIds, isEmpty);
   });
+
+  testWidgets('does not display or mark feedback rejected by its guard', (
+    tester,
+  ) async {
+    final store = _FakeImpressionStore();
+    var shownCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeFeedbackImpressionStoreProvider.overrideWithValue(store),
+        ],
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: TransientHomeFeedbackPresenter(
+            userId: 'user-1',
+            dailyQuestionId: 'suggestion-1:session-1',
+            feedbackText: '노출 한도를 넘긴 문구',
+            beforeShow: () async => false,
+            onShown: () => shownCount += 1,
+            builder: (text, opacity) => Text(text ?? 'hidden'),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('hidden'), findsOneWidget);
+    expect(shownCount, 0);
+    expect(store.markedQuestionIds, isEmpty);
+  });
 }
 
 class _FakeImpressionStore implements HomeFeedbackImpressionStore {

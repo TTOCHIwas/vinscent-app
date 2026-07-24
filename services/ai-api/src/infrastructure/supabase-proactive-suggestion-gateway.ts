@@ -2,6 +2,7 @@ import {
   ProactiveSuggestionContextError,
   type ProactiveSuggestionBaseContext,
   type ProactiveSuggestionContextSource,
+  type ProactiveSuggestionQuota,
 } from '../application/generate-proactive-suggestion.ts';
 import {
   parseProactiveSuggestionBaseContext,
@@ -74,6 +75,32 @@ export class SupabaseProactiveSuggestionContextSource
         error,
       );
     }
+  }
+}
+
+export class SupabaseProactiveSuggestionQuota
+  implements ProactiveSuggestionQuota {
+  readonly #client: SupabaseRpcClient;
+
+  constructor(client: SupabaseRpcClient) {
+    this.#client = client;
+  }
+
+  async claimGeneration(userId: string, contextDate: string): Promise<boolean> {
+    const { data, error } = await this.#client.rpc(
+      'claim_ai_proactive_suggestion_generation',
+      {
+        requested_user_id: userId,
+        requested_context_date: contextDate,
+      },
+    );
+    if (error !== null || typeof data !== 'boolean') {
+      throw new ProactiveSuggestionContextError(
+        'ai_suggestion_context_unavailable',
+        error,
+      );
+    }
+    return data;
   }
 }
 

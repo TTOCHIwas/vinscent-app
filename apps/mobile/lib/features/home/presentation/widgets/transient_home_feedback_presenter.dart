@@ -7,6 +7,7 @@ import '../../data/home_feedback_impression_store.dart';
 
 typedef TransientHomeFeedbackBuilder =
     Widget Function(String? feedbackText, double feedbackOpacity);
+typedef TransientHomeFeedbackGuard = Future<bool> Function();
 
 class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
   const TransientHomeFeedbackPresenter({
@@ -16,6 +17,7 @@ class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
     required this.feedbackText,
     required this.builder,
     this.visibleDuration = displayDuration,
+    this.beforeShow,
     this.onShown,
   });
 
@@ -27,6 +29,7 @@ class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
   final String? feedbackText;
   final TransientHomeFeedbackBuilder builder;
   final Duration visibleDuration;
+  final TransientHomeFeedbackGuard? beforeShow;
   final VoidCallback? onShown;
 
   @override
@@ -118,6 +121,19 @@ class _TransientHomeFeedbackPresenterState
 
     if (!mounted || revision != _loadRevision || hasShown) {
       return;
+    }
+
+    final beforeShow = widget.beforeShow;
+    if (beforeShow != null) {
+      var canShow = false;
+      try {
+        canShow = await beforeShow();
+      } catch (_) {
+        canShow = false;
+      }
+      if (!mounted || revision != _loadRevision || !canShow) {
+        return;
+      }
     }
 
     setState(() {

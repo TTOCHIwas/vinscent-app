@@ -128,6 +128,66 @@ test('proactive handler exposes only the safe personalization readiness code', a
   });
 });
 
+test('proactive handler reports the daily generation limit without provider details', async () => {
+  const handler = createProactiveSuggestionHttpHandler({
+    authenticator: {
+      async authenticate() {
+        return 'user-1';
+      },
+    },
+    generator: {
+      async execute() {
+        throw new ProactiveSuggestionContextError(
+          'ai_proactive_daily_limit_reached',
+        );
+      },
+    },
+  });
+
+  const response = await handler(new Request('https://example.test', {
+    method: 'POST',
+    headers: { authorization: 'Bearer user-token' },
+  }));
+
+  assert.equal(response.status, 429);
+  assert.deepEqual(await response.json(), {
+    error: 'ai_proactive_daily_limit_reached',
+  });
+});
+
+test('proactive handler logs a safe context failure code', async () => {
+  const logged: unknown[] = [];
+  const handler = createProactiveSuggestionHttpHandler({
+    authenticator: {
+      async authenticate() {
+        return 'user-1';
+      },
+    },
+    generator: {
+      async execute() {
+        throw new ProactiveSuggestionContextError(
+          'ai_suggestion_context_unavailable',
+          new Error('private database detail'),
+        );
+      },
+    },
+    onError(errorType) {
+      logged.push(errorType);
+    },
+  });
+
+  const response = await handler(new Request('https://example.test', {
+    method: 'POST',
+    headers: { authorization: 'Bearer user-token' },
+  }));
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error: 'ai_suggestion_context_unavailable',
+  });
+  assert.deepEqual(logged, ['ai_suggestion_context_unavailable']);
+});
+
 test('proactive handler logs only an error type and hides internal failures', async () => {
   const logged: unknown[] = [];
   const handler = createProactiveSuggestionHttpHandler({

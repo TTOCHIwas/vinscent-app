@@ -174,6 +174,40 @@ test('repository maps claimed jobs and worker context', async () => {
   });
 });
 
+test('direct question context preserves every confirmed memory', async () => {
+  const subjects = ['me', 'partner', 'couple'] as const;
+  const memories = subjects.flatMap((subject) =>
+    Array.from({ length: 20 }, (_, index) => ({
+      subject,
+      kind: `kind_${index}`,
+      learning_domain: 'daily_life',
+      statement: `${subject} memory ${index}`,
+      confidence: 0.8,
+    }))
+  );
+  const repository = new SupabaseLearningJobRepository(new FakeRpcClient({
+    get_ai_direct_question_job_context: {
+      data: {
+        question_text: 'What should we do together?',
+        confirmed_memories: memories,
+        recent_completed_questions: [],
+      },
+      error: null,
+    },
+  }));
+
+  const context = await repository.loadDirectQuestionContext('job-1');
+
+  assert.equal(context.confirmedMemories.length, memories.length);
+  for (const subject of subjects) {
+    assert.equal(
+      context.confirmedMemories.filter((memory) => memory.subject === subject)
+        .length,
+      20,
+    );
+  }
+});
+
 test('repository sends run lifecycle values to exact RPC arguments', async () => {
   const client = new FakeRpcClient({
     start_ai_processing_run: { data: 'run-1', error: null },

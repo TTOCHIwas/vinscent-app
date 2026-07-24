@@ -77,6 +77,10 @@ export interface CoupleFeedbackGenerationOptions {
   rejectedText: string | null;
 }
 
+export interface ProactiveSuggestionGenerationOptions {
+  rejectedText: string | null;
+}
+
 export interface LearningModelPort {
   rankFoundationQuestions(
     context: AnonymizedCompletedQuestionContext,
@@ -106,5 +110,6 @@ export interface LearningModelPort {
 
   generateProactiveSuggestion(
     context: ProactiveSuggestionContext,
+    options?: ProactiveSuggestionGenerationOptions,
   ): Promise<LearningModelResult<ProactiveSuggestionCandidate>>;
 }

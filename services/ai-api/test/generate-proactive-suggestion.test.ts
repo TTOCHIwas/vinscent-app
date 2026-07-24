@@ -24,6 +24,7 @@ test('proactive suggestion uses the server context date and clamps its lifetime'
   const contextSource = sourceWith(baseContext);
   const useCase = new GenerateProactiveSuggestionUseCase({
     contextSource,
+    quota: quotaAlwaysAllows(),
     model: {
       async generateProactiveSuggestion(context) {
         seenContexts.push(context);
@@ -56,6 +57,7 @@ test('proactive suggestion treats weather failure as optional context', async ()
   const seenContexts: ProactiveSuggestionContext[] = [];
   const useCase = new GenerateProactiveSuggestionUseCase({
     contextSource: sourceWith(baseContext),
+    quota: quotaAlwaysAllows(),
     model: {
       async generateProactiveSuggestion(context) {
         seenContexts.push(context);
@@ -83,6 +85,143 @@ test('proactive suggestion treats weather failure as optional context', async ()
   assert.equal(seenContexts[0]?.weather, null);
 });
 
+test('proactive suggestion retries one contract-invalid model response', async () => {
+  const rejectedTexts: Array<string | null> = [];
+  let quotaClaimCount = 0;
+  const outputs: ProactiveSuggestionCandidate[] = [
+    {
+      text: '오늘은 산책해봐',
+      kind: 'date_idea',
+    },
+    {
+      text: '오늘은 가까운 곳을 천천히 걸으며 둘이 느긋하게 쉬는 건 어때?',
+      kind: 'date_idea',
+    },
+  ];
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: {
+      async claimGeneration() {
+        quotaClaimCount += 1;
+        return true;
+      },
+    },
+    model: {
+      async generateProactiveSuggestion(_context, options) {
+        rejectedTexts.push(options?.rejectedText ?? null);
+        return modelResult(outputs.shift()!);
+      },
+    },
+    weatherClient: null,
+    now: () => new Date('2026-07-24T10:00:00.000Z'),
+    generateId: () => 'suggestion-retried',
+  });
+
+  const result = await useCase.execute({
+    userId: 'user-1',
+    coordinates: null,
+  });
+
+  assert.equal(result.suggestionId, 'suggestion-retried');
+  assert.deepEqual(rejectedTexts, [null, '오늘은 산책해봐']);
+  assert.equal(quotaClaimCount, 2);
+});
+
+test('proactive suggestion does not retry without another model allowance', async () => {
+  let quotaClaimCount = 0;
+  let modelCallCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: {
+      async claimGeneration() {
+        quotaClaimCount += 1;
+        return quotaClaimCount === 1;
+      },
+    },
+    model: {
+      async generateProactiveSuggestion() {
+        modelCallCount += 1;
+        return modelResult({
+          text: '오늘은 산책해봐',
+          kind: 'date_idea',
+        });
+      },
+    },
+    weatherClient: null,
+  });
+
+  await assert.rejects(
+    () => useCase.execute({ userId: 'user-1', coordinates: null }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, 'ai_proactive_daily_limit_reached');
+      return true;
+    },
+  );
+  assert.equal(quotaClaimCount, 2);
+  assert.equal(modelCallCount, 1);
+});
+
+test('proactive suggestion stops after two contract-invalid responses', async () => {
+  let generationCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: quotaAlwaysAllows(),
+    model: {
+      async generateProactiveSuggestion() {
+        generationCount += 1;
+        return modelResult({
+          text: '오늘은 산책해봐',
+          kind: 'date_idea',
+        });
+      },
+    },
+    weatherClient: null,
+  });
+
+  await assert.rejects(
+    () => useCase.execute({ userId: 'user-1', coordinates: null }),
+    /proactive suggestion must contain at least 35 characters/,
+  );
+  assert.equal(generationCount, 2);
+});
+
+test('proactive suggestion does not call providers after the daily limit', async () => {
+  let modelCallCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: {
+      async claimGeneration() {
+        return false;
+      },
+    },
+    model: {
+      async generateProactiveSuggestion() {
+        modelCallCount += 1;
+        return modelResult({
+          text: '오늘은 가까운 곳을 천천히 걸으며 둘이 느긋하게 쉬는 건 어때?',
+          kind: 'date_idea',
+        });
+      },
+    },
+    weatherClient: {
+      async fetchContext() {
+        throw new Error('weather must not be called');
+      },
+    },
+  });
+
+  await assert.rejects(
+    () => useCase.execute({ userId: 'user-1', coordinates: null }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, 'ai_proactive_daily_limit_reached');
+      return true;
+    },
+  );
+  assert.equal(modelCallCount, 0);
+});
+
 function sourceWith(
   context: ProactiveSuggestionBaseContext,
 ): ProactiveSuggestionContextSource & { userIds: string[] } {
@@ -91,6 +230,14 @@ function sourceWith(
     async loadForUser(userId) {
       this.userIds.push(userId);
       return context;
+    },
+  };
+}
+
+function quotaAlwaysAllows() {
+  return {
+    async claimGeneration() {
+      return true;
     },
   };
 }

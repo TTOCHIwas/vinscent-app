@@ -3,43 +3,22 @@ import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
 
 void main() {
   test(
-    'limits proactive impressions to three foreground sessions per day',
+    'keeps local session history without enforcing the server daily quota',
     () async {
       final store = SharedPreferencesAiProactiveSuggestionStore(
         preferences: _MemoryPreferences(),
       );
 
-      for (var index = 1; index <= 3; index++) {
-        final sessionId = 'session-$index';
-        expect(
-          await store.canShow(
-            userId: 'user-1',
-            sessionId: sessionId,
-            contextDate: '2026-07-24',
-          ),
-          isTrue,
-        );
+      for (var index = 1; index <= 4; index++) {
         await store.markShown(
           userId: 'user-1',
-          sessionId: sessionId,
+          sessionId: 'session-$index',
           contextDate: '2026-07-24',
         );
       }
 
       expect(
-        await store.canShow(
-          userId: 'user-1',
-          sessionId: 'session-4',
-          contextDate: '2026-07-24',
-        ),
-        isFalse,
-      );
-      expect(
-        await store.canShow(
-          userId: 'user-1',
-          sessionId: 'session-4',
-          contextDate: '2026-07-25',
-        ),
+        await store.hasShownInSession(userId: 'user-1', sessionId: 'session-4'),
         isTrue,
       );
     },
@@ -61,11 +40,7 @@ void main() {
       isTrue,
     );
     expect(
-      await store.canShow(
-        userId: 'user-1',
-        sessionId: 'session-1',
-        contextDate: '2026-07-24',
-      ),
+      await store.hasShownInSession(userId: 'user-1', sessionId: 'session-2'),
       isFalse,
     );
   });

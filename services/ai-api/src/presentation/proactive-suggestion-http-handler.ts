@@ -61,6 +61,12 @@ export function createProactiveSuggestionHttpHandler(
       return jsonResponse(200, serializeSuggestion(suggestion));
     } catch (error) {
       if (error instanceof ProactiveSuggestionContextError) {
+        if (error.code === 'ai_proactive_daily_limit_reached') {
+          return jsonResponse(429, { error: error.code });
+        }
+        if (error.code === 'ai_suggestion_context_unavailable') {
+          onError(error.code);
+        }
         return jsonResponse(
           error.code === 'ai_personalization_not_ready' ? 409 : 503,
           { error: error.code },

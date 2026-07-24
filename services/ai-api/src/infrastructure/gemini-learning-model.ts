@@ -5,6 +5,7 @@ import {
   type LearningModelErrorCode,
   type LearningModelPort,
   type LearningModelResult,
+  type ProactiveSuggestionGenerationOptions,
 } from '../application/learning-model-port.ts';
 import type {
   AnonymizedCompletedQuestionContext,
@@ -205,9 +206,13 @@ export class GeminiLearningModel implements LearningModelPort {
 
   async generateProactiveSuggestion(
     context: ProactiveSuggestionContext,
+    options?: ProactiveSuggestionGenerationOptions,
   ): Promise<LearningModelResult<ProactiveSuggestionCandidate>> {
     const result = await this.#generateStructured({
-      prompt: buildProactiveSuggestionPrompt(context),
+      prompt: buildProactiveSuggestionPrompt(
+        context,
+        options?.rejectedText ?? null,
+      ),
       schema: proactiveSuggestionSchema,
     });
     const output = requireRecord(result.value);
@@ -445,11 +450,33 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
 
 function buildProactiveSuggestionPrompt(
   context: ProactiveSuggestionContext,
+  rejectedText: string | null,
 ): string {
+  const data: Record<string, unknown> = {
+    local_date: context.localDate,
+    local_hour: context.localHour,
+    has_card_today: context.hasCardToday,
+    confirmed_profile: context.confirmedMemories,
+    recent_completed_questions: context.recentCompletedQuestions,
+    weather: context.weather === null
+      ? null
+      : {
+        condition: context.weather.condition,
+        apparent_temperature_c: context.weather.apparentTemperatureC,
+        precipitation_possible: context.weather.precipitationPossible,
+        near_sunset: context.weather.nearSunset,
+        sunset_local_time: context.weather.sunsetLocalTime,
+      },
+  };
+  if (rejectedText !== null) {
+    data.rejected_suggestion = rejectedText;
+  }
+
   return buildTaskPrompt(
     [
       'Write one concrete Korean activity or card idea between 35 and 100 characters.',
       'This is a temporary private home bubble spoken by the couple app\'s small character.',
+      'When rejected_suggestion is present, write a meaningfully revised sentence that obeys every rule instead of repeating it.',
       'Use confirmed_profile and recent questions only for subtle relevance. Never reveal whose memory an item is or repeat private facts mechanically.',
       'Use time and weather only as soft context. Weather can be inaccurate, so never state rain, snow, heat, cold, or clear sky as certain.',
       'Do not name or invent a venue, neighborhood, city, business, route, or search result.',
@@ -461,24 +488,9 @@ function buildProactiveSuggestionPrompt(
       'When has_card_today is true, never mention creating, taking, or leaving a card and always use date_idea.',
       'When near_sunset is false, never use sunset_card or claim that sunset is imminent.',
       'If weather is absent or unknown, make an idea that does not depend on weather.',
-      'Examples of the intended tone are "오늘 하늘이 맑을 것 같은데 둘이 밖에 나가 놀면 좋겠다", "곧 노을 질 시간인데 하늘이 괜찮다면 사진 찍어서 카드로 남겨도 예쁘겠다", and "밖에서 오래 보내기 부담스러운 날엔 가까운 실내에서 느긋하게 쉬는 건 어때?".',
+      'Examples of the intended tone are "오늘 하늘이 맑을 것 같은데 둘이 가볍게 밖으로 나가 천천히 걸으면 좋겠다", "곧 노을 질 시간인데 하늘이 괜찮다면 사진 찍어서 카드로 남겨도 예쁘겠다", and "밖에서 오래 보내기 부담스러운 날엔 가까운 실내에서 느긋하게 쉬는 건 어때?".',
     ].join(' '),
-    {
-      local_date: context.localDate,
-      local_hour: context.localHour,
-      has_card_today: context.hasCardToday,
-      confirmed_profile: context.confirmedMemories,
-      recent_completed_questions: context.recentCompletedQuestions,
-      weather: context.weather === null
-        ? null
-        : {
-          condition: context.weather.condition,
-          apparent_temperature_c: context.weather.apparentTemperatureC,
-          precipitation_possible: context.weather.precipitationPossible,
-          near_sunset: context.weather.nearSunset,
-          sunset_local_time: context.weather.sunsetLocalTime,
-        },
-    },
+    data,
   );
 }
 
