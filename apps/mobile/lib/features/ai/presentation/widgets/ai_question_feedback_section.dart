@@ -4,10 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
-import '../../../characters/presentation/widgets/couple_character_avatar.dart';
-import '../../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../application/ai_question_feedback_provider.dart';
 import '../../data/ai_learning_dashboard.dart';
+import 'ai_character_speech_row.dart';
 
 enum AiQuestionFeedbackPresentation { labeledText, characterSpeech }
 
@@ -107,24 +106,14 @@ class _CharacterSpeechFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CharacterFeedbackRow(
-      characterKey: const Key('ai-question-feedback-character'),
-      bubble: Semantics(
-        label: '캐릭터의 한마디: ${feedback.feedbackText}',
-        excludeSemantics: true,
-        child: CharacterSpeechBubble(
-          key: const Key('ai-question-feedback-prompt'),
-          speechText: feedback.feedbackText,
-          maxWidth: double.infinity,
-          maxLines: 4,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          tailSize: const Size(10, 18),
-          tailPosition: SpeechBubbleTailPosition.left,
-          textStyle: AppTextStyles.homeQuestionBubble,
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: AiCharacterSpeechRow(
+        characterKey: const Key('ai-question-feedback-character'),
+        bubbleKey: const Key('ai-question-feedback-prompt'),
+        speechText: feedback.feedbackText,
+        semanticLabel: '캐릭터의 한마디: ${feedback.feedbackText}',
+        maxLines: 4,
       ),
     );
   }
@@ -139,140 +128,14 @@ class _FeedbackStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     return KeyedSubtree(
       key: const Key('ai-question-feedback-status'),
-      child: _CharacterFeedbackRow(
-        characterKey: const Key('ai-question-feedback-status-character'),
-        bubble: CharacterSpeechBubble.custom(
-          key: const Key('ai-question-feedback-status-prompt'),
-          semanticLabel: message,
-          maxWidth: double.infinity,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          tailSize: const Size(10, 18),
-          tailPosition: SpeechBubbleTailPosition.left,
-          child: _FeedbackStatusContent(message: message),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 32),
+        child: AiCharacterThinkingSpeechRow(
+          characterKey: const Key('ai-question-feedback-status-character'),
+          bubbleKey: const Key('ai-question-feedback-status-prompt'),
+          thinkingDotsKey: const Key('ai-question-feedback-thinking-dots'),
+          message: message,
         ),
-      ),
-    );
-  }
-}
-
-class _CharacterFeedbackRow extends StatelessWidget {
-  const _CharacterFeedbackRow({
-    required this.characterKey,
-    required this.bubble,
-  });
-
-  static const _characterSize = 96.0;
-  static const _maximumContentWidth = 360.0;
-
-  final Key characterKey;
-  final Widget bubble;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 32),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maximumContentWidth),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              CoupleCharacterAvatar(key: characterKey, size: _characterSize),
-              Flexible(fit: FlexFit.loose, child: bubble),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeedbackStatusContent extends StatelessWidget {
-  const _FeedbackStatusContent({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 4,
-      children: [
-        WordBoundaryText(
-          message,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.homeQuestionBubble,
-        ),
-        const _ThinkingDots(),
-      ],
-    );
-  }
-}
-
-class _ThinkingDots extends StatefulWidget {
-  const _ThinkingDots();
-
-  @override
-  State<_ThinkingDots> createState() => _ThinkingDotsState();
-}
-
-class _ThinkingDotsState extends State<_ThinkingDots>
-    with SingleTickerProviderStateMixin {
-  static const _dotCount = 3;
-  static const _dotSize = 5.0;
-  static const _duration = Duration(milliseconds: 1100);
-
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: _duration)
-      ..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      key: const Key('ai-question-feedback-thinking-dots'),
-      width: 25,
-      height: 12,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(_dotCount, (index) {
-              final phase = (_controller.value - (index * 0.18)) % 1.0;
-              final strength = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
-              return Transform.translate(
-                offset: Offset(0, -2 * strength),
-                child: Opacity(
-                  opacity: 0.3 + (0.7 * strength),
-                  child: const DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.textMuted,
-                      shape: BoxShape.circle,
-                    ),
-                    child: SizedBox.square(dimension: _dotSize),
-                  ),
-                ),
-              );
-            }),
-          );
-        },
       ),
     );
   }

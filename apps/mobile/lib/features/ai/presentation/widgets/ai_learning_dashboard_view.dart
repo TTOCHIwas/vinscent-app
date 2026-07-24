@@ -8,15 +8,22 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../application/ai_learning_controller.dart';
 import '../../data/ai_learning_dashboard.dart';
+import '../ai_direct_question_composer_controller.dart';
+import 'ai_direct_question_composer.dart';
 import 'ai_learning_error_message.dart';
 import 'ai_memory_section.dart';
 
 const _memoryReviewBatchSize = 5;
 
 class AiLearningDashboardView extends ConsumerWidget {
-  const AiLearningDashboardView({super.key, required this.dashboard});
+  const AiLearningDashboardView({
+    super.key,
+    required this.dashboard,
+    required this.directQuestionComposerController,
+  });
 
   final AiLearningDashboard dashboard;
+  final AiDirectQuestionComposerController directQuestionComposerController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,18 +35,26 @@ class AiLearningDashboardView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 128),
         children: [
-          _LearningProgressSection(progress: dashboard.progress),
-          const SizedBox(height: 32),
-          _ConsentSection(progress: dashboard.progress),
+          if (!dashboard.progress.foundationComplete) ...[
+            _LearningProgressSection(progress: dashboard.progress),
+            const SizedBox(height: 32),
+          ],
+          if (!dashboard.progress.foundationComplete ||
+              !dashboard.progress.isEnabled)
+            _ConsentSection(progress: dashboard.progress),
           if (dashboard.progress.isEnabled) ...[
             if (!dashboard.progress.foundationComplete) ...[
               const SizedBox(height: 40),
               _FocusedQuestionSection(dashboard: dashboard),
+              const SizedBox(height: 40),
+            ] else ...[
+              const SizedBox(height: 16),
             ],
-            const SizedBox(height: 40),
             _PersonalizationSection(
               progress: dashboard.progress,
               memories: dashboard.memories,
+              directQuestionComposerController:
+                  directQuestionComposerController,
               onDecision: (memory, decision) => _runAction(
                 context,
                 () => ref
@@ -47,6 +62,13 @@ class AiLearningDashboardView extends ConsumerWidget {
                     .confirmMemory(memoryId: memory.id, decision: decision),
               ),
             ),
+            if (dashboard.progress.foundationComplete) ...[
+              const SizedBox(height: 32),
+              _ConsentSection(
+                progress: dashboard.progress,
+                showEnabledStatus: false,
+              ),
+            ],
           ],
         ],
       ),
@@ -122,11 +144,13 @@ class _PersonalizationSection extends StatelessWidget {
   const _PersonalizationSection({
     required this.progress,
     required this.memories,
+    required this.directQuestionComposerController,
     required this.onDecision,
   });
 
   final AiLearningProgress progress;
   final List<AiMemory> memories;
+  final AiDirectQuestionComposerController directQuestionComposerController;
   final AiMemoryDecisionCallback onDecision;
 
   @override
@@ -150,6 +174,7 @@ class _PersonalizationSection extends StatelessWidget {
             .take(_memoryReviewBatchSize)
             .toList(growable: false),
         onDecision: onDecision,
+        pendingReviewCount: progress.myPendingReviewCount,
       ),
       AiPersonalizationStatus.waitingPartner => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,26 +183,114 @@ class _PersonalizationSection extends StatelessWidget {
             icon: Icons.hourglass_top_rounded,
             message: '상대방이 기억을 확인하는 중',
           ),
-          if (memories.isNotEmpty) ...[
-            const SizedBox(height: 28),
-            AiMemorySection(memories: memories, onDecision: onDecision),
-          ],
         ],
       ),
       AiPersonalizationStatus.ready => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PersonalizationMessage(
-            icon: Icons.check_circle_outline_rounded,
-            message: '우리 둘의 AI가 준비됐어',
+          AiDirectQuestionComposer(
+            controller: directQuestionComposerController,
+            onHistoryPressed: () => context.push('/ai/ask'),
           ),
-          if (memories.isNotEmpty) ...[
-            const SizedBox(height: 28),
-            AiMemorySection(memories: memories, onDecision: onDecision),
+          if (memories.any(
+            (memory) => memory.state == AiMemoryState.active,
+          )) ...[
+            const SizedBox(height: 40),
+            _MemorySummarySection(
+              memoryCount: memories
+                  .where((memory) => memory.state == AiMemoryState.active)
+                  .length,
+            ),
           ],
         ],
       ),
     };
+  }
+}
+
+class _MemorySummarySection extends StatelessWidget {
+  const _MemorySummarySection({required this.memoryCount});
+
+  final int memoryCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DashboardNavigationRow(
+      key: const Key('ai-memory-summary-open'),
+      onTap: () => context.push('/ai/memories'),
+      icon: Icons.bookmark_outline_rounded,
+      title: '기억한 내용',
+      description: '확인한 기억 $memoryCount개',
+    );
+  }
+}
+
+class _DashboardNavigationRow extends StatelessWidget {
+  const _DashboardNavigationRow({
+    super.key,
+    required this.onTap,
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final VoidCallback onTap;
+  final IconData icon;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.settingsIconBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.homeBodyMedium.copyWith(
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    WordBoundaryText(
+                      description,
+                      style: AppTextStyles.homeBody.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -237,9 +350,13 @@ class _LearningProgressSection extends StatelessWidget {
 }
 
 class _ConsentSection extends ConsumerWidget {
-  const _ConsentSection({required this.progress});
+  const _ConsentSection({
+    required this.progress,
+    this.showEnabledStatus = true,
+  });
 
   final AiLearningProgress progress;
+  final bool showEnabledStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -269,6 +386,19 @@ class _ConsentSection extends ConsumerWidget {
       );
     }
 
+    final revokeButton = TextButton(
+      onPressed: () => _showRevokeDialog(context, ref),
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        foregroundColor: AppColors.textMuted,
+      ),
+      child: const Text('AI 학습 중지'),
+    );
+
+    if (!showEnabledStatus) {
+      return Align(alignment: Alignment.centerLeft, child: revokeButton);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -277,14 +407,7 @@ class _ConsentSection extends ConsumerWidget {
           label: '함께 학습 중',
         ),
         const SizedBox(height: 8),
-        TextButton(
-          onPressed: () => _showRevokeDialog(context, ref),
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            foregroundColor: AppColors.textMuted,
-          ),
-          child: const Text('AI 학습 중지'),
-        ),
+        revokeButton,
       ],
     );
   }

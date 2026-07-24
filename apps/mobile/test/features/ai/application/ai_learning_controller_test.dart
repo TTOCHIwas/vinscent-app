@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
@@ -43,6 +45,11 @@ void main() {
       overrides: [aiLearningRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
+    final subscription = container.listen(
+      aiLearningControllerProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
 
     await container.read(aiLearningControllerProvider.future);
     await container
@@ -60,12 +67,50 @@ void main() {
       AiMemoryState.active,
     );
   });
+
+  test(
+    'keeps the current dashboard visible while confirming a memory',
+    () async {
+      final memoryDecisionGate = Completer<void>();
+      final repository = _FakeAiLearningRepository([
+        _dashboard(memories: [_pendingMemory]),
+        _dashboard(memories: [_activeMemory]),
+      ], memoryDecisionGate: memoryDecisionGate);
+      final container = ProviderContainer(
+        overrides: [aiLearningRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        aiLearningControllerProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await container.read(aiLearningControllerProvider.future);
+
+      final confirmation = container
+          .read(aiLearningControllerProvider.notifier)
+          .confirmMemory(
+            memoryId: 'memory-id',
+            decision: AiMemoryDecision.confirmed,
+          );
+      await Future<void>.delayed(Duration.zero);
+
+      final inFlightState = container.read(aiLearningControllerProvider);
+      expect(inFlightState.isLoading, isFalse);
+      expect(inFlightState.value?.memories.single.state, AiMemoryState.pending);
+
+      memoryDecisionGate.complete();
+      await confirmation;
+    },
+  );
 }
 
 class _FakeAiLearningRepository implements AiLearningRepository {
-  _FakeAiLearningRepository(this.dashboards);
+  _FakeAiLearningRepository(this.dashboards, {this.memoryDecisionGate});
 
   final List<AiLearningDashboard> dashboards;
+  final Completer<void>? memoryDecisionGate;
   final consentUpdates = <bool>[];
   final memoryDecisions = <(String, AiMemoryDecision)>[];
   var _dashboardIndex = 0;
@@ -88,6 +133,10 @@ class _FakeAiLearningRepository implements AiLearningRepository {
     required AiMemoryDecision decision,
   }) async {
     memoryDecisions.add((memoryId, decision));
+    final gate = memoryDecisionGate;
+    if (gate != null) {
+      await gate.future;
+    }
   }
 
   @override

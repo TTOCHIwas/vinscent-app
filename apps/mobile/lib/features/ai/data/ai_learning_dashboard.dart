@@ -256,8 +256,7 @@ class AiMemory {
     final rawIsMine = json['is_mine'];
     final isMine = rawIsMine is bool
         ? rawIsMine
-        : scope == AiMemoryScope.personal &&
-              (canConfirm || myDecision != null);
+        : scope == AiMemoryScope.personal && (canConfirm || myDecision != null);
 
     return AiMemory(
       id: _readString(json, 'memory_id'),
@@ -329,6 +328,10 @@ class AiLearningDashboard {
   final AiLearningProgress progress;
   final Set<String> enabledFeatures;
   final List<AiMemory> memories;
+
+  List<AiMemory> get confirmedMemories => memories
+      .where((memory) => memory.state == AiMemoryState.active)
+      .toList(growable: false);
 
   bool hasFeature(String featureKey) => enabledFeatures.contains(featureKey);
 }

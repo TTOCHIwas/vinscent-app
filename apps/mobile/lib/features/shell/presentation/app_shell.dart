@@ -75,6 +75,8 @@ class AppShell extends StatelessWidget {
 
   bool get _hidesBottomBar {
     return location.startsWith('/home/recordings') ||
+        location == '/ai/ask' ||
+        location == '/ai/memories' ||
         location == '/home/question/edit' ||
         location.startsWith('/settings');
   }

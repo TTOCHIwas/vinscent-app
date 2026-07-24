@@ -18,6 +18,13 @@ String aiLearningErrorMessage(Object error) {
       AiLearningFailureReason.focusedQuestionsLocked => '먼저 집중 질문을 잠금 해제해 주세요.',
       AiLearningFailureReason.answerRequired => '답변을 입력해 주세요.',
       AiLearningFailureReason.answerTooLong => '답변은 500자까지 입력할 수 있어요.',
+      AiLearningFailureReason.questionRequired => '질문을 입력해 주세요.',
+      AiLearningFailureReason.questionTooLong => '질문은 300자까지 입력할 수 있어요.',
+      AiLearningFailureReason.dailyQuestionLimitReached =>
+        '오늘은 질문을 모두 사용했어. 내일 다시 물어봐 줘',
+      AiLearningFailureReason.sensitiveQuestionNotAvailable =>
+        '이 주제는 아직 답할 준비가 되지 않았어',
+      AiLearningFailureReason.invalidUserQuestion => '질문을 찾지 못했어.',
       AiLearningFailureReason.questionNotReady => '질문 상태가 바뀌었어요. 다시 확인해 주세요.',
       AiLearningFailureReason.invalidQuestion => '질문 정보를 확인하지 못했어요.',
       AiLearningFailureReason.configMissing => 'AI 연결 설정을 확인해 주세요.',

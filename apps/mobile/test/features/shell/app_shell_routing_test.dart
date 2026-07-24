@@ -10,6 +10,8 @@ import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
+import 'package:vinscent/features/ai/presentation/ai_direct_question_screen.dart';
+import 'package:vinscent/features/ai/presentation/ai_memory_screen.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_tab_header.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
@@ -348,6 +350,40 @@ void main() {
     expect(find.byType(AppHeader), findsNothing);
     expect(find.byType(SettingsPageHeader), findsOneWidget);
     expect(find.text('집중 질문'), findsOneWidget);
+  });
+
+  testWidgets('지난 질문 경로에는 전용 헤더만 보여준다', (tester) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(tester.element(find.byType(AppHeader))).go('/ai/ask');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AiDirectQuestionScreen), findsOneWidget);
+    expect(find.byType(AppHeader), findsNothing);
+    expect(find.byType(AppBottomBar), findsNothing);
+    expect(find.byType(SettingsPageHeader), findsOneWidget);
+    expect(find.text('지난 질문'), findsOneWidget);
+  });
+
+  testWidgets('기억한 내용 경로에는 전용 헤더만 보여준다', (tester) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(tester.element(find.byType(AppHeader))).go('/ai/memories');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AiMemoryScreen), findsOneWidget);
+    expect(find.byType(AppHeader), findsNothing);
+    expect(find.byType(AppBottomBar), findsNothing);
+    expect(find.byType(SettingsPageHeader), findsOneWidget);
+    expect(find.text('기억한 내용'), findsOneWidget);
   });
 
   testWidgets('system back returns from secondary tabs to home', (

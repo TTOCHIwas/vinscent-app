@@ -35,7 +35,7 @@ class AiLearningController extends AsyncNotifier<AiLearningDashboard> {
       return ref
           .read(aiLearningRepositoryProvider)
           .confirmMemory(memoryId: memoryId, decision: decision);
-    });
+    }, showLoading: false);
   }
 
   Future<void> unlockFocusedQuestions() async {
@@ -44,9 +44,14 @@ class AiLearningController extends AsyncNotifier<AiLearningDashboard> {
     });
   }
 
-  Future<void> _runAndReload(Future<void> Function() command) async {
+  Future<void> _runAndReload(
+    Future<void> Function() command, {
+    bool showLoading = true,
+  }) async {
     final previousState = state;
-    state = const AsyncValue.loading();
+    if (showLoading) {
+      state = const AsyncValue.loading();
+    }
 
     try {
       await command();

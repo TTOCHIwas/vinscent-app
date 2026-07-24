@@ -7,7 +7,7 @@ import 'word_boundary_text.dart';
 
 const _speechBubbleColor = Color(0xFFEFEFEF);
 
-enum SpeechBubbleTailPosition { bottom, left }
+enum SpeechBubbleTailPosition { bottom, left, right }
 
 class CharacterSpeechBubble extends StatelessWidget {
   const CharacterSpeechBubble({
@@ -22,6 +22,7 @@ class CharacterSpeechBubble extends StatelessWidget {
     this.tailSize = const Size(18, 10),
     this.tailPosition = SpeechBubbleTailPosition.bottom,
     this.textStyle = AppTextStyles.homeCharacterLabel,
+    this.bubbleColor = _speechBubbleColor,
   }) : semanticLabel = speechText,
        _content = null;
 
@@ -36,6 +37,7 @@ class CharacterSpeechBubble extends StatelessWidget {
     ),
     this.tailSize = const Size(18, 10),
     this.tailPosition = SpeechBubbleTailPosition.bottom,
+    this.bubbleColor = _speechBubbleColor,
   }) : speechText = semanticLabel,
        maxLines = null,
        textStyle = AppTextStyles.homeCharacterLabel,
@@ -49,6 +51,7 @@ class CharacterSpeechBubble extends StatelessWidget {
   final Size tailSize;
   final SpeechBubbleTailPosition tailPosition;
   final TextStyle textStyle;
+  final Color bubbleColor;
   final Widget? _content;
 
   @override
@@ -57,7 +60,7 @@ class CharacterSpeechBubble extends StatelessWidget {
       builder: (context, constraints) {
         final textScaler = MediaQuery.textScalerOf(context);
         final effectiveMaxLines = textScaler.scale(1) > 1.01 ? null : maxLines;
-        final tailWidth = tailPosition == SpeechBubbleTailPosition.left
+        final tailWidth = tailPosition != SpeechBubbleTailPosition.bottom
             ? tailSize.width
             : 0.0;
         final tailHeight = tailPosition == SpeechBubbleTailPosition.bottom
@@ -77,7 +80,7 @@ class CharacterSpeechBubble extends StatelessWidget {
           ),
           padding: contentPadding,
           decoration: BoxDecoration(
-            color: _speechBubbleColor,
+            color: bubbleColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: _content == null
@@ -107,12 +110,33 @@ class CharacterSpeechBubble extends StatelessWidget {
                 offset: const Offset(1, 0),
                 child: CustomPaint(
                   size: tailSize,
-                  painter: const _SpeechBubbleTailPainter(
+                  painter: _SpeechBubbleTailPainter(
                     position: SpeechBubbleTailPosition.left,
+                    color: bubbleColor,
                   ),
                 ),
               ),
               bubble,
+            ],
+          );
+        }
+
+        if (tailPosition == SpeechBubbleTailPosition.right) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              bubble,
+              Transform.translate(
+                offset: const Offset(-1, 0),
+                child: CustomPaint(
+                  size: tailSize,
+                  painter: _SpeechBubbleTailPainter(
+                    position: SpeechBubbleTailPosition.right,
+                    color: bubbleColor,
+                  ),
+                ),
+              ),
             ],
           );
         }
@@ -125,7 +149,7 @@ class CharacterSpeechBubble extends StatelessWidget {
               offset: const Offset(0, -1),
               child: CustomPaint(
                 size: tailSize,
-                painter: const _SpeechBubbleTailPainter(),
+                painter: _SpeechBubbleTailPainter(color: bubbleColor),
               ),
             ),
           ],
@@ -138,13 +162,15 @@ class CharacterSpeechBubble extends StatelessWidget {
 class _SpeechBubbleTailPainter extends CustomPainter {
   const _SpeechBubbleTailPainter({
     this.position = SpeechBubbleTailPosition.bottom,
+    this.color = _speechBubbleColor,
   });
 
   final SpeechBubbleTailPosition position;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = _speechBubbleColor;
+    final paint = Paint()..color = color;
     final path = switch (position) {
       SpeechBubbleTailPosition.bottom =>
         Path()
@@ -158,6 +184,12 @@ class _SpeechBubbleTailPainter extends CustomPainter {
           ..lineTo(0, size.height / 2)
           ..lineTo(size.width, size.height)
           ..close(),
+      SpeechBubbleTailPosition.right =>
+        Path()
+          ..moveTo(0, 0)
+          ..lineTo(size.width, size.height / 2)
+          ..lineTo(0, size.height)
+          ..close(),
     };
 
     canvas.drawPath(path, paint);
@@ -165,6 +197,6 @@ class _SpeechBubbleTailPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SpeechBubbleTailPainter oldDelegate) {
-    return oldDelegate.position != position;
+    return oldDelegate.position != position || oldDelegate.color != color;
   }
 }
