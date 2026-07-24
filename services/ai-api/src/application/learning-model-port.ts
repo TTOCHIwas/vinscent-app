@@ -1,10 +1,14 @@
 import type {
   AnonymizedCompletedQuestionContext,
   CoupleFeedbackCandidate,
+  DirectQuestionAnswer,
+  DirectQuestionContext,
   FoundationQuestionCandidate,
   GeneralQuestionContext,
   ModelMemoryCandidate,
   PersonalizedQuestionCandidate,
+  ProactiveSuggestionCandidate,
+  ProactiveSuggestionContext,
 } from '../domain/learning-contract.ts';
 
 export interface FoundationQuestionRecommendation {
@@ -49,4 +53,12 @@ export interface LearningModelPort {
   generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>>;
+
+  answerDirectQuestion(
+    context: DirectQuestionContext,
+  ): Promise<LearningModelResult<DirectQuestionAnswer>>;
+
+  generateProactiveSuggestion(
+    context: ProactiveSuggestionContext,
+  ): Promise<LearningModelResult<ProactiveSuggestionCandidate>>;
 }

@@ -8,6 +8,7 @@ import {
 } from '../application/process-learning-jobs.ts';
 import type {
   CompletedQuestionContext,
+  DirectQuestionContext,
   GeneralQuestionContext,
   LearningDomain,
   MemoryCandidateState,
@@ -15,6 +16,9 @@ import type {
   PromptAngle,
   QuestionDepth,
 } from '../domain/learning-contract.ts';
+import {
+  parseDirectQuestionContext,
+} from './personalization-context-parser.ts';
 
 interface SupabaseRpcResult {
   data: unknown;
@@ -43,6 +47,7 @@ const learningJobTypes = new Set<LearningJobType>([
   'select_curated_question',
   'generate_general_question',
   'generate_personalized_question',
+  'answer_user_question',
   'rebuild_profile',
 ]);
 
@@ -133,6 +138,28 @@ export class SupabaseLearningJobRepository implements LearningJobRepository {
       }
       throw repositoryContractError(
         'ai_general_question_context_invalid',
+        error,
+      );
+    }
+  }
+
+  async loadDirectQuestionContext(
+    jobId: string,
+  ): Promise<DirectQuestionContext> {
+    const data = await this.#rpc(
+      'get_ai_direct_question_job_context',
+      { requested_job_id: jobId },
+      'ai_direct_question_context_unavailable',
+    );
+
+    try {
+      return parseDirectQuestionContext(data);
+    } catch (error) {
+      if (error instanceof AiRepositoryError) {
+        throw error;
+      }
+      throw repositoryContractError(
+        'ai_direct_question_context_invalid',
         error,
       );
     }
@@ -249,14 +276,14 @@ export class SupabaseLearningJobRepository implements LearningJobRepository {
 function parseClaimedJob(value: unknown): ClaimedLearningJob {
   const record = requireRecord(value);
   const jobType = requireJobType(record.job_type);
-  const dailyQuestionId = requireNullableString(record.job_daily_question_id, 160);
+  const sourceId = requireNullableString(record.job_daily_question_id, 160);
   const attempt = record.job_attempt;
   if (!Number.isInteger(attempt) || Number(attempt) < 1) {
     throw new TypeError('invalid job attempt');
   }
   if (
-    (jobType === 'rebuild_profile' && dailyQuestionId !== null)
-    || (jobType !== 'rebuild_profile' && dailyQuestionId === null)
+    (jobType === 'rebuild_profile' && sourceId !== null)
+    || (jobType !== 'rebuild_profile' && sourceId === null)
   ) {
     throw new TypeError('invalid job question');
   }
@@ -264,7 +291,7 @@ function parseClaimedJob(value: unknown): ClaimedLearningJob {
   return {
     jobId: requireString(record.job_id, 160),
     coupleId: requireString(record.job_couple_id, 160),
-    dailyQuestionId,
+    sourceId,
     jobType,
     attempt: Number(attempt),
     leaseExpiresAt: requireString(record.job_lease_expires_at, 100),

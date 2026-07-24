@@ -888,3 +888,65 @@ test('Gemini model rejects structurally invalid values after JSON decoding', asy
     },
   );
 });
+
+test('Gemini model keeps direct questions and proactive context user-relative', async () => {
+  const prompts: string[] = [];
+  const outputs = [
+    {
+      answer_text: '조용히 걷는 시간을 좋아한다고 했어. 가벼운 산책이 잘 맞을 것 같아',
+    },
+    {
+      suggestion_text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진을 카드로 남겨도 예쁘겠다',
+      kind: 'sunset_card',
+    },
+  ];
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ prompt }) => {
+      prompts.push(prompt);
+      return {
+        value: outputs.shift(),
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+
+  const direct = await model.answerDirectQuestion({
+    questionText: '상대는 쉴 때 어떤 걸 좋아할까?',
+    confirmedMemories: [
+      {
+        subject: 'partner',
+        kind: 'rest_preference',
+        domain: 'daily_life',
+        statement: '조용한 산책을 좋아해',
+        confidence: 0.9,
+      },
+    ],
+    recentCompletedQuestions: [],
+  });
+  const proactive = await model.generateProactiveSuggestion({
+    localDate: '2026-07-24',
+    localHour: 18,
+    hasCardToday: false,
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    weather: {
+      condition: 'clear',
+      apparentTemperatureC: 24,
+      precipitationPossible: false,
+      nearSunset: true,
+      sunsetLocalTime: '19:42',
+    },
+  });
+
+  assert.equal(direct.value.text.includes('산책'), true);
+  assert.equal(proactive.value.kind, 'sunset_card');
+  assert.equal(prompts[0]?.includes('requester_question'), true);
+  assert.equal(prompts[0]?.includes('partner_a'), false);
+  assert.equal(prompts[1]?.includes('near_sunset'), true);
+  assert.equal(prompts[1]?.includes('latitude'), false);
+  assert.equal(prompts[1]?.includes('longitude'), false);
+});

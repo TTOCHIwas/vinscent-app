@@ -95,18 +95,43 @@ test('repository maps claimed jobs and worker context', async () => {
       },
       error: null,
     },
+    get_ai_direct_question_job_context: {
+      data: {
+        question_text: '상대는 쉴 때 어떤 걸 좋아할까?',
+        confirmed_memories: [
+          {
+            subject: 'partner',
+            kind: 'rest_preference',
+            learning_domain: 'daily_life',
+            statement: '조용한 산책을 좋아해',
+            confidence: 0.9,
+          },
+        ],
+        recent_completed_questions: [
+          {
+            question_text: '편하게 쉬는 방법은 뭐야?',
+            answers: [
+              { subject: 'me', text: '집에서 쉬기' },
+              { subject: 'partner', text: '산책하기' },
+            ],
+          },
+        ],
+      },
+      error: null,
+    },
   });
   const repository = new SupabaseLearningJobRepository(client);
 
   const jobs = await repository.claimJobs('edge-worker', 3);
   const context = await repository.loadContext('job-1');
   const generalContext = await repository.loadGeneralQuestionContext('job-2');
+  const directContext = await repository.loadDirectQuestionContext('job-3');
 
   assert.deepEqual(jobs, [
     {
       jobId: 'job-1',
       coupleId: 'couple-1',
-      dailyQuestionId: 'daily-1',
+      sourceId: 'daily-1',
       jobType: 'generate_feedback',
       attempt: 2,
       leaseExpiresAt: '2026-07-20T12:00:00.000Z',
@@ -129,6 +154,12 @@ test('repository maps claimed jobs and worker context', async () => {
     generalContext.recentQuestions[0]?.questionKey,
     'foundation_v1_daily_life_04',
   );
+  assert.equal(directContext.questionText, '상대는 쉴 때 어떤 걸 좋아할까?');
+  assert.equal(directContext.confirmedMemories[0]?.subject, 'partner');
+  assert.equal(
+    directContext.recentCompletedQuestions[0]?.answers[1]?.subject,
+    'partner',
+  );
   assert.deepEqual(client.calls[0], {
     name: 'claim_ai_processing_jobs',
     params: { requested_worker: 'edge-worker', requested_limit: 3 },
@@ -136,6 +167,10 @@ test('repository maps claimed jobs and worker context', async () => {
   assert.deepEqual(client.calls[2], {
     name: 'get_ai_general_question_job_context',
     params: { requested_job_id: 'job-2' },
+  });
+  assert.deepEqual(client.calls[3], {
+    name: 'get_ai_direct_question_job_context',
+    params: { requested_job_id: 'job-3' },
   });
 });
 
@@ -153,7 +188,7 @@ test('repository sends run lifecycle values to exact RPC arguments', async () =>
     {
       jobId: 'job-1',
       coupleId: 'couple-1',
-      dailyQuestionId: 'daily-1',
+      sourceId: 'daily-1',
       jobType: 'generate_feedback',
       attempt: 1,
       leaseExpiresAt: '2026-07-20T12:00:00.000Z',

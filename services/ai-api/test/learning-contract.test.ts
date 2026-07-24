@@ -6,7 +6,9 @@ import {
   deriveLearningStage,
   resolveMemoryCandidates,
   validateCoupleFeedback,
+  validateDirectQuestionAnswer,
   validateMemoryCandidates,
+  validateProactiveSuggestion,
   validateQuestionRecommendation,
   type CompletedQuestionContext,
 } from '../src/domain/learning-contract.ts';
@@ -67,6 +69,79 @@ const context: CompletedQuestionContext = {
     },
   ],
 };
+
+test('direct answers reject internal participant labels and blocked topics', () => {
+  assert.doesNotThrow(() =>
+    validateDirectQuestionAnswer({
+      text: '아직 확실히 알 만큼 기록이 충분하지 않아',
+    })
+  );
+  assert.throws(() =>
+    validateDirectQuestionAnswer({
+      text: 'partner_a는 산책을 좋아해',
+    })
+  );
+  assert.throws(() =>
+    validateDirectQuestionAnswer({
+      text: '정신건강 상태를 보면 이렇게 판단할 수 있어',
+    })
+  );
+  assert.throws(() =>
+    validateDirectQuestionAnswer({
+      text: '연봉과 돈 관리 방식을 비교하면 이렇게 볼 수 있어',
+    })
+  );
+  assert.throws(() =>
+    validateDirectQuestionAnswer({
+      text: '건강 상태와 병원 기록을 보면 이런 경향이 있어',
+    })
+  );
+});
+
+test('proactive suggestions enforce card, weather, and tone boundaries', () => {
+  const proactiveContext = {
+    localDate: '2026-07-24',
+    localHour: 18,
+    hasCardToday: false,
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    weather: {
+      condition: 'clear' as const,
+      apparentTemperatureC: 24,
+      precipitationPossible: false,
+      nearSunset: true,
+      sunsetLocalTime: '19:42',
+    },
+  };
+
+  assert.doesNotThrow(() =>
+    validateProactiveSuggestion(proactiveContext, {
+      text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진을 카드로 남겨도 예쁘겠다',
+      kind: 'sunset_card',
+    })
+  );
+  assert.throws(() =>
+    validateProactiveSuggestion(
+      { ...proactiveContext, hasCardToday: true },
+      {
+        text: '곧 노을 질 시간인데 사진을 카드로 남기면 좋겠다',
+        kind: 'sunset_card',
+      },
+    )
+  );
+  assert.throws(() =>
+    validateProactiveSuggestion(proactiveContext, {
+      text: '비가 오니까 가까운 실내에 가봐!',
+      kind: 'date_idea',
+    })
+  );
+  assert.throws(() =>
+    validateProactiveSuggestion(proactiveContext, {
+      text: '둘의 오늘을 기억 한 조각으로 남기면 좋겠다',
+      kind: 'card_idea',
+    })
+  );
+});
 
 test('학습 단계 경계를 24개 커리큘럼 기준으로 계산한다', () => {
   assert.equal(deriveLearningStage(0, 24), 'collecting');

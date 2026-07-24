@@ -16,6 +16,7 @@ import {
 import type {
   AnonymizedCompletedQuestionContext,
   CompletedQuestionContext,
+  DirectQuestionContext,
   GeneralQuestionContext,
 } from '../src/domain/learning-contract.ts';
 import {
@@ -95,6 +96,20 @@ const generalQuestionContext: GeneralQuestionContext = {
   ],
 };
 
+const directQuestionContext: DirectQuestionContext = {
+  questionText: '상대는 쉬고 싶을 때 어떤 걸 좋아할까?',
+  confirmedMemories: [
+    {
+      subject: 'partner',
+      kind: 'rest_preference',
+      domain: 'daily_life',
+      statement: '조용한 산책을 좋아해',
+      confidence: 0.9,
+    },
+  ],
+  recentCompletedQuestions: [],
+};
+
 test('processor handles every learning job and restores IDs only at persistence', async () => {
   const jobs: ClaimedLearningJob[] = [
     job('job-memory', 'extract_memories'),
@@ -102,11 +117,13 @@ test('processor handles every learning job and restores IDs only at persistence'
     job('job-rank', 'select_curated_question'),
     job('job-general', 'generate_general_question'),
     job('job-personalized', 'generate_personalized_question'),
+    job('job-direct', 'answer_user_question'),
     job('job-rebuild', 'rebuild_profile', null),
   ];
   const repository = new FakeRepository(jobs);
   const seenModelContexts: AnonymizedCompletedQuestionContext[] = [];
   const seenGeneralContexts: GeneralQuestionContext[] = [];
+  const seenDirectContexts: DirectQuestionContext[] = [];
   const model: LearningModelPort = {
     async extractMemoryCandidates(context) {
       seenModelContexts.push(context);
@@ -156,6 +173,18 @@ test('processor handles every learning job and restores IDs only at persistence'
         rationale: 'Their preferred ways of spending time differ.',
       });
     },
+    async answerDirectQuestion(context) {
+      seenDirectContexts.push(context);
+      return result({
+        text: '조용히 걷는 시간을 좋아한다고 했어. 복잡하지 않은 산책이 잘 맞을 것 같아',
+      });
+    },
+    async generateProactiveSuggestion() {
+      return result({
+        text: '오늘은 가까운 곳을 천천히 산책하면 좋겠다',
+        kind: 'date_idea',
+      });
+    },
   };
   const processor = new LearningJobProcessor({
     repository,
@@ -165,16 +194,16 @@ test('processor handles every learning job and restores IDs only at persistence'
     modelName: 'gemini-test',
   });
 
-  const summary = await processor.processBatch(6);
+  const summary = await processor.processBatch(7);
 
   assert.deepEqual(summary, {
-    claimed: 6,
-    succeeded: 6,
+    claimed: 7,
+    succeeded: 7,
     retried: 0,
     failed: 0,
   });
   assert.equal(repository.rebuildJobIds.includes('job-rebuild'), true);
-  assert.equal(repository.successes.length, 5);
+  assert.equal(repository.successes.length, 6);
   assert.deepEqual(repository.successes[0]?.output, {
     memories: [
       {
@@ -212,6 +241,10 @@ test('processor handles every learning job and restores IDs only at persistence'
     mood: null,
     rationale: 'Their preferred ways of spending time differ.',
   });
+  assert.deepEqual(repository.successes[5]?.output, {
+    answer_text:
+      '조용히 걷는 시간을 좋아한다고 했어. 복잡하지 않은 산책이 잘 맞을 것 같아',
+  });
   assert.equal(
     JSON.stringify(seenModelContexts).includes('couple-real-id'),
     false,
@@ -221,8 +254,11 @@ test('processor handles every learning job and restores IDs only at persistence'
     false,
   );
   assert.deepEqual(seenGeneralContexts, [generalQuestionContext]);
+  assert.deepEqual(seenDirectContexts, [directQuestionContext]);
   assert.deepEqual(repository.generalContextJobIds, ['job-general']);
+  assert.deepEqual(repository.directContextJobIds, ['job-direct']);
   assert.equal(repository.contextJobIds.includes('job-general'), false);
+  assert.equal(repository.contextJobIds.includes('job-direct'), false);
 });
 
 test('processor records retryable model failures and continues the batch', async () => {
@@ -449,6 +485,7 @@ class FakeRepository implements LearningJobRepository {
   readonly rebuildJobIds: string[] = [];
   readonly contextJobIds: string[] = [];
   readonly generalContextJobIds: string[] = [];
+  readonly directContextJobIds: string[] = [];
   readonly claimFailures: Array<{
     jobId: string;
     errorCode: string;
@@ -475,6 +512,11 @@ class FakeRepository implements LearningJobRepository {
   async loadGeneralQuestionContext(jobId: string) {
     this.generalContextJobIds.push(jobId);
     return generalQuestionContext;
+  }
+
+  async loadDirectQuestionContext(jobId: string) {
+    this.directContextJobIds.push(jobId);
+    return directQuestionContext;
   }
 
   async startRun(job: ClaimedLearningJob) {
@@ -509,12 +551,12 @@ class FakeRepository implements LearningJobRepository {
 function job(
   jobId: string,
   jobType: ClaimedLearningJob['jobType'],
-  dailyQuestionId = 'daily-question-1' as string | null,
+  sourceId = 'daily-question-1' as string | null,
 ): ClaimedLearningJob {
   return {
     jobId,
     coupleId: 'couple-real-id',
-    dailyQuestionId,
+    sourceId,
     jobType,
     attempt: 1,
     leaseExpiresAt: '2026-07-20T12:00:00.000Z',
@@ -557,6 +599,17 @@ function modelWith(
         category: 'personalized',
         mood: null,
         rationale: 'Default rationale.',
+      });
+    },
+    async answerDirectQuestion() {
+      return result({
+        text: '아직 확실히 알 만큼 기록이 충분하지 않아',
+      });
+    },
+    async generateProactiveSuggestion() {
+      return result({
+        text: '오늘은 둘이 가볍게 산책하는 건 어때?',
+        kind: 'date_idea',
       });
     },
     ...overrides,

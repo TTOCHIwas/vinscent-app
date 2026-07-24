@@ -217,6 +217,71 @@ export interface GeneralQuestionContext {
   }>;
 }
 
+export type PersonalizationSubject = 'me' | 'partner' | 'couple';
+
+export interface PersonalizationMemoryContext {
+  subject: PersonalizationSubject;
+  kind: string;
+  domain: LearningDomain;
+  statement: string;
+  confidence: number;
+}
+
+export interface PersonalizationRecentQuestionContext {
+  questionText: string;
+  answers: Array<{
+    subject: 'me' | 'partner';
+    text: string;
+  }>;
+}
+
+export interface DirectQuestionContext {
+  questionText: string;
+  confirmedMemories: PersonalizationMemoryContext[];
+  recentCompletedQuestions: PersonalizationRecentQuestionContext[];
+}
+
+export interface DirectQuestionAnswer {
+  text: string;
+}
+
+export type ProactiveSuggestionKind =
+  | 'date_idea'
+  | 'card_idea'
+  | 'sunset_card';
+
+export type ProactiveWeatherCondition =
+  | 'clear'
+  | 'partly_cloudy'
+  | 'cloudy'
+  | 'rain_possible'
+  | 'snow_possible'
+  | 'hot'
+  | 'cold'
+  | 'unknown';
+
+export interface ProactiveWeatherContext {
+  condition: ProactiveWeatherCondition;
+  apparentTemperatureC: number | null;
+  precipitationPossible: boolean;
+  nearSunset: boolean;
+  sunsetLocalTime: string | null;
+}
+
+export interface ProactiveSuggestionContext {
+  localDate: string;
+  localHour: number;
+  hasCardToday: boolean;
+  confirmedMemories: PersonalizationMemoryContext[];
+  recentCompletedQuestions: PersonalizationRecentQuestionContext[];
+  weather: ProactiveWeatherContext | null;
+}
+
+export interface ProactiveSuggestionCandidate {
+  text: string;
+  kind: ProactiveSuggestionKind;
+}
+
 function requireNonBlank(value: string, field: string, maximum: number): void {
   const length = value.trim().length;
   if (length === 0 || length > maximum) {
@@ -645,6 +710,77 @@ export function validateGeneralQuestion(
   }
 }
 
+export function validateDirectQuestionAnswer(
+  candidate: DirectQuestionAnswer,
+): void {
+  requireNonBlank(candidate.text, 'direct question answer', 400);
+
+  if (
+    internalMemoryParticipantPatterns.some(
+      (pattern) => pattern.test(candidate.text),
+    )
+  ) {
+    throw new Error('direct question answer exposes an internal participant');
+  }
+  if (containsBlockedAiTopic(candidate.text)) {
+    throw new Error('direct question answer contains a blocked topic');
+  }
+}
+
+export function validateProactiveSuggestion(
+  context: ProactiveSuggestionContext,
+  candidate: ProactiveSuggestionCandidate,
+): void {
+  requireNonBlank(candidate.text, 'proactive suggestion', 100);
+
+  if (candidate.text.trim().length < 35) {
+    throw new RangeError('proactive suggestion must contain at least 35 characters');
+  }
+  if (
+    candidate.kind === 'sunset_card'
+    && (context.hasCardToday || context.weather?.nearSunset !== true)
+  ) {
+    throw new Error('sunset card suggestion is not valid for this context');
+  }
+  if (
+    context.hasCardToday
+    && (
+      candidate.kind === 'card_idea'
+      || candidate.kind === 'sunset_card'
+      || /카드/u.test(candidate.text)
+    )
+  ) {
+    throw new Error('card suggestion is not valid after a card was uploaded');
+  }
+  if (/[.]/u.test(candidate.text.replaceAll('...', ''))) {
+    throw new Error('proactive suggestion cannot use a period');
+  }
+  const textWithoutEllipsis = candidate.text.replaceAll('...', '');
+  if (/[!?]{2,}|\.\./u.test(textWithoutEllipsis)) {
+    throw new Error('proactive suggestion uses excessive punctuation');
+  }
+  if (
+    /(해\s*봐|가\s*봐|남겨|챙겨)(?:[!?….\s]|$)/u.test(candidate.text)
+  ) {
+    throw new Error('proactive suggestion uses a commanding expression');
+  }
+  if (
+    /(둘의 오늘|우리의 순간|기억 한 조각|추억 한 조각)/u.test(
+      candidate.text,
+    )
+  ) {
+    throw new Error('proactive suggestion uses a forced abstract expression');
+  }
+  if (
+    /(비|눈)(?:가|이)\s*(?:오니까|와서|내리니까)/u.test(candidate.text)
+  ) {
+    throw new Error('proactive suggestion overstates uncertain weather');
+  }
+  if (containsBlockedAiTopic(candidate.text)) {
+    throw new Error('proactive suggestion contains a blocked topic');
+  }
+}
+
 function validateGeneratedQuestion(
   candidate: PersonalizedQuestionCandidate,
 ): void {
@@ -673,27 +809,62 @@ const blockedAiTopicPattern = new RegExp(
     '임신',
     '출산',
     '난임',
+    '경제\\s*(상황|문제|고민|사정)',
+    '재정',
+    '소득',
+    '연봉',
+    '월급',
+    '재산',
+    '저축',
+    '금전',
+    '지출',
+    '생활비',
+    '대출',
     '부채',
     '빚',
+    '돈\\s*(문제|고민|관리)',
+    '투자\\s*(금|성향|계획|손실|수익)',
+    '건강\\s*(상태|문제|고민|검진)',
+    '몸\\s*(상태|건강)',
+    '질병',
+    '질환',
+    '병원',
+    '치료',
+    '수술',
+    '복약',
+    '통증',
+    '아프',
     '정신건강',
     '정신질환',
     '트라우마',
     '종교',
     '정치',
-    '가족\\s*(갈등|다툼)',
+    '(가족|부모|시댁|처가).{0,30}(갈등|다툼|불화|싸움)',
     'sexual',
     'pregnan',
     'fertility',
     'debt',
+    'financial',
+    'salary',
+    'income',
+    'money',
+    'loan',
+    'investment',
+    'physical\\s*health',
+    'medical',
+    'illness',
+    'disease',
+    'surgery',
+    'medication',
     'mental\\s*health',
     'trauma',
     'religion',
     'politic',
-    'family\\s*conflict',
+    'family.{0,30}(conflict|fight)',
   ].join('|'),
   'i',
 );
 
-function containsBlockedAiTopic(value: string): boolean {
+export function containsBlockedAiTopic(value: string): boolean {
   return blockedAiTopicPattern.test(value);
 }

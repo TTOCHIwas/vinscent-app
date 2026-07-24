@@ -2,10 +2,12 @@ import {
   anonymizeCompletedQuestionContext,
   resolveMemoryCandidates,
   validateCoupleFeedback,
+  validateDirectQuestionAnswer,
   validateGeneralQuestion,
   validatePersonalizedQuestion,
   validateQuestionRecommendation,
   type CompletedQuestionContext,
+  type DirectQuestionContext,
   type GeneralQuestionContext,
 } from '../domain/learning-contract.ts';
 import {
@@ -23,12 +25,13 @@ export type LearningJobType =
   | 'select_curated_question'
   | 'generate_general_question'
   | 'generate_personalized_question'
+  | 'answer_user_question'
   | 'rebuild_profile';
 
 export interface ClaimedLearningJob {
   jobId: string;
   coupleId: string;
-  dailyQuestionId: string | null;
+  sourceId: string | null;
   jobType: LearningJobType;
   attempt: number;
   leaseExpiresAt: string;
@@ -56,6 +59,7 @@ export interface LearningJobRepository {
   claimJobs(workerId: string, limit: number): Promise<ClaimedLearningJob[]>;
   loadContext(jobId: string): Promise<CompletedQuestionContext>;
   loadGeneralQuestionContext(jobId: string): Promise<GeneralQuestionContext>;
+  loadDirectQuestionContext(jobId: string): Promise<DirectQuestionContext>;
   startRun(
     job: ClaimedLearningJob,
     provider: string,
@@ -110,6 +114,7 @@ const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string
   select_curated_question: 'question-ranking-v2',
   generate_general_question: 'general-question-v1',
   generate_personalized_question: 'personalized-question-v2',
+  answer_user_question: 'direct-question-v1',
 };
 
 export class AiRepositoryError extends Error {
@@ -185,6 +190,17 @@ export class LearningJobProcessor {
             promptVersions[job.jobType],
           );
           execution = await this.#executeGeneralQuestionTask(context);
+        } else if (job.jobType === 'answer_user_question') {
+          const context = await this.#repository.loadDirectQuestionContext(
+            job.jobId,
+          );
+          runId = await this.#repository.startRun(
+            job,
+            this.#provider,
+            this.#modelName,
+            promptVersions[job.jobType],
+          );
+          execution = await this.#executeDirectQuestionTask(context);
         } else {
           const context = await this.#repository.loadContext(job.jobId);
           const modelContext = anonymizeCompletedQuestionContext(context);
@@ -251,7 +267,7 @@ export class LearningJobProcessor {
   async #executeModelTask(
     jobType: Exclude<
       LearningJobType,
-      'rebuild_profile' | 'generate_general_question'
+      'rebuild_profile' | 'generate_general_question' | 'answer_user_question'
     >,
     context: CompletedQuestionContext,
     modelContext: ReturnType<typeof anonymizeCompletedQuestionContext>,
@@ -346,6 +362,20 @@ export class LearningJobProcessor {
         mood: result.value.mood,
         rationale: result.value.rationale,
       },
+      usage: result.usage,
+    };
+  }
+
+  async #executeDirectQuestionTask(
+    context: DirectQuestionContext,
+  ): Promise<{
+    output: Record<string, unknown>;
+    usage: LearningModelUsage;
+  }> {
+    const result = await this.#model.answerDirectQuestion(context);
+    validateDirectQuestionAnswer(result.value);
+    return {
+      output: { answer_text: result.value.text },
       usage: result.usage,
     };
   }
