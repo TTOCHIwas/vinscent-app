@@ -545,6 +545,7 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
           loadingLabel: '저장 중',
           enabled: _canSubmit,
           isLoading: _isSubmitting,
+          horizontalPadding: 32,
           onPressed: _submit,
         ),
         child: child!,

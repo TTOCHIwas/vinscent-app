@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,6 +52,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_wordBoundaryText('오늘 2번 더 물어볼 수 있어'), findsOneWidget);
+    expect(find.byKey(const Key('ai-direct-remaining-count')), findsOneWidget);
+  });
+
+  testWidgets('pauses the guide cycle while its tab is inactive', (
+    tester,
+  ) async {
+    final tickerEnabled = ValueNotifier(true);
+    addTearDown(tickerEnabled.dispose);
+    await _pump(
+      tester,
+      _FakeDirectQuestionRepository(history: _history()),
+      tickerEnabled: tickerEnabled,
+    );
+
+    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsOneWidget);
+
+    tickerEnabled.value = false;
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 4));
+    tickerEnabled.value = true;
+    await tester.pump();
+
+    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsOneWidget);
+    expect(find.byKey(const Key('ai-direct-remaining-count')), findsNothing);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
     expect(find.byKey(const Key('ai-direct-remaining-count')), findsOneWidget);
   });
 
@@ -210,9 +239,25 @@ Future<void> _pump(
   VoidCallback? onHistoryPressed,
   double textScaleFactor = 1,
   bool settle = true,
+  ValueListenable<bool>? tickerEnabled,
 }) async {
   final composerController = AiDirectQuestionComposerController();
   addTearDown(composerController.dispose);
+  Widget composer = SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: AiDirectQuestionComposer(
+      controller: composerController,
+      onHistoryPressed: onHistoryPressed ?? () {},
+    ),
+  );
+  if (tickerEnabled != null) {
+    composer = ValueListenableBuilder<bool>(
+      valueListenable: tickerEnabled,
+      child: composer,
+      builder: (context, enabled, child) =>
+          TickerMode(enabled: enabled, child: child!),
+    );
+  }
 
   await tester.pumpWidget(
     ProviderScope(
@@ -229,13 +274,7 @@ Future<void> _pump(
         home: Scaffold(
           body: ListenableBuilder(
             listenable: composerController.focusNode,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: AiDirectQuestionComposer(
-                controller: composerController,
-                onHistoryPressed: onHistoryPressed ?? () {},
-              ),
-            ),
+            child: composer,
             builder: (context, child) => AppKeyboardAccessoryLayout(
               isActive: composerController.focusNode.hasFocus,
               accessory: AiDirectQuestionKeyboardAccessory(

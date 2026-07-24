@@ -260,8 +260,24 @@ void main() {
     await tester.pump();
 
     final accessory = find.byKey(const Key('ai-direct-keyboard-accessory'));
+    final characterCountText = find.descendant(
+      of: accessory,
+      matching: find.text('0 / 300'),
+    );
+    final submitText = find.descendant(
+      of: accessory,
+      matching: find.text('물어보기'),
+    );
     expect(accessory, findsOneWidget);
     expect(tester.getRect(accessory).bottom, 400);
+    expect(
+      tester.getRect(characterCountText).left,
+      closeTo(tester.getRect(input).left, 0.5),
+    );
+    expect(
+      tester.getRect(submitText).right,
+      closeTo(tester.getRect(input).right, 0.5),
+    );
     expect(
       find.descendant(
         of: find.byKey(const Key('ai-direct-question-composer')),

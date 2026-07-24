@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_answer_input.dart';
-import '../../../core/presentation/widgets/app_header_text_action.dart';
+import '../../../core/presentation/widgets/app_keyboard_accessory.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -26,6 +26,7 @@ class AiFocusedQuestionScreen extends ConsumerStatefulWidget {
 class _AiFocusedQuestionScreenState
     extends ConsumerState<AiFocusedQuestionScreen> {
   final _answerController = TextEditingController();
+  final _answerFocusNode = FocusNode();
   bool _isSubmitting = false;
 
   @override
@@ -39,6 +40,7 @@ class _AiFocusedQuestionScreenState
     _answerController
       ..removeListener(_onAnswerChanged)
       ..dispose();
+    _answerFocusNode.dispose();
     super.dispose();
   }
 
@@ -50,10 +52,20 @@ class _AiFocusedQuestionScreenState
   Widget build(BuildContext context) {
     final flow = ref.watch(aiFocusedQuestionControllerProvider);
     final history = ref.watch(aiFocusedQuestionHistoryProvider);
+    final value = flow.asData?.value;
+    final question = value?.status == AiFocusedQuestionStatus.answering
+        ? value?.question
+        : null;
+    final normalizedAnswer = _answerController.text.trim();
+    final characterCount = _answerController.text.characters.length;
+    final canSubmit =
+        question != null &&
+        !_isSubmitting &&
+        normalizedAnswer.isNotEmpty &&
+        characterCount <= 500;
 
-    return SettingsPageLayout(
+    final page = SettingsPageLayout(
       title: '집중 질문',
-      action: _buildHeaderAction(flow),
       onBackPressed: () {
         ref.invalidate(aiLearningControllerProvider);
         if (context.canPop()) {
@@ -76,30 +88,34 @@ class _AiFocusedQuestionScreenState
         data: (flow) => _buildFlow(flow, history),
       ),
     );
-  }
 
-  Widget? _buildHeaderAction(AsyncValue<AiFocusedQuestionFlow> flow) {
-    final value = flow.asData?.value;
-    final question = value?.status == AiFocusedQuestionStatus.answering
-        ? value?.question
-        : null;
-    if (question == null) {
-      return null;
-    }
-
-    final normalizedAnswer = _answerController.text.trim();
-    final characterCount = _answerController.text.characters.length;
-    final canSubmit =
-        !_isSubmitting && normalizedAnswer.isNotEmpty && characterCount <= 500;
-
-    return AppHeaderTextAction(
-      key: const Key('ai-focused-submit'),
-      label: '다음',
-      loadingLabel: '처리 중',
-      enabled: canSubmit,
-      isLoading: _isSubmitting,
-      onPressed: () =>
-          _submitAnswer(questionId: question.id, answerText: normalizedAnswer),
+    return ListenableBuilder(
+      listenable: _answerFocusNode,
+      child: page,
+      builder: (context, child) => AppKeyboardAccessoryLayout(
+        isActive: question != null && _answerFocusNode.hasFocus,
+        accessory: AppTextInputKeyboardAccessory(
+          characterCountKey: const Key('ai-focused-character-count'),
+          characterCount: characterCount,
+          maxLength: 500,
+          actionKey: const Key('ai-focused-submit'),
+          actionLabel: '다음',
+          loadingLabel: '처리 중',
+          enabled: canSubmit,
+          isLoading: _isSubmitting,
+          horizontalPadding: 20,
+          onPressed: () {
+            if (question == null) {
+              return;
+            }
+            _submitAnswer(
+              questionId: question.id,
+              answerText: normalizedAnswer,
+            );
+          },
+        ),
+        child: child!,
+      ),
     );
   }
 
@@ -131,12 +147,9 @@ class _AiFocusedQuestionScreenState
     AsyncValue<List<AiFocusedQuestionHistoryEntry>> history,
   ) {
     final question = flow.question!;
-    final characterCount = _answerController.text.characters.length;
-    final keyboardVisible = View.of(context).viewInsets.bottom > 0;
-
-    final content = ListView(
+    return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.only(bottom: keyboardVisible ? 48 : 32),
+      padding: const EdgeInsets.only(bottom: 32),
       children: [
         _FocusedQuestionProgressView(progress: flow.progress),
         const SizedBox(height: 44),
@@ -159,38 +172,13 @@ class _AiFocusedQuestionScreenState
         AppAnswerInput(
           key: const Key('ai-focused-answer-input'),
           controller: _answerController,
+          focusNode: _answerFocusNode,
           enabled: !_isSubmitting,
           minLines: 5,
           maxLines: 8,
           maxLength: 500,
         ),
-        if (!keyboardVisible)
-          AppAnswerCharacterCount(
-            key: const Key('ai-focused-character-count'),
-            characterCount: characterCount,
-            maxLength: 500,
-          ),
         _FocusedQuestionHistory(history: history),
-      ],
-    );
-
-    return Stack(
-      children: [
-        Positioned.fill(child: content),
-        if (keyboardVisible)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: ColoredBox(
-              color: AppColors.background,
-              child: AppAnswerCharacterCount(
-                key: const Key('ai-focused-character-count'),
-                characterCount: characterCount,
-                maxLength: 500,
-              ),
-            ),
-          ),
       ],
     );
   }

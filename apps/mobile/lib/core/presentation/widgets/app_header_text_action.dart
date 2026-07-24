@@ -10,6 +10,8 @@ class AppHeaderTextAction extends StatelessWidget {
     required this.enabled,
     required this.isLoading,
     required this.onPressed,
+    this.alignment = Alignment.center,
+    this.padding = const EdgeInsets.symmetric(horizontal: 8),
   });
 
   final String label;
@@ -17,6 +19,8 @@ class AppHeaderTextAction extends StatelessWidget {
   final bool enabled;
   final bool isLoading;
   final VoidCallback onPressed;
+  final AlignmentGeometry alignment;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -33,17 +37,20 @@ class AppHeaderTextAction extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: AppColors.textPrimary,
             disabledForegroundColor: AppColors.textPlaceholder,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: padding,
           ),
-          child: isLoading
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(
-                    color: AppColors.textPrimary,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Text(label),
+          child: Align(
+            alignment: alignment,
+            child: isLoading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      color: AppColors.textPrimary,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(label),
+          ),
         ),
       ),
     );

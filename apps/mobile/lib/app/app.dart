@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/date/today_controller.dart';
+import '../core/presentation/widgets/app_keyboard_dismiss_scope.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_status.dart';
@@ -246,6 +247,8 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.light,
       routerConfig: router,
+      builder: (context, child) =>
+          AppKeyboardDismissScope(child: child ?? const SizedBox.shrink()),
     );
   }
 

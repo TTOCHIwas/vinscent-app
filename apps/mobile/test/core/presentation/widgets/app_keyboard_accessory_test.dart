@@ -45,6 +45,10 @@ void main() {
   testWidgets('shows a reusable character count and text action', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     var pressed = false;
 
     await tester.pumpWidget(
@@ -53,11 +57,13 @@ void main() {
           body: AppTextInputKeyboardAccessory(
             characterCount: 12,
             maxLength: 300,
+            characterCountKey: const Key('test-character-count'),
             actionKey: const Key('test-text-action'),
             actionLabel: '저장',
             loadingLabel: '저장 중',
             enabled: true,
             isLoading: false,
+            horizontalPadding: 12,
             onPressed: () => pressed = true,
           ),
         ),
@@ -70,6 +76,49 @@ void main() {
     await tester.tap(find.byKey(const Key('test-text-action')));
 
     expect(pressed, isTrue);
+  });
+
+  testWidgets('aligns the visible count and action to equal side margins', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AppTextInputKeyboardAccessory(
+            characterCount: 12,
+            maxLength: 300,
+            characterCountKey: const Key('test-character-count'),
+            actionKey: const Key('test-text-action'),
+            actionLabel: '저장',
+            loadingLabel: '저장 중',
+            enabled: true,
+            isLoading: false,
+            horizontalPadding: 12,
+            onPressed: () {},
+          ),
+        ),
+      ),
+    );
+
+    final countText = find.descendant(
+      of: find.byKey(const Key('test-character-count')),
+      matching: find.text('12 / 300'),
+    );
+    final actionText = find.descendant(
+      of: find.byKey(const Key('test-text-action')),
+      matching: find.byType(Text),
+    );
+    final surfaceWidth = tester.getSize(find.byType(Scaffold)).width;
+
+    expect(
+      tester.getRect(countText).left,
+      closeTo(surfaceWidth - tester.getRect(actionText).right, 0.5),
+    );
   });
 }
 

@@ -127,13 +127,15 @@ class _StoryCardTextInputOverlayState extends State<StoryCardTextInputOverlay> {
               left: 16,
               right: 16,
               bottom: keyboardInset + 12,
-              child: _StoryCardTextColorPalette(
-                selectedColor: _selectedColor,
-                onColorChanged: (color) {
-                  setState(() {
-                    _selectedColor = color;
-                  });
-                },
+              child: TextFieldTapRegion(
+                child: _StoryCardTextColorPalette(
+                  selectedColor: _selectedColor,
+                  onColorChanged: (color) {
+                    setState(() {
+                      _selectedColor = color;
+                    });
+                  },
+                ),
               ),
             ),
           ],

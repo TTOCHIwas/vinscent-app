@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/widgets/character_speech_bubble.dart';
+import '../../../../core/presentation/widgets/character_speech_row.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -69,25 +70,10 @@ class AiCharacterSpeechRow extends StatelessWidget {
             child: _content,
           );
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maximumContentWidth),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CoupleCharacterAvatar(key: characterKey, size: characterSize),
-            Flexible(
-              fit: FlexFit.loose,
-              child: Semantics(
-                label: label,
-                excludeSemantics: true,
-                child: bubble,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return CharacterSpeechRow(
+      maximumContentWidth: maximumContentWidth,
+      character: CoupleCharacterAvatar(key: characterKey, size: characterSize),
+      bubble: Semantics(label: label, excludeSemantics: true, child: bubble),
     );
   }
 }

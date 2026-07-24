@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/app_keyboard_accessory.dart';
 import 'package:vinscent/features/ai/application/ai_focused_question_controller.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
@@ -17,20 +18,7 @@ void main() {
     expect(find.byKey(const Key('ai-focused-my-progress')), findsOneWidget);
     expect(find.byKey(const Key('ai-focused-couple-progress')), findsOneWidget);
     expect(find.byKey(const Key('ai-focused-answer-input')), findsOneWidget);
-    expect(find.byKey(const Key('ai-focused-submit')), findsOneWidget);
-    expect(
-      tester.getCenter(find.byKey(const Key('ai-focused-submit'))).dy,
-      lessThan(
-        tester.getTopLeft(find.byKey(const Key('ai-focused-answer-input'))).dy,
-      ),
-    );
-    expect(
-      find.descendant(
-        of: find.byType(SettingsPageHeader),
-        matching: find.byKey(const Key('ai-focused-submit')),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('ai-focused-submit')), findsNothing);
   });
 
   testWidgets('wraps a long question at a large system text size', (
@@ -60,10 +48,53 @@ void main() {
 
     await _pump(tester, _flow());
 
+    final input = find.byKey(const Key('ai-focused-answer-input'));
+    await tester.tap(input);
+    await tester.pump();
+
     final characterCount = find.byKey(const Key('ai-focused-character-count'));
+    final answerField = find.descendant(
+      of: input,
+      matching: find.byType(TextField),
+    );
+    final characterCountText = find.descendant(
+      of: characterCount,
+      matching: find.byType(Text),
+    );
+    final submitText = find.text('다음');
     expect(characterCount, findsOneWidget);
+    expect(find.byKey(const Key('ai-focused-submit')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppKeyboardAccessoryBar),
+        matching: characterCount,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppKeyboardAccessoryBar),
+        matching: find.byKey(const Key('ai-focused-submit')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SettingsPageHeader),
+        matching: find.byKey(const Key('ai-focused-submit')),
+      ),
+      findsNothing,
+    );
     final characterCountRect = tester.getRect(characterCount);
     expect(characterCountRect.bottom, lessThanOrEqualTo(400));
+    expect(
+      tester.getRect(characterCountText).left,
+      closeTo(tester.getRect(answerField).left, 0.5),
+    );
+    expect(
+      tester.getRect(submitText).right,
+      closeTo(tester.getRect(answerField).right, 0.5),
+    );
   });
 
   testWidgets('keeps input focus when the keyboard inset changes', (
@@ -95,7 +126,7 @@ void main() {
     expect(
       find.ancestor(
         of: find.byKey(const Key('ai-focused-character-count')),
-        matching: find.byType(Positioned),
+        matching: find.byType(AppKeyboardAccessoryBar),
       ),
       findsOneWidget,
     );

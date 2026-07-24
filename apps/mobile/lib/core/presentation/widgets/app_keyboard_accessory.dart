@@ -49,7 +49,8 @@ class _AppKeyboardAccessoryLayoutState extends State<AppKeyboardAccessoryLayout>
     return Column(
       children: [
         Expanded(child: widget.child),
-        if (widget.isActive && keyboardVisible) widget.accessory,
+        if (widget.isActive && keyboardVisible)
+          TextFieldTapRegion(child: widget.accessory),
       ],
     );
   }
@@ -94,6 +95,7 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
     required this.enabled,
     required this.isLoading,
     required this.onPressed,
+    required this.horizontalPadding,
     this.characterCountKey,
     this.actionKey,
   });
@@ -105,12 +107,14 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
   final bool enabled;
   final bool isLoading;
   final VoidCallback onPressed;
+  final double horizontalPadding;
   final Key? characterCountKey;
   final Key? actionKey;
 
   @override
   Widget build(BuildContext context) {
     return AppKeyboardAccessoryBar(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 2),
       child: Row(
         children: [
           Expanded(
@@ -128,6 +132,8 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
             enabled: enabled,
             isLoading: isLoading,
             onPressed: onPressed,
+            alignment: Alignment.centerRight,
+            padding: EdgeInsets.zero,
           ),
         ],
       ),

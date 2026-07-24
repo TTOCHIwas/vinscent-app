@@ -131,14 +131,21 @@ class _DirectQuestionGuideState extends State<_DirectQuestionGuide> {
 
   Timer? _messageTimer;
   var _messageIndex = 0;
+  bool? _tickerEnabled;
 
   List<String> get _messages => widget.remainingCount > 0
       ? ['나에게 궁금한 걸 물어봐!', '오늘 ${widget.remainingCount}번 더 물어볼 수 있어']
       : const ['오늘 질문은 모두 사용했어! 내일 다시 물어봐!'];
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final tickerEnabled = TickerMode.valuesOf(context).enabled;
+    if (_tickerEnabled == tickerEnabled) {
+      return;
+    }
+
+    _tickerEnabled = tickerEnabled;
     _restartTimer();
   }
 
@@ -161,7 +168,7 @@ class _DirectQuestionGuideState extends State<_DirectQuestionGuide> {
 
   void _restartTimer() {
     _messageTimer?.cancel();
-    if (_messages.length < 2) {
+    if (_tickerEnabled != true || _messages.length < 2) {
       return;
     }
 

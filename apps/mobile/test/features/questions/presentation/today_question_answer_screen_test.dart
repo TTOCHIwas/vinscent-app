@@ -735,6 +735,14 @@ void main() {
       final saveBar = find.byKey(const Key('answer-save-bar'));
       final characterCount = find.byKey(const Key('answer-character-count'));
       final saveAction = find.byKey(const Key('answer-save-action'));
+      final characterCountText = find.descendant(
+        of: characterCount,
+        matching: find.text('0 / 500'),
+      );
+      final saveText = find.descendant(
+        of: saveAction,
+        matching: find.text('저장'),
+      );
       final textFieldRect = tester.getRect(find.byType(TextField));
       final saveBarRect = tester.getRect(saveBar);
       final screenHeight =
@@ -751,6 +759,11 @@ void main() {
       );
       expect(saveBarRect.top, greaterThanOrEqualTo(textFieldRect.bottom));
       expect(saveBarRect.bottom, screenHeight - keyboardHeight);
+      expect(
+        tester.getRect(characterCountText).left,
+        closeTo(textFieldRect.left, 0.5),
+      );
+      expect(tester.getRect(saveText).right, closeTo(textFieldRect.right, 0.5));
       expect(tester.takeException(), isNull);
     });
 

@@ -37,6 +37,7 @@ class AiDirectQuestionKeyboardAccessory extends ConsumerWidget {
           loadingLabel: '질문 보내는 중',
           enabled: canSubmit,
           isLoading: controller.isSubmitting,
+          horizontalPadding: 24,
           onPressed: () => _submitQuestion(context, ref),
         );
       },
