@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../assets/app_icons.dart';
 import '../../presentation/widgets/app_svg_icon.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
 import '../app_drawing.dart';
 import '../app_drawing_style.dart';
 
@@ -235,7 +236,7 @@ class _StrokeWidthSlider extends StatelessWidget {
 
     return Row(
       children: [
-        const Text('굵기', style: TextStyle(color: Colors.white, fontSize: 13)),
+        const Text('굵기', style: AppTextStyles.drawingToolLabel),
         const SizedBox(width: 10),
         SizedBox.square(
           dimension: 44,

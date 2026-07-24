@@ -6,6 +6,7 @@ import '../../../../core/presentation/widgets/app_action_button.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../application/ai_learning_controller.dart';
 import '../../data/ai_learning_dashboard.dart';
 import '../ai_direct_question_composer_controller.dart';
@@ -91,7 +92,7 @@ class _FocusedQuestionSection extends ConsumerWidget {
       children: [
         Text(
           '집중 질문',
-          style: AppTextStyles.homeBodyMedium.copyWith(fontSize: 18),
+          style: AppTypography.withFontSize(AppTextStyles.homeBodyMedium, 18),
         ),
         const SizedBox(height: 8),
         WordBoundaryText(
@@ -267,8 +268,9 @@ class _DashboardNavigationRow extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles.homeBodyMedium.copyWith(
-                        fontSize: 18,
+                      style: AppTypography.withFontSize(
+                        AppTextStyles.homeBodyMedium,
+                        18,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -451,22 +453,12 @@ Future<void> _showConsentSheet(BuildContext context, WidgetRef ref) async {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'AI 학습 안내',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                  letterSpacing: 0,
-                ),
-              ),
+              const Text('AI 학습 안내', style: AppTextStyles.pageTitle),
               const SizedBox(height: 16),
               Text(
                 '두 사람이 모두 동의하면 질문과 답변을 Google Gemini로 분석해 개인과 커플의 기억 후보를 만듭니다. 기억은 확인한 뒤에만 활성화되며 언제든 학습을 중지할 수 있습니다.',
                 style: AppTextStyles.homeBody.copyWith(
                   color: AppColors.textMuted,
-                  height: 1.55,
                 ),
               ),
               const SizedBox(height: 24),

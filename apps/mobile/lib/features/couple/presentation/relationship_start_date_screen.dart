@@ -35,7 +35,6 @@ class RelationshipStartDateScreen extends ConsumerWidget {
                 '둘만의 디데이와 기록은 이 날짜를 기준으로 보여줄게요.',
                 style: AppTextStyles.homeBody.copyWith(
                   color: AppColors.textMuted,
-                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 36),
@@ -77,15 +76,7 @@ class RelationshipStartDateScreen extends ConsumerWidget {
               ),
               if (state.errorMessage != null) ...[
                 const SizedBox(height: 14),
-                Text(
-                  state.errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
-                ),
+                Text(state.errorMessage!, style: AppTextStyles.compactError),
               ],
               const Spacer(),
               CoupleActionButton(

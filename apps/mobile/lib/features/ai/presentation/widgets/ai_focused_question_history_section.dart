@@ -20,16 +20,7 @@ class AiFocusedQuestionHistorySection extends StatelessWidget {
       key: const Key('ai-focused-history'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const WordBoundaryText(
-          '함께 답한 기록',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            height: 1.4,
-            letterSpacing: 0,
-          ),
-        ),
+        const WordBoundaryText('함께 답한 기록', style: AppTextStyles.sectionTitle),
         const SizedBox(height: 8),
         for (var index = 0; index < entries.length; index++) ...[
           _FocusedQuestionHistoryRow(entry: entries[index]),

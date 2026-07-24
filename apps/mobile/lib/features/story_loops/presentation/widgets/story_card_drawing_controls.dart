@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/assets/app_icons.dart';
 import '../../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../data/story_card_scene.dart';
 import 'story_card_editor_icon_button.dart';
 
@@ -120,10 +121,7 @@ class StoryCardDrawingControls extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Text(
-                  '굵기',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                ),
+                const Text('굵기', style: AppTextStyles.drawingToolLabel),
                 const SizedBox(width: 10),
                 SizedBox.square(
                   dimension: 44,

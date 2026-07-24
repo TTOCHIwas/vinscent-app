@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../application/onboarding_controller.dart';
 import '../application/onboarding_state.dart';
 import 'widgets/birth_date_picker_sheet.dart';
@@ -59,15 +60,7 @@ class OnboardingScreen extends ConsumerWidget {
                 ),
               ),
               if (state.errorMessage != null) ...[
-                Text(
-                  state.errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
-                ),
+                Text(state.errorMessage!, style: AppTextStyles.compactError),
                 const SizedBox(height: 10),
               ],
               OnboardingActionButton(

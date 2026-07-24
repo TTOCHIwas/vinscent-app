@@ -43,11 +43,7 @@ class QuestionDetailHeader extends StatelessWidget {
           if (assignedDate != null)
             Text(
               _formatQuestionDate(assignedDate),
-              style: AppTextStyles.shellTitle.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
-              ),
+              style: AppTextStyles.pageTitle,
             ),
           if (action case final action?)
             Positioned(

@@ -30,16 +30,7 @@ class AiMemorySection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Expanded(
-              child: Text(
-                '이렇게 기억했어',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                  letterSpacing: 0,
-                ),
-              ),
+              child: Text('이렇게 기억했어', style: AppTextStyles.sectionTitle),
             ),
             if (pendingReviewCount case final count?) ...[
               const SizedBox(width: 12),

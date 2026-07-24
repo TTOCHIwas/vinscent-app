@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
+import 'package:vinscent/core/theme/app_theme.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
@@ -32,6 +34,53 @@ import '../../../support/story_loop_fixtures.dart';
 import '../../../support/text_finders.dart';
 
 void main() {
+  testWidgets('keeps the date label inside its marker when text is enlarged', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ko'),
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        supportedLocales: const [Locale('ko')],
+        theme: AppTheme.light,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(1.3)),
+          child: child!,
+        ),
+        home: Center(
+          child: SizedBox(
+            width: 52,
+            height: 72,
+            child: CalendarMonthStoryCell(
+              date: DateTime(2026, 5, 10),
+              textColor: AppColors.textPrimary,
+              isSelected: true,
+              summary: null,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final textFinder = find.text('10');
+    final text = tester.widget<Text>(textFinder);
+    final context = tester.element(textFinder);
+    final style = DefaultTextStyle.of(context).style.merge(text.style);
+    final painter = TextPainter(
+      text: TextSpan(text: '10', style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    addTearDown(painter.dispose);
+
+    expect(text.style?.height, 1);
+    expect(painter.height, lessThanOrEqualTo(16));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('selects today and loads its detail on entry', (tester) async {
     final repository = FakeStoryLoopReadRepository(
       details: {DateTime(2026, 5, 10): _todayPendingDetail},

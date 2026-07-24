@@ -91,7 +91,7 @@ class _LabeledFeedback extends StatelessWidget {
           const SizedBox(height: 8),
           WordBoundaryText(
             feedback.feedbackText,
-            style: AppTextStyles.homeBodyMedium.copyWith(height: 1.55),
+            style: AppTextStyles.homeBodyMedium,
           ),
         ],
       ),

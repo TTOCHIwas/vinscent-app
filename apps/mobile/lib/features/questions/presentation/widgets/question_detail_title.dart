@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_typography.dart';
 
 class QuestionDetailTitle extends StatelessWidget {
   const QuestionDetailTitle({super.key, required this.questionText});
@@ -19,10 +20,7 @@ class QuestionDetailTitle extends StatelessWidget {
           questionText,
           key: const Key('question-detail-title'),
           textAlign: TextAlign.center,
-          style: AppTextStyles.homeBodyMedium.copyWith(
-            fontSize: 18,
-            height: 1.5,
-          ),
+          style: AppTypography.withFontSize(AppTextStyles.homeBodyMedium, 18),
         ),
       ),
     );

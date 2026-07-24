@@ -377,7 +377,7 @@ class _CameraUnavailable extends StatelessWidget {
               ? '카메라를 준비하고 있어요.'
               : '카메라를 사용할 수 없어요.\n갤러리, 텍스트 또는 그리기로 시작해 주세요.',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white, height: 1.5),
+          style: const TextStyle(color: Colors.white),
         ),
       ),
     );

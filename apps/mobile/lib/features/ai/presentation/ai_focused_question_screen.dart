@@ -7,6 +7,7 @@ import '../../../core/presentation/widgets/app_keyboard_accessory.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/ai_focused_question_controller.dart';
 import '../application/ai_learning_controller.dart';
@@ -156,9 +157,9 @@ class _AiFocusedQuestionScreenState
         WordBoundaryText(
           question.text,
           key: const Key('ai-focused-question-text'),
-          style: AppTextStyles.homeQuestionBubble.copyWith(
-            fontSize: 24,
-            height: 1.5,
+          style: AppTypography.withFontSize(
+            AppTextStyles.homeQuestionBubble,
+            24,
           ),
         ),
         if (question.partnerAnswered) ...[

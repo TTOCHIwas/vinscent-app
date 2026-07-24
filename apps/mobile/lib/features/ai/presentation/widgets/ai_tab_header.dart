@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 
 class AiTabHeader extends StatelessWidget {
   const AiTabHeader({super.key});
@@ -19,13 +19,7 @@ class AiTabHeader extends StatelessWidget {
           child: WordBoundaryText(
             '우리 둘의 AI',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-              letterSpacing: 0,
-            ),
+            style: AppTextStyles.pageTitle,
           ),
         ),
       ),

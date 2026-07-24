@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 
 enum _ShellRootBackAction { confirmExit, returnHome }
 
@@ -24,7 +25,7 @@ class ShellRootBackScope extends StatefulWidget {
     fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 20 / 14,
-    letterSpacing: 0,
+    letterSpacing: 14 * AppTypography.letterSpacingRatio,
   );
 
   final Widget child;

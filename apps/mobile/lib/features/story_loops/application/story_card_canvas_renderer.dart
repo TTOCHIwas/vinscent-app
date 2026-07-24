@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_typography.dart';
 import '../data/story_card_scene.dart';
 
 abstract final class StoryCardCanvasRenderer {
@@ -80,15 +81,16 @@ abstract final class StoryCardCanvasRenderer {
       return;
     }
 
+    final fontSize = size.width * storyCardCaptionFontSizeRatio;
     final painter = TextPainter(
       text: TextSpan(
         text: caption,
         style: TextStyle(
           color: const Color(0xFF222222),
-          fontSize: size.width * storyCardCaptionFontSizeRatio,
+          fontSize: fontSize,
           fontWeight: FontWeight.w500,
-          height: 1.3,
-          letterSpacing: 0,
+          height: AppTypography.bodyLineHeight,
+          letterSpacing: AppTypography.letterSpacingFor(fontSize),
         ),
       ),
       textAlign: TextAlign.center,
@@ -165,13 +167,16 @@ abstract final class StoryCardCanvasRenderer {
     StoryCardTextLayer layer,
   ) {
     final textWidth = size.width * 0.72;
+    final fontSize = size.width * storyCardTextFontSizeRatio;
     final painter = TextPainter(
       text: TextSpan(
         text: layer.text,
-        style: AppTextStyles.homeBodyMedium.copyWith(
-          color: layer.color,
-          fontSize: size.width * storyCardTextFontSizeRatio,
-          shadows: const [],
+        style: AppTypography.withFontSize(
+          AppTextStyles.homeBodyMedium.copyWith(
+            color: layer.color,
+            shadows: const [],
+          ),
+          fontSize,
         ),
       ),
       textAlign: TextAlign.center,

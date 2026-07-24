@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/date/today_controller.dart';
 import '../core/presentation/widgets/app_keyboard_dismiss_scope.dart';
@@ -246,6 +247,8 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.light,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('ko')],
       routerConfig: router,
       builder: (context, child) =>
           AppKeyboardDismissScope(child: child ?? const SizedBox.shrink()),

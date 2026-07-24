@@ -243,17 +243,13 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
 }
 
 TextStyle _boxedBodyStyle(bool isMuted) {
-  return (isMuted
-          ? AppTextStyles.homeCharacterLabel.copyWith(
-              color: AppColors.textMuted,
-            )
-          : AppTextStyles.homeBody)
-      .copyWith(height: 1.45);
+  return isMuted
+      ? AppTextStyles.homeCharacterLabel.copyWith(color: AppColors.textMuted)
+      : AppTextStyles.homeBody;
 }
 
 TextStyle _plainBodyStyle(bool isMuted) {
   return AppTextStyles.homeCharacterLabel.copyWith(
     color: isMuted ? AppColors.textMuted : AppColors.textPrimary,
-    height: 1.45,
   );
 }

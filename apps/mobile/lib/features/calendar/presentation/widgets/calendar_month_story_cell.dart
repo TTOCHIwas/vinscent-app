@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../story_loops/data/story_loop_card_preview.dart';
 import '../../../story_loops/data/story_card_scene.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
@@ -47,11 +48,15 @@ class CalendarMonthStoryCell extends StatelessWidget {
               child: Center(
                 child: Text(
                   '${date.day}',
-                  style: AppTextStyles.homeCharacterLabel.copyWith(
-                    color: isSelected ? AppColors.textInverse : textColor,
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    height: 1,
+                  style: AppTypography.applyToStyle(
+                    AppTextStyles.homeCharacterLabel.copyWith(
+                      color: isSelected ? AppColors.textInverse : textColor,
+                      fontSize: 11,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      height: 1,
+                    ),
                   ),
                 ),
               ),

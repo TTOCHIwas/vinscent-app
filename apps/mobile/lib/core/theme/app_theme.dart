@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_typography.dart';
 
 class AppTheme {
   const AppTheme._();
@@ -54,6 +56,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: _lightColorScheme,
+      typography: _typographyFor(_lightColorScheme),
       scaffoldBackgroundColor: AppColors.background,
       appBarTheme: const AppBarTheme(centerTitle: false),
       cardTheme: CardThemeData(
@@ -68,8 +71,18 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: _darkColorScheme,
+      typography: _typographyFor(_darkColorScheme),
       scaffoldBackgroundColor: _darkSurface,
       appBarTheme: const AppBarTheme(centerTitle: false),
+    );
+  }
+
+  static Typography _typographyFor(ColorScheme colorScheme) {
+    return AppTypography.applyToTypography(
+      Typography.material2021(
+        platform: defaultTargetPlatform,
+        colorScheme: colorScheme,
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../application/story_card_canvas_renderer.dart';
 import '../../application/story_card_editor_session.dart';
 import '../../data/story_card_scene.dart';
@@ -125,11 +126,14 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                                 child: Text(
                                   layer.text,
                                   textAlign: TextAlign.center,
-                                  style: AppTextStyles.homeBodyMedium.copyWith(
-                                    color: layer.color,
-                                    fontSize:
-                                        size.width * storyCardTextFontSizeRatio,
-                                    shadows: const [],
+                                  style: AppTypography.applyToStyle(
+                                    AppTextStyles.homeBodyMedium.copyWith(
+                                      color: layer.color,
+                                      fontSize:
+                                          size.width *
+                                          storyCardTextFontSizeRatio,
+                                      shadows: const [],
+                                    ),
                                   ),
                                 ),
                               ),

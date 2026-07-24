@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_text_styles.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../profile/application/profile_controller.dart';
@@ -26,10 +27,7 @@ class BootScreen extends ConsumerWidget {
                       const Text(
                         '정보를 불러오지 못했어요.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTextStyles.sectionTitle,
                       ),
                       const SizedBox(height: 12),
                       const Text(

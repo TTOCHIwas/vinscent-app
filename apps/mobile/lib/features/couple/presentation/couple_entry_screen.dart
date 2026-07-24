@@ -30,7 +30,6 @@ class CoupleEntryScreen extends ConsumerWidget {
                 '초대 코드를 만들거나 상대방의 코드를 입력하면 커플 공간이 연결돼요.',
                 style: AppTextStyles.homeBody.copyWith(
                   color: AppColors.textMuted,
-                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 36),
@@ -63,20 +62,12 @@ class CoupleEntryScreen extends ConsumerWidget {
               ),
               if (state.errorMessage != null) ...[
                 const SizedBox(height: 14),
-                Text(
-                  state.errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
-                ),
+                Text(state.errorMessage!, style: AppTextStyles.compactError),
               ],
               const Spacer(),
               Text(
                 '연결 후 질문, 답변, 캐릭터, AI 기억은 모두 이 커플 공간에 저장돼요.',
-                style: AppTextStyles.onboardingHint.copyWith(height: 1.5),
+                style: AppTextStyles.onboardingHint,
               ),
             ],
           ),

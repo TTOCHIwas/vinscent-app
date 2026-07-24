@@ -36,7 +36,6 @@ class CoupleWaitingScreen extends ConsumerWidget {
                 '아래 코드를 상대방에게 알려주세요. 상대방이 입력하면 자동으로 다음 단계로 이동해요.',
                 style: AppTextStyles.homeBody.copyWith(
                   color: AppColors.textMuted,
-                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 36),
@@ -57,15 +56,7 @@ class CoupleWaitingScreen extends ConsumerWidget {
               ),
               const Spacer(),
               if (state.errorMessage != null) ...[
-                Text(
-                  state.errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
-                ),
+                Text(state.errorMessage!, style: AppTextStyles.compactError),
                 const SizedBox(height: 12),
               ],
               CoupleActionButton(

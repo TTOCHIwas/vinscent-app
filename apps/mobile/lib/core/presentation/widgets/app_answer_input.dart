@@ -58,7 +58,7 @@ class AppAnswerInput extends StatelessWidget {
       keyboardType: TextInputType.multiline,
       textInputAction: TextInputAction.newline,
       textAlignVertical: TextAlignVertical.top,
-      style: AppTextStyles.homeBody.copyWith(height: 1.55),
+      style: AppTextStyles.homeBody,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: AppTextStyles.homeBody.copyWith(

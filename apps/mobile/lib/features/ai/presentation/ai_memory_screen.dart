@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/ai_learning_controller.dart';
 import '../data/ai_learning_dashboard.dart';
@@ -124,7 +125,10 @@ class _MemoryGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTextStyles.homeBodyMedium.copyWith(fontSize: 18)),
+        Text(
+          title,
+          style: AppTypography.withFontSize(AppTextStyles.homeBodyMedium, 18),
+        ),
         const SizedBox(height: 8),
         for (var index = 0; index < memories.length; index++) ...[
           Padding(
