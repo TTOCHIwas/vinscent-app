@@ -104,6 +104,53 @@ void main() {
       await confirmation;
     },
   );
+
+  test(
+    'serializes memory confirmations and preserves the latest dashboard',
+    () async {
+      final firstDecisionGate = Completer<void>();
+      final repository = _SerialMemoryDecisionRepository(
+        firstDecisionGate: firstDecisionGate,
+      );
+      final container = ProviderContainer(
+        overrides: [aiLearningRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        aiLearningControllerProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await container.read(aiLearningControllerProvider.future);
+      final controller = container.read(aiLearningControllerProvider.notifier);
+      final firstConfirmation = controller.confirmMemory(
+        memoryId: 'first-memory',
+        decision: AiMemoryDecision.confirmed,
+      );
+      final secondConfirmation = controller.confirmMemory(
+        memoryId: 'second-memory',
+        decision: AiMemoryDecision.rejected,
+      );
+      final secondExpectation = expectLater(
+        secondConfirmation,
+        throwsA(isA<StateError>()),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.startedMemoryIds, ['first-memory']);
+
+      firstDecisionGate.complete();
+      await firstConfirmation;
+      await secondExpectation;
+
+      expect(repository.startedMemoryIds, ['first-memory', 'second-memory']);
+      expect(
+        container.read(aiLearningControllerProvider).value?.memories.single.id,
+        'first-memory',
+      );
+    },
+  );
 }
 
 class _FakeAiLearningRepository implements AiLearningRepository {
@@ -144,6 +191,88 @@ class _FakeAiLearningRepository implements AiLearningRepository {
     String dailyQuestionId,
   ) async {
     return null;
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> fetchFocusedQuestionFlow() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<AiFocusedQuestionHistoryEntry>>
+  fetchFocusedQuestionHistory() async {
+    return const [];
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> submitFocusedQuestionAnswer({
+    required String questionId,
+    required String answerText,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiFocusedQuestionFlow> unlockFocusedQuestions() {
+    throw UnimplementedError();
+  }
+}
+
+class _SerialMemoryDecisionRepository implements AiLearningRepository {
+  _SerialMemoryDecisionRepository({required this.firstDecisionGate});
+
+  final Completer<void> firstDecisionGate;
+  final startedMemoryIds = <String>[];
+  var _dashboardFetchCount = 0;
+
+  @override
+  Future<AiLearningDashboard> fetchDashboard() async {
+    _dashboardFetchCount += 1;
+    return _dashboard(
+      memories: [
+        _dashboardFetchCount == 1
+            ? _pendingMemory
+            : AiMemory(
+                id: 'first-memory',
+                scope: AiMemoryScope.personal,
+                isMine: true,
+                kind: 'personal_value',
+                statement: '첫 번째 기억',
+                confidence: 0.9,
+                state: AiMemoryState.active,
+                myDecision: AiMemoryDecision.confirmed,
+                confirmedCount: 1,
+                requiredConfirmationCount: 1,
+                canConfirm: false,
+                evidenceCount: 1,
+                createdAt: DateTime.utc(2026, 7, 20),
+                updatedAt: DateTime.utc(2026, 7, 20),
+              ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> confirmMemory({
+    required String memoryId,
+    required AiMemoryDecision decision,
+  }) async {
+    startedMemoryIds.add(memoryId);
+    if (memoryId == 'first-memory') {
+      await firstDecisionGate.future;
+      return;
+    }
+    throw StateError('second confirmation failed');
+  }
+
+  @override
+  Future<void> setMyConsent({required bool granted}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiQuestionFeedback?> fetchQuestionFeedback(String dailyQuestionId) {
+    throw UnimplementedError();
   }
 
   @override

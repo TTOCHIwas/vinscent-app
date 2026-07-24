@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/ai_direct_question_history.dart';
 import '../data/ai_direct_question_repository.dart';
+import 'ai_async_operation_queue.dart';
 
 final aiDirectQuestionControllerProvider =
     AsyncNotifierProvider.autoDispose<
@@ -15,7 +16,7 @@ final aiDirectQuestionControllerProvider =
 class AiDirectQuestionController
     extends AsyncNotifier<AiDirectQuestionHistory> {
   Timer? _pollTimer;
-  bool _isRefreshing = false;
+  final _operations = AiAsyncOperationQueue();
 
   @override
   Future<AiDirectQuestionHistory> build() async {
@@ -27,34 +28,34 @@ class AiDirectQuestionController
     return history;
   }
 
-  Future<void> refresh() async {
-    if (_isRefreshing) {
-      return;
-    }
-    _isRefreshing = true;
-    try {
-      final history = await ref
+  Future<void> refresh() {
+    return _operations.run(_reload);
+  }
+
+  Future<void> submitQuestion(String questionText) {
+    return _operations.run(() async {
+      await ref
           .read(aiDirectQuestionRepositoryProvider)
-          .fetchHistory();
-      state = AsyncValue.data(history);
-      _updatePolling(history);
-    } finally {
-      _isRefreshing = false;
-    }
+          .submitQuestion(questionText);
+      await _reload();
+    });
   }
 
-  Future<void> submitQuestion(String questionText) async {
-    await ref
-        .read(aiDirectQuestionRepositoryProvider)
-        .submitQuestion(questionText);
-    await refresh();
+  Future<void> deleteQuestion(String questionId) {
+    return _operations.run(() async {
+      await ref
+          .read(aiDirectQuestionRepositoryProvider)
+          .deleteQuestion(questionId);
+      await _reload();
+    });
   }
 
-  Future<void> deleteQuestion(String questionId) async {
-    await ref
+  Future<void> _reload() async {
+    final history = await ref
         .read(aiDirectQuestionRepositoryProvider)
-        .deleteQuestion(questionId);
-    await refresh();
+        .fetchHistory();
+    state = AsyncValue.data(history);
+    _updatePolling(history);
   }
 
   void _updatePolling(AiDirectQuestionHistory history) {

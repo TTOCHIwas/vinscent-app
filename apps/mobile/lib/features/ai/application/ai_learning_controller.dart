@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/ai_learning_dashboard.dart';
 import '../data/ai_learning_repository.dart';
+import 'ai_async_operation_queue.dart';
 
 final aiLearningControllerProvider =
     AsyncNotifierProvider.autoDispose<
@@ -10,6 +11,8 @@ final aiLearningControllerProvider =
     >(AiLearningController.new, retry: (_, _) => null);
 
 class AiLearningController extends AsyncNotifier<AiLearningDashboard> {
+  final _operations = AiAsyncOperationQueue();
+
   @override
   Future<AiLearningDashboard> build() {
     return ref.read(aiLearningRepositoryProvider).fetchDashboard();
@@ -47,21 +50,23 @@ class AiLearningController extends AsyncNotifier<AiLearningDashboard> {
   Future<void> _runAndReload(
     Future<void> Function() command, {
     bool showLoading = true,
-  }) async {
-    final previousState = state;
-    if (showLoading) {
-      state = const AsyncValue.loading();
-    }
+  }) {
+    return _operations.run(() async {
+      final previousState = state;
+      if (showLoading) {
+        state = const AsyncValue.loading();
+      }
 
-    try {
-      await command();
-      final dashboard = await ref
-          .read(aiLearningRepositoryProvider)
-          .fetchDashboard();
-      state = AsyncValue.data(dashboard);
-    } catch (error, stackTrace) {
-      state = previousState;
-      Error.throwWithStackTrace(error, stackTrace);
-    }
+      try {
+        await command();
+        final dashboard = await ref
+            .read(aiLearningRepositoryProvider)
+            .fetchDashboard();
+        state = AsyncValue.data(dashboard);
+      } catch (error, stackTrace) {
+        state = previousState;
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+    });
   }
 }
