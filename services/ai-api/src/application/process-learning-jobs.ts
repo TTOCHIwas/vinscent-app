@@ -11,12 +11,9 @@ import {
   type GeneralQuestionContext,
 } from '../domain/learning-contract.ts';
 import {
-  GeminiOutputError,
-  GeminiProviderError,
-} from '../infrastructure/gemini-structured-generation-client.ts';
-import type {
-  LearningModelPort,
-  LearningModelUsage,
+  LearningModelError,
+  type LearningModelPort,
+  type LearningModelUsage,
 } from './learning-model-port.ts';
 
 export type LearningJobType =
@@ -438,36 +435,16 @@ function classifyFailure(
   error: unknown,
   fallbackUsage: LearningModelUsage,
 ): ClassifiedFailure {
-  if (error instanceof GeminiProviderError) {
+  if (error instanceof LearningModelError) {
     return {
       errorCode: error.code,
       safetyStatus: 'error',
       retryable: error.retryable,
-      providerHttpStatus: error.status,
-      providerErrorStatus: error.providerStatus,
-      providerErrorDetail: error.providerErrorDetail,
+      providerHttpStatus: error.providerHttpStatus,
+      providerErrorStatus: error.providerErrorStatus,
+      providerErrorDetail: error.diagnosticDetail,
       retryAfterMs: error.retryAfterMs,
-      usage: {
-        inputTokenCount: null,
-        outputTokenCount: null,
-        latencyMs: error.latencyMs,
-      },
-    };
-  }
-  if (error instanceof GeminiOutputError) {
-    return {
-      errorCode: error.code,
-      safetyStatus: 'error',
-      retryable: error.retryable,
-      providerHttpStatus: null,
-      providerErrorStatus: null,
-      providerErrorDetail: error.validationDetail,
-      retryAfterMs: null,
-      usage: {
-        inputTokenCount: null,
-        outputTokenCount: null,
-        latencyMs: error.latencyMs,
-      },
+      usage: error.usage,
     };
   }
   if (error instanceof AiRepositoryError) {

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type {
-  LearningModelPort,
-  LearningModelResult,
+import {
+  LearningModelError,
+  type LearningModelPort,
+  type LearningModelResult,
 } from '../src/application/learning-model-port.ts';
 import {
   AiRepositoryError,
@@ -19,10 +20,6 @@ import type {
   DirectQuestionContext,
   GeneralQuestionContext,
 } from '../src/domain/learning-contract.ts';
-import {
-  GeminiOutputError,
-  GeminiProviderError,
-} from '../src/infrastructure/gemini-structured-generation-client.ts';
 
 const completedContext: CompletedQuestionContext = {
   coupleId: 'couple-real-id',
@@ -271,14 +268,18 @@ test('processor records retryable model failures and continues the batch', async
     async generateCoupleFeedback() {
       calls += 1;
       if (calls === 1) {
-        throw new GeminiProviderError({
-          code: 'gemini_rate_limited',
+        throw new LearningModelError({
+          code: 'model_rate_limited',
           retryable: true,
-          status: 429,
-          providerStatus: 'RESOURCE_EXHAUSTED',
-          providerErrorDetail: 'Quota exhausted for this project.',
+          providerHttpStatus: 429,
+          providerErrorStatus: 'RESOURCE_EXHAUSTED',
+          diagnosticDetail: 'Quota exhausted for this project.',
           retryAfterMs: 45_000,
-          latencyMs: 275,
+          usage: {
+            inputTokenCount: null,
+            outputTokenCount: null,
+            latencyMs: 275,
+          },
         });
       }
       return result({ text: '둘의 휴식은 집과 새로운 길 사이를 오가나 봐!' });
@@ -300,7 +301,7 @@ test('processor records retryable model failures and continues the batch', async
     retried: 1,
     failed: 0,
   });
-  assert.equal(repository.failures[0]?.errorCode, 'gemini_rate_limited');
+  assert.equal(repository.failures[0]?.errorCode, 'model_rate_limited');
   assert.equal(repository.failures[0]?.retryable, true);
   assert.equal(repository.failures[0]?.providerHttpStatus, 429);
   assert.equal(
@@ -391,11 +392,16 @@ test('processor records a safe model output validation detail', async () => {
   ]);
   const model = modelWith({
     async extractMemoryCandidates() {
-      throw new GeminiOutputError(
-        undefined,
-        125,
-        'memory.confidence.invalid',
-      );
+      throw new LearningModelError({
+        code: 'model_invalid_output',
+        retryable: false,
+        diagnosticDetail: 'memory.confidence.invalid',
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 125,
+        },
+      });
     },
   });
   const processor = new LearningJobProcessor({
@@ -414,7 +420,7 @@ test('processor records a safe model output validation detail', async () => {
     retried: 0,
     failed: 1,
   });
-  assert.equal(repository.failures[0]?.errorCode, 'gemini_invalid_output');
+  assert.equal(repository.failures[0]?.errorCode, 'model_invalid_output');
   assert.equal(
     repository.failures[0]?.providerErrorDetail,
     'memory.confidence.invalid',

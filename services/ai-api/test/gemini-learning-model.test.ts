@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  LearningModelError,
+} from '../src/application/learning-model-port.ts';
+import {
   GeminiStructuredGenerationClient,
   GeminiOutputError,
   GeminiProviderError,
@@ -378,6 +381,44 @@ test('Gemini client rejects malformed structured output', async () => {
   );
 });
 
+test('Gemini model translates provider failures into the model error contract', async () => {
+  const model = new GeminiLearningModel({
+    async generateStructured() {
+      throw new GeminiProviderError({
+        code: 'gemini_rate_limited',
+        retryable: true,
+        status: 429,
+        providerStatus: 'RESOURCE_EXHAUSTED',
+        providerErrorDetail: 'Quota exhausted for this project.',
+        retryAfterMs: 45_000,
+        latencyMs: 275,
+      });
+    },
+  });
+
+  await assert.rejects(
+    () => model.generateCoupleFeedback(context),
+    (error: unknown) => {
+      assert.ok(error instanceof LearningModelError);
+      assert.equal(error.code, 'model_rate_limited');
+      assert.equal(error.retryable, true);
+      assert.equal(error.providerHttpStatus, 429);
+      assert.equal(error.providerErrorStatus, 'RESOURCE_EXHAUSTED');
+      assert.equal(
+        error.diagnosticDetail,
+        'Quota exhausted for this project.',
+      );
+      assert.equal(error.retryAfterMs, 45_000);
+      assert.deepEqual(error.usage, {
+        inputTokenCount: null,
+        outputTokenCount: null,
+        latencyMs: 275,
+      });
+      return true;
+    },
+  );
+});
+
 test('Gemini model maps memory output without real user identifiers', async () => {
   let capturedPrompt = '';
   const model = new GeminiLearningModel({
@@ -571,12 +612,13 @@ test('memory extraction reports the invalid field without exposing its value', a
   await assert.rejects(
     () => model.extractMemoryCandidates(context),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiOutputError);
-      const validationDetail = (
-        error as GeminiOutputError & { validationDetail?: string }
-      ).validationDetail;
-      assert.equal(validationDetail, 'memory.confidence.invalid');
-      assert.equal(validationDetail?.includes('private-invalid-value'), false);
+      assert.ok(error instanceof LearningModelError);
+      assert.equal(error.code, 'model_invalid_output');
+      assert.equal(error.diagnosticDetail, 'memory.confidence.invalid');
+      assert.equal(
+        error.diagnosticDetail?.includes('private-invalid-value'),
+        false,
+      );
       return true;
     },
   );
@@ -609,7 +651,7 @@ test('memory extraction rejects more than three model candidates', async () => {
 
   await assert.rejects(
     () => model.extractMemoryCandidates(context),
-    (error: unknown) => error instanceof GeminiOutputError,
+    (error: unknown) => error instanceof LearningModelError,
   );
 });
 
@@ -882,8 +924,8 @@ test('Gemini model rejects structurally invalid values after JSON decoding', asy
   await assert.rejects(
     () => model.generateCoupleFeedback(context),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiOutputError);
-      assert.equal(error.code, 'gemini_invalid_output');
+      assert.ok(error instanceof LearningModelError);
+      assert.equal(error.code, 'model_invalid_output');
       return true;
     },
   );

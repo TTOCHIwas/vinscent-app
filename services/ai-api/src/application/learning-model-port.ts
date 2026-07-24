@@ -27,6 +27,52 @@ export interface LearningModelResult<T> {
   usage: LearningModelUsage;
 }
 
+export type LearningModelErrorCode =
+  | 'model_rate_limited'
+  | 'model_unavailable'
+  | 'model_invalid_request'
+  | 'model_auth_failed'
+  | 'model_not_found'
+  | 'model_request_failed'
+  | 'model_timeout'
+  | 'model_network_error'
+  | 'model_invalid_output';
+
+export class LearningModelError extends Error {
+  readonly code: LearningModelErrorCode;
+  readonly retryable: boolean;
+  readonly providerHttpStatus: number | null;
+  readonly providerErrorStatus: string | null;
+  readonly diagnosticDetail: string | null;
+  readonly retryAfterMs: number | null;
+  readonly usage: LearningModelUsage;
+
+  constructor(params: {
+    code: LearningModelErrorCode;
+    retryable: boolean;
+    providerHttpStatus?: number | null;
+    providerErrorStatus?: string | null;
+    diagnosticDetail?: string | null;
+    retryAfterMs?: number | null;
+    usage?: LearningModelUsage;
+    cause?: unknown;
+  }) {
+    super(params.code, { cause: params.cause });
+    this.name = 'LearningModelError';
+    this.code = params.code;
+    this.retryable = params.retryable;
+    this.providerHttpStatus = params.providerHttpStatus ?? null;
+    this.providerErrorStatus = params.providerErrorStatus ?? null;
+    this.diagnosticDetail = params.diagnosticDetail ?? null;
+    this.retryAfterMs = params.retryAfterMs ?? null;
+    this.usage = params.usage ?? {
+      inputTokenCount: null,
+      outputTokenCount: null,
+      latencyMs: 0,
+    };
+  }
+}
+
 export interface CoupleFeedbackGenerationOptions {
   rejectedText: string | null;
 }

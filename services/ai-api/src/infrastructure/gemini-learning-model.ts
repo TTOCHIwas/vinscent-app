@@ -1,8 +1,10 @@
-import type {
-  CoupleFeedbackGenerationOptions,
-  FoundationQuestionRecommendation,
-  LearningModelPort,
-  LearningModelResult,
+import {
+  LearningModelError,
+  type CoupleFeedbackGenerationOptions,
+  type FoundationQuestionRecommendation,
+  type LearningModelErrorCode,
+  type LearningModelPort,
+  type LearningModelResult,
 } from '../application/learning-model-port.ts';
 import type {
   AnonymizedCompletedQuestionContext,
@@ -20,6 +22,8 @@ import type {
 } from '../domain/learning-contract.ts';
 import {
   GeminiOutputError,
+  GeminiProviderError,
+  type StructuredGenerationRequest,
   type StructuredGenerationClient,
   type StructuredGenerationResult,
 } from './gemini-structured-generation-client.ts';
@@ -101,7 +105,7 @@ export class GeminiLearningModel implements LearningModelPort {
     context: AnonymizedCompletedQuestionContext,
     candidates: FoundationQuestionCandidate[],
   ): Promise<LearningModelResult<FoundationQuestionRecommendation>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildFoundationRankingPrompt(context, candidates),
       schema: rankingSchema,
     });
@@ -116,7 +120,7 @@ export class GeminiLearningModel implements LearningModelPort {
   async extractMemoryCandidates(
     context: AnonymizedCompletedQuestionContext,
   ): Promise<LearningModelResult<ModelMemoryCandidate[]>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildMemoryExtractionPrompt(context),
       schema: memorySchema,
     });
@@ -138,7 +142,7 @@ export class GeminiLearningModel implements LearningModelPort {
     context: AnonymizedCompletedQuestionContext,
     options?: CoupleFeedbackGenerationOptions,
   ): Promise<LearningModelResult<CoupleFeedbackCandidate>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildFeedbackPrompt(context, options?.rejectedText ?? null),
       schema: feedbackSchema,
     });
@@ -152,7 +156,7 @@ export class GeminiLearningModel implements LearningModelPort {
   async generateGeneralQuestion(
     context: GeneralQuestionContext,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildGeneralQuestionPrompt(context),
       schema: personalizedQuestionSchema,
     });
@@ -170,7 +174,7 @@ export class GeminiLearningModel implements LearningModelPort {
   async generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildPersonalizedQuestionPrompt(context),
       schema: personalizedQuestionSchema,
     });
@@ -188,7 +192,7 @@ export class GeminiLearningModel implements LearningModelPort {
   async answerDirectQuestion(
     context: DirectQuestionContext,
   ): Promise<LearningModelResult<DirectQuestionAnswer>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildDirectQuestionPrompt(context),
       schema: directQuestionAnswerSchema,
     });
@@ -202,7 +206,7 @@ export class GeminiLearningModel implements LearningModelPort {
   async generateProactiveSuggestion(
     context: ProactiveSuggestionContext,
   ): Promise<LearningModelResult<ProactiveSuggestionCandidate>> {
-    const result = await this.#client.generateStructured({
+    const result = await this.#generateStructured({
       prompt: buildProactiveSuggestionPrompt(context),
       schema: proactiveSuggestionSchema,
     });
@@ -216,6 +220,16 @@ export class GeminiLearningModel implements LearningModelPort {
         ['date_idea', 'card_idea', 'sunset_card'] as const,
       ),
     });
+  }
+
+  async #generateStructured(
+    request: StructuredGenerationRequest,
+  ): Promise<StructuredGenerationResult> {
+    try {
+      return await this.#client.generateStructured(request);
+    } catch (error) {
+      throw translateGeminiError(error);
+    }
   }
 }
 
@@ -677,5 +691,56 @@ function requireEnum<const T extends readonly string[]>(
 }
 
 function throwInvalidOutput(validationDetail: string | null = null): never {
-  throw new GeminiOutputError(undefined, 0, validationDetail);
+  throw new LearningModelError({
+    code: 'model_invalid_output',
+    retryable: false,
+    diagnosticDetail: validationDetail,
+  });
+}
+
+const providerErrorCodes: Record<string, LearningModelErrorCode> = {
+  gemini_rate_limited: 'model_rate_limited',
+  gemini_provider_unavailable: 'model_unavailable',
+  gemini_invalid_request: 'model_invalid_request',
+  gemini_auth_failed: 'model_auth_failed',
+  gemini_model_not_found: 'model_not_found',
+  gemini_request_failed: 'model_request_failed',
+  gemini_timeout: 'model_timeout',
+  gemini_network_error: 'model_network_error',
+};
+
+function translateGeminiError(error: unknown): unknown {
+  if (error instanceof LearningModelError) {
+    return error;
+  }
+  if (error instanceof GeminiProviderError) {
+    return new LearningModelError({
+      code: providerErrorCodes[error.code] ?? 'model_request_failed',
+      retryable: error.retryable,
+      providerHttpStatus: error.status,
+      providerErrorStatus: error.providerStatus,
+      diagnosticDetail: error.providerErrorDetail,
+      retryAfterMs: error.retryAfterMs,
+      usage: {
+        inputTokenCount: null,
+        outputTokenCount: null,
+        latencyMs: error.latencyMs,
+      },
+      cause: error,
+    });
+  }
+  if (error instanceof GeminiOutputError) {
+    return new LearningModelError({
+      code: 'model_invalid_output',
+      retryable: false,
+      diagnosticDetail: error.validationDetail,
+      usage: {
+        inputTokenCount: null,
+        outputTokenCount: null,
+        latencyMs: error.latencyMs,
+      },
+      cause: error,
+    });
+  }
+  return error;
 }

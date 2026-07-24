@@ -5,7 +5,9 @@ This service owns the model-independent learning boundary for Vinscent.
 `LearningModelPort` keeps application and domain code independent from a model
 provider. The deployed `process-ai-learning-jobs` Edge Function currently
 connects that port to Gemini through `GeminiLearningModel`. Replacing the
-provider must not change the job repository or domain contracts.
+provider must not change the job repository or domain contracts. Provider
+adapters translate their native failures into `LearningModelError` before an
+error reaches the application layer.
 
 The database remains authoritative for consent, job claims, memory
 confirmation, feature entitlements, question recommendations, and question
