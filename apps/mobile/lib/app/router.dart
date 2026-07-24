@@ -29,6 +29,7 @@ import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/shell/presentation/app_shell.dart';
+import '../features/shell/presentation/home_tab_frame.dart';
 import '../features/shell/presentation/widgets/shell_root_back_scope.dart';
 import '../features/story_loops/presentation/story_card_editor_screen.dart';
 
@@ -103,121 +104,152 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'storyCardEditor',
         builder: (context, state) => const StoryCardEditorScreen(),
       ),
+      StatefulShellRoute.indexedStack(
+        pageBuilder: (context, state, navigationShell) => MaterialPage<void>(
+          key: state.pageKey,
+          canPop: false,
+          child: AppShell(
+            location: state.uri.path,
+            navigationShell: navigationShell,
+            child: navigationShell,
+          ),
+        ),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                name: 'home',
+                builder: (context, state) => const ShellRootBackScope.home(
+                  child: HomeTabFrame(child: HomeScreen()),
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'character',
+                    redirect: (context, state) => '/settings/character',
+                  ),
+                  GoRoute(
+                    path: 'question',
+                    name: 'todayQuestionAnswer',
+                    builder: (context, state) {
+                      final dateQuery = state.uri.queryParameters['date'];
+                      final targetDate = parseQuestionRouteDate(dateQuery);
+                      return TodayQuestionAnswerScreen(
+                        targetDate: targetDate,
+                        hasInvalidTargetDate: hasInvalidQuestionRouteDate(
+                          dateQuery,
+                        ),
+                      );
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        name: 'todayQuestionAnswerEdit',
+                        builder: (context, state) =>
+                            TodayQuestionAnswerEditScreen(
+                              routeContext: QuestionRouteContext.fromEditUri(
+                                state.uri,
+                              ),
+                            ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'recordings',
+                    name: 'recordingLibrary',
+                    builder: (context, state) => const RecordingLibraryScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'create/:slotIndex',
+                        name: 'recordingSlotCreate',
+                        builder: (context, state) =>
+                            RecordingSlotArtworkEditorScreen.create(
+                              slotIndex:
+                                  int.tryParse(
+                                    state.pathParameters['slotIndex'] ?? '',
+                                  ) ??
+                                  0,
+                            ),
+                      ),
+                      GoRoute(
+                        path: ':slotId/artwork',
+                        name: 'recordingSlotArtworkEditor',
+                        builder: (context, state) =>
+                            RecordingSlotArtworkEditorScreen(
+                              slotId: state.pathParameters['slotId']!,
+                            ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/calendar',
+                name: 'calendar',
+                builder: (context, state) =>
+                    const ShellRootBackScope.secondaryTab(
+                      child: CalendarScreen(),
+                    ),
+                routes: [
+                  GoRoute(
+                    path: 'question',
+                    name: 'calendarQuestionAnswer',
+                    builder: (context, state) {
+                      final dateQuery = state.uri.queryParameters['date'];
+                      final targetDate = parseQuestionRouteDate(dateQuery);
+                      return TodayQuestionAnswerScreen(
+                        targetDate: targetDate,
+                        hasInvalidTargetDate: hasInvalidQuestionRouteDate(
+                          dateQuery,
+                        ),
+                        backLocation: '/calendar',
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/ai',
+                name: 'ai',
+                builder: (context, state) =>
+                    const ShellRootBackScope.secondaryTab(child: AiScreen()),
+                routes: [
+                  GoRoute(
+                    path: 'focused',
+                    name: 'aiFocusedQuestions',
+                    builder: (context, state) =>
+                        const AiFocusedQuestionScreen(),
+                  ),
+                  GoRoute(
+                    path: 'ask',
+                    name: 'aiDirectQuestion',
+                    builder: (context, state) => const AiDirectQuestionScreen(),
+                  ),
+                  GoRoute(
+                    path: 'memories',
+                    name: 'aiMemories',
+                    builder: (context, state) => const AiMemoryScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
       ShellRoute(
         pageBuilder: (context, state, child) => MaterialPage<void>(
           key: state.pageKey,
-          canPop: false,
           child: AppShell(location: state.uri.path, child: child),
         ),
         routes: [
-          GoRoute(
-            path: '/home',
-            name: 'home',
-            builder: (context, state) =>
-                const ShellRootBackScope.home(child: HomeScreen()),
-            routes: [
-              GoRoute(
-                path: 'character',
-                redirect: (context, state) => '/settings/character',
-              ),
-              GoRoute(
-                path: 'question',
-                name: 'todayQuestionAnswer',
-                builder: (context, state) {
-                  final dateQuery = state.uri.queryParameters['date'];
-                  final targetDate = parseQuestionRouteDate(dateQuery);
-                  return TodayQuestionAnswerScreen(
-                    targetDate: targetDate,
-                    hasInvalidTargetDate: hasInvalidQuestionRouteDate(
-                      dateQuery,
-                    ),
-                  );
-                },
-                routes: [
-                  GoRoute(
-                    path: 'edit',
-                    name: 'todayQuestionAnswerEdit',
-                    builder: (context, state) => TodayQuestionAnswerEditScreen(
-                      routeContext: QuestionRouteContext.fromEditUri(state.uri),
-                    ),
-                  ),
-                ],
-              ),
-              GoRoute(
-                path: 'recordings',
-                name: 'recordingLibrary',
-                builder: (context, state) => const RecordingLibraryScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'create/:slotIndex',
-                    name: 'recordingSlotCreate',
-                    builder: (context, state) =>
-                        RecordingSlotArtworkEditorScreen.create(
-                          slotIndex:
-                              int.tryParse(
-                                state.pathParameters['slotIndex'] ?? '',
-                              ) ??
-                              0,
-                        ),
-                  ),
-                  GoRoute(
-                    path: ':slotId/artwork',
-                    name: 'recordingSlotArtworkEditor',
-                    builder: (context, state) =>
-                        RecordingSlotArtworkEditorScreen(
-                          slotId: state.pathParameters['slotId']!,
-                        ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/calendar',
-            name: 'calendar',
-            builder: (context, state) =>
-                const ShellRootBackScope.secondaryTab(child: CalendarScreen()),
-            routes: [
-              GoRoute(
-                path: 'question',
-                name: 'calendarQuestionAnswer',
-                builder: (context, state) {
-                  final dateQuery = state.uri.queryParameters['date'];
-                  final targetDate = parseQuestionRouteDate(dateQuery);
-                  return TodayQuestionAnswerScreen(
-                    targetDate: targetDate,
-                    hasInvalidTargetDate: hasInvalidQuestionRouteDate(
-                      dateQuery,
-                    ),
-                    backLocation: '/calendar',
-                  );
-                },
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/ai',
-            name: 'ai',
-            builder: (context, state) =>
-                const ShellRootBackScope.secondaryTab(child: AiScreen()),
-            routes: [
-              GoRoute(
-                path: 'focused',
-                name: 'aiFocusedQuestions',
-                builder: (context, state) => const AiFocusedQuestionScreen(),
-              ),
-              GoRoute(
-                path: 'ask',
-                name: 'aiDirectQuestion',
-                builder: (context, state) => const AiDirectQuestionScreen(),
-              ),
-              GoRoute(
-                path: 'memories',
-                name: 'aiMemories',
-                builder: (context, state) => const AiMemoryScreen(),
-              ),
-            ],
-          ),
           GoRoute(
             path: '/settings',
             name: 'settings',

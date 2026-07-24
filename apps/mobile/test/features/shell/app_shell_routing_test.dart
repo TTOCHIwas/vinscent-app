@@ -14,6 +14,7 @@ import 'package:vinscent/features/ai/presentation/ai_direct_question_screen.dart
 import 'package:vinscent/features/ai/presentation/ai_memory_screen.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_tab_header.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
+import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -386,6 +387,87 @@ void main() {
     expect(find.text('기억한 내용'), findsOneWidget);
   });
 
+  testWidgets('root tab switches without keeping the previous page onstage', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pump();
+
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(CalendarScreen), findsOneWidget);
+  });
+
+  testWidgets('root tabs preserve their local view state', (tester) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+
+    final previousDateCell = find.byWidgetPredicate(
+      (widget) =>
+          widget is CalendarMonthStoryCell &&
+          widget.date == DateTime(2026, 5, 30),
+    );
+    final previousDateTapTarget = find
+        .ancestor(of: previousDateCell, matching: find.byType(InkWell))
+        .first;
+    tester.widget<InkWell>(previousDateTapTarget).onTap!();
+    await tester.pump();
+    expect(_selectedCalendarDate(tester), DateTime(2026, 5, 30));
+
+    await tester.tap(find.byType(ShellTab).at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+
+    expect(_selectedCalendarDate(tester), DateTime(2026, 5, 30));
+  });
+
+  testWidgets('root tabs restore nested routes and reselect to their root', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+
+    GoRouter.of(
+      tester.element(find.byType(AppHeader)),
+    ).go('/calendar/question?date=2026-05-30');
+    await tester.pumpAndSettle();
+    expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+
+    await tester.tap(find.byType(ShellTab).at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
+    expect(
+      GoRouterState.of(
+        tester.element(find.byType(TodayQuestionAnswerScreen)),
+      ).uri.path,
+      '/calendar/question',
+    );
+
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarScreen), findsOneWidget);
+    expect(find.byType(TodayQuestionAnswerScreen), findsNothing);
+  });
+
   testWidgets('system back returns from secondary tabs to home', (
     tester,
   ) async {
@@ -544,6 +626,7 @@ void main() {
     await tester.tap(settingsControl);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(_appShellPage(tester, '/settings').canPop, isTrue);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -862,6 +945,25 @@ double _scrollBottomPadding(WidgetTester tester, Finder screen) {
 
 List<ShellTab> _tabs(WidgetTester tester) {
   return tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
+}
+
+DateTime _selectedCalendarDate(WidgetTester tester) {
+  return tester
+      .widgetList<CalendarMonthStoryCell>(find.byType(CalendarMonthStoryCell))
+      .singleWhere((cell) => cell.isSelected)
+      .date;
+}
+
+MaterialPage<void> _appShellPage(WidgetTester tester, String location) {
+  return tester
+      .widgetList<Navigator>(find.byType(Navigator))
+      .expand((navigator) => navigator.pages)
+      .whereType<MaterialPage<void>>()
+      .singleWhere(
+        (page) =>
+            page.child is AppShell &&
+            (page.child as AppShell).location == location,
+      );
 }
 
 bool? _lastFrameworkHandlesBack(List<MethodCall> calls) {

@@ -5,10 +5,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import 'widgets/app_bottom_bar.dart';
-import 'widgets/app_header.dart';
 
 class AppShell extends StatelessWidget {
-  const AppShell({super.key, required this.child, required this.location});
+  const AppShell({
+    super.key,
+    required this.child,
+    required this.location,
+    this.navigationShell,
+  });
 
   static const topMinHeight = 56.0;
   static const headerHeight = 56.0;
@@ -16,11 +20,11 @@ class AppShell extends StatelessWidget {
 
   final Widget child;
   final String location;
+  final StatefulNavigationShell? navigationShell;
 
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
-    final showHeader = !_hidesMainHeader;
     final showBottomBar = !_hidesBottomBar;
     final canPop =
         GoRouter.maybeOf(context)?.canPop() ?? Navigator.of(context).canPop();
@@ -38,14 +42,6 @@ class AppShell extends StatelessWidget {
         body: Column(
           children: [
             SizedBox(height: math.max(topMinHeight, topInset)),
-            if (showHeader)
-              AppHeader(
-                height: headerHeight,
-                showRelationshipDayCount: location == '/home',
-                onRecordingLibraryPressed: () =>
-                    context.push('/home/recordings'),
-                onSettingsPressed: () => context.push('/settings'),
-              ),
             Expanded(child: child),
           ],
         ),
@@ -53,24 +49,23 @@ class AppShell extends StatelessWidget {
             ? AppBottomBar(
                 height: bottomBarHeight,
                 currentLocation: location,
-                onHomePressed: () => context.go('/home'),
-                onCalendarPressed: () => context.go('/calendar'),
-                onAiPressed: () => context.go('/ai'),
+                onHomePressed: () => _openBranch(context, 0, '/home'),
+                onCalendarPressed: () => _openBranch(context, 1, '/calendar'),
+                onAiPressed: () => _openBranch(context, 2, '/ai'),
               )
             : null,
       ),
     );
   }
 
-  bool get _hidesMainHeader {
-    return location == '/calendar' ||
-        location == '/calendar/question' ||
-        location == '/ai' ||
-        location.startsWith('/ai/') ||
-        location.startsWith('/home/recordings') ||
-        location == '/home/question' ||
-        location == '/home/question/edit' ||
-        location.startsWith('/settings');
+  void _openBranch(BuildContext context, int index, String location) {
+    final shell = navigationShell;
+    if (shell == null) {
+      context.go(location);
+      return;
+    }
+
+    shell.goBranch(index, initialLocation: shell.currentIndex == index);
   }
 
   bool get _hidesBottomBar {
