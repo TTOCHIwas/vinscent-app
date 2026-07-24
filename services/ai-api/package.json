@@ -6,6 +6,6 @@
     "node": ">=22.6.0"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test test/learning-contract.test.ts test/gemini-learning-model.test.ts test/open-meteo-forecast-client.test.ts test/process-learning-jobs.test.ts test/supabase-learning-job-repository.test.ts test/worker-http-handler.test.ts"
+    "test": "node --experimental-strip-types --test test/learning-contract.test.ts test/gemini-learning-model.test.ts test/generate-proactive-suggestion.test.ts test/open-meteo-forecast-client.test.ts test/process-learning-jobs.test.ts test/proactive-suggestion-http-handler.test.ts test/supabase-learning-job-repository.test.ts test/supabase-proactive-suggestion-gateway.test.ts test/worker-http-handler.test.ts"
   }
 }

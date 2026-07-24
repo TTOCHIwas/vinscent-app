@@ -14,6 +14,11 @@ abstract interface class AiProactiveSuggestionStore {
 
   Future<void> saveSuggestion(String userId, AiProactiveSuggestion suggestion);
 
+  Future<bool> hasShownInSession({
+    required String userId,
+    required String sessionId,
+  });
+
   Future<bool> canShow({
     required String userId,
     required String sessionId,
@@ -64,6 +69,15 @@ class SharedPreferencesAiProactiveSuggestionStore
       '$_suggestionPrefix.$userId',
       jsonEncode(suggestion.toJson()),
     );
+  }
+
+  @override
+  Future<bool> hasShownInSession({
+    required String userId,
+    required String sessionId,
+  }) async {
+    final record = await _loadImpressions(userId);
+    return record.sessionIds.contains(sessionId);
   }
 
   @override

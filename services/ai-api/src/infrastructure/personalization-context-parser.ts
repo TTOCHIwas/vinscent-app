@@ -1,18 +1,10 @@
 import type {
+  ProactiveSuggestionBaseContext,
+} from '../application/generate-proactive-suggestion.ts';
+import type {
   DirectQuestionContext,
   LearningDomain,
-  PersonalizationMemoryContext,
-  PersonalizationRecentQuestionContext,
 } from '../domain/learning-contract.ts';
-
-export interface ProactiveSuggestionBaseContext {
-  localDate: string;
-  localHour: number;
-  timezone: string;
-  hasCardToday: boolean;
-  confirmedMemories: PersonalizationMemoryContext[];
-  recentCompletedQuestions: PersonalizationRecentQuestionContext[];
-}
 
 const learningDomains = new Set<LearningDomain>([
   'personal_values',

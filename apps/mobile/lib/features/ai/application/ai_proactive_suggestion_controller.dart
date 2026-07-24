@@ -72,10 +72,9 @@ class AiProactiveSuggestionCoordinator {
       return await _canShow(request, cached) ? cached : null;
     }
 
-    if (!await _store.canShow(
+    if (await _store.hasShownInSession(
       userId: request.userId,
       sessionId: request.sessionId,
-      contextDate: _localDate(now),
     )) {
       return null;
     }
@@ -111,11 +110,4 @@ class AiProactiveSuggestionCoordinator {
       contextDate: suggestion.contextDate,
     );
   }
-}
-
-String _localDate(DateTime value) {
-  final local = value.toLocal();
-  return '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}-'
-      '${local.day.toString().padLeft(2, '0')}';
 }

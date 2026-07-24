@@ -88,6 +88,36 @@ void main() {
 
     expect(await coordinator.resolve(firstRequest), isNull);
   });
+
+  test(
+    'uses the server context date instead of the device date for a new suggestion',
+    () async {
+      final serverSuggestion = AiProactiveSuggestion(
+        id: 'server-date-suggestion',
+        text: _suggestion.text,
+        kind: AiProactiveSuggestionKind.dateIdea,
+        generatedAt: DateTime.now(),
+        validUntil: DateTime.now().add(const Duration(hours: 1)),
+        contextDate: '2099-01-01',
+        hasCardToday: false,
+      );
+      final store = _FakeSuggestionStore(blockedContextDates: {_today()});
+      final repository = _FakeSuggestionRepository(
+        generatedSuggestion: serverSuggestion,
+      );
+      final coordinator = AiProactiveSuggestionCoordinator(
+        repository: repository,
+        store: store,
+        locationService: _FakeLocationService(),
+      );
+
+      final result = await coordinator.resolve(firstRequest);
+
+      expect(result, same(serverSuggestion));
+      expect(repository.generateCount, 1);
+      expect(store.canShowContextDates, ['2099-01-01']);
+    },
+  );
 }
 
 final _suggestion = AiProactiveSuggestion(
@@ -142,10 +172,15 @@ class _FakeSuggestionRepository implements AiProactiveSuggestionRepository {
 }
 
 class _FakeSuggestionStore implements AiProactiveSuggestionStore {
-  _FakeSuggestionStore({this.cachedSuggestion});
+  _FakeSuggestionStore({
+    this.cachedSuggestion,
+    Set<String>? blockedContextDates,
+  }) : blockedContextDates = blockedContextDates ?? {};
 
   AiProactiveSuggestion? cachedSuggestion;
+  final Set<String> blockedContextDates;
   final Set<String> _shownSessions = {};
+  final List<String> canShowContextDates = [];
 
   @override
   Future<bool> canShow({
@@ -153,7 +188,17 @@ class _FakeSuggestionStore implements AiProactiveSuggestionStore {
     required String sessionId,
     required String contextDate,
   }) async {
-    return !_shownSessions.contains(sessionId);
+    canShowContextDates.add(contextDate);
+    return !blockedContextDates.contains(contextDate) &&
+        !_shownSessions.contains(sessionId);
+  }
+
+  @override
+  Future<bool> hasShownInSession({
+    required String userId,
+    required String sessionId,
+  }) async {
+    return _shownSessions.contains(sessionId);
   }
 
   @override

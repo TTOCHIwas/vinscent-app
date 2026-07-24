@@ -57,6 +57,10 @@ void main() {
     );
 
     expect(
+      await store.hasShownInSession(userId: 'user-1', sessionId: 'session-1'),
+      isTrue,
+    );
+    expect(
       await store.canShow(
         userId: 'user-1',
         sessionId: 'session-1',

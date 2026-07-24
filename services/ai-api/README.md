@@ -13,6 +13,11 @@ error reaches the application layer.
 Task-specific context loading, model calls, validation, and output mapping are
 registered through `LearningJobHandlerRegistry`.
 
+Proactive suggestions follow the same boundary: the Edge Function is only a
+composition root, the HTTP handler owns transport concerns, and
+`GenerateProactiveSuggestionUseCase` owns server-date context and lifetime
+rules. Device-local dates are not used for daily suggestion limits.
+
 The database remains authoritative for consent, job claims, memory
 confirmation, feature entitlements, question recommendations, and question
 assignment. A worker re-checks consent immediately before reading completed
