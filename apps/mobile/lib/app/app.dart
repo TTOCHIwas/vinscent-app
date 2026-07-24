@@ -23,6 +23,7 @@ import '../features/profile/application/profile_controller.dart';
 import '../features/recordings/application/couple_recording_overview_controller.dart';
 import '../features/story_loops/application/story_loop_realtime_controller.dart';
 import '../features/story_loops/application/today_story_loop_summary_provider.dart';
+import 'application/app_foreground_session_controller.dart';
 import 'application/latest_launch_dispatcher.dart';
 import 'router.dart';
 
@@ -41,6 +42,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   late final HomeWidgetSyncScheduler _widgetSyncScheduler;
   late final LatestLaunchDispatcher<Uri> _widgetLaunchDispatcher;
   late final LatestLaunchDispatcher<String> _notificationLaunchDispatcher;
+  DateTime? _backgroundedAt;
 
   @override
   void initState() {
@@ -131,7 +133,22 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _backgroundedAt ??= DateTime.now();
+      return;
+    }
+
     if (state == AppLifecycleState.resumed) {
+      final backgroundedAt = _backgroundedAt;
+      _backgroundedAt = null;
+      if (backgroundedAt != null &&
+          DateTime.now().difference(backgroundedAt) >=
+              const Duration(minutes: 30)) {
+        ref
+            .read(appForegroundSessionControllerProvider.notifier)
+            .beginNewSession();
+      }
       ref.read(todayControllerProvider.notifier).refresh();
       ref.invalidate(coupleControllerProvider);
       ref

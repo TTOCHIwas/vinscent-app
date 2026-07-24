@@ -62,6 +62,8 @@
 	<string>Save story cards to your photo library.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>스토리 카드에 사진을 추가하기 위해 카메라 권한이 필요합니다.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>현재 지역과 날씨에 어울리는 활동을 추천하기 위해 위치 권한이 필요합니다.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIBackgroundModes</key>

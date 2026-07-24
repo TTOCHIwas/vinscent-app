@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,7 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../app/application/app_foreground_session_controller.dart';
 import '../../ai/application/ai_learning_controller.dart';
+import '../../ai/application/ai_proactive_suggestion_controller.dart';
 import '../../ai/application/ai_question_feedback_provider.dart';
 import '../../ai/data/ai_learning_dashboard.dart';
 import '../../couple/application/couple_controller.dart';
@@ -293,12 +296,15 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
         ),
       ),
     );
-    final needsAiConsent = ref.watch(
+    final aiLearningState = ref.watch(
       aiLearningControllerProvider.select(
         (state) => state.maybeWhen(
-          data: (dashboard) =>
-              dashboard.progress.myConsent == AiConsentStatus.revoked,
-          orElse: () => false,
+          data: (dashboard) => (
+            needsConsent:
+                dashboard.progress.myConsent == AiConsentStatus.revoked,
+            personalizationReady: dashboard.progress.personalizationEnabled,
+          ),
+          orElse: () => (needsConsent: false, personalizationReady: false),
         ),
       ),
     );
@@ -321,9 +327,29 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                 recordingGuideState.isReady,
             hasCurrentRecording: recordingGuideState.hasCurrentRecording,
             hasSavedRecordingSlot: recordingGuideState.hasSavedRecordingSlot,
-            needsAiConsent: needsAiConsent,
+            needsAiConsent: aiLearningState.needsConsent,
           )
         : const <HomeGuide>[];
+    final foregroundSessionId = ref.watch(
+      appForegroundSessionControllerProvider,
+    );
+    final proactiveRequest =
+        currentUserId != null &&
+            aiLearningState.personalizationReady &&
+            characterGuideText == null &&
+            presentation.questionText == null
+        ? AiProactiveSuggestionRequest(
+            userId: currentUserId!,
+            sessionId: foregroundSessionId,
+            hasCardToday: presentation.myCard != null,
+          )
+        : null;
+    final proactiveSuggestion = proactiveRequest == null
+        ? null
+        : ref
+              .watch(aiProactiveSuggestionProvider(proactiveRequest))
+              .asData
+              ?.value;
 
     return TransientHomeFeedbackPresenter(
       userId: currentUserId,
@@ -337,44 +363,74 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
           guides: featureGuides,
           onGuideTap: (guide) => _openHomeGuide(context, guide),
           builder: (guide, guideOpacity, onGuideTap) {
-            final questionText =
-                characterGuideText ??
-                visibleFeedbackText ??
-                presentation.questionText ??
-                guide?.message;
-            final questionOpacity = visibleFeedbackText != null
-                ? feedbackOpacity
-                : guide != null
-                ? guideOpacity
-                : 1.0;
-            final onQuestionTap =
-                onGuideTap ??
-                (questionTargetLocation == null
-                    ? null
-                    : () => context.go(questionTargetLocation));
-
-            return _HomeStoryLoopContent(
-              myCard: presentation.myCard,
-              partnerCard: presentation.partnerCard,
-              questionText: questionText,
-              questionOpacity: questionOpacity,
-              cardsAreCompleted: presentation.cardsAreCompleted,
-              canAddCard: presentation.canAddCard,
-              onAddCard: presentation.canAddCard
-                  ? () => context.go('/home/story')
+            final canShowProactive =
+                guide == null &&
+                characterGuideText == null &&
+                visibleFeedbackText == null &&
+                presentation.questionText == null;
+            return TransientHomeFeedbackPresenter(
+              userId: currentUserId,
+              dailyQuestionId:
+                  canShowProactive &&
+                      proactiveSuggestion != null &&
+                      proactiveRequest != null
+                  ? 'proactive:${proactiveSuggestion.id}:'
+                        '${proactiveRequest.sessionId}'
                   : null,
-              onQuestionTap: onQuestionTap,
-              onCardTap: (card) {
-                final editTargetLocation = presentation
-                    .editTargetLocationForCard(card);
-                if (editTargetLocation != null) {
-                  context.go(editTargetLocation);
-                  return;
-                }
-                showStoryCardDetailOverlay(
-                  context: context,
-                  cardId: card.id,
-                  previewUrl: card.previewUrl,
+              feedbackText: canShowProactive ? proactiveSuggestion?.text : null,
+              visibleDuration: const Duration(seconds: 12),
+              onShown: proactiveSuggestion == null || proactiveRequest == null
+                  ? null
+                  : () => unawaited(
+                      ref
+                          .read(aiProactiveSuggestionCoordinatorProvider)
+                          .markShown(proactiveRequest, proactiveSuggestion),
+                    ),
+              builder: (visibleSuggestionText, suggestionOpacity) {
+                final questionText =
+                    characterGuideText ??
+                    visibleFeedbackText ??
+                    presentation.questionText ??
+                    guide?.message ??
+                    visibleSuggestionText;
+                final questionOpacity = visibleFeedbackText != null
+                    ? feedbackOpacity
+                    : guide != null
+                    ? guideOpacity
+                    : visibleSuggestionText != null
+                    ? suggestionOpacity
+                    : 1.0;
+                final onQuestionTap = visibleSuggestionText != null
+                    ? null
+                    : onGuideTap ??
+                          (questionTargetLocation == null
+                              ? null
+                              : () => context.go(questionTargetLocation));
+
+                return _HomeStoryLoopContent(
+                  myCard: presentation.myCard,
+                  partnerCard: presentation.partnerCard,
+                  questionText: questionText,
+                  questionOpacity: questionOpacity,
+                  cardsAreCompleted: presentation.cardsAreCompleted,
+                  canAddCard: presentation.canAddCard,
+                  onAddCard: presentation.canAddCard
+                      ? () => context.go('/home/story')
+                      : null,
+                  onQuestionTap: onQuestionTap,
+                  onCardTap: (card) {
+                    final editTargetLocation = presentation
+                        .editTargetLocationForCard(card);
+                    if (editTargetLocation != null) {
+                      context.go(editTargetLocation);
+                      return;
+                    }
+                    showStoryCardDetailOverlay(
+                      context: context,
+                      cardId: card.id,
+                      previewUrl: card.previewUrl,
+                    );
+                  },
                 );
               },
             );

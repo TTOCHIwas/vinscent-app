@@ -16,6 +16,7 @@ class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
     required this.feedbackText,
     required this.builder,
     this.visibleDuration = displayDuration,
+    this.onShown,
   });
 
   static const displayDuration = Duration(seconds: 8);
@@ -26,6 +27,7 @@ class TransientHomeFeedbackPresenter extends ConsumerStatefulWidget {
   final String? feedbackText;
   final TransientHomeFeedbackBuilder builder;
   final Duration visibleDuration;
+  final VoidCallback? onShown;
 
   @override
   ConsumerState<TransientHomeFeedbackPresenter> createState() =>
@@ -122,6 +124,7 @@ class _TransientHomeFeedbackPresenterState
       _isVisible = true;
       _opacity = 1;
     });
+    widget.onShown?.call();
     unawaited(
       _markShown(
         store: store,
