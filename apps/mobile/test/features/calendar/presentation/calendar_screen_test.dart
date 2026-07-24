@@ -110,6 +110,24 @@ void main() {
     );
   });
 
+  testWidgets('ignores a short fast date flick', (tester) async {
+    final repository = FakeStoryLoopReadRepository();
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 9),
+    );
+
+    await tester.fling(
+      find.byKey(const Key('calendar-date-swipe-region')),
+      const Offset(64, 0),
+      2000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
+  });
+
   testWidgets('updates the visible month when a date swipe crosses a month', (
     tester,
   ) async {

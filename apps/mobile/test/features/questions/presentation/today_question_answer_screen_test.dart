@@ -388,7 +388,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('저장'), findsOneWidget);
+      expect(find.byKey(const Key('answer-save-action')), findsNothing);
       expect(find.text('상대방 답변'), findsNothing);
     });
 
@@ -406,7 +406,7 @@ void main() {
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
         'hello',
       );
-      expect(find.text('저장'), findsOneWidget);
+      expect(find.byKey(const Key('answer-save-action')), findsNothing);
       expect(find.text('상대방 답변'), findsNothing);
     });
 
@@ -506,7 +506,7 @@ void main() {
       );
 
       await tester.fling(
-        find.byType(GestureDetector).first,
+        find.byKey(const Key('question-date-swipe-region')),
         const Offset(400, 0),
         1000,
       );
@@ -514,6 +514,38 @@ void main() {
 
       expect(find.text('05월 29일'), findsOneWidget);
       expect(find.text('previous history question'), findsOneWidget);
+    });
+
+    testWidgets('ignores a short fast dated question flick', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(_emptyAnswerState);
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        storyLoopDetails: {
+          DateTime(2026, 5, 29): _historyDetailFor(
+            date: DateTime(2026, 5, 29),
+            questionText: 'previous history question',
+          ),
+          DateTime(2026, 5, 30): _storyLoopDetailFor(
+            date: DateTime(2026, 5, 30),
+            question: _historyQuestion,
+            answerState: _historyAnswerState,
+            canAnswerQuestion: false,
+          ),
+        },
+        initialLocation: '/calendar/question?date=2026-05-30',
+      );
+
+      await tester.fling(
+        find.byKey(const Key('question-date-swipe-region')),
+        const Offset(64, 0),
+        2000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('05월 30일'), findsOneWidget);
+      expect(find.text('history question'), findsOneWidget);
     });
 
     testWidgets('swipes to next date and keeps today editable', (tester) async {
@@ -534,7 +566,7 @@ void main() {
       );
 
       await tester.fling(
-        find.byType(GestureDetector).first,
+        find.byKey(const Key('question-date-swipe-region')),
         const Offset(-400, 0),
         1000,
       );
@@ -570,7 +602,7 @@ void main() {
       );
 
       await tester.fling(
-        find.byType(GestureDetector).first,
+        find.byKey(const Key('question-date-swipe-region')),
         const Offset(400, 0),
         1000,
       );
@@ -590,7 +622,7 @@ void main() {
       );
 
       await tester.fling(
-        find.byType(GestureDetector).first,
+        find.byKey(const Key('question-date-swipe-region')),
         const Offset(-400, 0),
         1000,
       );
@@ -689,8 +721,8 @@ void main() {
         tester,
         repository: repository,
         initialLocation: '/home/question/edit',
-        viewInsetsBottom: 300,
       );
+      await _openAnswerKeyboard(tester);
 
       expect(find.byType(StoryCardPreviewSurface), findsNothing);
       expect(
@@ -700,19 +732,25 @@ void main() {
       expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('저장'), findsOneWidget);
+      final saveBar = find.byKey(const Key('answer-save-bar'));
       final characterCount = find.byKey(const Key('answer-character-count'));
       final saveAction = find.byKey(const Key('answer-save-action'));
       final textFieldRect = tester.getRect(find.byType(TextField));
-      final characterCountRect = tester.getRect(characterCount);
+      final saveBarRect = tester.getRect(saveBar);
       final screenHeight =
           tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final keyboardHeight = 300 / tester.view.devicePixelRatio;
+      expect(saveBar, findsOneWidget);
       expect(
-        characterCountRect.top,
-        greaterThanOrEqualTo(textFieldRect.bottom),
+        find.descendant(of: saveBar, matching: characterCount),
+        findsOneWidget,
       );
-      expect(characterCountRect.bottom, lessThanOrEqualTo(screenHeight - 300));
-      expect(tester.getCenter(saveAction).dy, lessThan(textFieldRect.top));
-      expect(find.byKey(const Key('answer-save-bar')), findsNothing);
+      expect(
+        find.descendant(of: saveBar, matching: saveAction),
+        findsOneWidget,
+      );
+      expect(saveBarRect.top, greaterThanOrEqualTo(textFieldRect.bottom));
+      expect(saveBarRect.bottom, screenHeight - keyboardHeight);
       expect(tester.takeException(), isNull);
     });
 
@@ -758,6 +796,7 @@ void main() {
         repository: repository,
         initialLocation: '/home/question/edit',
       );
+      await _openAnswerKeyboard(tester);
 
       expect(find.text('05월 31일'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
@@ -774,7 +813,7 @@ void main() {
         BorderSide.none,
       );
 
-      await tester.tap(find.text('저장'));
+      await tester.tap(find.byKey(const Key('answer-save-action')));
       await tester.pump();
 
       expect(repository.submitCallCount, 0);
@@ -793,13 +832,14 @@ void main() {
         repository: repository,
         initialLocation: '/home/question/edit',
       );
+      await _openAnswerKeyboard(tester);
 
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
 
       expect(find.text('5 / 500'), findsOneWidget);
 
-      await tester.tap(find.text('저장'));
+      await tester.tap(find.byKey(const Key('answer-save-action')));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 1);
@@ -824,11 +864,12 @@ void main() {
         repository: repository,
         initialLocation: '/home/question/edit',
       );
+      await _openAnswerKeyboard(tester);
 
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
 
-      await tester.tap(find.text('저장'));
+      await tester.tap(find.byKey(const Key('answer-save-action')));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 1);
@@ -840,7 +881,8 @@ void main() {
       expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
 
-      await tester.tap(find.text('저장'));
+      await _openAnswerKeyboard(tester);
+      await tester.tap(find.byKey(const Key('answer-save-action')));
       await tester.pumpAndSettle();
 
       expect(repository.submitCallCount, 2);
@@ -858,13 +900,14 @@ void main() {
         repository: repository,
         initialLocation: '/home/question/edit',
       );
+      await _openAnswerKeyboard(tester);
 
       await tester.enterText(find.byType(TextField), 'a' * 501);
       await tester.pump();
 
       expect(find.text('501 / 500'), findsOneWidget);
 
-      await tester.tap(find.text('저장'));
+      await tester.tap(find.byKey(const Key('answer-save-action')));
       await tester.pump();
 
       expect(repository.submitCallCount, 0);
@@ -880,6 +923,7 @@ void main() {
         repository: repository,
         initialLocation: '/home/question/edit',
       );
+      await _openAnswerKeyboard(tester);
 
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
@@ -945,11 +989,12 @@ void main() {
           initialLocation:
               '/home/question/edit?source=calendar&date=2026-05-31',
         );
+        await _openAnswerKeyboard(tester);
 
         await tester.enterText(find.byType(TextField), 'hello');
         await tester.pump();
 
-        await tester.tap(find.text('저장'));
+        await tester.tap(find.byKey(const Key('answer-save-action')));
         await tester.pumpAndSettle();
 
         expect(find.byType(TextField), findsNothing);
@@ -958,6 +1003,12 @@ void main() {
       },
     );
   });
+}
+
+Future<void> _openAnswerKeyboard(WidgetTester tester) async {
+  await tester.tap(find.byType(TextField));
+  tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+  await tester.pumpAndSettle();
 }
 
 Future<GoRouter> _pumpRouter(
@@ -973,6 +1024,9 @@ Future<GoRouter> _pumpRouter(
   Set<String> delayedAiFeedbackIds = const {},
   bool settle = true,
 }) async {
+  tester.view.viewInsets = FakeViewPadding(bottom: viewInsetsBottom);
+  addTearDown(tester.view.resetViewInsets);
+
   final today = DateTime(2026, 5, 31);
   final normalizedDetails = <DateTime, StoryLoopDetail?>{
     for (final entry in storyLoopDetails.entries)
@@ -1054,15 +1108,7 @@ Future<GoRouter> _pumpRouter(
           resolvedStoryLoopRepository,
         ),
       ],
-      child: MaterialApp.router(
-        routerConfig: router,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(viewInsets: EdgeInsets.only(bottom: viewInsetsBottom)),
-          child: child!,
-        ),
-      ),
+      child: MaterialApp.router(routerConfig: router),
     ),
   );
 

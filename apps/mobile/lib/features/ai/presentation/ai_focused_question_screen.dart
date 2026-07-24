@@ -174,26 +174,23 @@ class _AiFocusedQuestionScreenState
       ],
     );
 
-    if (!keyboardVisible) {
-      return content;
-    }
-
     return Stack(
       children: [
         Positioned.fill(child: content),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: ColoredBox(
-            color: AppColors.background,
-            child: AppAnswerCharacterCount(
-              key: const Key('ai-focused-character-count'),
-              characterCount: characterCount,
-              maxLength: 500,
+        if (keyboardVisible)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: ColoredBox(
+              color: AppColors.background,
+              child: AppAnswerCharacterCount(
+                key: const Key('ai-focused-character-count'),
+                characterCount: characterCount,
+                maxLength: 500,
+              ),
             ),
           ),
-        ),
       ],
     );
   }

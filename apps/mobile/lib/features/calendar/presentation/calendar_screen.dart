@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -22,8 +23,6 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
-  static const _minimumSwipeVelocity = 350.0;
-
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
 
@@ -80,11 +79,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext(todayMonth);
 
-        return GestureDetector(
+        return AppHorizontalSwipeRegion(
           key: const Key('calendar-date-swipe-region'),
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragEnd: (details) => _handleHorizontalDragEnd(
-            details,
+          onSwipeRight: () => _moveSelectedDate(
+            -1,
+            relationshipStartDate: couple.relationshipStartDate!,
+            today: today,
+          ),
+          onSwipeLeft: () => _moveSelectedDate(
+            1,
             relationshipStartDate: couple.relationshipStartDate!,
             today: today,
           ),
@@ -167,23 +170,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     setState(() {
       _selectedDate = calendarDateOnly(date);
     });
-  }
-
-  void _handleHorizontalDragEnd(
-    DragEndDetails details, {
-    required DateTime relationshipStartDate,
-    required DateTime today,
-  }) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity.abs() < _minimumSwipeVelocity) {
-      return;
-    }
-
-    _moveSelectedDate(
-      velocity > 0 ? -1 : 1,
-      relationshipStartDate: relationshipStartDate,
-      today: today,
-    );
   }
 
   void _moveSelectedDate(

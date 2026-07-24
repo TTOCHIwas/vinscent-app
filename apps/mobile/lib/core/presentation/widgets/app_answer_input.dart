@@ -8,6 +8,7 @@ class AppAnswerInput extends StatelessWidget {
   const AppAnswerInput({
     super.key,
     required this.controller,
+    this.focusNode,
     this.enabled = true,
     this.expands = false,
     this.minLines,
@@ -18,6 +19,7 @@ class AppAnswerInput extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final bool enabled;
   final bool expands;
   final int? minLines;
@@ -35,6 +37,7 @@ class AppAnswerInput extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       enabled: enabled,
       expands: expands,
       minLines: minLines,
@@ -78,10 +81,12 @@ class AppAnswerCharacterCount extends StatelessWidget {
     super.key,
     required this.characterCount,
     required this.maxLength,
+    this.alignment = Alignment.centerRight,
   });
 
   final int characterCount;
   final int maxLength;
+  final AlignmentGeometry alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +97,7 @@ class AppAnswerCharacterCount extends StatelessWidget {
     return SizedBox(
       height: 32,
       child: Align(
-        alignment: Alignment.centerRight,
+        alignment: alignment,
         child: Text(
           '$characterCount / $maxLength',
           style: AppTextStyles.homeCharacterLabel.copyWith(color: color),

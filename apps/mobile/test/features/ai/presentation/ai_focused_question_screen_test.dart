@@ -66,6 +66,45 @@ void main() {
     expect(characterCountRect.bottom, lessThanOrEqualTo(400));
   });
 
+  testWidgets('keeps input focus when the keyboard inset changes', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetViewInsets);
+    await _pump(tester, _flow());
+
+    final input = find.descendant(
+      of: find.byKey(const Key('ai-focused-answer-input')),
+      matching: find.byType(TextField),
+    );
+    final editableText = find.descendant(
+      of: input,
+      matching: find.byType(EditableText),
+    );
+    await tester.tap(input);
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(editableText).focusNode.hasFocus,
+      isTrue,
+    );
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+    await tester.enterText(input, '집중 질문에 답할게');
+    await tester.pump();
+
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('ai-focused-character-count')),
+        matching: find.byType(Positioned),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<EditableText>(editableText).focusNode.hasFocus,
+      isTrue,
+    );
+  });
+
   testWidgets('shows both answers in completed focused history', (
     tester,
   ) async {
@@ -78,9 +117,7 @@ void main() {
     );
     final historyRowRect = tester.getRect(historyRow);
     final historyQuestionRect = tester.getRect(
-      find.byKey(
-        const Key('ai-focused-history-question-question-history-id'),
-      ),
+      find.byKey(const Key('ai-focused-history-question-question-history-id')),
     );
     expect(
       historyQuestionRect.left - historyRowRect.left,

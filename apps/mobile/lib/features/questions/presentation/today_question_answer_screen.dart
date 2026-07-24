@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/presentation/widgets/app_answer_input.dart';
-import '../../../core/presentation/widgets/app_header_text_action.dart';
+import '../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
+import '../../../core/presentation/widgets/app_keyboard_accessory.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../ai/presentation/widgets/ai_question_feedback_section.dart';
@@ -128,11 +129,12 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
 
     final previousDate = navigation?.previousDate;
     final nextDate = navigation?.nextDate;
-    return _QuestionSwipeNavigationRegion(
-      onPreviousDate: previousDate == null
+    return AppHorizontalSwipeRegion(
+      key: const Key('question-date-swipe-region'),
+      onSwipeRight: previousDate == null
           ? null
           : () => context.go(_questionDetailLocation(previousDate)),
-      onNextDate: nextDate == null
+      onSwipeLeft: nextDate == null
           ? null
           : () => context.go(_questionDetailLocation(nextDate)),
       child: page,
@@ -149,43 +151,6 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
       backLocation: backLocation,
       targetDate: date,
     ).buildQuestionLocation();
-  }
-}
-
-class _QuestionSwipeNavigationRegion extends StatelessWidget {
-  const _QuestionSwipeNavigationRegion({
-    required this.child,
-    required this.onPreviousDate,
-    required this.onNextDate,
-  });
-
-  static const _minimumSwipeVelocity = 350.0;
-
-  final Widget child;
-  final VoidCallback? onPreviousDate;
-  final VoidCallback? onNextDate;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragEnd: _handleHorizontalDragEnd,
-      child: child,
-    );
-  }
-
-  void _handleHorizontalDragEnd(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity.abs() < _minimumSwipeVelocity) {
-      return;
-    }
-
-    if (velocity > 0) {
-      onPreviousDate?.call();
-      return;
-    }
-
-    onNextDate?.call();
   }
 }
 
@@ -358,13 +323,11 @@ class _QuestionPageFrame extends StatelessWidget {
     required this.onBackPressed,
     required this.child,
     this.question,
-    this.headerAction,
   });
 
   final DailyQuestion? question;
   final VoidCallback onBackPressed;
   final Widget child;
-  final Widget? headerAction;
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +336,6 @@ class _QuestionPageFrame extends StatelessWidget {
         QuestionDetailHeader(
           assignedDate: question?.assignedDate,
           onBackPressed: onBackPressed,
-          action: headerAction,
         ),
         Expanded(child: child),
       ],
@@ -457,12 +419,14 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
   static const _submitFailureMessage = '답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
   var _isSubmitting = false;
   String? _submitErrorMessage;
 
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     _controller = TextEditingController(text: _initialText)
       ..addListener(_onTextChanged);
   }
@@ -485,6 +449,7 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
     _controller
       ..removeListener(_onTextChanged)
       ..dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -505,17 +470,9 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       widget.cards,
       currentUserId: widget.currentUserId,
     );
-    return _QuestionPageFrame(
+    final page = _QuestionPageFrame(
       question: widget.question,
       onBackPressed: () => _goBackToQuestion(context, widget.routeContext),
-      headerAction: AppHeaderTextAction(
-        key: const Key('answer-save-action'),
-        label: '저장',
-        loadingLabel: '저장 중',
-        enabled: _canSubmit,
-        isLoading: _isSubmitting,
-        onPressed: _submit,
-      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compactLayout =
@@ -544,6 +501,7 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
                         Expanded(
                           child: AppAnswerInput(
                             controller: _controller,
+                            focusNode: _focusNode,
                             expands: true,
                             minLines: null,
                             maxLines: null,
@@ -551,11 +509,6 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
                             enforceMaxLength: false,
                             hintText: '답변 입력',
                           ),
-                        ),
-                        AppAnswerCharacterCount(
-                          key: const Key('answer-character-count'),
-                          characterCount: _characterCount,
-                          maxLength: _maxAnswerLength,
                         ),
                         if (_submitErrorMessage != null) ...[
                           const SizedBox(height: 12),
@@ -574,6 +527,27 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
             ),
           );
         },
+      ),
+    );
+
+    return ListenableBuilder(
+      listenable: _focusNode,
+      child: page,
+      builder: (context, child) => AppKeyboardAccessoryLayout(
+        isActive: _focusNode.hasFocus,
+        accessory: AppTextInputKeyboardAccessory(
+          key: const Key('answer-save-bar'),
+          characterCountKey: const Key('answer-character-count'),
+          characterCount: _characterCount,
+          maxLength: _maxAnswerLength,
+          actionKey: const Key('answer-save-action'),
+          actionLabel: '저장',
+          loadingLabel: '저장 중',
+          enabled: _canSubmit,
+          isLoading: _isSubmitting,
+          onPressed: _submit,
+        ),
+        child: child!,
       ),
     );
   }
