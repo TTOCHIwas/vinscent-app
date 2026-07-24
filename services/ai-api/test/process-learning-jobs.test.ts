@@ -14,6 +14,10 @@ import {
   type RunFailure,
   type RunSuccess,
 } from '../src/application/process-learning-jobs.ts';
+import {
+  LearningJobHandlerRegistry,
+  type LearningJobHandler,
+} from '../src/application/learning-job-handler.ts';
 import type {
   AnonymizedCompletedQuestionContext,
   CompletedQuestionContext,
@@ -106,6 +110,75 @@ const directQuestionContext: DirectQuestionContext = {
   ],
   recentCompletedQuestions: [],
 };
+
+test('processor delegates model work to the registered job handler', async () => {
+  const repository = new FakeRepository([
+    job('job-custom-handler', 'generate_feedback'),
+  ]);
+  const preparedJobs: string[] = [];
+  const handler: LearningJobHandler = {
+    jobType: 'generate_feedback',
+    async prepare(claimedJob) {
+      preparedJobs.push(claimedJob.jobId);
+      return {
+        kind: 'model',
+        promptVersion: 'custom-feedback-v1',
+        async execute() {
+          return {
+            output: { feedback_text: 'custom handler output' },
+            usage,
+          };
+        },
+      };
+    },
+  };
+  const processor = new LearningJobProcessor({
+    repository,
+    model: modelWith({}),
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+    handlerRegistry: new LearningJobHandlerRegistry([handler]),
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 1,
+    retried: 0,
+    failed: 0,
+  });
+  assert.deepEqual(preparedJobs, ['job-custom-handler']);
+  assert.deepEqual(repository.startedRuns, [
+    {
+      jobId: 'job-custom-handler',
+      provider: 'google',
+      model: 'gemini-test',
+      promptVersion: 'custom-feedback-v1',
+    },
+  ]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: 'custom handler output',
+  });
+});
+
+test('job handler registry rejects duplicate task registrations', () => {
+  const handler: LearningJobHandler = {
+    jobType: 'generate_feedback',
+    async prepare() {
+      return {
+        kind: 'maintenance',
+        async execute() {},
+      };
+    },
+  };
+
+  assert.throws(
+    () => new LearningJobHandlerRegistry([handler, handler]),
+    /duplicate learning job handler/,
+  );
+});
 
 test('processor handles every learning job and restores IDs only at persistence', async () => {
   const jobs: ClaimedLearningJob[] = [
@@ -482,6 +555,7 @@ test('processor reports repository failures before a run without leaking details
       retryable: true,
     },
   ]);
+  assert.deepEqual(repository.startedRuns, []);
 });
 
 class FakeRepository implements LearningJobRepository {
@@ -492,6 +566,12 @@ class FakeRepository implements LearningJobRepository {
   readonly contextJobIds: string[] = [];
   readonly generalContextJobIds: string[] = [];
   readonly directContextJobIds: string[] = [];
+  readonly startedRuns: Array<{
+    jobId: string;
+    provider: string;
+    model: string;
+    promptVersion: string;
+  }> = [];
   readonly claimFailures: Array<{
     jobId: string;
     errorCode: string;
@@ -525,7 +605,18 @@ class FakeRepository implements LearningJobRepository {
     return directQuestionContext;
   }
 
-  async startRun(job: ClaimedLearningJob) {
+  async startRun(
+    job: ClaimedLearningJob,
+    provider: string,
+    model: string,
+    promptVersion: string,
+  ) {
+    this.startedRuns.push({
+      jobId: job.jobId,
+      provider,
+      model,
+      promptVersion,
+    });
     return `run-${job.jobId}`;
   }
 

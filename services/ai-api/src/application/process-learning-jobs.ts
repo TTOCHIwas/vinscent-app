@@ -1,77 +1,29 @@
+import type {
+  LearningJobHandlerRegistry,
+} from './learning-job-handler.ts';
 import {
-  anonymizeCompletedQuestionContext,
-  resolveMemoryCandidates,
-  validateCoupleFeedback,
-  validateDirectQuestionAnswer,
-  validateGeneralQuestion,
-  validatePersonalizedQuestion,
-  validateQuestionRecommendation,
-  type CompletedQuestionContext,
-  type DirectQuestionContext,
-  type GeneralQuestionContext,
-} from '../domain/learning-contract.ts';
+  createDefaultLearningJobHandlerRegistry,
+} from './learning-job-handlers.ts';
+import {
+  AiRepositoryError,
+  type LearningJobRepository,
+} from './learning-job-repository.ts';
 import {
   LearningModelError,
   type LearningModelPort,
   type LearningModelUsage,
 } from './learning-model-port.ts';
 
-export type LearningJobType =
-  | 'extract_memories'
-  | 'generate_feedback'
-  | 'select_curated_question'
-  | 'generate_general_question'
-  | 'generate_personalized_question'
-  | 'answer_user_question'
-  | 'rebuild_profile';
-
-export interface ClaimedLearningJob {
-  jobId: string;
-  coupleId: string;
-  sourceId: string | null;
-  jobType: LearningJobType;
-  attempt: number;
-  leaseExpiresAt: string;
-}
-
-export interface RunSuccess {
-  runId: string;
-  output: Record<string, unknown>;
-  usage: LearningModelUsage;
-}
-
-export interface RunFailure {
-  runId: string;
-  errorCode: string;
-  safetyStatus: 'flagged' | 'error';
-  retryable: boolean;
-  providerHttpStatus: number | null;
-  providerErrorStatus: string | null;
-  providerErrorDetail: string | null;
-  retryAfterMs: number | null;
-  usage: LearningModelUsage;
-}
-
-export interface LearningJobRepository {
-  claimJobs(workerId: string, limit: number): Promise<ClaimedLearningJob[]>;
-  loadContext(jobId: string): Promise<CompletedQuestionContext>;
-  loadGeneralQuestionContext(jobId: string): Promise<GeneralQuestionContext>;
-  loadDirectQuestionContext(jobId: string): Promise<DirectQuestionContext>;
-  startRun(
-    job: ClaimedLearningJob,
-    provider: string,
-    model: string,
-    promptVersion: string,
-  ): Promise<string>;
-  succeedRun(success: RunSuccess): Promise<boolean>;
-  failRun(failure: RunFailure): Promise<boolean>;
-  failClaimedJob(
-    jobId: string,
-    errorCode: string,
-    retryable: boolean,
-  ): Promise<boolean>;
-  expandRebuild(jobId: string): Promise<boolean>;
-}
+export {
+  AiRepositoryError,
+} from './learning-job-repository.ts';
+export type {
+  ClaimedLearningJob,
+  LearningJobRepository,
+  LearningJobType,
+  RunFailure,
+  RunSuccess,
+} from './learning-job-repository.ts';
 
 export interface LearningJobBatchSummary {
   claimed: number;
@@ -86,6 +38,7 @@ interface LearningJobProcessorOptions {
   workerId: string;
   provider: string;
   modelName: string;
+  handlerRegistry?: LearningJobHandlerRegistry;
 }
 
 interface ClassifiedFailure {
@@ -105,37 +58,20 @@ const emptyUsage: LearningModelUsage = {
   latencyMs: 0,
 };
 
-const promptVersions: Record<Exclude<LearningJobType, 'rebuild_profile'>, string> = {
-  extract_memories: 'memory-v6',
-  generate_feedback: 'feedback-v3',
-  select_curated_question: 'question-ranking-v2',
-  generate_general_question: 'general-question-v1',
-  generate_personalized_question: 'personalized-question-v2',
-  answer_user_question: 'direct-question-v1',
-};
-
-export class AiRepositoryError extends Error {
-  readonly code: string;
-  readonly retryable: boolean;
-
-  constructor(params: { code: string; retryable: boolean; cause?: unknown }) {
-    super(params.code, { cause: params.cause });
-    this.name = 'AiRepositoryError';
-    this.code = params.code;
-    this.retryable = params.retryable;
-  }
-}
-
 export class LearningJobProcessor {
   readonly #repository: LearningJobRepository;
-  readonly #model: LearningModelPort;
+  readonly #handlerRegistry: LearningJobHandlerRegistry;
   readonly #workerId: string;
   readonly #provider: string;
   readonly #modelName: string;
 
   constructor(options: LearningJobProcessorOptions) {
     this.#repository = options.repository;
-    this.#model = options.model;
+    this.#handlerRegistry = options.handlerRegistry
+      ?? createDefaultLearningJobHandlerRegistry({
+        repository: options.repository,
+        model: options.model,
+      });
     this.#workerId = requireNonBlank(options.workerId, 'worker id', 120);
     this.#provider = requireNonBlank(options.provider, 'provider', 100);
     this.#modelName = requireNonBlank(options.modelName, 'model', 160);
@@ -159,60 +95,26 @@ export class LearningJobProcessor {
       let usage = emptyUsage;
 
       try {
-        if (job.jobType === 'rebuild_profile') {
-          const expanded = await this.#repository.expandRebuild(job.jobId);
-          if (!expanded) {
-            throw new AiRepositoryError({
-              code: 'ai_rebuild_not_completed',
-              retryable: true,
-            });
-          }
+        const handler = this.#handlerRegistry.handlerFor(job.jobType);
+        const prepared = await handler.prepare(job);
+
+        if (prepared.kind === 'maintenance') {
+          await prepared.execute();
           summary.succeeded += 1;
           continue;
         }
 
-        let execution: {
-          output: Record<string, unknown>;
-          usage: LearningModelUsage;
-        };
-
-        if (job.jobType === 'generate_general_question') {
-          const context = await this.#repository.loadGeneralQuestionContext(
-            job.jobId,
-          );
-          runId = await this.#repository.startRun(
-            job,
-            this.#provider,
-            this.#modelName,
-            promptVersions[job.jobType],
-          );
-          execution = await this.#executeGeneralQuestionTask(context);
-        } else if (job.jobType === 'answer_user_question') {
-          const context = await this.#repository.loadDirectQuestionContext(
-            job.jobId,
-          );
-          runId = await this.#repository.startRun(
-            job,
-            this.#provider,
-            this.#modelName,
-            promptVersions[job.jobType],
-          );
-          execution = await this.#executeDirectQuestionTask(context);
-        } else {
-          const context = await this.#repository.loadContext(job.jobId);
-          const modelContext = anonymizeCompletedQuestionContext(context);
-          runId = await this.#repository.startRun(
-            job,
-            this.#provider,
-            this.#modelName,
-            promptVersions[job.jobType],
-          );
-          execution = await this.#executeModelTask(
-            job.jobType,
-            context,
-            modelContext,
-          );
-        }
+        runId = await this.#repository.startRun(
+          job,
+          this.#provider,
+          this.#modelName,
+          requireNonBlank(
+            prepared.promptVersion,
+            'prompt version',
+            160,
+          ),
+        );
+        const execution = await prepared.execute();
         usage = execution.usage;
         const completed = await this.#repository.succeedRun({
           runId,
@@ -229,7 +131,6 @@ export class LearningJobProcessor {
         summary.succeeded += 1;
       } catch (error) {
         const failure = classifyFailure(error, usage);
-        usage = failure.usage;
         if (runId === null) {
           await this.#repository.failClaimedJob(
             job.jobId,
@@ -246,7 +147,7 @@ export class LearningJobProcessor {
             providerErrorStatus: failure.providerErrorStatus,
             providerErrorDetail: failure.providerErrorDetail,
             retryAfterMs: failure.retryAfterMs,
-            usage,
+            usage: failure.usage,
           });
         }
 
@@ -260,175 +161,6 @@ export class LearningJobProcessor {
 
     return summary;
   }
-
-  async #executeModelTask(
-    jobType: Exclude<
-      LearningJobType,
-      'rebuild_profile' | 'generate_general_question' | 'answer_user_question'
-    >,
-    context: CompletedQuestionContext,
-    modelContext: ReturnType<typeof anonymizeCompletedQuestionContext>,
-  ): Promise<{
-    output: Record<string, unknown>;
-    usage: LearningModelUsage;
-  }> {
-    if (jobType === 'extract_memories') {
-      const result = await this.#model.extractMemoryCandidates(modelContext);
-      const resolved = resolveMemoryCandidates(
-        context,
-        result.value.filter(
-          (candidate) => candidate.sensitiveCategory === 'none',
-        ),
-      );
-      return {
-        output: {
-          memories: resolved.map((memory) => ({
-            memory_key: memory.memoryKey,
-            scope: memory.scope,
-            subject_user_id: memory.subjectUserId,
-            kind: memory.kind,
-            learning_domain: memory.domain,
-            evidence_type: memory.evidenceType,
-            sensitive_category: memory.sensitiveCategory,
-            statement: memory.statement,
-            confidence: memory.confidence,
-            evidence_answer_ids: memory.evidenceAnswerIds,
-          })),
-        },
-        usage: result.usage,
-      };
-    }
-
-    if (jobType === 'generate_feedback') {
-      const result = await this.#generateValidatedCoupleFeedback(modelContext);
-      return {
-        output: { feedback_text: result.value.text },
-        usage: result.usage,
-      };
-    }
-
-    if (jobType === 'select_curated_question') {
-      const result = await this.#model.rankFoundationQuestions(
-        modelContext,
-        context.remainingFoundationQuestions,
-      );
-      validateQuestionRecommendation(
-        context.remainingFoundationQuestions,
-        result.value.questionKey,
-      );
-      return {
-        output: {
-          question_key: result.value.questionKey,
-          rationale: requireNonBlank(
-            result.value.rationale,
-            'question rationale',
-            500,
-          ),
-        },
-        usage: result.usage,
-      };
-    }
-
-    const result = await this.#model.generatePersonalizedQuestion(modelContext);
-    validatePersonalizedQuestion(result.value);
-    return {
-      output: {
-        question_key: result.value.questionKey,
-        question_text: result.value.text,
-        category: result.value.category,
-        mood: result.value.mood,
-        rationale: result.value.rationale,
-      },
-      usage: result.usage,
-    };
-  }
-
-  async #executeGeneralQuestionTask(
-    context: GeneralQuestionContext,
-  ): Promise<{
-    output: Record<string, unknown>;
-    usage: LearningModelUsage;
-  }> {
-    const result = await this.#model.generateGeneralQuestion(context);
-    validateGeneralQuestion(result.value);
-    return {
-      output: {
-        question_key: result.value.questionKey,
-        question_text: result.value.text,
-        category: result.value.category,
-        mood: result.value.mood,
-        rationale: result.value.rationale,
-      },
-      usage: result.usage,
-    };
-  }
-
-  async #executeDirectQuestionTask(
-    context: DirectQuestionContext,
-  ): Promise<{
-    output: Record<string, unknown>;
-    usage: LearningModelUsage;
-  }> {
-    const result = await this.#model.answerDirectQuestion(context);
-    validateDirectQuestionAnswer(result.value);
-    return {
-      output: { answer_text: result.value.text },
-      usage: result.usage,
-    };
-  }
-
-  async #generateValidatedCoupleFeedback(
-    modelContext: ReturnType<typeof anonymizeCompletedQuestionContext>,
-  ) {
-    let rejectedText: string | null = null;
-    let combinedUsage: LearningModelUsage | null = null;
-
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const result = await this.#model.generateCoupleFeedback(
-        modelContext,
-        { rejectedText },
-      );
-      combinedUsage = combinedUsage === null
-        ? result.usage
-        : combineUsage(combinedUsage, result.usage);
-
-      try {
-        validateCoupleFeedback(result.value);
-        return { value: result.value, usage: combinedUsage };
-      } catch (error) {
-        if (attempt === 1) {
-          throw error;
-        }
-        rejectedText = result.value.text;
-      }
-    }
-
-    throw new Error('couple feedback generation exhausted');
-  }
-}
-
-function combineUsage(
-  first: LearningModelUsage,
-  second: LearningModelUsage,
-): LearningModelUsage {
-  return {
-    inputTokenCount: sumKnownCounts(
-      first.inputTokenCount,
-      second.inputTokenCount,
-    ),
-    outputTokenCount: sumKnownCounts(
-      first.outputTokenCount,
-      second.outputTokenCount,
-    ),
-    latencyMs: first.latencyMs + second.latencyMs,
-  };
-}
-
-function sumKnownCounts(
-  first: number | null,
-  second: number | null,
-): number | null {
-  return first === null || second === null ? null : first + second;
 }
 
 function classifyFailure(

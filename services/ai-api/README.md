@@ -9,6 +9,10 @@ provider must not change the job repository or domain contracts. Provider
 adapters translate their native failures into `LearningModelError` before an
 error reaches the application layer.
 
+`LearningJobProcessor` owns only claim and run lifecycle orchestration.
+Task-specific context loading, model calls, validation, and output mapping are
+registered through `LearningJobHandlerRegistry`.
+
 The database remains authoritative for consent, job claims, memory
 confirmation, feature entitlements, question recommendations, and question
 assignment. A worker re-checks consent immediately before reading completed

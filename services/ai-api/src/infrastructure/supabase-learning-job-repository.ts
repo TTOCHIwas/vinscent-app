@@ -5,7 +5,7 @@ import {
   type LearningJobType,
   type RunFailure,
   type RunSuccess,
-} from '../application/process-learning-jobs.ts';
+} from '../application/learning-job-repository.ts';
 import type {
   CompletedQuestionContext,
   DirectQuestionContext,
