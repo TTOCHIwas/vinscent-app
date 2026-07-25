@@ -12,6 +12,14 @@ void main() {
     expect(metrics.weeklyScrollOffset, 612);
   });
 
+  test('does not exceed a compact viewport', () {
+    final metrics = CalendarMonthLayoutMetrics.forViewport(460);
+
+    expect(metrics.expandedExtent, 460);
+    expect(metrics.standardExtent, 364);
+    expect(metrics.standardScrollOffset, 96);
+  });
+
   test('resolves expanded standard and weekly calendar values', () {
     final metrics = CalendarMonthLayoutMetrics.forViewport(720);
     final expanded = metrics.resolve(0);

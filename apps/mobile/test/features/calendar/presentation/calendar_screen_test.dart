@@ -804,6 +804,47 @@ void main() {
     },
   );
 
+  testWidgets('caps expanded calendar cards on a tablet viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1024, 1366);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = FakeStoryLoopReadRepository(
+      monthSummaries: {
+        DateTime(2026, 5): [
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 5),
+            cardCount: 1,
+            cards: [
+              samplePreviewCard(
+                id: 'tablet-card',
+                submittedAt: DateTime(2026, 5, 5, 9),
+              ),
+            ],
+          ),
+        ],
+      },
+    );
+
+    await _pumpCalendar(tester, repository: repository);
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(
+      const ValueKey('calendar-month-story-card-tablet-card'),
+    );
+    final cell = find.byKey(
+      const ValueKey('calendar-month-story-cell-single-2026-05-05'),
+    );
+    expect(tester.getSize(card).width, inInclusiveRange(40, 48));
+    expect(tester.getCenter(card).dx, closeTo(tester.getCenter(cell).dx, 0.5));
+  });
+
   testWidgets('fetches selected past date and shows story loop detail', (
     tester,
   ) async {

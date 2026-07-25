@@ -9,10 +9,13 @@ class CalendarMonthLayoutMetrics {
   });
 
   factory CalendarMonthLayoutMetrics.forViewport(double viewportExtent) {
-    final expandedExtent = math.max(viewportExtent, minimumExpandedExtent);
-    final standardExtent = math.min(
-      standardCalendarExtent,
-      expandedExtent - minimumExpandedStandardDistance,
+    final expandedExtent = math.max(viewportExtent, weeklyCalendarExtent);
+    final standardExtent = math.max(
+      weeklyCalendarExtent,
+      math.min(
+        standardCalendarExtent,
+        expandedExtent - minimumExpandedStandardDistance,
+      ),
     );
     return CalendarMonthLayoutMetrics._(
       expandedExtent: expandedExtent,
@@ -28,7 +31,6 @@ class CalendarMonthLayoutMetrics {
   static const weeklyHorizontalPadding = 16.0;
   static const standardCalendarExtent = 414.0;
   static const weeklyCalendarExtent = 108.0;
-  static const minimumExpandedExtent = 510.0;
   static const minimumExpandedStandardDistance = 96.0;
   static const minimumTransitionThreshold = 48.0;
   static const maximumTransitionThreshold = 72.0;
