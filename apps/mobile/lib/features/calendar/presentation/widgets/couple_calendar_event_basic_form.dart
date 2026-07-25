@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/drawing/app_drawing_controller.dart';
-import '../../../../core/drawing/widgets/app_drawing_canvas.dart';
-import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/couple_calendar_event.dart';
 
-class CoupleCalendarEventForm extends StatelessWidget {
-  const CoupleCalendarEventForm({
+class CoupleCalendarEventBasicForm extends StatelessWidget {
+  const CoupleCalendarEventBasicForm({
     super.key,
     required this.titleController,
-    required this.memoController,
-    required this.drawingController,
     required this.selectedDate,
     required this.repeatRule,
     required this.reminder,
@@ -21,19 +16,14 @@ class CoupleCalendarEventForm extends StatelessWidget {
     required this.isPast,
     required this.onDatePressed,
     required this.onRepeatRuleChanged,
-    required this.onClearDrawing,
     required this.onReminderEnabledChanged,
     required this.onReminderOffsetChanged,
     required this.onReminderTimePressed,
   });
 
-  static const _maxCanvasSize = 360.0;
   static const _titleMaxLength = 30;
-  static const _memoMaxLength = 500;
 
   final TextEditingController titleController;
-  final TextEditingController memoController;
-  final AppDrawingController drawingController;
   final DateTime selectedDate;
   final CoupleCalendarEventRepeatRule repeatRule;
   final CoupleCalendarEventReminder reminder;
@@ -42,7 +32,6 @@ class CoupleCalendarEventForm extends StatelessWidget {
   final bool isPast;
   final VoidCallback onDatePressed;
   final ValueChanged<CoupleCalendarEventRepeatRule> onRepeatRuleChanged;
-  final VoidCallback onClearDrawing;
   final ValueChanged<bool> onReminderEnabledChanged;
   final ValueChanged<int> onReminderOffsetChanged;
   final VoidCallback onReminderTimePressed;
@@ -56,6 +45,7 @@ class CoupleCalendarEventForm extends StatelessWidget {
         : reminder;
 
     return ListView(
+      key: const Key('calendar-event-basic-step'),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.only(bottom: 32),
       children: [
@@ -66,7 +56,7 @@ class CoupleCalendarEventForm extends StatelessWidget {
           enabled: _isEnabled,
           maxLength: _titleMaxLength,
           textInputAction: TextInputAction.next,
-          decoration: _inputDecoration('일정 제목'),
+          decoration: calendarEventInputDecoration('일정 제목'),
         ),
         const SizedBox(height: 24),
         const _SectionLabel(label: '날짜'),
@@ -99,55 +89,6 @@ class CoupleCalendarEventForm extends StatelessWidget {
                 : null,
           ),
         ),
-        const SizedBox(height: 32),
-        const _SectionLabel(label: '그림', trailing: '그림은 선택 사항이에요'),
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: _maxCanvasSize,
-              maxHeight: _maxCanvasSize,
-            ),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: ColoredBox(
-                color: const Color(0xFFF3F3F3),
-                child: AppDrawingCanvas(
-                  strokes: drawingController.visibleStrokes,
-                  isReadOnly: !_isEnabled,
-                  onStrokeStart: drawingController.startStroke,
-                  onStrokeUpdate: drawingController.updateStroke,
-                  onStrokeEnd: drawingController.endStroke,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        AppDrawingToolbar(
-          keyPrefix: 'calendar-event-drawing',
-          selectedTool: drawingController.selectedTool,
-          selectedColor: drawingController.selectedColor,
-          selectedStrokeWidth: drawingController.selectedStrokeWidth,
-          isReadOnly: !_isEnabled,
-          canUndo: _isEnabled && drawingController.canUndo,
-          canClear: _isEnabled && drawingController.canClear,
-          onToolChanged: drawingController.selectTool,
-          onColorChanged: drawingController.selectColor,
-          onStrokeWidthChanged: drawingController.selectStrokeWidth,
-          onUndoPressed: drawingController.undo,
-          onClearPressed: onClearDrawing,
-        ),
-        const SizedBox(height: 32),
-        const _SectionLabel(label: '메모'),
-        TextField(
-          key: const Key('calendar-event-memo-field'),
-          controller: memoController,
-          enabled: _isEnabled,
-          minLines: 3,
-          maxLines: 5,
-          maxLength: _memoMaxLength,
-          decoration: _inputDecoration('함께 기억할 내용을 남겨도 좋아요'),
-        ),
         const SizedBox(height: 24),
         const _SectionLabel(label: '알림'),
         SwitchListTile(
@@ -163,7 +104,7 @@ class CoupleCalendarEventForm extends StatelessWidget {
           DropdownButtonFormField<int>(
             key: const Key('calendar-event-reminder-offset'),
             initialValue: effectiveReminder.offsetDays,
-            decoration: _inputDecoration('알림 시점'),
+            decoration: calendarEventInputDecoration('알림 시점'),
             items: const [
               DropdownMenuItem(value: 0, child: Text('당일')),
               DropdownMenuItem(value: 1, child: Text('1일 전')),
@@ -196,29 +137,15 @@ class CoupleCalendarEventForm extends StatelessWidget {
 }
 
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label, this.trailing});
+  const _SectionLabel({required this.label});
 
   final String label;
-  final String? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(label, style: AppTextStyles.homeBodyMedium),
-          if (trailing != null) ...[
-            const Spacer(),
-            Text(
-              trailing!,
-              style: AppTextStyles.homeCharacterLabel.copyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ],
-        ],
-      ),
+      child: Text(label, style: AppTextStyles.homeBodyMedium),
     );
   }
 }
@@ -266,7 +193,7 @@ class _SelectionRow extends StatelessWidget {
   }
 }
 
-InputDecoration _inputDecoration(String hintText) {
+InputDecoration calendarEventInputDecoration(String hintText) {
   return InputDecoration(
     hintText: hintText,
     filled: true,

@@ -14,7 +14,8 @@ import '../application/couple_calendar_event_realtime_controller.dart';
 import '../data/couple_calendar_event.dart';
 import '../data/couple_calendar_event_failure.dart';
 import '../data/couple_calendar_event_repository.dart';
-import 'widgets/couple_calendar_event_form.dart';
+import 'widgets/couple_calendar_event_basic_form.dart';
+import 'widgets/couple_calendar_event_extras_form.dart';
 
 class CoupleCalendarEventEditorScreen extends ConsumerStatefulWidget {
   const CoupleCalendarEventEditorScreen.create({
@@ -50,6 +51,8 @@ class _CoupleCalendarEventEditorScreenState
       CoupleCalendarEventRepeatRule.none;
   CoupleCalendarEventReminder _reminder =
       const CoupleCalendarEventReminder.disabled();
+  _CalendarEventEditorStep _step = _CalendarEventEditorStep.basic;
+  CalendarEventExtrasMode _extrasMode = CalendarEventExtrasMode.drawing;
   CoupleCalendarEvent? _existingEvent;
   String _originalDrawingJson = AppDrawingData.empty().toJsonString();
   bool _isLoading = false;
@@ -217,66 +220,120 @@ class _CoupleCalendarEventEditorScreenState
     );
     final isPast = _selectedDate.isBefore(today);
 
-    return SettingsPageLayout(
-      title: widget.isCreating ? '일정 추가' : '일정 수정',
-      onBackPressed: _close,
-      action: SizedBox(
-        width: 64,
-        child: TextButton(
-          key: const Key('calendar-event-save'),
-          onPressed: _canSave && canEdit ? _save : null,
-          child: _isSaving
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('저장'),
+    return PopScope(
+      canPop: _step == _CalendarEventEditorStep.basic,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _step == _CalendarEventEditorStep.extras) {
+          _showBasicStep();
+        }
+      },
+      child: SettingsPageLayout(
+        title: _step == _CalendarEventEditorStep.basic
+            ? widget.isCreating
+                  ? '일정 추가'
+                  : '일정 수정'
+            : '꾸미기',
+        onBackPressed: _handleBackPressed,
+        action: SizedBox(
+          width: 64,
+          child: TextButton(
+            key: _step == _CalendarEventEditorStep.basic
+                ? const Key('calendar-event-next')
+                : const Key('calendar-event-save'),
+            onPressed: _canSave && canEdit
+                ? _step == _CalendarEventEditorStep.basic
+                      ? _showExtrasStep
+                      : _save
+                : null,
+            child: _isSaving && _step == _CalendarEventEditorStep.extras
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(_step == _CalendarEventEditorStep.basic ? '다음' : '저장'),
+          ),
         ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+            : _loadFailed
+            ? _LoadFailure(onRetry: _loadEvent)
+            : _step == _CalendarEventEditorStep.basic
+            ? CoupleCalendarEventBasicForm(
+                titleController: _titleController,
+                selectedDate: _selectedDate,
+                repeatRule: _repeatRule,
+                reminder: _reminder,
+                canEdit: canEdit,
+                isSaving: _isSaving,
+                isPast: isPast,
+                onDatePressed: () => _pickDate(relationshipStartDate, today),
+                onRepeatRuleChanged: (value) {
+                  setState(() {
+                    _repeatRule = value;
+                  });
+                },
+                onReminderEnabledChanged: (value) {
+                  setState(() {
+                    _reminder = CoupleCalendarEventReminder(
+                      isEnabled: value,
+                      offsetDays: _reminder.offsetDays,
+                      hour: _reminder.hour,
+                      minute: _reminder.minute,
+                    );
+                  });
+                },
+                onReminderOffsetChanged: (value) {
+                  setState(() {
+                    _reminder = CoupleCalendarEventReminder(
+                      isEnabled: true,
+                      offsetDays: value,
+                      hour: _reminder.hour,
+                      minute: _reminder.minute,
+                    );
+                  });
+                },
+                onReminderTimePressed: _pickReminderTime,
+              )
+            : CoupleCalendarEventExtrasForm(
+                memoController: _memoController,
+                drawingController: _drawingController,
+                mode: _extrasMode,
+                canEdit: canEdit,
+                isSaving: _isSaving,
+                onModeChanged: (mode) {
+                  setState(() {
+                    _extrasMode = mode;
+                  });
+                },
+                onClearDrawing: _confirmClearDrawing,
+              ),
       ),
-      child: _isLoading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-          : _loadFailed
-          ? _LoadFailure(onRetry: _loadEvent)
-          : CoupleCalendarEventForm(
-              titleController: _titleController,
-              memoController: _memoController,
-              drawingController: _drawingController,
-              selectedDate: _selectedDate,
-              repeatRule: _repeatRule,
-              reminder: _reminder,
-              canEdit: canEdit,
-              isSaving: _isSaving,
-              isPast: isPast,
-              onDatePressed: () => _pickDate(relationshipStartDate, today),
-              onRepeatRuleChanged: (value) {
-                setState(() {
-                  _repeatRule = value;
-                });
-              },
-              onClearDrawing: _confirmClearDrawing,
-              onReminderEnabledChanged: (value) {
-                setState(() {
-                  _reminder = CoupleCalendarEventReminder(
-                    isEnabled: value,
-                    offsetDays: _reminder.offsetDays,
-                    hour: _reminder.hour,
-                    minute: _reminder.minute,
-                  );
-                });
-              },
-              onReminderOffsetChanged: (value) {
-                setState(() {
-                  _reminder = CoupleCalendarEventReminder(
-                    isEnabled: true,
-                    offsetDays: value,
-                    hour: _reminder.hour,
-                    minute: _reminder.minute,
-                  );
-                });
-              },
-              onReminderTimePressed: _pickReminderTime,
-            ),
     );
+  }
+
+  void _showExtrasStep() {
+    if (!_canSave) {
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _step = _CalendarEventEditorStep.extras;
+    });
+  }
+
+  void _showBasicStep() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _step = _CalendarEventEditorStep.basic;
+    });
+  }
+
+  void _handleBackPressed() {
+    if (_step == _CalendarEventEditorStep.extras) {
+      _showBasicStep();
+      return;
+    }
+    _close();
   }
 
   Future<void> _pickDate(DateTime relationshipStartDate, DateTime today) async {
@@ -396,3 +453,5 @@ class _LoadFailure extends StatelessWidget {
     );
   }
 }
+
+enum _CalendarEventEditorStep { basic, extras }

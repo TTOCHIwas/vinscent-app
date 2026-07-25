@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
 import 'package:vinscent/features/calendar/presentation/couple_calendar_event_editor_screen.dart';
@@ -50,14 +51,31 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('일정 추가'), findsOneWidget);
-    expect(find.text('그림은 선택 사항이에요'), findsOneWidget);
+    expect(find.byKey(const Key('calendar-event-basic-step')), findsOneWidget);
+    expect(find.byKey(const Key('calendar-event-extras-step')), findsNothing);
+    expect(
+      find.byKey(const Key('calendar-event-drawing-canvas')),
+      findsNothing,
+    );
 
     await tester.enterText(
       find.byKey(const Key('calendar-event-title-field')),
       '첫 여행',
     );
     await tester.pump();
+    final nextButton = find.byKey(const Key('calendar-event-next'));
+    expect(tester.widget<TextButton>(nextButton).onPressed, isNotNull);
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.lastRequest, isNull);
+    expect(find.byKey(const Key('calendar-event-basic-step')), findsNothing);
+    expect(find.byKey(const Key('calendar-event-extras-step')), findsOneWidget);
+    expect(
+      find.byKey(const Key('calendar-event-drawing-canvas')),
+      findsOneWidget,
+    );
+
     final saveButton = find.byKey(const Key('calendar-event-save'));
     expect(tester.widget<TextButton>(saveButton).onPressed, isNotNull);
     await tester.tap(saveButton);
@@ -68,6 +86,96 @@ void main() {
     expect(repository.lastPreviewBytes, isNull);
     expect(find.text('calendar'), findsOneWidget);
   });
+
+  testWidgets('preserves basic and optional values when returning a step', (
+    tester,
+  ) async {
+    final repository = _FakeCalendarEventRepository();
+    final router = _eventEditorRouter();
+
+    await tester.pumpWidget(
+      _eventEditorApp(router: router, repository: repository),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('calendar-event-title-field')),
+      '여름 휴가',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('calendar-event-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('calendar-event-mode-memo')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('calendar-event-memo-field')),
+      '바다 근처에서 쉬기',
+    );
+
+    await tester.tap(find.byType(AppBackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calendar-event-basic-step')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const Key('calendar-event-title-field')),
+          )
+          .controller
+          ?.text,
+      '여름 휴가',
+    );
+    expect(repository.lastRequest, isNull);
+
+    await tester.tap(find.byKey(const Key('calendar-event-next')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('calendar-event-memo-field')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('calendar-event-memo-field')))
+          .controller
+          ?.text,
+      '바다 근처에서 쉬기',
+    );
+  });
+}
+
+GoRouter _eventEditorRouter() {
+  return GoRouter(
+    initialLocation: '/calendar/event/new',
+    routes: [
+      GoRoute(
+        path: '/calendar',
+        builder: (context, state) => const Text('calendar'),
+      ),
+      GoRoute(
+        path: '/calendar/event/new',
+        builder: (context, state) => Scaffold(
+          body: CoupleCalendarEventEditorScreen.create(
+            initialDate: DateTime(2026, 8, 2),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _eventEditorApp({
+  required GoRouter router,
+  required CoupleCalendarEventRepository repository,
+}) {
+  return ProviderScope(
+    overrides: [
+      coupleControllerProvider.overrideWithBuild(
+        (ref, notifier) async => activeCouple(
+          relationshipStartDate: DateTime(2026, 5, 1),
+          currentDate: DateTime(2026, 7, 26),
+        ),
+      ),
+      coupleCalendarEventRepositoryProvider.overrideWithValue(repository),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
 }
 
 class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
