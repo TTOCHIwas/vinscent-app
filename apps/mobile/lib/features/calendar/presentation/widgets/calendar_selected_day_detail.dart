@@ -62,15 +62,12 @@ class _CalendarSelectedDayDetailState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CalendarDetailDateHeader(date: selectedDate),
         if (monthEvents.hasError) ...[
-          const SizedBox(height: 16),
           _CalendarEventLoadFailure(
             onRetry: () =>
                 ref.invalidate(coupleCalendarEventMonthProvider(selectedDate)),
           ),
         ] else if (hasCalendarEntries) ...[
-          const SizedBox(height: 16),
           CalendarEventDetailList(
             events: events,
             anniversaries: anniversaries,

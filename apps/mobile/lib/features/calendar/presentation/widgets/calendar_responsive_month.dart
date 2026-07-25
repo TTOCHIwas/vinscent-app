@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/date/app_date_policy.dart';
+import '../../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -11,6 +12,7 @@ import '../../application/couple_anniversary_resolver.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../data/couple_calendar_event.dart';
 import '../calendar_month_layout_metrics.dart';
+import 'calendar_detail_date_header.dart';
 import 'calendar_month_story_cell.dart';
 
 class CalendarResponsiveMonth extends ConsumerWidget {
@@ -20,12 +22,24 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.relationshipStartDate,
     required this.selectedDate,
     required this.onDatePressed,
+    required this.metrics,
+    required this.onSwipeRight,
+    required this.onSwipeLeft,
+    required this.onDetailSwipeRight,
+    required this.onDetailSwipeLeft,
+    required this.detailHeaderExtent,
   });
 
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
   final ValueChanged<DateTime> onDatePressed;
+  final CalendarMonthLayoutMetrics metrics;
+  final VoidCallback onSwipeRight;
+  final VoidCallback onSwipeLeft;
+  final VoidCallback onDetailSwipeRight;
+  final VoidCallback onDetailSwipeLeft;
+  final double detailHeaderExtent;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,6 +82,12 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         eventsByDate: eventsByDate,
         anniversaryLabels: anniversaryLabels,
         onDatePressed: onDatePressed,
+        metrics: metrics,
+        onSwipeRight: onSwipeRight,
+        onSwipeLeft: onSwipeLeft,
+        onDetailSwipeRight: onDetailSwipeRight,
+        onDetailSwipeLeft: onDetailSwipeLeft,
+        detailHeaderExtent: detailHeaderExtent,
       ),
     );
   }
@@ -82,6 +102,12 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.eventsByDate,
     required this.anniversaryLabels,
     required this.onDatePressed,
+    required this.metrics,
+    required this.onSwipeRight,
+    required this.onSwipeLeft,
+    required this.onDetailSwipeRight,
+    required this.onDetailSwipeLeft,
+    required this.detailHeaderExtent,
   });
 
   static const _weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
@@ -97,12 +123,18 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final Map<DateTime, List<CoupleCalendarEvent>> eventsByDate;
   final Map<DateTime, String> anniversaryLabels;
   final ValueChanged<DateTime> onDatePressed;
+  final CalendarMonthLayoutMetrics metrics;
+  final VoidCallback onSwipeRight;
+  final VoidCallback onSwipeLeft;
+  final VoidCallback onDetailSwipeRight;
+  final VoidCallback onDetailSwipeLeft;
+  final double detailHeaderExtent;
 
   @override
-  double get maxExtent => CalendarMonthLayoutMetrics.expandedExtent;
+  double get maxExtent => metrics.expandedExtent + detailHeaderExtent;
 
   @override
-  double get minExtent => CalendarMonthLayoutMetrics.collapsedExtent;
+  double get minExtent => metrics.weeklyExtent + detailHeaderExtent;
 
   @override
   Widget build(
@@ -110,69 +142,131 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final values = CalendarMonthLayoutMetrics.resolve(shrinkOffset);
+    final values = metrics.resolve(shrinkOffset);
     final days = _calendarDays(visibleMonth);
     final selectedRow = _selectedRow(days);
     final rowPitch = values.rowHeight + values.rowGap;
     final gridTranslation = -(selectedRow * rowPitch * values.collapseProgress);
+    final currentExtent = (maxExtent - shrinkOffset).clamp(
+      minExtent,
+      maxExtent,
+    );
+    final calendarExtent = currentExtent - detailHeaderExtent;
 
     return ColoredBox(
       color: AppColors.background,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final availableWidth =
-              constraints.maxWidth - (values.horizontalPadding * 2);
-          final cellWidth =
-              (availableWidth - (_columnGap * 6)) / DateTime.daysPerWeek;
-          final gridTop = _topPadding + _weekdayHeight + _weekdayGridGap;
-
-          return ClipRect(
-            child: Stack(
-              children: [
-                for (var index = 0; index < DateTime.daysPerWeek; index++)
-                  Positioned(
-                    left:
-                        values.horizontalPadding +
-                        (index * (cellWidth + _columnGap)),
-                    top: _topPadding,
-                    width: cellWidth,
-                    height: _weekdayHeight,
-                    child: _WeekdayCell(label: _weekdayLabels[index]),
-                  ),
-                for (var index = 0; index < days.length; index++)
-                  Positioned(
-                    left:
-                        values.horizontalPadding +
-                        ((index % DateTime.daysPerWeek) *
-                            (cellWidth + _columnGap)),
-                    top:
-                        gridTop +
-                        ((index ~/ DateTime.daysPerWeek) * rowPitch) +
-                        gridTranslation,
-                    width: cellWidth,
-                    height: values.rowHeight,
-                    child: _DateCell(
-                      date: days[index],
-                      isCurrentMonth: _isSameMonth(days[index], visibleMonth),
-                      isEnabled: _isEnabled(days[index]),
-                      isSelected:
-                          selectedDate != null &&
-                          _isSameDate(days[index], selectedDate!),
-                      summary: summaryByDate[calendarDateOnly(days[index])],
-                      events:
-                          eventsByDate[calendarDateOnly(days[index])] ??
-                          const [],
-                      anniversaryLabel:
-                          anniversaryLabels[calendarDateOnly(days[index])],
-                      eventIndicatorLimit: values.eventIndicatorLimit,
-                      onPressed: () => onDatePressed(days[index]),
-                    ),
-                  ),
-              ],
+      child: Column(
+        children: [
+          SizedBox(
+            height: calendarExtent,
+            child: AppHorizontalSwipeRegion(
+              key: const Key('calendar-month-swipe-region'),
+              onSwipeRight: onSwipeRight,
+              onSwipeLeft: onSwipeLeft,
+              child: _buildMonthSurface(
+                values: values,
+                days: days,
+                rowPitch: rowPitch,
+                gridTranslation: gridTranslation,
+              ),
             ),
-          );
-        },
+          ),
+          SizedBox(
+            height: detailHeaderExtent,
+            child: AppHorizontalSwipeRegion(
+              key: const Key('calendar-detail-date-swipe-region'),
+              onSwipeRight: onDetailSwipeRight,
+              onSwipeLeft: onDetailSwipeLeft,
+              child: selectedDate == null
+                  ? const SizedBox.expand()
+                  : CalendarDetailDateHeader(
+                      date: selectedDate!,
+                      height: detailHeaderExtent,
+                    ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildMonthSurface({
+    required CalendarMonthLayoutValues values,
+    required List<DateTime> days,
+    required double rowPitch,
+    required double gridTranslation,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth =
+            constraints.maxWidth - (values.horizontalPadding * 2);
+        final cellWidth =
+            (availableWidth - (_columnGap * 6)) / DateTime.daysPerWeek;
+        final gridTop = _topPadding + _weekdayHeight + _weekdayGridGap;
+
+        return ClipRect(
+          child: Stack(
+            children: [
+              for (var index = 0; index < DateTime.daysPerWeek; index++)
+                Positioned(
+                  left:
+                      values.horizontalPadding +
+                      (index * (cellWidth + _columnGap)),
+                  top: _topPadding,
+                  width: cellWidth,
+                  height: _weekdayHeight,
+                  child: _WeekdayCell(label: _weekdayLabels[index]),
+                ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: gridTop,
+                bottom: 0,
+                child: ClipRect(
+                  child: Stack(
+                    children: [
+                      for (var index = 0; index < days.length; index++)
+                        Positioned(
+                          left:
+                              values.horizontalPadding +
+                              ((index % DateTime.daysPerWeek) *
+                                  (cellWidth + _columnGap)),
+                          top:
+                              ((index ~/ DateTime.daysPerWeek) * rowPitch) +
+                              gridTranslation,
+                          width: cellWidth,
+                          height: values.rowHeight,
+                          child: _DateCell(
+                            date: days[index],
+                            isCurrentMonth: _isSameMonth(
+                              days[index],
+                              visibleMonth,
+                            ),
+                            isEnabled: _isEnabled(days[index]),
+                            isSelected:
+                                selectedDate != null &&
+                                _isSameDate(days[index], selectedDate!),
+                            summary:
+                                summaryByDate[calendarDateOnly(days[index])],
+                            events:
+                                eventsByDate[calendarDateOnly(days[index])] ??
+                                const [],
+                            anniversaryLabel:
+                                anniversaryLabels[calendarDateOnly(
+                                  days[index],
+                                )],
+                            eventIndicatorLimit: values.eventIndicatorLimit,
+                            onPressed: () => onDatePressed(days[index]),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -208,7 +302,10 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         selectedDate != oldDelegate.selectedDate ||
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
-        anniversaryLabels != oldDelegate.anniversaryLabels;
+        anniversaryLabels != oldDelegate.anniversaryLabels ||
+        metrics.expandedExtent != oldDelegate.metrics.expandedExtent ||
+        metrics.standardExtent != oldDelegate.metrics.standardExtent ||
+        detailHeaderExtent != oldDelegate.detailHeaderExtent;
   }
 }
 

@@ -82,6 +82,7 @@ void main() {
     addTearDown(painter.dispose);
 
     expect(text.style?.height, 1);
+    expect(text.style?.fontSize, 12);
     expect(painter.height, lessThanOrEqualTo(16));
     expect(tester.takeException(), isNull);
   });
@@ -158,7 +159,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('swipes one day at a time within the relationship range', (
+  testWidgets('swipes the selected-day detail one day at a time', (
     tester,
   ) async {
     final repository = FakeStoryLoopReadRepository();
@@ -167,7 +168,9 @@ void main() {
       repository: repository,
       relationshipStartDate: DateTime(2026, 5, 9),
     );
-    final swipeRegion = find.byKey(const Key('calendar-date-swipe-region'));
+    final swipeRegion = find.byKey(
+      const Key('calendar-detail-date-swipe-region'),
+    );
 
     await tester.fling(swipeRegion, const Offset(300, 0), 1000);
     await tester.pumpAndSettle();
@@ -238,7 +241,7 @@ void main() {
     );
 
     await tester.fling(
-      find.byKey(const Key('calendar-date-swipe-region')),
+      find.byKey(const Key('calendar-detail-date-swipe-region')),
       const Offset(64, 0),
       2000,
     );
@@ -258,7 +261,7 @@ void main() {
     );
 
     await tester.fling(
-      find.byKey(const Key('calendar-date-swipe-region')),
+      find.byKey(const Key('calendar-detail-date-swipe-region')),
       const Offset(300, 0),
       1000,
     );
@@ -270,6 +273,70 @@ void main() {
       DateTime(2026, 6, 1),
       DateTime(2026, 5, 31),
     ]);
+  });
+
+  testWidgets(
+    'moves the standard calendar one month while preserving the day',
+    (tester) async {
+      final repository = FakeStoryLoopReadRepository();
+      await _pumpCalendar(
+        tester,
+        repository: repository,
+        today: DateTime(2026, 6, 2),
+      );
+
+      await tester.fling(
+        find.byKey(const Key('calendar-month-swipe-region')),
+        const Offset(300, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('2026년 05월'), findsOneWidget);
+      expect(repository.requestedMonths, [
+        DateTime(2026, 6),
+        DateTime(2026, 5),
+      ]);
+      expect(repository.requestedDetailDates, [
+        DateTime(2026, 6, 2),
+        DateTime(2026, 5, 2),
+      ]);
+    },
+  );
+
+  testWidgets('moves the weekly calendar by seven days', (tester) async {
+    final repository = FakeStoryLoopReadRepository();
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+    final scrollView = tester.widget<CustomScrollView>(
+      find.byKey(const Key('calendar-scroll-view')),
+    );
+    final metrics = CalendarMonthLayoutMetrics.forViewport(
+      tester.getSize(find.byKey(const Key('calendar-scroll-view'))).height,
+    );
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, -1000),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      scrollView.controller!.offset,
+      closeTo(metrics.weeklyScrollOffset, 0.5),
+    );
+
+    await tester.fling(
+      find.byKey(const Key('calendar-month-swipe-region')),
+      const Offset(-300, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('5월 17일'), findsOneWidget);
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
   });
 
   testWidgets('does not move before relationship start month', (tester) async {
@@ -284,6 +351,37 @@ void main() {
     expect(find.text('2026년 04월'), findsNothing);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
+  });
+
+  testWidgets('centers month navigation and keeps add at the far right', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+
+    final titleCenter = tester.getCenter(find.text('2026년 05월')).dx;
+    final previousCenter = tester
+        .getCenter(find.byKey(const Key('calendar-previous-month')))
+        .dx;
+    final nextCenter = tester
+        .getCenter(find.byKey(const Key('calendar-next-month')))
+        .dx;
+    final addCenter = tester
+        .getCenter(find.byKey(const Key('calendar-add-event')))
+        .dx;
+
+    expect((previousCenter + nextCenter) / 2, closeTo(titleCenter, 0.5));
+    expect(
+      titleCenter,
+      closeTo(
+        tester.view.physicalSize.width / tester.view.devicePixelRatio / 2,
+        0.5,
+      ),
+    );
+    expect(addCenter, greaterThan(nextCenter));
   });
 
   testWidgets('moves to previous month after relationship start month', (
@@ -304,7 +402,10 @@ void main() {
 
     expect(find.text('2026년 05월'), findsOneWidget);
     expect(repository.requestedMonths, [DateTime(2026, 6), DateTime(2026, 5)]);
-    expect(repository.requestedDetailDates, [DateTime(2026, 6, 2)]);
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 6, 2),
+      DateTime(2026, 5, 2),
+    ]);
   });
 
   testWidgets('moves to a future month for shared schedules', (tester) async {
@@ -321,7 +422,7 @@ void main() {
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
   });
 
-  testWidgets('starts in the standard calendar height and snaps smoothly', (
+  testWidgets('uses thresholds and moves only one calendar state per gesture', (
     tester,
   ) async {
     await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
@@ -329,29 +430,78 @@ void main() {
       find.byKey(const Key('calendar-scroll-view')),
     );
     final controller = scrollView.controller!;
-
-    expect(
-      controller.offset,
-      closeTo(CalendarMonthLayoutMetrics.defaultScrollOffset, 0.5),
+    final metrics = CalendarMonthLayoutMetrics.forViewport(
+      tester.getSize(find.byKey(const Key('calendar-scroll-view'))).height,
     );
+
+    expect(controller.offset, closeTo(metrics.standardScrollOffset, 0.5));
 
     await tester.drag(
       find.byKey(const Key('calendar-scroll-view')),
-      const Offset(0, 100),
+      const Offset(0, 40),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.offset, closeTo(metrics.standardScrollOffset, 0.5));
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
     );
     await tester.pumpAndSettle();
     expect(controller.offset, closeTo(0, 0.5));
 
     await tester.drag(
       find.byKey(const Key('calendar-scroll-view')),
-      const Offset(0, -330),
+      const Offset(0, -1000),
     );
     await tester.pumpAndSettle();
-    expect(
-      controller.offset,
-      closeTo(CalendarMonthLayoutMetrics.collapsedScrollOffset, 0.5),
+    expect(controller.offset, closeTo(metrics.standardScrollOffset, 0.5));
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, -1000),
     );
+    await tester.pumpAndSettle();
+    expect(controller.offset, closeTo(metrics.weeklyScrollOffset, 0.5));
   });
+
+  testWidgets(
+    'keeps the date header pinned and hands detail scrolling off at its top',
+    (tester) async {
+      final repository = FakeStoryLoopReadRepository(
+        details: {DateTime(2026, 5, 5): _completedDetail},
+      );
+      await _pumpCalendar(
+        tester,
+        repository: repository,
+        initialDate: DateTime(2026, 5, 5),
+      );
+      final scrollFinder = find.byKey(const Key('calendar-scroll-view'));
+      final scrollView = tester.widget<CustomScrollView>(scrollFinder);
+      final controller = scrollView.controller!;
+      final metrics = CalendarMonthLayoutMetrics.forViewport(
+        tester.getSize(scrollFinder).height,
+      );
+
+      await tester.drag(scrollFinder, const Offset(0, -1000));
+      await tester.pumpAndSettle();
+      expect(controller.offset, closeTo(metrics.weeklyScrollOffset, 0.5));
+
+      final headerTop = tester.getTopLeft(find.text('5월 5일')).dy;
+      await tester.drag(scrollFinder, const Offset(0, -320));
+      await tester.pumpAndSettle();
+      expect(controller.offset, greaterThan(metrics.weeklyScrollOffset));
+      expect(tester.getTopLeft(find.text('5월 5일')).dy, closeTo(headerTop, 0.5));
+
+      await tester.drag(scrollFinder, const Offset(0, 1000));
+      await tester.pumpAndSettle();
+      expect(controller.offset, closeTo(metrics.weeklyScrollOffset, 0.5));
+
+      await tester.drag(scrollFinder, const Offset(0, 1000));
+      await tester.pumpAndSettle();
+      expect(controller.offset, closeTo(metrics.standardScrollOffset, 0.5));
+    },
+  );
 
   testWidgets('opens the shared event editor with the selected date', (
     tester,
@@ -636,6 +786,21 @@ void main() {
         expect(decoration.border, isNull);
         expect(decoration.boxShadow, hasLength(1));
       }
+
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, 1000),
+      );
+      await tester.pumpAndSettle();
+
+      final expandedSingleSize = tester.getSize(singleCard);
+      expect(expandedSingleSize.width, inInclusiveRange(24, 30));
+      expect(tester.getSize(firstStackedCard), expandedSingleSize);
+      expect(tester.getSize(secondStackedCard), expandedSingleSize);
+      expect(
+        tester.getCenter(singleCard).dx,
+        closeTo(tester.getCenter(singleCardCell).dx, 0.5),
+      );
     },
   );
 

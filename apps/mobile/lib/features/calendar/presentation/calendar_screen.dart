@@ -11,7 +11,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
+import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
+import 'calendar_step_scroll_physics.dart';
+import 'widgets/calendar_detail_date_header.dart';
 import 'widgets/calendar_responsive_month.dart';
 import 'widgets/calendar_selected_day_detail.dart';
 
@@ -25,16 +28,24 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  static const _dateNavigation = CalendarDateNavigation();
+
   late final ScrollController _scrollController;
+  late final CalendarScrollBoundaryController _scrollBoundaryController;
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
+  CalendarMonthLayoutMetrics? _layoutMetrics;
+  CalendarViewportState _viewportState = CalendarViewportState.standard;
+  _CalendarGestureSession? _activeGesture;
   bool _didSetInitialScrollPosition = false;
-  bool _isSnapScheduled = false;
+  bool _isMetricAdjustmentScheduled = false;
+  int _gestureGeneration = 0;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _scrollBoundaryController = CalendarScrollBoundaryController();
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
     final initialDate = calendarDateOnly(widget.initialDate ?? today);
     _visibleMonth = _monthOnly(initialDate);
@@ -90,62 +101,103 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext();
 
-        return AppHorizontalSwipeRegion(
-          key: const Key('calendar-date-swipe-region'),
-          onSwipeRight: () => _moveSelectedDate(
-            -1,
-            relationshipStartDate: couple.relationshipStartDate!,
-          ),
-          onSwipeLeft: () => _moveSelectedDate(
-            1,
-            relationshipStartDate: couple.relationshipStartDate!,
-          ),
-          child: Column(
-            children: [
-              _CalendarMonthHeader(
-                visibleMonth: _visibleMonth,
-                canGoPrevious: canGoPrevious,
-                canGoNext: canGoNext,
-                onPreviousPressed: canGoPrevious
-                    ? () => _showPreviousMonth(relationshipStartMonth)
-                    : null,
-                onNextPressed: canGoNext ? _showNextMonth : null,
-                onAddPressed: couple.canEditSharedData
-                    ? () => _addEvent(
-                        relationshipStartDate: couple.relationshipStartDate!,
-                        today: today,
-                      )
-                    : null,
-              ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    _scheduleInitialScrollPosition();
-                    final detailMinHeight = math.max(
-                      0.0,
-                      constraints.maxHeight -
-                          CalendarMonthLayoutMetrics.collapsedExtent,
-                    );
+        return Column(
+          children: [
+            _CalendarMonthHeader(
+              visibleMonth: _visibleMonth,
+              canGoPrevious: canGoPrevious,
+              canGoNext: canGoNext,
+              onPreviousPressed: canGoPrevious
+                  ? () => _moveSelectedMonth(
+                      -1,
+                      relationshipStartDate: couple.relationshipStartDate!,
+                    )
+                  : null,
+              onNextPressed: canGoNext
+                  ? () => _moveSelectedMonth(
+                      1,
+                      relationshipStartDate: couple.relationshipStartDate!,
+                    )
+                  : null,
+              onAddPressed: couple.canEditSharedData
+                  ? () => _addEvent(
+                      relationshipStartDate: couple.relationshipStartDate!,
+                      today: today,
+                    )
+                  : null,
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final metrics = CalendarMonthLayoutMetrics.forViewport(
+                    constraints.maxHeight,
+                  );
+                  final detailHeaderExtent =
+                      CalendarDetailDateHeader.resolveExtent(context);
+                  _adoptLayoutMetrics(metrics);
+                  _scheduleInitialScrollPosition(metrics);
+                  final detailMinHeight = math.max(
+                    0.0,
+                    constraints.maxHeight -
+                        metrics.weeklyExtent -
+                        detailHeaderExtent,
+                  );
 
-                    return NotificationListener<ScrollEndNotification>(
-                      onNotification: _handleScrollEnd,
-                      child: CustomScrollView(
-                        key: const Key('calendar-scroll-view'),
-                        controller: _scrollController,
-                        slivers: [
-                          CalendarResponsiveMonth(
-                            visibleMonth: _visibleMonth,
+                  return NotificationListener<ScrollNotification>(
+                    onNotification: _handleScrollNotification,
+                    child: CustomScrollView(
+                      key: const Key('calendar-scroll-view'),
+                      controller: _scrollController,
+                      physics: CalendarStepScrollPhysics(
+                        boundaryController: _scrollBoundaryController,
+                      ),
+                      slivers: [
+                        CalendarResponsiveMonth(
+                          visibleMonth: _visibleMonth,
+                          relationshipStartDate: couple.relationshipStartDate!,
+                          selectedDate: _selectedDate,
+                          onDatePressed: _handleDatePressed,
+                          metrics: metrics,
+                          onSwipeRight: () => _moveCalendarPeriod(
+                            -1,
                             relationshipStartDate:
                                 couple.relationshipStartDate!,
-                            selectedDate: _selectedDate,
-                            onDatePressed: _handleDatePressed,
                           ),
-                          SliverToBoxAdapter(
+                          onSwipeLeft: () => _moveCalendarPeriod(
+                            1,
+                            relationshipStartDate:
+                                couple.relationshipStartDate!,
+                          ),
+                          onDetailSwipeRight: () => _moveSelectedDate(
+                            -1,
+                            relationshipStartDate:
+                                couple.relationshipStartDate!,
+                          ),
+                          onDetailSwipeLeft: () => _moveSelectedDate(
+                            1,
+                            relationshipStartDate:
+                                couple.relationshipStartDate!,
+                          ),
+                          detailHeaderExtent: detailHeaderExtent,
+                        ),
+                        SliverToBoxAdapter(
+                          child: AppHorizontalSwipeRegion(
+                            key: const Key('calendar-detail-swipe-region'),
+                            onSwipeRight: () => _moveSelectedDate(
+                              -1,
+                              relationshipStartDate:
+                                  couple.relationshipStartDate!,
+                            ),
+                            onSwipeLeft: () => _moveSelectedDate(
+                              1,
+                              relationshipStartDate:
+                                  couple.relationshipStartDate!,
+                            ),
                             child: Padding(
                               key: const Key('calendar-detail-padding'),
                               padding: EdgeInsets.fromLTRB(
                                 20,
-                                24,
+                                16,
                                 20,
                                 40 + bottomNavigationClearance,
                               ),
@@ -163,14 +215,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -184,34 +236,57 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return _visibleMonth.isBefore(DateTime(2100, 12));
   }
 
-  void _showPreviousMonth(DateTime relationshipStartMonth) {
-    final previousMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1);
-    if (previousMonth.isBefore(relationshipStartMonth)) {
-      return;
-    }
-
-    setState(() {
-      _visibleMonth = previousMonth;
-      _selectedDate = null;
-    });
-  }
-
-  void _showNextMonth() {
-    final nextMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1);
-    if (nextMonth.isAfter(DateTime(2100, 12))) {
-      return;
-    }
-
-    setState(() {
-      _visibleMonth = nextMonth;
-      _selectedDate = null;
-    });
-  }
-
   void _handleDatePressed(DateTime date) {
     setState(() {
       _selectedDate = calendarDateOnly(date);
     });
+  }
+
+  void _moveCalendarPeriod(
+    int offset, {
+    required DateTime relationshipStartDate,
+  }) {
+    if (_viewportState == CalendarViewportState.weekly) {
+      _moveSelectedWeek(offset, relationshipStartDate: relationshipStartDate);
+      return;
+    }
+    _moveSelectedMonth(offset, relationshipStartDate: relationshipStartDate);
+  }
+
+  void _moveSelectedMonth(
+    int monthOffset, {
+    required DateTime relationshipStartDate,
+  }) {
+    final selectedDate = _selectedDate;
+    if (selectedDate == null) {
+      return;
+    }
+    final targetDate = _dateNavigation.moveByMonth(
+      selectedDate: selectedDate,
+      monthOffset: monthOffset,
+      relationshipStartDate: relationshipStartDate,
+    );
+    if (targetDate != null) {
+      _selectDate(targetDate);
+    }
+  }
+
+  void _moveSelectedWeek(
+    int weekOffset, {
+    required DateTime relationshipStartDate,
+  }) {
+    final selectedDate = _selectedDate;
+    if (selectedDate == null) {
+      return;
+    }
+    final targetDate = _dateNavigation.moveByWeek(
+      selectedDate: selectedDate,
+      weekOffset: weekOffset,
+      relationshipStartDate: relationshipStartDate,
+    );
+    if (targetDate != null) {
+      _selectDate(targetDate);
+    }
   }
 
   void _moveSelectedDate(
@@ -223,19 +298,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       return;
     }
 
-    final targetDate = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day + dayOffset,
+    final targetDate = _dateNavigation.moveByDay(
+      selectedDate: selectedDate,
+      dayOffset: dayOffset,
+      relationshipStartDate: relationshipStartDate,
     );
-    final firstDate = calendarDateOnly(relationshipStartDate);
-    if (targetDate.isBefore(firstDate) || targetDate.year > 2100) {
-      return;
+    if (targetDate != null) {
+      _selectDate(targetDate);
     }
+  }
 
+  void _selectDate(DateTime date) {
     setState(() {
-      _selectedDate = targetDate;
-      _visibleMonth = _monthOnly(targetDate);
+      _selectedDate = date;
+      _visibleMonth = _monthOnly(date);
     });
   }
 
@@ -252,7 +328,45 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     context.push('/calendar/event/new?date=${_formatRouteDate(initialDate)}');
   }
 
-  void _scheduleInitialScrollPosition() {
+  void _adoptLayoutMetrics(CalendarMonthLayoutMetrics metrics) {
+    final previous = _layoutMetrics;
+    if (previous == null) {
+      _layoutMetrics = metrics;
+      return;
+    }
+    if ((previous.expandedExtent - metrics.expandedExtent).abs() <= 0.5 &&
+        (previous.standardExtent - metrics.standardExtent).abs() <= 0.5) {
+      return;
+    }
+
+    final previousOffset = _scrollController.hasClients
+        ? _scrollController.offset
+        : previous.offsetFor(_viewportState);
+    final detailOffset = math.max(
+      0.0,
+      previousOffset - previous.weeklyScrollOffset,
+    );
+    _layoutMetrics = metrics;
+    if (!_didSetInitialScrollPosition || _isMetricAdjustmentScheduled) {
+      return;
+    }
+
+    _isMetricAdjustmentScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMetricAdjustmentScheduled = false;
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+      final target = detailOffset > 0.5
+          ? metrics.weeklyScrollOffset + detailOffset
+          : metrics.offsetFor(_viewportState);
+      _scrollController.jumpTo(
+        target.clamp(0.0, _scrollController.position.maxScrollExtent),
+      );
+    });
+  }
+
+  void _scheduleInitialScrollPosition(CalendarMonthLayoutMetrics metrics) {
     if (_didSetInitialScrollPosition) {
       return;
     }
@@ -265,57 +379,114 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       _didSetInitialScrollPosition = true;
       _scrollController.jumpTo(
         math.min(
-          CalendarMonthLayoutMetrics.defaultScrollOffset,
+          metrics.standardScrollOffset,
           _scrollController.position.maxScrollExtent,
         ),
       );
     });
   }
 
-  bool _handleScrollEnd(ScrollEndNotification notification) {
+  bool _handleScrollNotification(ScrollNotification notification) {
     if (notification.depth != 0 || !_scrollController.hasClients) {
       return false;
     }
-    final offset = _scrollController.offset;
-    if (offset > CalendarMonthLayoutMetrics.collapsedScrollOffset + 0.5) {
-      return false;
+
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _beginCalendarGesture();
+    } else if (notification is ScrollEndNotification) {
+      final gesture = _activeGesture;
+      if (gesture != null) {
+        _activeGesture = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && gesture.generation == _gestureGeneration) {
+            unawaited(_completeCalendarGesture(gesture));
+          }
+        });
+      }
     }
-    final target = CalendarMonthLayoutMetrics.snapTarget(offset);
-    if ((target - offset).abs() <= 0.5) {
-      return false;
-    }
-    if (_isSnapScheduled) {
-      return false;
-    }
-    _isSnapScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_snapToNearestCalendarState());
-    });
+
     return false;
   }
 
-  Future<void> _snapToNearestCalendarState() async {
+  void _beginCalendarGesture() {
+    final metrics = _layoutMetrics;
+    if (metrics == null || !_scrollController.hasClients) {
+      return;
+    }
+
+    final generation = ++_gestureGeneration;
+    final offset = _scrollController.offset;
+    final boundary = metrics.gestureBoundary(
+      state: _viewportState,
+      scrollOffset: offset,
+      maxScrollExtent: _scrollController.position.maxScrollExtent,
+    );
+    _scrollBoundaryController.boundary = boundary;
+    _activeGesture = _CalendarGestureSession(
+      generation: generation,
+      startState: _viewportState,
+      startOffset: offset,
+      boundary: boundary,
+    );
+  }
+
+  Future<void> _completeCalendarGesture(_CalendarGestureSession gesture) async {
+    final metrics = _layoutMetrics;
+    if (metrics == null ||
+        !_scrollController.hasClients ||
+        gesture.generation != _gestureGeneration) {
+      return;
+    }
+
+    final decision = metrics.resolveSnap(
+      startState: gesture.startState,
+      startOffset: gesture.startOffset,
+      currentOffset: _scrollController.offset,
+      startedInDetail: gesture.boundary.startedInDetail,
+    );
+    if (decision == null) {
+      _scrollBoundaryController.clear();
+      return;
+    }
+
+    if (_viewportState != decision.state) {
+      setState(() {
+        _viewportState = decision.state;
+      });
+    }
+    final target = decision.offset.clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
     try {
-      if (!mounted || !_scrollController.hasClients) {
-        return;
+      if ((target - _scrollController.offset).abs() > 0.5) {
+        await _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+        );
       }
-      final offset = _scrollController.offset;
-      if (offset > CalendarMonthLayoutMetrics.collapsedScrollOffset + 0.5) {
-        return;
-      }
-      final target = CalendarMonthLayoutMetrics.snapTarget(offset);
-      if ((target - offset).abs() <= 0.5) {
-        return;
-      }
-      await _scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-      );
     } finally {
-      _isSnapScheduled = false;
+      if (gesture.generation == _gestureGeneration) {
+        _scrollBoundaryController.clear();
+      }
     }
   }
+}
+
+class _CalendarGestureSession {
+  const _CalendarGestureSession({
+    required this.generation,
+    required this.startState,
+    required this.startOffset,
+    required this.boundary,
+  });
+
+  final int generation;
+  final CalendarViewportState startState;
+  final double startOffset;
+  final CalendarScrollBoundary boundary;
 }
 
 class _CalendarMonthHeader extends StatelessWidget {
@@ -343,50 +514,41 @@ class _CalendarMonthHeader extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Positioned(
-            left: 12,
-            top: 0,
-            bottom: 0,
-            child: _MonthIconButton(
-              icon: Icons.chevron_left,
-              semanticLabel: '이전 달',
-              onPressed: canGoPrevious ? onPreviousPressed : null,
-            ),
-          ),
-          Positioned(
-            left: 92,
-            right: 92,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MonthIconButton(
+                  key: const Key('calendar-previous-month'),
+                  icon: Icons.chevron_left,
+                  semanticLabel: '이전 달',
+                  onPressed: canGoPrevious ? onPreviousPressed : null,
+                ),
+                const SizedBox(width: 4),
+                Text(
                   _formatMonth(visibleMonth),
                   maxLines: 1,
                   style: AppTextStyles.pageTitle,
                 ),
-              ),
+                const SizedBox(width: 4),
+                _MonthIconButton(
+                  key: const Key('calendar-next-month'),
+                  icon: Icons.chevron_right,
+                  semanticLabel: '다음 달',
+                  onPressed: canGoNext ? onNextPressed : null,
+                ),
+              ],
             ),
           ),
           Positioned(
             right: 12,
             top: 0,
             bottom: 0,
-            child: Row(
-              children: [
-                _MonthIconButton(
-                  icon: Icons.chevron_right,
-                  semanticLabel: '다음 달',
-                  onPressed: canGoNext ? onNextPressed : null,
-                ),
-                _MonthIconButton(
-                  key: const Key('calendar-add-event'),
-                  icon: Icons.add,
-                  semanticLabel: '일정 추가',
-                  onPressed: onAddPressed,
-                ),
-              ],
+            child: _MonthIconButton(
+              key: const Key('calendar-add-event'),
+              icon: Icons.add,
+              semanticLabel: '일정 추가',
+              onPressed: onAddPressed,
             ),
           ),
         ],

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -47,11 +49,11 @@ class CalendarMonthStoryCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 16,
+            height: 18,
             child: Row(
               children: [
                 SizedBox.square(
-                  dimension: 16,
+                  dimension: 18,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: isSelected
@@ -67,7 +69,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                             color: isSelected
                                 ? AppColors.textInverse
                                 : textColor,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.w400,
@@ -89,7 +91,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                       style: AppTypography.applyToStyle(
                         AppTextStyles.homeCharacterLabel.copyWith(
                           color: textColor,
-                          fontSize: 8,
+                          fontSize: 10,
                           height: 1,
                         ),
                       ),
@@ -102,7 +104,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
           if (events.isNotEmpty) ...[
             const SizedBox(height: 1),
             SizedBox(
-              height: 14,
+              height: 16,
               child: _CalendarEventIndicators(
                 date: date,
                 events: events,
@@ -161,7 +163,7 @@ class _CalendarEventIndicators extends StatelessWidget {
           CalendarEventArtwork(
             key: ValueKey('calendar-event-indicator-${event.id}'),
             event: event,
-            size: 13,
+            size: 14,
           ),
           const SizedBox(width: 1),
         ],
@@ -172,7 +174,7 @@ class _CalendarEventIndicators extends StatelessWidget {
             style: AppTypography.applyToStyle(
               AppTextStyles.homeCharacterLabel.copyWith(
                 color: AppColors.textMuted,
-                fontSize: 8,
+                fontSize: 10,
                 height: 1,
               ),
             ),
@@ -192,7 +194,7 @@ String _calendarDateKey(DateTime date) {
 class _MonthStoryPreview extends StatelessWidget {
   const _MonthStoryPreview({required this.cards});
 
-  static const _preferredCardWidth = 18.0;
+  static const _maximumCardWidth = 48.0;
   static const _stackWidthFactor = 1.55;
 
   final List<StoryLoopCardPreview> cards;
@@ -205,18 +207,18 @@ class _MonthStoryPreview extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final preferredCardHeight =
-            _preferredCardWidth / storyCardCanvasAspectRatio;
-        final cardHeight =
-            constraints.hasBoundedHeight &&
-                constraints.maxHeight < preferredCardHeight
-            ? constraints.maxHeight
-            : preferredCardHeight;
-        final cardWidth = cardHeight * storyCardCanvasAspectRatio;
+        final widthFromCell = constraints.maxWidth / _stackWidthFactor;
+        final widthFromHeight =
+            constraints.maxHeight * storyCardCanvasAspectRatio;
+        final cardWidth = math.min(
+          _maximumCardWidth,
+          math.min(widthFromCell, widthFromHeight),
+        );
+        final cardHeight = cardWidth / storyCardCanvasAspectRatio;
 
         if (cards.length == 1) {
           return Align(
-            alignment: Alignment.bottomCenter,
+            alignment: Alignment.center,
             child: _MonthStorySurface(
               card: cards.first,
               width: cardWidth,
@@ -225,15 +227,10 @@ class _MonthStoryPreview extends StatelessWidget {
           );
         }
 
-        final preferredStackWidth = cardWidth * _stackWidthFactor;
-        final stackWidth =
-            constraints.hasBoundedWidth &&
-                constraints.maxWidth < preferredStackWidth
-            ? constraints.maxWidth
-            : preferredStackWidth;
+        final stackWidth = cardWidth * _stackWidthFactor;
 
         return Align(
-          alignment: Alignment.bottomCenter,
+          alignment: Alignment.center,
           child: SizedBox(
             width: stackWidth,
             height: cardHeight,

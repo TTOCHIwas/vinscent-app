@@ -11,6 +11,7 @@ import '../../../questions/presentation/widgets/question_detail_title.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
 import '../../../story_loops/data/story_loop_status.dart';
+import 'calendar_detail_date_header.dart';
 import '../../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import 'calendar_story_card_stack.dart';
 
@@ -226,42 +227,6 @@ class _CardOnlyMessage extends StatelessWidget {
         1 => '두 사람의 카드가 모두 올라오면 질문이 생성돼요',
         _ => '질문이 준비되면 이 자리에서 함께 볼 수 있어요',
       },
-    );
-  }
-}
-
-class CalendarDetailDateHeader extends StatelessWidget {
-  const CalendarDetailDateHeader({super.key, required this.date});
-
-  static const _weekdayLabels = [
-    '월요일',
-    '화요일',
-    '수요일',
-    '목요일',
-    '금요일',
-    '토요일',
-    '일요일',
-  ];
-
-  final DateTime date;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${date.month}월 ${date.day}일',
-          style: AppTextStyles.calendarDetailDate,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '${date.year} · ${_weekdayLabels[date.weekday - 1]}',
-          style: AppTextStyles.homeCharacterLabel.copyWith(
-            color: AppColors.textMuted,
-          ),
-        ),
-      ],
     );
   }
 }
