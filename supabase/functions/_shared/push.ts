@@ -16,7 +16,8 @@ export type NotificationType =
   | 'partner_story_card_uploaded'
   | 'question_generated'
   | 'couple_activity'
-  | 'ai_update';
+  | 'ai_update'
+  | 'calendar_event_reminder';
 
 export type DeliveryStatus = PushDeliveryStatus;
 
