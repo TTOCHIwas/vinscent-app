@@ -3,16 +3,19 @@ class HomeWidgetSnapshot {
     required this.characterImage,
     required this.recordingAudio,
     required this.partnerCardImage,
+    this.calendarSummary = const HomeWidgetCalendarSummaryUpdate.remove(),
   });
 
   final HomeWidgetAssetUpdate characterImage;
   final HomeWidgetAssetUpdate recordingAudio;
   final HomeWidgetAssetUpdate partnerCardImage;
+  final HomeWidgetCalendarSummaryUpdate calendarSummary;
 
   bool get requiresRetry =>
       characterImage.shouldPreserve ||
       recordingAudio.shouldPreserve ||
-      partnerCardImage.shouldPreserve;
+      partnerCardImage.shouldPreserve ||
+      calendarSummary.shouldPreserve;
 }
 
 enum HomeWidgetAssetUpdateType { replace, remove, preserve }
@@ -50,6 +53,41 @@ class HomeWidgetRemoteAsset {
   final int maxBytes;
 }
 
+enum HomeWidgetCalendarSummaryUpdateType { replace, remove, preserve }
+
+class HomeWidgetCalendarSummaryUpdate {
+  const HomeWidgetCalendarSummaryUpdate.replace(this.summary)
+    : type = HomeWidgetCalendarSummaryUpdateType.replace,
+      assert(summary != null);
+
+  const HomeWidgetCalendarSummaryUpdate.remove()
+    : type = HomeWidgetCalendarSummaryUpdateType.remove,
+      summary = null;
+
+  const HomeWidgetCalendarSummaryUpdate.preserve()
+    : type = HomeWidgetCalendarSummaryUpdateType.preserve,
+      summary = null;
+
+  final HomeWidgetCalendarSummaryUpdateType type;
+  final HomeWidgetCalendarSummary? summary;
+
+  bool get shouldPreserve =>
+      type == HomeWidgetCalendarSummaryUpdateType.preserve;
+}
+
+class HomeWidgetCalendarSummary {
+  const HomeWidgetCalendarSummary({
+    required this.title,
+    required this.additionalCount,
+    this.artwork,
+  }) : assert(title != ''),
+       assert(additionalCount >= 0);
+
+  final String title;
+  final int additionalCount;
+  final HomeWidgetRemoteAsset? artwork;
+}
+
 class HomeWidgetTarget {
   const HomeWidgetTarget({
     required this.qualifiedAndroidName,
@@ -71,6 +109,13 @@ class HomeWidgetStorage {
   static const recordingAudioVersionKey = 'widget_recording_audio_version';
   static const partnerCardImagePathKey = 'widget_partner_card_image_path';
   static const partnerCardImageVersionKey = 'widget_partner_card_image_version';
+  static const calendarEventArtworkPathKey =
+      'widget_calendar_event_artwork_path';
+  static const calendarEventArtworkVersionKey =
+      'widget_calendar_event_artwork_version';
+  static const calendarEventTitleKey = 'widget_calendar_event_title';
+  static const calendarEventAdditionalCountKey =
+      'widget_calendar_event_additional_count';
 
   static const characterAndroidProvider =
       'com.vinscent.vinscent.widgets.CharacterWidgetProvider';

@@ -242,6 +242,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
           _scheduleWidgetSync();
         }
       });
+      ref.listen(coupleCalendarEventRevisionProvider, (_, _) {
+        _scheduleWidgetSync();
+      });
       ref.listen(todayStoryLoopSummaryProvider, (_, next) {
         if (next.hasValue) {
           _scheduleWidgetSync();

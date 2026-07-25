@@ -16,7 +16,9 @@ import 'widgets/calendar_responsive_month.dart';
 import 'widgets/calendar_selected_day_detail.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
-  const CalendarScreen({super.key});
+  const CalendarScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
@@ -34,8 +36,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     super.initState();
     _scrollController = ScrollController();
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
-    _visibleMonth = _monthOnly(today);
-    _selectedDate = today;
+    final initialDate = calendarDateOnly(widget.initialDate ?? today);
+    _visibleMonth = _monthOnly(initialDate);
+    _selectedDate = initialDate;
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final previousDate = oldWidget.initialDate;
+    final nextDate = widget.initialDate;
+    if (_isSameOptionalDate(previousDate, nextDate)) {
+      return;
+    }
+
+    final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
+    final targetDate = calendarDateOnly(nextDate ?? today);
+    _visibleMonth = _monthOnly(targetDate);
+    _selectedDate = targetDate;
   }
 
   @override
@@ -124,6 +142,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           ),
                           SliverToBoxAdapter(
                             child: Padding(
+                              key: const Key('calendar-detail-padding'),
                               padding: EdgeInsets.fromLTRB(
                                 20,
                                 24,
@@ -504,4 +523,13 @@ String _twoDigits(int value) {
 String _formatRouteDate(DateTime date) {
   return '${date.year.toString().padLeft(4, '0')}-'
       '${_twoDigits(date.month)}-${_twoDigits(date.day)}';
+}
+
+bool _isSameOptionalDate(DateTime? left, DateTime? right) {
+  if (left == null || right == null) {
+    return left == right;
+  }
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
 }

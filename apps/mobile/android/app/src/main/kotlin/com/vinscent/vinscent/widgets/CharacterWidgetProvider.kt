@@ -52,6 +52,18 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                 maximumWidth = 384,
                 maximumHeight = 384,
             )
+            val calendarArtwork = WidgetBitmapLoader.decode(
+                data.getString(WidgetStorageKeys.CALENDAR_EVENT_ARTWORK_PATH, null),
+                maximumWidth = 96,
+                maximumHeight = 96,
+            )
+            val calendarSummary = WidgetCalendarSummaryPolicy.resolve(
+                title = data.getString(WidgetStorageKeys.CALENDAR_EVENT_TITLE, null),
+                additionalCount = data.getString(
+                    WidgetStorageKeys.CALENDAR_EVENT_ADDITIONAL_COUNT,
+                    null,
+                ),
+            )
             val audioPath = data.getString(WidgetStorageKeys.RECORDING_AUDIO_PATH, null)
             val hasAudio = !audioPath.isNullOrBlank()
             val recordingStateStore = WidgetRecordingStateStore(context)
@@ -79,6 +91,12 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
 
             ids.forEach { widgetId ->
                 val views = RemoteViews(context.packageName, R.layout.character_widget)
+                bindCalendarSummary(
+                    context = context,
+                    views = views,
+                    summary = calendarSummary,
+                    artwork = calendarArtwork,
+                )
                 if (characterFrame == null) {
                     views.setImageViewResource(
                         R.id.character_widget_image,
@@ -145,8 +163,54 @@ class CharacterWidgetProvider : HomeWidgetProvider() {
                 views.setOnClickPendingIntent(R.id.character_widget_record, recordIntent)
                 manager.updateAppWidget(widgetId, views)
             }
+            calendarArtwork?.recycle()
             characterFrame?.recycle()
             source?.recycle()
+        }
+
+        private fun bindCalendarSummary(
+            context: Context,
+            views: RemoteViews,
+            summary: WidgetCalendarSummaryPresentation?,
+            artwork: android.graphics.Bitmap?,
+        ) {
+            if (summary == null) {
+                views.setViewVisibility(R.id.character_widget_calendar_summary, View.GONE)
+                return
+            }
+
+            views.setViewVisibility(R.id.character_widget_calendar_summary, View.VISIBLE)
+            views.setTextViewText(R.id.character_widget_calendar_title, summary.title)
+            if (artwork == null) {
+                views.setViewVisibility(R.id.character_widget_calendar_artwork, View.GONE)
+            } else {
+                views.setViewVisibility(R.id.character_widget_calendar_artwork, View.VISIBLE)
+                views.setImageViewBitmap(R.id.character_widget_calendar_artwork, artwork)
+            }
+            if (summary.additionalCount == 0) {
+                views.setViewVisibility(R.id.character_widget_calendar_count, View.GONE)
+                views.setContentDescription(
+                    R.id.character_widget_calendar_summary,
+                    summary.title,
+                )
+            } else {
+                views.setViewVisibility(R.id.character_widget_calendar_count, View.VISIBLE)
+                views.setTextViewText(
+                    R.id.character_widget_calendar_count,
+                    context.getString(
+                        R.string.character_widget_calendar_additional_count,
+                        summary.additionalCount,
+                    ),
+                )
+                views.setContentDescription(
+                    R.id.character_widget_calendar_summary,
+                    context.getString(
+                        R.string.character_widget_calendar_summary_description,
+                        summary.title,
+                        summary.additionalCount,
+                    ),
+                )
+            }
         }
 
         fun updateRecordingProgress(context: Context, elapsedMs: Long) {

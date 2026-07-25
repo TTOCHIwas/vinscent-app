@@ -6,6 +6,8 @@
     <string name="character_widget_record">녹음하기</string>
     <string name="character_widget_stop_recording">녹음 끝내기</string>
     <string name="character_widget_uploading">녹음 저장 중</string>
+    <string name="character_widget_calendar_additional_count">+%1$d</string>
+    <string name="character_widget_calendar_summary_description">%1$s 외 %2$d개의 일정</string>
     <string name="card_widget_description">상대방의 최근 카드</string>
     <string name="card_widget_open">카드 열기</string>
     <string name="card_widget_configuration_title">카드 기울기</string>

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../calendar/application/couple_anniversary_resolver.dart';
+import '../../calendar/data/couple_calendar_event_repository.dart';
 import '../../characters/data/couple_character_repository.dart';
 import '../../couple/data/couple_repository.dart';
 import '../../recordings/data/couple_recording_repository.dart';
+import 'home_widget_calendar_summary_resolver.dart';
 import 'home_widget_partner_card_repository.dart';
 import 'home_widget_snapshot.dart';
 
@@ -15,6 +18,9 @@ final homeWidgetSnapshotRepositoryProvider =
         coupleRepository: ref.watch(coupleRepositoryProvider),
         characterRepository: ref.watch(coupleCharacterRepositoryProvider),
         recordingRepository: ref.watch(coupleRecordingRepositoryProvider),
+        calendarEventRepository: ref.watch(
+          coupleCalendarEventRepositoryProvider,
+        ),
         partnerCardRepository: ref.watch(
           homeWidgetPartnerCardRepositoryProvider,
         ),
@@ -31,11 +37,13 @@ class SupabaseHomeWidgetSnapshotRepository
     required CoupleRepository coupleRepository,
     required CoupleCharacterRepository characterRepository,
     required CoupleRecordingRepository recordingRepository,
+    required CoupleCalendarEventRepository calendarEventRepository,
     required HomeWidgetPartnerCardRepository partnerCardRepository,
   }) : _coupleRepository = coupleRepository,
        _assetLoader = HomeWidgetSnapshotAssetLoader(
          characterRepository: characterRepository,
          recordingRepository: recordingRepository,
+         calendarEventRepository: calendarEventRepository,
          partnerCardRepository: partnerCardRepository,
        );
 
@@ -60,6 +68,8 @@ class SupabaseHomeWidgetSnapshotRepository
     return _assetLoader.fetch(
       coupleId: couple.id,
       currentUserId: currentUserId,
+      relationshipStartDate: couple.relationshipStartDate,
+      currentDate: couple.effectiveCurrentDate,
     );
   }
 }
@@ -68,32 +78,52 @@ class HomeWidgetSnapshotAssetLoader {
   const HomeWidgetSnapshotAssetLoader({
     required CoupleCharacterRepository characterRepository,
     required CoupleRecordingRepository recordingRepository,
+    required CoupleCalendarEventRepository calendarEventRepository,
     required HomeWidgetPartnerCardRepository partnerCardRepository,
+    CoupleAnniversaryResolver anniversaryResolver =
+        const CoupleAnniversaryResolver(),
+    HomeWidgetCalendarSummaryResolver calendarSummaryResolver =
+        const HomeWidgetCalendarSummaryResolver(),
   }) : _characterRepository = characterRepository,
        _recordingRepository = recordingRepository,
-       _partnerCardRepository = partnerCardRepository;
+       _calendarEventRepository = calendarEventRepository,
+       _partnerCardRepository = partnerCardRepository,
+       _anniversaryResolver = anniversaryResolver,
+       _calendarSummaryResolver = calendarSummaryResolver;
 
   static const _maximumImageBytes = 5 * 1024 * 1024;
   static const _maximumAudioBytes = 4 * 1024 * 1024;
 
   final CoupleCharacterRepository _characterRepository;
   final CoupleRecordingRepository _recordingRepository;
+  final CoupleCalendarEventRepository _calendarEventRepository;
   final HomeWidgetPartnerCardRepository _partnerCardRepository;
+  final CoupleAnniversaryResolver _anniversaryResolver;
+  final HomeWidgetCalendarSummaryResolver _calendarSummaryResolver;
 
   Future<HomeWidgetSnapshot> fetch({
     required String coupleId,
     required String currentUserId,
+    required DateTime? relationshipStartDate,
+    required DateTime currentDate,
   }) async {
-    final updates = await Future.wait([
+    final assetUpdatesFuture = Future.wait([
       _fetchCharacterImage(),
       _fetchRecordingAudio(),
       _fetchPartnerCardImage(coupleId: coupleId, currentUserId: currentUserId),
     ]);
+    final calendarSummaryFuture = _fetchCalendarSummary(
+      relationshipStartDate: relationshipStartDate,
+      currentDate: currentDate,
+    );
+    final updates = await assetUpdatesFuture;
+    final calendarSummary = await calendarSummaryFuture;
 
     return HomeWidgetSnapshot(
       characterImage: updates[0],
       recordingAudio: updates[1],
       partnerCardImage: updates[2],
+      calendarSummary: calendarSummary,
     );
   }
 
@@ -167,6 +197,41 @@ class HomeWidgetSnapshotAssetLoader {
     } catch (error) {
       _logSourceFailure('partner-card', error);
       return const HomeWidgetAssetUpdate.preserve();
+    }
+  }
+
+  Future<HomeWidgetCalendarSummaryUpdate> _fetchCalendarSummary({
+    required DateTime? relationshipStartDate,
+    required DateTime currentDate,
+  }) async {
+    if (relationshipStartDate == null) {
+      return const HomeWidgetCalendarSummaryUpdate.remove();
+    }
+
+    try {
+      final normalizedDate = DateTime(
+        currentDate.year,
+        currentDate.month,
+        currentDate.day,
+      );
+      final events = await _calendarEventRepository.fetchOccurrences(
+        startDate: normalizedDate,
+        endDate: normalizedDate,
+      );
+      final anniversaries = _anniversaryResolver.resolve(
+        startDate: relationshipStartDate,
+        date: normalizedDate,
+      );
+      final summary = _calendarSummaryResolver.resolve(
+        events: events,
+        anniversaryLabels: anniversaries.map((event) => event.label),
+      );
+      return summary == null
+          ? const HomeWidgetCalendarSummaryUpdate.remove()
+          : HomeWidgetCalendarSummaryUpdate.replace(summary);
+    } catch (error) {
+      _logSourceFailure('calendar', error);
+      return const HomeWidgetCalendarSummaryUpdate.preserve();
     }
   }
 

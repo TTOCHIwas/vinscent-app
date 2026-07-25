@@ -108,6 +108,31 @@ void main() {
     );
   });
 
+  testWidgets('selects the date supplied by the route on entry', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository(
+      details: {DateTime(2026, 5, 9): _todayPendingDetail},
+    );
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 1),
+      initialDate: DateTime(2026, 5, 9),
+    );
+
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 9)]);
+    expect(
+      _circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-09'),
+        ),
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
+    );
+  });
+
   testWidgets('keeps the calendar readable on a narrow enlarged-text screen', (
     tester,
   ) async {
@@ -904,6 +929,7 @@ Future<void> _pumpCalendar(
   required StoryLoopReadRepository repository,
   DateTime? today,
   DateTime? relationshipStartDate,
+  DateTime? initialDate,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   List<CoupleCalendarEvent> calendarEvents = const [],
   double textScaleFactor = 1,
@@ -916,7 +942,8 @@ Future<void> _pumpCalendar(
     routes: [
       GoRoute(
         path: '/calendar',
-        builder: (context, state) => const Scaffold(body: CalendarScreen()),
+        builder: (context, state) =>
+            Scaffold(body: CalendarScreen(initialDate: initialDate)),
       ),
       GoRoute(
         path: '/calendar/question',

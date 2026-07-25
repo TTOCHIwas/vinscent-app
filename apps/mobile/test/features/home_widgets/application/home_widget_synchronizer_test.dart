@@ -22,6 +22,7 @@ void main() {
       'https://example.com/character.png',
       'https://example.com/recording.m4a',
       'https://example.com/card.png',
+      'https://example.com/event.png',
     ]);
     expect(store.refreshedTargets, [
       HomeWidgetStorage.characterTarget,
@@ -41,6 +42,15 @@ void main() {
       store.values[HomeWidgetStorage.partnerCardImageVersionKey],
       'card-v1',
     );
+    expect(
+      store.values[HomeWidgetStorage.calendarEventArtworkVersionKey],
+      'event-v1',
+    );
+    expect(store.values[HomeWidgetStorage.calendarEventTitleKey], '한강 산책');
+    expect(
+      store.values[HomeWidgetStorage.calendarEventAdditionalCountKey],
+      '2',
+    );
   });
 
   test('removes stored assets when shared data is unavailable', () async {
@@ -50,7 +60,11 @@ void main() {
       ..seedFile(HomeWidgetStorage.recordingAudioPathKey, _m4aBytes)
       ..values[HomeWidgetStorage.recordingAudioVersionKey] = 'recording-v1'
       ..seedFile(HomeWidgetStorage.partnerCardImagePathKey, _pngBytes)
-      ..values[HomeWidgetStorage.partnerCardImageVersionKey] = 'card-v1';
+      ..values[HomeWidgetStorage.partnerCardImageVersionKey] = 'card-v1'
+      ..seedFile(HomeWidgetStorage.calendarEventArtworkPathKey, _pngBytes)
+      ..values[HomeWidgetStorage.calendarEventArtworkVersionKey] = 'event-v1'
+      ..values[HomeWidgetStorage.calendarEventTitleKey] = '한강 산책'
+      ..values[HomeWidgetStorage.calendarEventAdditionalCountKey] = '2';
     final synchronizer = HomeWidgetSynchronizer(
       store: store,
       downloader: _FakeHomeWidgetAssetDownloader(),
@@ -141,6 +155,40 @@ void main() {
       );
     },
   );
+
+  test(
+    'preserves an existing calendar summary after a source failure',
+    () async {
+      final store = _FakeHomeWidgetStore()
+        ..seedFile(HomeWidgetStorage.calendarEventArtworkPathKey, _pngBytes)
+        ..values[HomeWidgetStorage.calendarEventArtworkVersionKey] = 'event-v1'
+        ..values[HomeWidgetStorage.calendarEventTitleKey] = '한강 산책'
+        ..values[HomeWidgetStorage.calendarEventAdditionalCountKey] = '2';
+      final synchronizer = HomeWidgetSynchronizer(
+        store: store,
+        downloader: _FakeHomeWidgetAssetDownloader(),
+      );
+
+      await synchronizer.synchronize(
+        const HomeWidgetSnapshot(
+          characterImage: HomeWidgetAssetUpdate.preserve(),
+          recordingAudio: HomeWidgetAssetUpdate.preserve(),
+          partnerCardImage: HomeWidgetAssetUpdate.preserve(),
+          calendarSummary: HomeWidgetCalendarSummaryUpdate.preserve(),
+        ),
+      );
+
+      expect(
+        store.values[HomeWidgetStorage.calendarEventArtworkVersionKey],
+        'event-v1',
+      );
+      expect(store.values[HomeWidgetStorage.calendarEventTitleKey], '한강 산책');
+      expect(
+        store.values[HomeWidgetStorage.calendarEventAdditionalCountKey],
+        '2',
+      );
+    },
+  );
 }
 
 HomeWidgetSnapshot _completeSnapshot() {
@@ -148,6 +196,13 @@ HomeWidgetSnapshot _completeSnapshot() {
     characterImage: HomeWidgetAssetUpdate.replace(_characterAsset),
     recordingAudio: HomeWidgetAssetUpdate.replace(_recordingAsset),
     partnerCardImage: HomeWidgetAssetUpdate.replace(_cardAsset),
+    calendarSummary: HomeWidgetCalendarSummaryUpdate.replace(
+      HomeWidgetCalendarSummary(
+        title: '한강 산책',
+        additionalCount: 2,
+        artwork: _eventAsset,
+      ),
+    ),
   );
 }
 
@@ -164,6 +219,11 @@ const _recordingAsset = HomeWidgetRemoteAsset(
 const _cardAsset = HomeWidgetRemoteAsset(
   url: 'https://example.com/card.png',
   version: 'card-v1',
+  extension: 'png',
+);
+const _eventAsset = HomeWidgetRemoteAsset(
+  url: 'https://example.com/event.png',
+  version: 'event-v1',
   extension: 'png',
 );
 
@@ -204,6 +264,7 @@ class _FakeHomeWidgetAssetDownloader implements HomeWidgetAssetDownloader {
             'https://example.com/character.png': _pngBytes,
             'https://example.com/recording.m4a': _m4aBytes,
             'https://example.com/card.png': _pngBytes,
+            'https://example.com/event.png': _pngBytes,
           };
 
   final Map<String, Uint8List> responses;

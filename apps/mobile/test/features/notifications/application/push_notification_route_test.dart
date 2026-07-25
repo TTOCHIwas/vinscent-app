@@ -82,6 +82,25 @@ void main() {
       expect(location, '/home/question?date=2026-07-20');
     });
 
+    test('opens the calendar date for a calendar event reminder', () {
+      final location = resolvePushNotificationLocation({
+        'type': 'calendar_event_reminder',
+        'event_date': '2026-07-26',
+        'route': '/calendar?date=2026-07-26',
+      });
+
+      expect(location, '/calendar?date=2026-07-26');
+    });
+
+    test('falls back to the calendar when a reminder date is invalid', () {
+      final location = resolvePushNotificationLocation({
+        'type': 'calendar_event_reminder',
+        'event_date': 'not-a-date',
+      });
+
+      expect(location, '/calendar');
+    });
+
     test('returns null for an unknown notification', () {
       expect(resolvePushNotificationLocation({'type': 'unknown'}), isNull);
     });

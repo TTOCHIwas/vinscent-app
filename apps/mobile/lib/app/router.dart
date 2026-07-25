@@ -191,10 +191,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/calendar',
                 name: 'calendar',
-                builder: (context, state) =>
-                    const ShellRootBackScope.secondaryTab(
-                      child: CalendarScreen(),
-                    ),
+                builder: (context, state) {
+                  final initialDate = parseQuestionRouteDate(
+                    state.uri.queryParameters['date'],
+                  );
+                  return ShellRootBackScope.secondaryTab(
+                    child: CalendarScreen(initialDate: initialDate),
+                  );
+                },
                 routes: [
                   GoRoute(
                     path: 'event/new',

@@ -12,6 +12,11 @@ enum VinscentWidgetConstants {
   static let characterImagePathKey = "widget_character_image_path"
   static let recordingAudioPathKey = "widget_recording_audio_path"
   static let partnerCardImagePathKey = "widget_partner_card_image_path"
+  static let calendarEventArtworkPathKey =
+    "widget_calendar_event_artwork_path"
+  static let calendarEventTitleKey = "widget_calendar_event_title"
+  static let calendarEventAdditionalCountKey =
+    "widget_calendar_event_additional_count"
   static let characterPlayingKey = "widget_character_playing"
   static let characterPlayingStartedAtKey = "widget_character_playing_started_at"
   static let microphonePermissionGrantedKey =
@@ -42,6 +47,9 @@ struct VinscentWidgetSnapshot {
   let characterImagePath: String?
   let recordingAudioPath: String?
   let partnerCardImagePath: String?
+  let calendarEventArtworkPath: String?
+  let calendarEventTitle: String?
+  let calendarEventAdditionalCount: Int
   let isCharacterPlaying: Bool
   let characterPlayingStartedAt: Date?
   let microphonePermissionGranted: Bool
@@ -68,6 +76,22 @@ struct VinscentWidgetSnapshot {
       partnerCardImagePath: existingFilePath(
         defaults?.string(forKey: VinscentWidgetConstants.partnerCardImagePathKey)
       ),
+      calendarEventArtworkPath: existingFilePath(
+        defaults?.string(
+          forKey: VinscentWidgetConstants.calendarEventArtworkPathKey
+        )
+      ),
+      calendarEventTitle: nonEmptyString(
+        defaults?.string(forKey: VinscentWidgetConstants.calendarEventTitleKey)
+      ),
+      calendarEventAdditionalCount: max(
+        Int(
+          defaults?.string(
+            forKey: VinscentWidgetConstants.calendarEventAdditionalCountKey
+          ) ?? ""
+        ) ?? 0,
+        0
+      ),
       isCharacterPlaying: isPlaying && isRecentPlayback(playingStartedAt),
       characterPlayingStartedAt: playingStartedAt,
       microphonePermissionGranted: defaults?.bool(
@@ -91,6 +115,11 @@ struct VinscentWidgetSnapshot {
       return nil
     }
     return path
+  }
+
+  private static func nonEmptyString(_ value: String?) -> String? {
+    let normalized = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return normalized?.isEmpty == false ? normalized : nil
   }
 
   private static func date(fromMilliseconds milliseconds: Double) -> Date? {

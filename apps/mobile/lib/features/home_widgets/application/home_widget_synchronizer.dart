@@ -57,6 +57,10 @@ class HomeWidgetSynchronizer {
         pathKey: HomeWidgetStorage.partnerCardImagePathKey,
         versionKey: HomeWidgetStorage.partnerCardImageVersionKey,
       ),
+      _synchronizeCalendarSummary(
+        snapshot?.calendarSummary ??
+            const HomeWidgetCalendarSummaryUpdate.remove(),
+      ),
     ]);
 
     final refreshes = await Future.wait([
@@ -71,6 +75,53 @@ class HomeWidgetSynchronizer {
     ];
     if (failedOperations.isNotEmpty) {
       throw HomeWidgetSynchronizationException(failedOperations);
+    }
+  }
+
+  Future<bool> _synchronizeCalendarSummary(
+    HomeWidgetCalendarSummaryUpdate update,
+  ) async {
+    if (update.type == HomeWidgetCalendarSummaryUpdateType.preserve) {
+      return true;
+    }
+
+    try {
+      if (update.type == HomeWidgetCalendarSummaryUpdateType.remove) {
+        final artworkRemoved = await _synchronizeAsset(
+          update: const HomeWidgetAssetUpdate.remove(),
+          pathKey: HomeWidgetStorage.calendarEventArtworkPathKey,
+          versionKey: HomeWidgetStorage.calendarEventArtworkVersionKey,
+        );
+        await _store.remove(HomeWidgetStorage.calendarEventTitleKey);
+        await _store.remove(HomeWidgetStorage.calendarEventAdditionalCountKey);
+        return artworkRemoved;
+      }
+
+      final summary = update.summary!;
+      final artworkUpdated = await _synchronizeAsset(
+        update: summary.artwork == null
+            ? const HomeWidgetAssetUpdate.remove()
+            : HomeWidgetAssetUpdate.replace(summary.artwork),
+        pathKey: HomeWidgetStorage.calendarEventArtworkPathKey,
+        versionKey: HomeWidgetStorage.calendarEventArtworkVersionKey,
+      );
+      if (!artworkUpdated) {
+        return false;
+      }
+      await _store.write(
+        HomeWidgetStorage.calendarEventTitleKey,
+        summary.title,
+      );
+      await _store.write(
+        HomeWidgetStorage.calendarEventAdditionalCountKey,
+        summary.additionalCount.toString(),
+      );
+      return true;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[widget] calendar summary synchronization failed: $error');
+      }
+      return false;
     }
   }
 

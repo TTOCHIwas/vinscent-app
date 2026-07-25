@@ -936,6 +936,19 @@ StoryLoopStatus _summaryStatusFor(DailyQuestionAnswerState state) {
 }
 
 double _scrollBottomPadding(WidgetTester tester, Finder screen) {
+  final calendarDetailPadding = find.descendant(
+    of: screen,
+    matching: find.byKey(const Key('calendar-detail-padding')),
+  );
+  if (calendarDetailPadding.evaluate().isNotEmpty) {
+    expect(calendarDetailPadding, findsOneWidget);
+    return tester
+        .widget<Padding>(calendarDetailPadding)
+        .padding
+        .resolve(TextDirection.ltr)
+        .bottom;
+  }
+
   final scrollView = find.descendant(
     of: screen,
     matching: find.byType(SingleChildScrollView),

@@ -65,10 +65,44 @@ private struct VinscentCharacterWidgetView: View {
 
   var body: some View {
     ZStack(alignment: .bottomTrailing) {
-      characterInteraction
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      VStack(spacing: 0) {
+        calendarEventSummary
+        characterInteraction
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
       recordingControl
         .padding(10)
+    }
+  }
+
+  @ViewBuilder
+  private var calendarEventSummary: some View {
+    if let title = entry.snapshot.calendarEventTitle {
+      HStack(spacing: 4) {
+        if let path = entry.snapshot.calendarEventArtworkPath,
+          let image = UIImage(contentsOfFile: path)
+        {
+          Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 26, height: 26)
+        }
+        Text(title)
+          .font(.system(size: 11, weight: .medium))
+          .foregroundStyle(.black.opacity(0.9))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        if entry.snapshot.calendarEventAdditionalCount > 0 {
+          Text("+\(entry.snapshot.calendarEventAdditionalCount)")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(.black.opacity(0.58))
+            .lineLimit(1)
+        }
+      }
+      .frame(height: 32)
+      .padding(.horizontal, 8)
+      .accessibilityElement(children: .combine)
     }
   }
 

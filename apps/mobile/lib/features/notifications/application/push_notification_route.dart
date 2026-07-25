@@ -14,6 +14,7 @@ String? resolvePushNotificationLocation(Map<String, dynamic> data) {
     'question_generated' => _questionLocation(data['assigned_date']),
     'partner_story_card_uploaded' => '/home',
     'recording_activity' => _recordingLocation(eventType),
+    'calendar_event_reminder' => _calendarLocation(data['event_date']),
     'couple_disconnect' => '/settings/couple',
     'couple_activity' => '/home',
     'ai_update' =>
@@ -58,7 +59,9 @@ String? _allowListedRoute(Object? value) {
     return uri.path;
   }
 
-  if ((uri.path == '/home/question' || uri.path == '/calendar/question') &&
+  if ((uri.path == '/home/question' ||
+          uri.path == '/calendar/question' ||
+          uri.path == '/calendar') &&
       uri.queryParameters.length == 1 &&
       _isDate(uri.queryParameters['date'])) {
     return uri.toString();
@@ -71,6 +74,17 @@ String _recordingLocation(Object? eventType) {
   return eventType == 'current_recording_updated'
       ? '/home'
       : '/home/recordings';
+}
+
+String _calendarLocation(Object? eventDate) {
+  if (!_isDate(eventDate)) {
+    return '/calendar';
+  }
+
+  return Uri(
+    path: '/calendar',
+    queryParameters: {'date': eventDate as String},
+  ).toString();
 }
 
 String _questionLocation(Object? assignedDate) {
