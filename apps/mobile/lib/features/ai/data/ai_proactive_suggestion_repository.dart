@@ -34,7 +34,9 @@ class SupabaseAiProactiveSuggestionRepository
     required AiCurrentLocation? location,
   }) async {
     if (!AppConfig.isSupabaseConfigured) {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.configMissing,
+      );
     }
 
     try {
@@ -58,11 +60,17 @@ class SupabaseAiProactiveSuggestionRepository
       }
       throw const FormatException('Invalid proactive suggestion');
     } on TimeoutException {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.requestTimeout,
+      );
     } on FunctionException {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.functionRequestFailed,
+      );
     } on FormatException {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.invalidResponse,
+      );
     }
   }
 
@@ -72,7 +80,9 @@ class SupabaseAiProactiveSuggestionRepository
     required String sessionId,
   }) async {
     if (!AppConfig.isSupabaseConfigured) {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.configMissing,
+      );
     }
 
     try {
@@ -90,15 +100,37 @@ class SupabaseAiProactiveSuggestionRepository
       }
       throw const FormatException('Invalid proactive impression claim');
     } on TimeoutException {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.requestTimeout,
+      );
     } on PostgrestException {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.rpcRequestFailed,
+      );
     } on FormatException {
-      throw const AiProactiveSuggestionException();
+      throw const AiProactiveSuggestionException(
+        AiProactiveSuggestionFailureReason.invalidResponse,
+      );
     }
   }
 }
 
+enum AiProactiveSuggestionFailureReason {
+  configMissing,
+  requestTimeout,
+  functionRequestFailed,
+  rpcRequestFailed,
+  invalidResponse,
+  unknown,
+}
+
 class AiProactiveSuggestionException implements Exception {
-  const AiProactiveSuggestionException();
+  const AiProactiveSuggestionException([
+    this.reason = AiProactiveSuggestionFailureReason.unknown,
+  ]);
+
+  final AiProactiveSuggestionFailureReason reason;
+
+  @override
+  String toString() => reason.name;
 }

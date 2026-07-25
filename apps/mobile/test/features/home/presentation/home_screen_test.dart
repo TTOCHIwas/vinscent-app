@@ -1,13 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/features/ai/application/ai_current_location_service.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
+import 'package:vinscent/features/ai/data/ai_proactive_suggestion.dart';
+import 'package:vinscent/features/ai/data/ai_proactive_suggestion_repository.dart';
+import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -629,6 +634,137 @@ void main() {
     expect(find.text(_aiFeedbackText), findsNothing);
   });
 
+  testWidgets('keeps a proactive suggestion visible until it is swiped away', (
+    tester,
+  ) async {
+    final suggestion = AiProactiveSuggestion(
+      id: 'proactive-1',
+      text: '날이 괜찮다면 함께 걷다가 마음에 드는 장면을 카드로 남겨도 좋겠다',
+      kind: AiProactiveSuggestionKind.cardIdea,
+      generatedAt: DateTime.now(),
+      validUntil: DateTime.now().add(const Duration(hours: 1)),
+      contextDate: '2026-05-31',
+      hasCardToday: true,
+    );
+    final store = _FakeProactiveSuggestionStore();
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _todaySummaryWithMyCard(),
+      recordingOverview: _recordingOverviewWithSavedSlot(),
+      aiDashboard: _aiDashboard(personalizationEnabled: true),
+      proactiveRepository: _FakeProactiveSuggestionRepository(suggestion),
+      proactiveStore: store,
+      proactiveLocationService: _FakeProactiveLocationService(),
+    );
+
+    expect(findTextIgnoringWordJoiners(suggestion.text), findsOneWidget);
+    expect(find.byType(Dismissible), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 10));
+
+    expect(findTextIgnoringWordJoiners(suggestion.text), findsOneWidget);
+
+    await tester.drag(find.byType(Dismissible), const Offset(-320, 0));
+    await tester.pumpAndSettle();
+
+    expect(findTextIgnoringWordJoiners(suggestion.text), findsNothing);
+    expect(store.dismissedSessions, hasLength(1));
+  });
+
+  testWidgets(
+    'keeps the full proactive suggestion bubble height on a short screen',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 520));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final suggestion = AiProactiveSuggestion(
+        id: 'proactive-long',
+        text:
+            '자기 전에 편안한 자세로 기대앉아 서로의 일상에 대해 '
+            '도란도란 이야기를 나누는 건 어때?',
+        kind: AiProactiveSuggestionKind.dateIdea,
+        generatedAt: DateTime.now(),
+        validUntil: DateTime.now().add(const Duration(hours: 1)),
+        contextDate: '2026-05-31',
+        hasCardToday: true,
+      );
+
+      await _pumpHome(
+        tester,
+        couple: _activeCouple,
+        today: _today,
+        todaySummary: _todaySummaryWithMyCard(),
+        recordingOverview: _recordingOverviewWithSavedSlot(),
+        aiDashboard: _aiDashboard(personalizationEnabled: true),
+        proactiveRepository: _FakeProactiveSuggestionRepository(suggestion),
+        proactiveStore: _FakeProactiveSuggestionStore(),
+        proactiveLocationService: _FakeProactiveLocationService(),
+      );
+
+      expect(find.byKey(_questionBubbleKey), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(_questionBubbleKey)).height,
+        greaterThan(48),
+      );
+      final renderedText = find.descendant(
+        of: find.byKey(_questionBubbleKey),
+        matching: find.byType(RichText),
+      );
+      expect(renderedText, findsOneWidget);
+      expect(
+        tester.renderObject<RenderParagraph>(renderedText).didExceedMaxLines,
+        isFalse,
+      );
+    },
+  );
+
+  testWidgets('restores an undismissed suggestion after AI feedback ends', (
+    tester,
+  ) async {
+    final suggestion = AiProactiveSuggestion(
+      id: 'proactive-after-feedback',
+      text: '둘의 답을 천천히 떠올리며 가볍게 산책을 나가도 좋은 하루겠다',
+      kind: AiProactiveSuggestionKind.dateIdea,
+      generatedAt: DateTime.now(),
+      validUntil: DateTime.now().add(const Duration(hours: 1)),
+      contextDate: '2026-05-31',
+      hasCardToday: true,
+    );
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _completedTodaySummary(),
+      recordingOverview: _recordingOverviewWithSavedSlot(),
+      aiDashboard: _aiDashboard(personalizationEnabled: true),
+      aiFeedbacks: {
+        _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
+          dailyQuestionId: _dailyQuestion.dailyQuestionId,
+          feedbackText: _aiFeedbackText,
+          publishedAt: DateTime.utc(2026, 5, 31, 12),
+        ),
+      },
+      proactiveRepository: _FakeProactiveSuggestionRepository(suggestion),
+      proactiveStore: _FakeProactiveSuggestionStore(),
+      proactiveLocationService: _FakeProactiveLocationService(),
+      settle: false,
+    );
+
+    expect(find.text(_aiFeedbackText), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(suggestion.text), findsNothing);
+
+    await tester.pump(TransientHomeFeedbackPresenter.displayDuration);
+    await tester.pump(TransientHomeFeedbackPresenter.fadeDuration);
+    await tester.pump();
+
+    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(find.byType(Dismissible), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(suggestion.text), findsWidgets);
+  });
+
   testWidgets(
     '\ube48 \uc0c1\ud0dc\uc640 \ub2f5\ubcc0 \uc804\ud6c4\uc5d0 \uac19\uc740 \uc704\uce58\uc758 \uc904\uc744 \uc0ac\uc6a9\ud55c\ub2e4',
     (tester) async {
@@ -1155,6 +1291,9 @@ Future<void> _pumpHome(
   Set<String> processingAiFeedbackIds = const {},
   HomeFeedbackImpressionStore? feedbackImpressionStore,
   AiLearningDashboard? aiDashboard,
+  AiProactiveSuggestionRepository? proactiveRepository,
+  AiProactiveSuggestionStore? proactiveStore,
+  AiCurrentLocationService? proactiveLocationService,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -1186,6 +1325,16 @@ Future<void> _pumpHome(
         homeFeedbackImpressionStoreProvider.overrideWithValue(
           feedbackImpressionStore ?? _FakeHomeFeedbackImpressionStore(),
         ),
+        if (proactiveRepository != null)
+          aiProactiveSuggestionRepositoryProvider.overrideWithValue(
+            proactiveRepository,
+          ),
+        if (proactiveStore != null)
+          aiProactiveSuggestionStoreProvider.overrideWithValue(proactiveStore),
+        if (proactiveLocationService != null)
+          aiCurrentLocationServiceProvider.overrideWithValue(
+            proactiveLocationService,
+          ),
         if (recordingOverview != null)
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
@@ -1334,28 +1483,96 @@ TodayStoryLoopSummary _todaySummaryWithMyCard() {
 AiLearningDashboard _aiDashboard({
   AiConsentStatus myConsent = AiConsentStatus.granted,
   AiConsentStatus partnerConsent = AiConsentStatus.granted,
+  bool personalizationEnabled = false,
 }) {
   return AiLearningDashboard(
     progress: AiLearningProgress(
       curriculumVersion: 1,
       completedCount: 0,
       totalCount: 24,
-      stage: AiLearningStage.collecting,
+      stage: personalizationEnabled
+          ? AiLearningStage.ready
+          : AiLearningStage.collecting,
       domainProgress: const {},
       myConsent: myConsent,
       partnerConsent: partnerConsent,
       isEnabled:
           myConsent == AiConsentStatus.granted &&
           partnerConsent == AiConsentStatus.granted,
-      foundationComplete: false,
-      memoryProcessingComplete: false,
-      personalizationStatus: AiPersonalizationStatus.collecting,
-      personalizationEnabled: false,
+      foundationComplete: personalizationEnabled,
+      memoryProcessingComplete: personalizationEnabled,
+      personalizationStatus: personalizationEnabled
+          ? AiPersonalizationStatus.ready
+          : AiPersonalizationStatus.collecting,
+      personalizationEnabled: personalizationEnabled,
       myPendingReviewCount: 0,
       partnerPendingReviewCount: 0,
     ),
     memories: const [],
   );
+}
+
+class _FakeProactiveSuggestionRepository
+    implements AiProactiveSuggestionRepository {
+  _FakeProactiveSuggestionRepository(this.suggestion);
+
+  final AiProactiveSuggestion suggestion;
+
+  @override
+  Future<bool> claimImpression({
+    required String contextDate,
+    required String sessionId,
+  }) async {
+    return true;
+  }
+
+  @override
+  Future<AiProactiveSuggestion> generate({
+    required AiCurrentLocation? location,
+  }) async {
+    return suggestion;
+  }
+}
+
+class _FakeProactiveSuggestionStore implements AiProactiveSuggestionStore {
+  AiProactiveSuggestion? cachedSuggestion;
+  final Set<String> dismissedSessions = {};
+
+  @override
+  Future<bool> hasDismissedInSession({
+    required String userId,
+    required String sessionId,
+    required String contextDate,
+  }) async {
+    return dismissedSessions.contains(sessionId);
+  }
+
+  @override
+  Future<AiProactiveSuggestion?> loadSuggestion(String userId) async {
+    return cachedSuggestion;
+  }
+
+  @override
+  Future<void> markDismissed({
+    required String userId,
+    required String sessionId,
+    required String contextDate,
+  }) async {
+    dismissedSessions.add(sessionId);
+  }
+
+  @override
+  Future<void> saveSuggestion(
+    String userId,
+    AiProactiveSuggestion suggestion,
+  ) async {
+    cachedSuggestion = suggestion;
+  }
+}
+
+class _FakeProactiveLocationService implements AiCurrentLocationService {
+  @override
+  Future<AiCurrentLocation?> getCurrentLocation() async => null;
 }
 
 const _emptyRecordingOverview = CoupleRecordingOverview(

@@ -2,45 +2,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
 
 void main() {
-  test(
-    'keeps local session history without enforcing the server daily quota',
-    () async {
-      final store = SharedPreferencesAiProactiveSuggestionStore(
-        preferences: _MemoryPreferences(),
-      );
-
-      for (var index = 1; index <= 4; index++) {
-        await store.markShown(
-          userId: 'user-1',
-          sessionId: 'session-$index',
-          contextDate: '2026-07-24',
-        );
-      }
-
-      expect(
-        await store.hasShownInSession(userId: 'user-1', sessionId: 'session-4'),
-        isTrue,
-      );
-    },
-  );
-
-  test('does not count the same foreground session twice', () async {
+  test('records dismissal only for the targeted foreground session', () async {
     final store = SharedPreferencesAiProactiveSuggestionStore(
       preferences: _MemoryPreferences(),
     );
 
-    await store.markShown(
+    await store.markDismissed(
       userId: 'user-1',
       sessionId: 'session-1',
       contextDate: '2026-07-24',
     );
 
     expect(
-      await store.hasShownInSession(userId: 'user-1', sessionId: 'session-1'),
+      await store.hasDismissedInSession(
+        userId: 'user-1',
+        sessionId: 'session-1',
+        contextDate: '2026-07-24',
+      ),
       isTrue,
     );
     expect(
-      await store.hasShownInSession(userId: 'user-1', sessionId: 'session-2'),
+      await store.hasDismissedInSession(
+        userId: 'user-1',
+        sessionId: 'session-2',
+        contextDate: '2026-07-24',
+      ),
+      isFalse,
+    );
+  });
+
+  test('starts dismissal history again on a new context date', () async {
+    final store = SharedPreferencesAiProactiveSuggestionStore(
+      preferences: _MemoryPreferences(),
+    );
+
+    await store.markDismissed(
+      userId: 'user-1',
+      sessionId: 'session-1',
+      contextDate: '2026-07-24',
+    );
+    expect(
+      await store.hasDismissedInSession(
+        userId: 'user-1',
+        sessionId: 'session-1',
+        contextDate: '2026-07-25',
+      ),
       isFalse,
     );
   });

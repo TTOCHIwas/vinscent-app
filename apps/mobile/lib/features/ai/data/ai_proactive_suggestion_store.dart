@@ -14,12 +14,13 @@ abstract interface class AiProactiveSuggestionStore {
 
   Future<void> saveSuggestion(String userId, AiProactiveSuggestion suggestion);
 
-  Future<bool> hasShownInSession({
+  Future<bool> hasDismissedInSession({
     required String userId,
     required String sessionId,
+    required String contextDate,
   });
 
-  Future<void> markShown({
+  Future<void> markDismissed({
     required String userId,
     required String sessionId,
     required String contextDate,
@@ -34,7 +35,7 @@ class SharedPreferencesAiProactiveSuggestionStore
            preferences ?? SharedPreferencesAiProactiveSuggestionPreferences();
 
   static const _suggestionPrefix = 'vinscent.ai.proactive.suggestion';
-  static const _impressionPrefix = 'vinscent.ai.proactive.impressions';
+  static const _dismissalPrefix = 'vinscent.ai.proactive.dismissals';
 
   final AiProactiveSuggestionPreferences _preferences;
 
@@ -65,38 +66,39 @@ class SharedPreferencesAiProactiveSuggestionStore
   }
 
   @override
-  Future<bool> hasShownInSession({
-    required String userId,
-    required String sessionId,
-  }) async {
-    final record = await _loadImpressions(userId);
-    return record.sessionIds.contains(sessionId);
-  }
-
-  @override
-  Future<void> markShown({
+  Future<bool> hasDismissedInSession({
     required String userId,
     required String sessionId,
     required String contextDate,
   }) async {
-    final record = await _loadImpressions(userId);
-    final sessionIds = record.contextDate == contextDate
-        ? {...record.sessionIds}
-        : <String>{};
+    final record = await _loadDismissals(userId);
+    return record.contextDate == contextDate &&
+        record.sessionIds.contains(sessionId);
+  }
+
+  @override
+  Future<void> markDismissed({
+    required String userId,
+    required String sessionId,
+    required String contextDate,
+  }) async {
+    final record = await _loadDismissals(userId);
+    final sameContextDate = record.contextDate == contextDate;
+    final sessionIds = sameContextDate ? {...record.sessionIds} : <String>{};
     sessionIds.add(sessionId);
-    await _preferences.setString(
-      '$_impressionPrefix.$userId',
-      jsonEncode({
-        'context_date': contextDate,
-        'session_ids': sessionIds.toList(growable: false),
-      }),
+    await _saveDismissals(
+      userId: userId,
+      record: _ProactiveDismissalRecord(
+        contextDate: contextDate,
+        sessionIds: sessionIds,
+      ),
     );
   }
 
-  Future<_ProactiveImpressionRecord> _loadImpressions(String userId) async {
-    final encoded = await _preferences.getString('$_impressionPrefix.$userId');
+  Future<_ProactiveDismissalRecord> _loadDismissals(String userId) async {
+    final encoded = await _preferences.getString('$_dismissalPrefix.$userId');
     if (encoded == null) {
-      return const _ProactiveImpressionRecord(contextDate: '', sessionIds: {});
+      return const _ProactiveDismissalRecord(contextDate: '', sessionIds: {});
     }
 
     try {
@@ -104,15 +106,28 @@ class SharedPreferencesAiProactiveSuggestionStore
       final contextDate = data['context_date'];
       final sessionIds = data['session_ids'];
       if (contextDate is! String || sessionIds is! List) {
-        throw const FormatException('Invalid proactive impressions');
+        throw const FormatException('Invalid proactive dismissals');
       }
-      return _ProactiveImpressionRecord(
+      return _ProactiveDismissalRecord(
         contextDate: contextDate,
         sessionIds: sessionIds.whereType<String>().toSet(),
       );
     } on Object {
-      return const _ProactiveImpressionRecord(contextDate: '', sessionIds: {});
+      return const _ProactiveDismissalRecord(contextDate: '', sessionIds: {});
     }
+  }
+
+  Future<void> _saveDismissals({
+    required String userId,
+    required _ProactiveDismissalRecord record,
+  }) {
+    return _preferences.setString(
+      '$_dismissalPrefix.$userId',
+      jsonEncode({
+        'context_date': record.contextDate,
+        'session_ids': record.sessionIds.toList(growable: false),
+      }),
+    );
   }
 }
 
@@ -148,8 +163,8 @@ class SharedPreferencesAiProactiveSuggestionPreferences
   Future<void> remove(String key) => _client.remove(key);
 }
 
-class _ProactiveImpressionRecord {
-  const _ProactiveImpressionRecord({
+class _ProactiveDismissalRecord {
+  const _ProactiveDismissalRecord({
     required this.contextDate,
     required this.sessionIds,
   });

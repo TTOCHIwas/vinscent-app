@@ -4,7 +4,7 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 set local timezone = 'UTC';
 
-select plan(27);
+select plan(29);
 
 insert into auth.users (
   id,
@@ -256,8 +256,8 @@ select is(
     current_date,
     'session-4'
   ),
-  false,
-  'the fourth foreground session is rejected across devices'
+  true,
+  'the fourth foreground session is allowed across devices'
 );
 select is(
   public.claim_my_ai_proactive_suggestion_impression(
@@ -309,8 +309,8 @@ select is(
     '18000000-0000-0000-0000-000000000002',
     current_date
   ),
-  false,
-  'generation stops after three impressions'
+  true,
+  'generation remains independent from impression count'
 );
 
 reset role;
@@ -334,8 +334,46 @@ select is(
       '18000000-0000-0000-0000-000000000001'
       and usage.context_date = current_date
   ),
-  3,
-  'only three distinct foreground sessions are stored'
+  4,
+  'distinct foreground sessions are stored for telemetry'
+);
+
+update private.ai_proactive_suggestion_daily_usage as usage
+set shown_session_ids = array(
+  select 'telemetry-session-' || series::text
+  from generate_series(1, 100) as series
+)
+where usage.user_id = '18000000-0000-0000-0000-000000000001'
+  and usage.context_date = current_date;
+
+select set_config(
+  'request.jwt.claim.sub',
+  '18000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.claim_my_ai_proactive_suggestion_impression(
+    current_date,
+    'overflow-session'
+  ),
+  true,
+  'telemetry storage capacity does not block an impression'
+);
+
+reset role;
+
+select is(
+  (
+    select cardinality(usage.shown_session_ids)
+    from private.ai_proactive_suggestion_daily_usage as usage
+    where usage.user_id =
+      '18000000-0000-0000-0000-000000000001'
+      and usage.context_date = current_date
+  ),
+  100,
+  'telemetry session ids remain bounded'
 );
 
 select * from finish();

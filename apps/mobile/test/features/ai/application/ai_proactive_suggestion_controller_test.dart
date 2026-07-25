@@ -8,9 +8,10 @@ import 'package:vinscent/features/ai/data/ai_proactive_suggestion_repository.dar
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
 
 void main() {
-  const firstRequest = AiProactiveSuggestionRequest(
+  final firstRequest = AiProactiveSuggestionRequest(
     userId: 'user-1',
     sessionId: 'session-1',
+    contextDate: _today(),
     hasCardToday: false,
   );
 
@@ -49,9 +50,10 @@ void main() {
     );
 
     final result = await coordinator.resolve(
-      const AiProactiveSuggestionRequest(
+      AiProactiveSuggestionRequest(
         userId: 'user-1',
         sessionId: 'session-1',
+        contextDate: _today(),
         hasCardToday: true,
       ),
     );
@@ -64,7 +66,7 @@ void main() {
   });
 
   test(
-    'does not return a suggestion twice in the same foreground session',
+    'keeps returning a shown suggestion until the user dismisses it',
     () async {
       final store = _FakeSuggestionStore(cachedSuggestion: _suggestion);
       final coordinator = AiProactiveSuggestionCoordinator(
@@ -77,21 +79,48 @@ void main() {
       expect(await coordinator.claimShown(firstRequest, first!), true);
       final second = await coordinator.resolve(firstRequest);
 
-      expect(second, isNull);
+      expect(second, same(_suggestion));
+
+      await coordinator.dismiss(firstRequest, _suggestion);
+
+      expect(await coordinator.resolve(firstRequest), isNull);
+    },
+  );
+
+  test(
+    'allows a dismissed suggestion again in the next foreground session',
+    () async {
+      final store = _FakeSuggestionStore(cachedSuggestion: _suggestion);
+      final coordinator = AiProactiveSuggestionCoordinator(
+        repository: _FakeSuggestionRepository(),
+        store: store,
+        locationService: _FakeLocationService(),
+      );
+
+      await coordinator.dismiss(firstRequest, _suggestion);
+
+      final nextSession = await coordinator.resolve(
+        AiProactiveSuggestionRequest(
+          userId: 'user-1',
+          sessionId: 'session-2',
+          contextDate: _today(),
+          hasCardToday: false,
+        ),
+      );
+
+      expect(nextSession, same(_suggestion));
     },
   );
 
   test('does not let legacy local daily history block a new session', () async {
+    final preferences = _MemoryPreferences();
+    preferences.values['vinscent.ai.proactive.impressions.user-1'] =
+        '{"context_date":"${_suggestion.contextDate}",'
+        '"session_ids":["legacy-session-1","legacy-session-2",'
+        '"legacy-session-3"]}';
     final store = SharedPreferencesAiProactiveSuggestionStore(
-      preferences: _MemoryPreferences(),
+      preferences: preferences,
     );
-    for (var index = 1; index <= 3; index++) {
-      await store.markShown(
-        userId: 'user-1',
-        sessionId: 'legacy-session-$index',
-        contextDate: _suggestion.contextDate,
-      );
-    }
     await store.saveSuggestion('user-1', _suggestion);
     final repository = _FakeSuggestionRepository();
     final coordinator = AiProactiveSuggestionCoordinator(
@@ -101,9 +130,10 @@ void main() {
     );
 
     final suggestion = await coordinator.resolve(
-      const AiProactiveSuggestionRequest(
+      AiProactiveSuggestionRequest(
         userId: 'user-1',
         sessionId: 'session-after-migration',
+        contextDate: _today(),
         hasCardToday: false,
       ),
     );
@@ -112,9 +142,10 @@ void main() {
     expect(repository.generateCount, 0);
     expect(
       await coordinator.claimShown(
-        const AiProactiveSuggestionRequest(
+        AiProactiveSuggestionRequest(
           userId: 'user-1',
           sessionId: 'session-after-migration',
+          contextDate: _today(),
           hasCardToday: false,
         ),
         suggestion!,
@@ -145,11 +176,11 @@ void main() {
     expect(repository.generateCount, 1);
   });
 
-  test('generates when the local session record cannot be read', () async {
+  test('generates when the local dismissal record cannot be read', () async {
     final repository = _FakeSuggestionRepository();
     final coordinator = AiProactiveSuggestionCoordinator(
       repository: repository,
-      store: _FakeSuggestionStore(failHasShownInSession: true),
+      store: _FakeSuggestionStore(failHasDismissedInSession: true),
       locationService: _FakeLocationService(),
     );
 
@@ -167,12 +198,12 @@ void main() {
     expect(await coordinator.resolve(firstRequest), same(_suggestion));
   });
 
-  test('defers to the remote claim when local display checks fail', () async {
+  test('does not block when local dismissal checks fail', () async {
     final coordinator = AiProactiveSuggestionCoordinator(
       repository: _FakeSuggestionRepository(),
       store: _FakeSuggestionStore(
         cachedSuggestion: _suggestion,
-        failHasShownInSession: true,
+        failHasDismissedInSession: true,
       ),
       locationService: _FakeLocationService(),
     );
@@ -180,40 +211,31 @@ void main() {
     expect(await coordinator.resolve(firstRequest), same(_suggestion));
   });
 
-  test(
-    'does not mark a suggestion shown when the account quota rejects it',
-    () async {
-      final store = _FakeSuggestionStore(cachedSuggestion: _suggestion);
-      final repository = _FakeSuggestionRepository(claimAllowed: false);
-      final coordinator = AiProactiveSuggestionCoordinator(
-        repository: repository,
-        store: store,
-        locationService: _FakeLocationService(),
-      );
+  test('rejects an impression when the server claim is not accepted', () async {
+    final store = _FakeSuggestionStore(cachedSuggestion: _suggestion);
+    final repository = _FakeSuggestionRepository(claimAllowed: false);
+    final coordinator = AiProactiveSuggestionCoordinator(
+      repository: repository,
+      store: store,
+      locationService: _FakeLocationService(),
+    );
 
-      expect(await coordinator.claimShown(firstRequest, _suggestion), false);
-      expect(store.markShownCount, 0);
-      expect(repository.claimCount, 1);
-    },
-  );
+    expect(await coordinator.claimShown(firstRequest, _suggestion), false);
+    expect(repository.claimCount, 1);
+  });
 
-  test(
-    'shows a remotely claimed suggestion when local tracking fails',
-    () async {
-      final store = _FakeSuggestionStore(
-        cachedSuggestion: _suggestion,
-        failMarkShown: true,
-      );
-      final coordinator = AiProactiveSuggestionCoordinator(
-        repository: _FakeSuggestionRepository(),
-        store: store,
-        locationService: _FakeLocationService(),
-      );
+  test('delegates repeated impression claims to the server', () async {
+    final repository = _FakeSuggestionRepository();
+    final coordinator = AiProactiveSuggestionCoordinator(
+      repository: repository,
+      store: _FakeSuggestionStore(cachedSuggestion: _suggestion),
+      locationService: _FakeLocationService(),
+    );
 
-      expect(await coordinator.claimShown(firstRequest, _suggestion), true);
-      expect(store.markShownCount, 1);
-    },
-  );
+    expect(await coordinator.claimShown(firstRequest, _suggestion), true);
+    expect(await coordinator.claimShown(firstRequest, _suggestion), true);
+    expect(repository.claimCount, 2);
+  });
 
   test(
     'does not cache a generated suggestion for a stale card state',
@@ -272,12 +294,18 @@ void main() {
         store: _FakeSuggestionStore(),
         locationService: _FakeLocationService(),
       );
+      final serverDateRequest = AiProactiveSuggestionRequest(
+        userId: 'user-1',
+        sessionId: 'session-1',
+        contextDate: '2099-01-01',
+        hasCardToday: false,
+      );
 
-      final result = await coordinator.resolve(firstRequest);
+      final result = await coordinator.resolve(serverDateRequest);
 
       expect(result, same(serverSuggestion));
       expect(repository.generateCount, 1);
-      expect(await coordinator.claimShown(firstRequest, result!), isTrue);
+      expect(await coordinator.claimShown(serverDateRequest, result!), isTrue);
       expect(repository.lastClaimContextDate, '2099-01-01');
     },
   );
@@ -354,29 +382,27 @@ class _FakeSuggestionRepository implements AiProactiveSuggestionRepository {
 class _FakeSuggestionStore implements AiProactiveSuggestionStore {
   _FakeSuggestionStore({
     this.cachedSuggestion,
-    this.failMarkShown = false,
     this.failLoadSuggestion = false,
-    this.failHasShownInSession = false,
+    this.failHasDismissedInSession = false,
     this.failSaveSuggestion = false,
   });
 
   AiProactiveSuggestion? cachedSuggestion;
-  final bool failMarkShown;
   final bool failLoadSuggestion;
-  final bool failHasShownInSession;
+  final bool failHasDismissedInSession;
   final bool failSaveSuggestion;
-  final Set<String> _shownSessions = {};
-  var markShownCount = 0;
+  final Set<String> _dismissedSessions = {};
 
   @override
-  Future<bool> hasShownInSession({
+  Future<bool> hasDismissedInSession({
     required String userId,
     required String sessionId,
+    required String contextDate,
   }) async {
-    if (failHasShownInSession) {
+    if (failHasDismissedInSession) {
       throw StateError('local storage unavailable');
     }
-    return _shownSessions.contains(sessionId);
+    return _dismissedSessions.contains(sessionId);
   }
 
   @override
@@ -388,16 +414,12 @@ class _FakeSuggestionStore implements AiProactiveSuggestionStore {
   }
 
   @override
-  Future<void> markShown({
+  Future<void> markDismissed({
     required String userId,
     required String sessionId,
     required String contextDate,
   }) async {
-    markShownCount += 1;
-    if (failMarkShown) {
-      throw StateError('local storage unavailable');
-    }
-    _shownSessions.add(sessionId);
+    _dismissedSessions.add(sessionId);
   }
 
   @override

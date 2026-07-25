@@ -30,6 +30,7 @@ import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../application/home_guide.dart';
 import 'widgets/home_hanging_story_cards.dart';
 import 'widgets/home_guide_rotator.dart';
+import 'widgets/persistent_home_proactive_suggestion_presenter.dart';
 import 'widgets/transient_home_feedback_presenter.dart';
 
 const _homeStatusLoadError =
@@ -340,6 +341,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
         ? AiProactiveSuggestionRequest(
             userId: currentUserId!,
             sessionId: foregroundSessionId,
+            contextDate: _dateKey(summary.coupleDate),
             hasCardToday: presentation.myCard != null,
           )
         : null;
@@ -367,24 +369,29 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                 characterGuideText == null &&
                 visibleFeedbackText == null &&
                 presentation.questionText == null;
-            return TransientHomeFeedbackPresenter(
-              userId: currentUserId,
-              dailyQuestionId:
-                  canShowProactive &&
-                      proactiveSuggestion != null &&
-                      proactiveRequest != null
-                  ? 'proactive:${proactiveSuggestion.id}:'
-                        '${proactiveRequest.sessionId}'
-                  : null,
-              feedbackText: canShowProactive ? proactiveSuggestion?.text : null,
-              visibleDuration: const Duration(seconds: 12),
+            final proactivePresentationId =
+                proactiveSuggestion == null || proactiveRequest == null
+                ? null
+                : '${proactiveSuggestion.id}:'
+                      '${proactiveRequest.contextDate}:'
+                      '${proactiveRequest.sessionId}';
+            return PersistentHomeProactiveSuggestionPresenter(
+              presentationId: proactivePresentationId,
+              suggestionText: proactiveSuggestion?.text,
+              enabled: canShowProactive,
               beforeShow:
                   proactiveSuggestion == null || proactiveRequest == null
                   ? null
                   : () => ref
                         .read(aiProactiveSuggestionCoordinatorProvider)
                         .claimShown(proactiveRequest, proactiveSuggestion),
-              builder: (visibleSuggestionText, suggestionOpacity) {
+              onDismissed:
+                  proactiveSuggestion == null || proactiveRequest == null
+                  ? null
+                  : () => ref
+                        .read(aiProactiveSuggestionCoordinatorProvider)
+                        .dismiss(proactiveRequest, proactiveSuggestion),
+              builder: (visibleSuggestionText, dismissSuggestion) {
                 final questionText =
                     characterGuideText ??
                     visibleFeedbackText ??
@@ -395,8 +402,6 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                     ? feedbackOpacity
                     : guide != null
                     ? guideOpacity
-                    : visibleSuggestionText != null
-                    ? suggestionOpacity
                     : 1.0;
                 final onQuestionTap = visibleSuggestionText != null
                     ? null
@@ -404,6 +409,11 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                           (questionTargetLocation == null
                               ? null
                               : () => context.go(questionTargetLocation));
+                final questionDismissibleKey =
+                    visibleSuggestionText == null ||
+                        proactivePresentationId == null
+                    ? null
+                    : ValueKey('home-proactive-$proactivePresentationId');
 
                 return _HomeStoryLoopContent(
                   myCard: presentation.myCard,
@@ -416,6 +426,8 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                       ? () => context.go('/home/story')
                       : null,
                   onQuestionTap: onQuestionTap,
+                  questionDismissibleKey: questionDismissibleKey,
+                  onQuestionDismissed: dismissSuggestion,
                   onCardTap: (card) {
                     final editTargetLocation = presentation
                         .editTargetLocationForCard(card);
@@ -515,6 +527,8 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.canAddCard,
     required this.onAddCard,
     required this.onQuestionTap,
+    required this.questionDismissibleKey,
+    required this.onQuestionDismissed,
     required this.onCardTap,
   });
 
@@ -526,10 +540,11 @@ class _HomeStoryLoopContent extends StatelessWidget {
   final bool canAddCard;
   final VoidCallback? onAddCard;
   final VoidCallback? onQuestionTap;
+  final Key? questionDismissibleKey;
+  final VoidCallback? onQuestionDismissed;
   final ValueChanged<StoryLoopCardPreview> onCardTap;
 
   static const _entryGap = 8.0;
-  static const _minimumQuestionHeight = 48.0;
 
   @override
   Widget build(BuildContext context) {
@@ -561,43 +576,38 @@ class _HomeStoryLoopContent extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableCardHeight = constraints.hasBoundedHeight
-            ? math.max(
-                0.0,
-                constraints.maxHeight - _minimumQuestionHeight - _entryGap,
-              )
-            : maximumCardHeight;
-        final cardHeight = hasStoryEntry
-            ? math.min(maximumCardHeight, availableCardHeight)
-            : 0.0;
-        final entryGap = cardHeight > 0 ? _entryGap : 0.0;
-
-        return Column(
-          children: [
-            if (cardHeight > 0)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeInOutCubic,
-                height: cardHeight,
-                alignment: Alignment.topCenter,
-                child: storyEntry,
-              ),
-            if (entryGap > 0) SizedBox(height: entryGap),
-            Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _HomeQuestionAction(
-                  questionText: questionText,
-                  opacity: questionOpacity,
-                  onTap: onQuestionTap,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    return Column(
+      children: [
+        Expanded(
+          child: hasStoryEntry
+              ? LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardHeight = constraints.hasBoundedHeight
+                        ? math.min(maximumCardHeight, constraints.maxHeight)
+                        : maximumCardHeight;
+                    return Align(
+                      alignment: Alignment.topCenter,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 320),
+                        curve: Curves.easeInOutCubic,
+                        height: cardHeight,
+                        alignment: Alignment.topCenter,
+                        child: storyEntry,
+                      ),
+                    );
+                  },
+                )
+              : const SizedBox.shrink(),
+        ),
+        if (hasStoryEntry) const SizedBox(height: _entryGap),
+        _HomeQuestionAction(
+          questionText: questionText,
+          opacity: questionOpacity,
+          onTap: onQuestionTap,
+          dismissibleKey: questionDismissibleKey,
+          onDismissed: onQuestionDismissed,
+        ),
+      ],
     );
   }
 }
@@ -692,14 +702,33 @@ class _HomeQuestionAction extends StatelessWidget {
     required this.questionText,
     required this.opacity,
     required this.onTap,
+    required this.dismissibleKey,
+    required this.onDismissed,
   });
 
   final String questionText;
   final double opacity;
   final VoidCallback? onTap;
+  final Key? dismissibleKey;
+  final VoidCallback? onDismissed;
 
   @override
   Widget build(BuildContext context) {
+    final bubble = AnimatedOpacity(
+      key: const Key('home-question-opacity'),
+      opacity: opacity,
+      duration: TransientHomeFeedbackPresenter.fadeDuration,
+      curve: Curves.easeOut,
+      child: _HomeQuestionBubble(
+        questionText: questionText,
+        onTap: onTap,
+        actionKey: const Key('home-question-action'),
+        bubbleKey: const Key('home-question-speech-bubble'),
+      ),
+    );
+    final dismissibleKey = this.dismissibleKey;
+    final onDismissed = this.onDismissed;
+
     return _HomeForegroundPortal(
       portalKey: const Key('home-question-foreground'),
       layoutKey: questionText,
@@ -709,18 +738,20 @@ class _HomeQuestionAction extends StatelessWidget {
           child: _HomeQuestionBubble(questionText: questionText),
         ),
       ),
-      child: AnimatedOpacity(
-        key: const Key('home-question-opacity'),
-        opacity: opacity,
-        duration: TransientHomeFeedbackPresenter.fadeDuration,
-        curve: Curves.easeOut,
-        child: _HomeQuestionBubble(
-          questionText: questionText,
-          onTap: onTap,
-          actionKey: const Key('home-question-action'),
-          bubbleKey: const Key('home-question-speech-bubble'),
-        ),
-      ),
+      child: dismissibleKey == null || onDismissed == null
+          ? bubble
+          : Dismissible(
+              key: dismissibleKey,
+              direction: DismissDirection.horizontal,
+              dismissThresholds: const {
+                DismissDirection.startToEnd: 0.3,
+                DismissDirection.endToStart: 0.3,
+              },
+              movementDuration: const Duration(milliseconds: 180),
+              resizeDuration: null,
+              onDismissed: (_) => onDismissed(),
+              child: bubble,
+            ),
     );
   }
 }
@@ -750,7 +781,6 @@ class _HomeQuestionBubble extends StatelessWidget {
           key: bubbleKey,
           speechText: questionText,
           maxWidth: 320,
-          maxLines: 4,
           textStyle: AppTextStyles.homeQuestionBubble,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -784,22 +814,9 @@ class _HomeForegroundPortalState extends State<_HomeForegroundPortal> {
   late final OverlayPortalController _controller = OverlayPortalController()
     ..show();
   final GlobalKey _placeholderKey = GlobalKey();
+  Object? _layoutSignature;
   Size? _placeholderSize;
   bool _measurementScheduled = false;
-
-  @override
-  void didUpdateWidget(covariant _HomeForegroundPortal oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.layoutKey != widget.layoutKey) {
-      _placeholderSize = null;
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _placeholderSize = null;
-  }
 
   void _schedulePlaceholderMeasurement() {
     if (_measurementScheduled) {
@@ -823,30 +840,46 @@ class _HomeForegroundPortalState extends State<_HomeForegroundPortal> {
 
   @override
   Widget build(BuildContext context) {
-    final placeholderSize = _placeholderSize;
-    if (placeholderSize == null) {
-      _schedulePlaceholderMeasurement();
-    }
-
-    return OverlayPortal.overlayChildLayoutBuilder(
-      key: widget.portalKey,
-      controller: _controller,
-      overlayChildBuilder: (context, info) {
-        final offset = MatrixUtils.transformPoint(
-          info.childPaintTransform,
-          Offset.zero,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layoutSignature = (
+          widget.layoutKey,
+          constraints,
+          MediaQuery.textScalerOf(context),
+          Directionality.of(context),
+          Localizations.maybeLocaleOf(context),
+          DefaultTextStyle.of(context).style,
         );
-        return Positioned(
-          left: offset.dx,
-          top: offset.dy,
-          width: info.childSize.width,
-          height: info.childSize.height,
-          child: widget.child,
+        if (_layoutSignature != layoutSignature) {
+          _layoutSignature = layoutSignature;
+          _placeholderSize = null;
+        }
+        final placeholderSize = _placeholderSize;
+        if (placeholderSize == null) {
+          _schedulePlaceholderMeasurement();
+        }
+
+        return OverlayPortal.overlayChildLayoutBuilder(
+          key: widget.portalKey,
+          controller: _controller,
+          overlayChildBuilder: (context, info) {
+            final offset = MatrixUtils.transformPoint(
+              info.childPaintTransform,
+              Offset.zero,
+            );
+            return Positioned(
+              left: offset.dx,
+              top: offset.dy,
+              width: info.childSize.width,
+              height: info.childSize.height,
+              child: widget.child,
+            );
+          },
+          child: placeholderSize == null
+              ? KeyedSubtree(key: _placeholderKey, child: widget.placeholder)
+              : SizedBox.fromSize(size: placeholderSize),
         );
       },
-      child: placeholderSize == null
-          ? KeyedSubtree(key: _placeholderKey, child: widget.placeholder)
-          : SizedBox.fromSize(size: placeholderSize),
     );
   }
 }
@@ -872,6 +905,13 @@ class _HomeStoryCardThumbnail extends StatelessWidget {
       semanticsLabel: _homeStoryCardSemantics,
     );
   }
+}
+
+String _dateKey(DateTime date) {
+  final year = date.year.toString().padLeft(4, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
 }
 
 class _HomeStoryLoopPresentation {
