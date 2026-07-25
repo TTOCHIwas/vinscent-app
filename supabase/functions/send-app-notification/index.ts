@@ -6,15 +6,14 @@ import {
   jsonResponse,
   verifyWebhookSecret,
 } from '../_shared/webhook.ts';
-
-type AppEventType =
-  | 'couple_setup_started'
-  | 'couple_setup_completed'
-  | 'couple_character_updated'
-  | 'couple_reconnected'
-  | 'ai_feedback_ready'
-  | 'ai_memory_review_ready'
-  | 'ai_personalization_activated';
+import {
+  type AppEventType,
+  appEventTypeSet,
+  notificationBodyFor,
+  notificationTypeFor,
+  preferenceColumnFor,
+  routeFor,
+} from './notification_contract.ts';
 
 type AppNotificationEvent = {
   id: string;
@@ -25,16 +24,6 @@ type AppNotificationEvent = {
   curriculum_version: number | null;
   payload: Record<string, unknown>;
 };
-
-const eventTypes = new Set<AppEventType>([
-  'couple_setup_started',
-  'couple_setup_completed',
-  'couple_character_updated',
-  'couple_reconnected',
-  'ai_feedback_ready',
-  'ai_memory_review_ready',
-  'ai_personalization_activated',
-]);
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
@@ -109,7 +98,7 @@ async function loadEvent(
 
   if (
     typeof data.event_type !== 'string' ||
-    !eventTypes.has(data.event_type as AppEventType)
+    !appEventTypeSet.has(data.event_type as AppEventType)
   ) {
     throw new Error('invalid_app_notification_event_type');
   }
@@ -131,39 +120,9 @@ async function loadEvent(
   };
 }
 
-function notificationTypeFor(eventType: AppEventType) {
-  return eventType.startsWith('ai_')
-    ? 'ai_update' as const
-    : 'couple_activity' as const;
-}
-
-function preferenceColumnFor(eventType: AppEventType) {
-  return eventType.startsWith('ai_')
-    ? 'ai_updates_enabled' as const
-    : 'couple_activity_enabled' as const;
-}
-
-function notificationBodyFor(eventType: AppEventType) {
-  switch (eventType) {
-    case 'couple_setup_started':
-      return '상대방이 우리 둘의 공간을 준비하고 있어.';
-    case 'couple_setup_completed':
-      return '우리 둘의 공간이 준비됐어.';
-    case 'couple_character_updated':
-      return '우리 캐릭터가 새롭게 바뀌었어.';
-    case 'couple_reconnected':
-      return '우리 둘의 연결이 다시 이어졌어.';
-    case 'ai_feedback_ready':
-      return '오늘 답변을 보고 한마디를 남겼어.';
-    case 'ai_memory_review_ready':
-      return '지금까지 알게 된 내용을 확인해 줘.';
-    case 'ai_personalization_activated':
-      return '이제 너희 둘을 조금 더 잘 알게 됐어.';
-  }
-}
-
 function notificationDataFor(event: AppNotificationEvent) {
   const assignedDate = event.payload.assigned_date;
+  const userQuestionId = event.payload.user_question_id;
   const route = routeFor(event.event_type, assignedDate);
 
   return {
@@ -180,22 +139,8 @@ function notificationDataFor(event: AppNotificationEvent) {
     ...(typeof assignedDate === 'string'
       ? { assigned_date: assignedDate }
       : {}),
+    ...(typeof userQuestionId === 'string'
+      ? { user_question_id: userQuestionId }
+      : {}),
   };
-}
-
-function routeFor(eventType: AppEventType, assignedDate: unknown) {
-  if (eventType === 'ai_feedback_ready') {
-    return typeof assignedDate === 'string'
-      ? `/home/question?date=${encodeURIComponent(assignedDate)}`
-      : '/home/question';
-  }
-
-  if (
-    eventType === 'ai_memory_review_ready' ||
-    eventType === 'ai_personalization_activated'
-  ) {
-    return '/ai';
-  }
-
-  return '/home';
 }

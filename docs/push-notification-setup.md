@@ -61,9 +61,18 @@ npx supabase secrets set APP_NOTIFICATION_WEBHOOK_SECRET=...
 
 ## 4. 배포 순서
 
-DB 마이그레이션을 먼저 배포한다.
+일반 변경은 DB 마이그레이션을 먼저 배포한다.
 
 ```powershell
+npx supabase db push
+```
+
+`app_notification_events`에 새 이벤트 종류를 추가하는 변경은 예외다.
+구버전 Function이 새 이벤트를 받는 구간을 만들지 않도록
+`send-app-notification`을 먼저 배포한 뒤 DB 마이그레이션을 적용한다.
+
+```powershell
+npx supabase functions deploy send-app-notification --no-verify-jwt
 npx supabase db push
 ```
 
@@ -133,6 +142,8 @@ Android 알림 채널 ID는 앱과 Edge Function 모두 `vinscent_notifications`
 - 질문 답변에 대한 캐릭터의 한마디 준비
 - 24개 기초 질문 이후 기억 검토 준비
 - 양쪽 검토가 끝난 뒤 개인화 활성화
+- AI에게 직접 물어본 질문의 답변 준비 또는 최종 실패
+- 집중 질문을 먼저 마친 사용자가 상대 답변을 기다리는 상태
 
 Webhook 생성 시 `Supabase Edge Function` 대상으로 `send-app-notification`을 선택하고 다음 Header를 추가한다.
 
@@ -140,7 +151,9 @@ Webhook 생성 시 `Supabase Edge Function` 대상으로 `send-app-notification`
 x-app-notification-webhook-secret: <APP_NOTIFICATION_WEBHOOK_SECRET>
 ```
 
-설정 화면의 `커플 활동 알림`은 연결·설정·캐릭터 변경을 제어하고, `캐릭터 소식 알림`은 한마디·기억 검토·개인화 준비 알림을 제어한다.
+설정 화면의 `커플 활동 알림`은 연결·설정·캐릭터 변경을 제어한다.
+`캐릭터 소식 알림`은 한마디·기억 검토·개인화 준비·직접 질문 결과와
+집중 질문 진행 알림을 제어한다.
 
 ## 9. 현재 제약
 

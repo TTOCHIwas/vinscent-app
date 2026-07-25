@@ -57,6 +57,21 @@ void main() {
       expect(location, '/ai');
     });
 
+    test('opens AI for asynchronous AI result events', () {
+      for (final eventType in [
+        'ai_direct_answer_ready',
+        'ai_direct_answer_failed',
+        'ai_focused_partner_waiting',
+      ]) {
+        final location = resolvePushNotificationLocation({
+          'type': 'ai_update',
+          'event_type': eventType,
+        });
+
+        expect(location, '/ai');
+      }
+    });
+
     test('opens the dated question for an AI feedback event', () {
       final location = resolvePushNotificationLocation({
         'type': 'ai_update',
