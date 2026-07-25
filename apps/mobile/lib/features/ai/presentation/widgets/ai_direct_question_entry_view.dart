@@ -6,17 +6,22 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/ai_direct_question_history.dart';
 import 'ai_character_speech_row.dart';
+import 'ai_direct_question_follow_up_view.dart';
 
 class AiDirectQuestionExchange extends StatelessWidget {
   const AiDirectQuestionExchange({
     super.key,
     required this.entry,
     required this.questionBubbleKey,
+    required this.onApproveFollowUp,
+    required this.onDismissFollowUp,
     this.isLatest = false,
   });
 
   final AiDirectQuestionEntry entry;
   final Key questionBubbleKey;
+  final Future<void> Function(String questionId) onApproveFollowUp;
+  final Future<void> Function(String questionId) onDismissFollowUp;
   final bool isLatest;
 
   @override
@@ -29,7 +34,12 @@ class AiDirectQuestionExchange extends StatelessWidget {
           questionText: entry.questionText,
         ),
         const SizedBox(height: 16),
-        AiDirectQuestionAnswerView(entry: entry, isLatest: isLatest),
+        AiDirectQuestionAnswerView(
+          entry: entry,
+          isLatest: isLatest,
+          onApproveFollowUp: onApproveFollowUp,
+          onDismissFollowUp: onDismissFollowUp,
+        ),
       ],
     );
   }
@@ -40,10 +50,14 @@ class AiDirectQuestionHistoryEntry extends StatefulWidget {
     super.key,
     required this.entry,
     required this.onDelete,
+    required this.onApproveFollowUp,
+    required this.onDismissFollowUp,
   });
 
   final AiDirectQuestionEntry entry;
   final VoidCallback onDelete;
+  final Future<void> Function(String questionId) onApproveFollowUp;
+  final Future<void> Function(String questionId) onDismissFollowUp;
 
   @override
   State<AiDirectQuestionHistoryEntry> createState() =>
@@ -109,7 +123,11 @@ class _AiDirectQuestionHistoryEntryState
               padding: const EdgeInsets.only(top: 16, bottom: 18),
               child: Column(
                 children: [
-                  AiDirectQuestionAnswerView(entry: entry),
+                  AiDirectQuestionAnswerView(
+                    entry: entry,
+                    onApproveFollowUp: widget.onApproveFollowUp,
+                    onDismissFollowUp: widget.onDismissFollowUp,
+                  ),
                   const SizedBox(height: 4),
                   Align(
                     alignment: Alignment.centerRight,
@@ -162,10 +180,14 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
   const AiDirectQuestionAnswerView({
     super.key,
     required this.entry,
+    required this.onApproveFollowUp,
+    required this.onDismissFollowUp,
     this.isLatest = false,
   });
 
   final AiDirectQuestionEntry entry;
+  final Future<void> Function(String questionId) onApproveFollowUp;
+  final Future<void> Function(String questionId) onDismissFollowUp;
   final bool isLatest;
 
   @override
@@ -184,22 +206,39 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         characterSize: 76,
         message: '답을 생각하는 중',
       ),
-      AiDirectQuestionStatus.completed => AiCharacterSpeechRow(
-        key: Key('ai-direct-answer-completed-${entry.id}'),
-        characterKey: Key('ai-direct-answer-character-${entry.id}'),
-        bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
-        characterSize: 76,
-        speechText: entry.answerText!,
-        semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
-      ),
+      AiDirectQuestionStatus.completed => _completedAnswer(),
       AiDirectQuestionStatus.failed => AiCharacterSpeechRow(
         key: Key('ai-direct-answer-failed-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
         characterSize: 76,
         speechText: '이번에는 답을 만들지 못했어',
+        textAlign: TextAlign.center,
       ),
     };
+  }
+
+  Widget _completedAnswer() {
+    final followUp = entry.followUp;
+    if (followUp != null &&
+        followUp.status != AiDirectQuestionFollowUpStatus.dismissed) {
+      return AiDirectQuestionFollowUpView(
+        questionId: entry.id,
+        answerText: entry.answerText!,
+        followUp: followUp,
+        onApprove: () => onApproveFollowUp(entry.id),
+        onDismiss: () => onDismissFollowUp(entry.id),
+      );
+    }
+
+    return AiCharacterSpeechRow(
+      key: Key('ai-direct-answer-completed-${entry.id}'),
+      characterKey: Key('ai-direct-answer-character-${entry.id}'),
+      bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
+      characterSize: 76,
+      speechText: entry.answerText!,
+      semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
+    );
   }
 }
 

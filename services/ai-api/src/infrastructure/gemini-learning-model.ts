@@ -1,6 +1,7 @@
 import {
   LearningModelError,
   type CoupleFeedbackGenerationOptions,
+  type DirectQuestionFollowUpGenerationOptions,
   type FoundationQuestionRecommendation,
   type LearningModelErrorCode,
   type LearningModelPort,
@@ -12,6 +13,7 @@ import type {
   CoupleFeedbackCandidate,
   DirectQuestionAnswer,
   DirectQuestionContext,
+  DirectQuestionFollowUpCandidate,
   FoundationQuestionCandidate,
   GeneralQuestionContext,
   ModelMemoryCandidate,
@@ -84,8 +86,22 @@ const personalizedQuestionSchema = objectSchema({
 }, ['question_key', 'question_text', 'category', 'mood', 'rationale']);
 
 const directQuestionAnswerSchema = objectSchema({
+  answer_status: {
+    type: 'string',
+    enum: ['answered', 'insufficient'],
+  },
   answer_text: { type: 'string', maxLength: 400 },
-}, ['answer_text']);
+}, [
+  'answer_status',
+  'answer_text',
+]);
+
+const directQuestionFollowUpSchema = objectSchema({
+  question_text: { type: 'string', maxLength: 299 },
+  category: { type: 'string' },
+  mood: { type: ['string', 'null'] },
+  rationale: { type: 'string' },
+}, ['question_text', 'category', 'mood', 'rationale']);
 
 const proactiveSuggestionSchema = objectSchema({
   suggestion_text: { type: 'string', minLength: 35, maxLength: 100 },
@@ -199,8 +215,28 @@ export class GeminiLearningModel implements LearningModelPort {
     });
     const output = requireRecord(result.value);
 
+    return withUsage(result, parseDirectQuestionAnswer(output));
+  }
+
+  async generateDirectQuestionFollowUp(
+    context: DirectQuestionContext,
+    options?: DirectQuestionFollowUpGenerationOptions,
+  ): Promise<LearningModelResult<DirectQuestionFollowUpCandidate>> {
+    const result = await this.#generateStructured({
+      prompt: buildDirectQuestionFollowUpPrompt(context, options),
+      schema: directQuestionFollowUpSchema,
+    });
+    const output = requireRecord(result.value);
+    const text = normalizeDirectQuestionFollowUpText(
+      requireString(output, 'question_text', 299),
+    );
+
     return withUsage(result, {
-      text: requireString(output, 'answer_text', 400),
+      questionKey: buildDirectQuestionFollowUpKey(text),
+      text,
+      category: requireString(output, 'category', 100),
+      mood: requireNullableString(output, 'mood', 100),
+      rationale: requireString(output, 'rationale', 500),
     });
   }
 
@@ -435,7 +471,10 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
       'Use only confirmed_profile and the recent six completed questions as evidence.',
       'A profile item with subject me belongs to the requester, partner belongs to the other participant, and couple is jointly confirmed.',
       'Do not expose those subject labels, internal keys, IDs, memory ownership metadata, or system terminology.',
-      'If the supplied evidence cannot support a useful answer, say naturally that there is not enough known yet instead of guessing.',
+      'Set answer_status to answered only when at least one concrete evidence-backed detail directly resolves the requester\'s question.',
+      'If the answer says the topic is unknown, has not been discussed, lacks enough evidence, or is merely curious about the result, answer_status must be insufficient.',
+      'When evidence is insufficient, say that naturally instead of guessing.',
+      'Do not append a suggested shared question to answer_text because follow-up generation is handled separately.',
       'Never infer hidden intention, diagnose personality or emotion, judge the relationship, recommend separation, or claim certainty beyond the evidence.',
       'Do not answer blocked sensitive topics and do not mention that another participant can see this answer because the answer is private.',
       'Use natural friendly casual Korean without markdown, headings, bullet points, or citations.',
@@ -446,6 +485,69 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
       recent_completed_questions: context.recentCompletedQuestions,
     },
   );
+}
+
+function buildDirectQuestionFollowUpPrompt(
+  context: DirectQuestionContext,
+  options?: DirectQuestionFollowUpGenerationOptions,
+): string {
+  const data: Record<string, unknown> = {
+    requester_question: context.questionText,
+    recent_shared_questions: context.recentSharedQuestionTexts,
+  };
+  if (options?.rejectedText !== null && options?.rejectedText !== undefined) {
+    data.rejected_follow_up = {
+      text: options.rejectedText,
+      rejection_code: options.rejectionCode,
+    };
+  }
+
+  return buildTaskPrompt(
+    [
+      'Generate exactly one Korean shared follow-up question for a private requester question that could not be answered from confirmed evidence.',
+      'When rejected_follow_up is present, correct that candidate according to rejection_code instead of repeating it.',
+      'Rewrite the requester\'s private question into a neutral shared question that both people answer from the same position.',
+      'Preserve the original setting, time, behavior, comparison axis, explicit alternatives, specificity, and open-ended or choice-based form.',
+      'Change only the asymmetric subject or perspective needed to let both people answer for themselves.',
+      'Do not broaden, generalize, reinterpret, add choices, or replace a concrete question with a wider abstract theme.',
+      'For example, transform "상대방은 여행지에서 아침 일찍 움직이는 걸 좋아할까, 늦게 쉬는 걸 좋아할까?" into "여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?".',
+      'Never reveal who asked, say the follow-up came from a private request, or state that one person lacked information about the other.',
+      'The follow-up may retain non-identifying wording from the private question only when needed to preserve its exact meaning.',
+      'A shared follow-up must not ask one person to infer the other person, identify one answer owner, pressure either person, or expose participant roles, user IDs, or system labels.',
+      'The follow-up must end with a question mark and must not duplicate recent_shared_questions.',
+      'Return a concise category, an optional mood, and a rationale that explains only which evidence gap the question will fill.',
+      'Do not use markdown, headings, bullet points, or citations.',
+    ].join(' '),
+    data,
+  );
+}
+
+function normalizeDirectQuestionFollowUpText(value: string): string {
+  const normalized = value.trim();
+  if (normalized.endsWith('?')) {
+    return normalized;
+  }
+
+  const withoutTerminalPunctuation = normalized
+    .replace(/[.!。！？…]+$/u, '')
+    .trimEnd();
+  if (withoutTerminalPunctuation.length === 0) {
+    throwInvalidOutput('direct_question.follow_up_text.invalid');
+  }
+  return `${withoutTerminalPunctuation}?`;
+}
+
+function buildDirectQuestionFollowUpKey(questionText: string): string {
+  let hash = 2166136261;
+  for (const character of questionText.normalize('NFKC')) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16777619);
+  }
+  const suffix = (hash >>> 0)
+    .toString(36)
+    .padStart(8, '0')
+    .slice(-8);
+  return `direct_follow_up_generated_${suffix}`;
 }
 
 function buildProactiveSuggestionPrompt(
@@ -521,6 +623,29 @@ function buildTaskPrompt(
   data: Record<string, unknown>,
 ): string {
   return `${commonPolicy}\nTask: ${task}\nData:\n${JSON.stringify(data)}`;
+}
+
+function parseDirectQuestionAnswer(
+  output: Record<string, unknown>,
+): DirectQuestionAnswer {
+  const status = requireEnum(
+    output,
+    'answer_status',
+    ['answered', 'insufficient'] as const,
+    'direct_question.answer_status.invalid',
+  );
+  const text = requireString(
+    output,
+    'answer_text',
+    400,
+    'direct_question.answer_text.invalid',
+  );
+
+  return {
+    status,
+    text,
+    followUpQuestion: null,
+  };
 }
 
 function parseMemoryCandidate(value: unknown): ModelMemoryCandidate {

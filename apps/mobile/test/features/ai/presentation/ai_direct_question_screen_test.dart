@@ -49,6 +49,32 @@ void main() {
     expect(_wordBoundaryText('최근 답변'), findsNothing);
   });
 
+  testWidgets('dismisses a pending shared question from history', (
+    tester,
+  ) async {
+    final repository = _FakeDirectQuestionRepository(
+      history: _history(questions: [_questionWithPendingFollowUp]),
+    );
+    await _pump(tester, repository);
+
+    await tester.tap(
+      find.byKey(const Key('ai-direct-history-question-follow-up-question')),
+    );
+    await tester.pump();
+    final dismiss = find.byKey(
+      const Key('ai-direct-follow-up-dismiss-follow-up-question'),
+    );
+    await tester.ensureVisible(dismiss);
+    await tester.pumpAndSettle();
+    await tester.tap(dismiss);
+    await tester.pump();
+    await tester.pump();
+
+    expect(repository.followUpDecisions, [
+      ('follow-up-question', AiDirectQuestionFollowUpDecision.dismiss),
+    ]);
+  });
+
   testWidgets('keeps the expanded row transparent with content spacing', (
     tester,
   ) async {
@@ -230,7 +256,9 @@ final _latestQuestion = AiDirectQuestionEntry(
   id: 'latest-question',
   questionText: '최근 질문',
   status: AiDirectQuestionStatus.completed,
+  resultKind: AiDirectQuestionResultKind.answered,
   answerText: '최근 답변',
+  followUp: null,
   failureCode: null,
   createdAt: DateTime.utc(2026, 7, 24),
   answeredAt: DateTime.utc(2026, 7, 24, 0, 1),
@@ -240,10 +268,29 @@ final _pastQuestion = AiDirectQuestionEntry(
   id: 'past-question',
   questionText: '지난 질문 내용',
   status: AiDirectQuestionStatus.completed,
+  resultKind: AiDirectQuestionResultKind.answered,
   answerText: '지난 답변',
+  followUp: null,
   failureCode: null,
   createdAt: DateTime.utc(2026, 7, 23),
   answeredAt: DateTime.utc(2026, 7, 23, 0, 1),
+);
+
+final _questionWithPendingFollowUp = AiDirectQuestionEntry(
+  id: 'follow-up-question',
+  questionText: '상대는 쉬는 날에 뭘 하고 싶어 할까?',
+  status: AiDirectQuestionStatus.completed,
+  resultKind: AiDirectQuestionResultKind.insufficient,
+  answerText: '아직은 잘 모르겠어',
+  followUp: const AiDirectQuestionFollowUp(
+    id: 'follow-up-1',
+    questionText: '쉬는 날 함께 해보고 싶은 건 뭐야?',
+    status: AiDirectQuestionFollowUpStatus.pending,
+    sharedQuestionId: null,
+  ),
+  failureCode: null,
+  createdAt: DateTime.utc(2026, 7, 24),
+  answeredAt: DateTime.utc(2026, 7, 24, 0, 1),
 );
 
 class _FakeDirectQuestionRepository implements AiDirectQuestionRepository {
@@ -251,6 +298,7 @@ class _FakeDirectQuestionRepository implements AiDirectQuestionRepository {
 
   AiDirectQuestionHistory history;
   final List<String> deletedQuestionIds = [];
+  final followUpDecisions = <(String, AiDirectQuestionFollowUpDecision)>[];
 
   @override
   Future<void> deleteQuestion(String questionId) async {
@@ -266,6 +314,14 @@ class _FakeDirectQuestionRepository implements AiDirectQuestionRepository {
 
   @override
   Future<AiDirectQuestionHistory> fetchHistory() async => history;
+
+  @override
+  Future<void> decideFollowUp(
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) async {
+    followUpDecisions.add((questionId, decision));
+  }
 
   @override
   Future<void> submitQuestion(String questionText) async {}

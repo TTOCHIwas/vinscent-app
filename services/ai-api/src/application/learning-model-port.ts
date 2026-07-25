@@ -3,6 +3,8 @@ import type {
   CoupleFeedbackCandidate,
   DirectQuestionAnswer,
   DirectQuestionContext,
+  DirectQuestionFollowUpCandidate,
+  DirectQuestionFollowUpValidationCode,
   FoundationQuestionCandidate,
   GeneralQuestionContext,
   ModelMemoryCandidate,
@@ -81,6 +83,14 @@ export interface ProactiveSuggestionGenerationOptions {
   rejectedText: string | null;
 }
 
+export interface DirectQuestionFollowUpGenerationOptions {
+  rejectedText: string | null;
+  rejectionCode:
+    | DirectQuestionFollowUpValidationCode
+    | 'candidate_validation_failed'
+    | null;
+}
+
 export interface LearningModelPort {
   rankFoundationQuestions(
     context: AnonymizedCompletedQuestionContext,
@@ -107,6 +117,11 @@ export interface LearningModelPort {
   answerDirectQuestion(
     context: DirectQuestionContext,
   ): Promise<LearningModelResult<DirectQuestionAnswer>>;
+
+  generateDirectQuestionFollowUp(
+    context: DirectQuestionContext,
+    options?: DirectQuestionFollowUpGenerationOptions,
+  ): Promise<LearningModelResult<DirectQuestionFollowUpCandidate>>;
 
   generateProactiveSuggestion(
     context: ProactiveSuggestionContext,

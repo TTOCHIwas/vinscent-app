@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(49);
 
 create temporary table ai_direct_test_claim (
   job_id uuid,
@@ -157,8 +157,8 @@ set local role authenticated;
 
 select is(
   public.get_my_ai_user_questions()->>'remaining_count',
-  '3',
-  'a personalized member starts with three questions'
+  '100',
+  'a personalized member starts with the configured test allowance'
 );
 select throws_ok(
   $$
@@ -217,6 +217,12 @@ select is(
 );
 
 reset role;
+
+update public.ai_user_question_daily_usage
+set submission_count = 98
+where couple_id = '26000000-0000-0000-0000-000000000001'
+  and user_id = '16000000-0000-0000-0000-000000000001';
+
 select set_config(
   'request.jwt.claim.sub',
   '16000000-0000-0000-0000-000000000001',
@@ -233,7 +239,7 @@ select lives_ok(
     end;
     $test$
   $$,
-  'the requester can use the remaining two questions'
+  'the requester can use the final two questions at the limit'
 );
 select is(
   public.get_my_ai_user_questions()->>'remaining_count',
@@ -246,7 +252,7 @@ select throws_ok(
   $$,
   'P0001',
   'ai_daily_question_limit_reached',
-  'a fourth direct question is rejected'
+  'a question beyond the configured daily limit is rejected'
 );
 select is(
   public.delete_my_ai_user_question(
@@ -336,6 +342,15 @@ select is(
   'array',
   'the worker receives only confirmed memory context'
 );
+select is(
+  jsonb_typeof(
+    public.get_ai_direct_question_job_context(
+      (select job_id from pg_temp.ai_direct_test_claim)
+    )->'recent_shared_questions'
+  ),
+  'array',
+  'the worker receives recent shared questions for duplicate prevention'
+);
 select lives_ok(
   $$
     select public.start_ai_processing_run(
@@ -363,13 +378,107 @@ set local role service_role;
 select is(
   public.succeed_ai_processing_run(
     (select run_id from pg_temp.ai_direct_test_claim),
-    '{"answer_text":"둘이 조용히 걷는 시간을 좋아한다고 했어"}'::jsonb,
+    jsonb_build_object(
+      'answer_status', 'insufficient',
+      'answer_text', 'I do not know enough yet',
+      'follow_up_question', jsonb_build_object(
+        'question_key', 'direct_follow_up_shared_walk_ab12cd34',
+        'question_text', 'What kind of walk would each of us enjoy?',
+        'category', 'daily_life',
+        'mood', 'light',
+        'rationale', 'There is not enough shared evidence yet'
+      )
+    ),
     10,
     10,
     100
   ),
   true,
   'the worker atomically stores a direct answer'
+);
+
+reset role;
+
+select is(
+  (
+    select aiuq.result_kind
+    from public.ai_user_questions as aiuq
+    where aiuq.id = (
+      select aipj.user_question_id
+      from public.ai_processing_jobs as aipj
+      where aipj.id = (select job_id from pg_temp.ai_direct_test_claim)
+    )
+  ),
+  'insufficient',
+  'the completed answer records its structured result kind'
+);
+select is(
+  (
+    select count(*)
+    from public.ai_user_question_follow_ups as aiuqfu
+    where aiuqfu.user_question_id = (
+      select aipj.user_question_id
+      from public.ai_processing_jobs as aipj
+      where aipj.id = (select job_id from pg_temp.ai_direct_test_claim)
+    )
+      and aiuqfu.status = 'pending'
+  ),
+  1::bigint,
+  'a safe insufficient answer stores one private follow-up proposal'
+);
+select is(
+  (
+    select aiuq.follow_up_outcome
+    from public.ai_user_questions as aiuq
+    where aiuq.id = (
+      select aipj.user_question_id
+      from public.ai_processing_jobs as aipj
+      where aipj.id = (select job_id from pg_temp.ai_direct_test_claim)
+    )
+  ),
+  'created',
+  'a stored follow-up records its final outcome'
+);
+select is(
+  (
+    select aiuq.follow_up_error_code
+    from public.ai_user_questions as aiuq
+    where aiuq.id = (
+      select aipj.user_question_id
+      from public.ai_processing_jobs as aipj
+      where aipj.id = (select job_id from pg_temp.ai_direct_test_claim)
+    )
+  ),
+  null,
+  'a stored follow-up has no validation error'
+);
+select is(
+  (
+    select count(*)
+    from public.app_notification_events as ane
+    where ane.event_type = 'ai_direct_answer_ready'
+      and ane.payload->>'user_question_id' is not null
+  ),
+  1::bigint,
+  'a completed direct answer creates one notification event'
+);
+select is(
+  (
+    select ane.receiver_user_id
+    from public.app_notification_events as ane
+    where ane.event_type = 'ai_direct_answer_ready'
+  ),
+  '16000000-0000-0000-0000-000000000001'::uuid,
+  'the direct answer notification belongs only to its requester'
+);
+select is(
+  (
+    select ane.payload->>'result_status'
+    from public.app_notification_events as ane
+    where ane.event_type = 'ai_direct_answer_ready'
+  ),
+  'completed',
+  'the direct answer notification records its terminal result'
 );
 select is(
   public.get_ai_proactive_suggestion_context(
@@ -412,10 +521,168 @@ select ok(
       public.get_my_ai_user_questions()->'questions'
     ) as item
     where item->>'status' = 'completed'
-      and item->>'answer_text' =
-        '둘이 조용히 걷는 시간을 좋아한다고 했어'
+      and item->>'answer_text' = 'I do not know enough yet'
   ),
   'the requester can read the completed answer'
+);
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.get_my_ai_user_questions()->'questions'
+    ) as item
+    where item->>'status' = 'completed'
+      and item->'follow_up'->>'status' = 'pending'
+  ),
+  'the requester sees the private proposal with the completed answer'
+);
+
+reset role;
+
+update public.ai_processing_jobs as aipj
+set
+  status = 'failed',
+  completed_at = now(),
+  last_error = 'ai_answer_failed'
+where aipj.id = (
+  select pending_job.id
+  from public.ai_processing_jobs as pending_job
+  join public.ai_user_questions as aiuq
+    on aiuq.id = pending_job.user_question_id
+  where aiuq.requester_user_id =
+      '16000000-0000-0000-0000-000000000001'
+    and pending_job.job_type = 'answer_user_question'
+    and pending_job.status = 'pending'
+  order by pending_job.created_at, pending_job.id
+  limit 1
+);
+
+select is(
+  (
+    select count(*)
+    from public.app_notification_events as ane
+    where ane.event_type = 'ai_direct_answer_failed'
+  ),
+  1::bigint,
+  'a final direct answer failure creates one notification event'
+);
+select is(
+  (
+    select ane.receiver_user_id
+    from public.app_notification_events as ane
+    where ane.event_type = 'ai_direct_answer_failed'
+  ),
+  '16000000-0000-0000-0000-000000000001'::uuid,
+  'the direct answer failure notification belongs only to its requester'
+);
+select is(
+  (
+    select ane.payload->>'result_status'
+    from public.app_notification_events as ane
+    where ane.event_type = 'ai_direct_answer_failed'
+  ),
+  'failed',
+  'the failure notification is emitted only for the terminal state'
+);
+
+insert into public.ai_user_questions (
+  id,
+  couple_id,
+  requester_user_id,
+  question_text,
+  status
+)
+values (
+  '36000000-0000-0000-0000-000000000099',
+  '26000000-0000-0000-0000-000000000001',
+  '16000000-0000-0000-0000-000000000001',
+  'Does my partner prefer an early travel morning?',
+  'processing'
+);
+
+insert into public.ai_processing_jobs (
+  id,
+  couple_id,
+  user_question_id,
+  job_type,
+  status,
+  deduplication_key,
+  attempts,
+  claimed_at,
+  claimed_by,
+  lease_expires_at
+)
+values (
+  '46000000-0000-0000-0000-000000000099',
+  '26000000-0000-0000-0000-000000000001',
+  '36000000-0000-0000-0000-000000000099',
+  'answer_user_question',
+  'processing',
+  'direct-question-outcome-test',
+  1,
+  now(),
+  'ai-direct-outcome-worker',
+  now() + interval '5 minutes'
+);
+
+create temporary table ai_direct_outcome_run (
+  run_id uuid
+);
+grant select, insert on table ai_direct_outcome_run to service_role;
+
+set local role service_role;
+
+select lives_ok(
+  $$
+    insert into pg_temp.ai_direct_outcome_run (run_id)
+    select public.start_ai_processing_run(
+        '46000000-0000-0000-0000-000000000099',
+        'google',
+        'gemini-test',
+        'direct-question-v5'
+      )
+  $$,
+  'an unavailable follow-up run can start'
+);
+
+select is(
+  public.succeed_ai_processing_run(
+    (
+      select test_run.run_id
+      from pg_temp.ai_direct_outcome_run as test_run
+    ),
+    jsonb_build_object(
+      'answer_status', 'insufficient',
+      'answer_text', 'There is not enough evidence yet',
+      'follow_up_generation_status', 'generation_failed',
+      'follow_up_error_code', 'model_generation_failed',
+      'follow_up_question', null
+    ),
+    10,
+    10,
+    100
+  ),
+  true,
+  'an answer remains successful when follow-up generation is unavailable'
+);
+
+select is(
+  (
+    select aiuq.follow_up_outcome
+    from public.ai_user_questions as aiuq
+    where aiuq.id = '36000000-0000-0000-0000-000000000099'
+  ),
+  'generation_failed',
+  'an unavailable follow-up records a diagnosable outcome'
+);
+select is(
+  (
+    select aiuq.follow_up_error_code
+    from public.ai_user_questions as aiuq
+    where aiuq.id = '36000000-0000-0000-0000-000000000099'
+  ),
+  'model_generation_failed',
+  'an unavailable follow-up records a safe detailed error code'
 );
 
 select * from finish();

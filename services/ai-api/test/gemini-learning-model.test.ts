@@ -935,7 +935,13 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
   const prompts: string[] = [];
   const outputs = [
     {
+      answer_status: 'answered',
       answer_text: '조용히 걷는 시간을 좋아한다고 했어. 가벼운 산책이 잘 맞을 것 같아',
+      follow_up_question_key: null,
+      follow_up_question_text: null,
+      follow_up_category: null,
+      follow_up_mood: null,
+      follow_up_rationale: null,
     },
     {
       suggestion_text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진을 카드로 남겨도 예쁘겠다',
@@ -968,6 +974,7 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
       },
     ],
     recentCompletedQuestions: [],
+    recentSharedQuestionTexts: [],
   });
   const proactive = await model.generateProactiveSuggestion({
     localDate: '2026-07-24',
@@ -986,6 +993,8 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
     rejectedText: '오늘은 산책해봐',
   });
 
+  assert.equal(direct.value.status, 'answered');
+  assert.equal(direct.value.followUpQuestion, null);
   assert.equal(direct.value.text.includes('산책'), true);
   assert.equal(proactive.value.kind, 'sunset_card');
   assert.equal(prompts[0]?.includes('requester_question'), true);
@@ -994,4 +1003,116 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
   assert.equal(prompts[1]?.includes('latitude'), false);
   assert.equal(prompts[1]?.includes('longitude'), false);
   assert.equal(prompts[1]?.includes('"rejected_suggestion":"오늘은 산책해봐"'), true);
+});
+
+test('Gemini model keeps an insufficient answer separate from its follow-up', async () => {
+  let capturedPrompt = '';
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          answer_status: 'insufficient',
+          answer_text: '여행 스타일은 아직 구체적으로 확인된 내용이 없어서 다 말하기 어려워',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+
+  const result = await model.answerDirectQuestion({
+    questionText: '상대방은 여행지에서 아침 일찍 움직이는 걸 좋아할까, 늦게 쉬는 걸 좋아할까?',
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    recentSharedQuestionTexts: [],
+  });
+
+  assert.equal(result.value.status, 'insufficient');
+  assert.equal(result.value.followUpQuestion, null);
+  assert.equal(
+    capturedPrompt.includes('at least one concrete evidence-backed detail'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('Do not append a suggested shared question'),
+    true,
+  );
+});
+
+test('Gemini model generates a follow-up with a required dedicated schema', async () => {
+  let capturedPrompt = '';
+  let capturedSchema: unknown;
+  const model = new GeminiLearningModel({
+    generateStructured: async ({ prompt, schema }) => {
+      capturedPrompt = prompt;
+      capturedSchema = schema;
+      return {
+        value: {
+          question_text: '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아',
+          category: 'travel',
+          mood: null,
+          rationale: '여행지에서 선호하는 하루 시작 방식을 확인할 근거가 아직 부족해',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+
+  const result = await model.generateDirectQuestionFollowUp(
+    {
+      questionText: '상대방은 여행지에서 아침 일찍 움직이는 걸 좋아할까, 늦게 쉬는 걸 좋아할까?',
+      confirmedMemories: [],
+      recentCompletedQuestions: [],
+      recentSharedQuestionTexts: [],
+    },
+    {
+      rejectedText: '상대방은 여행지에서 일찍 움직이는 걸 좋아해?',
+      rejectionCode: 'asymmetric_question',
+    },
+  );
+
+  assert.equal(
+    result.value.text,
+    '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?',
+  );
+  assert.match(
+    result.value.questionKey,
+    /^direct_follow_up_generated_[a-z0-9]{8}$/,
+  );
+  assert.equal(
+    capturedPrompt.includes('Preserve the original setting, time, behavior'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('Do not broaden, generalize, reinterpret'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('"rejection_code":"asymmetric_question"'),
+    true,
+  );
+  assert.deepEqual(capturedSchema, {
+    type: 'object',
+    properties: {
+      question_text: { type: 'string', maxLength: 299 },
+      category: { type: 'string' },
+      mood: { type: ['string', 'null'] },
+      rationale: { type: 'string' },
+    },
+    required: [
+      'question_text',
+      'category',
+      'mood',
+      'rationale',
+    ],
+    additionalProperties: false,
+  });
 });

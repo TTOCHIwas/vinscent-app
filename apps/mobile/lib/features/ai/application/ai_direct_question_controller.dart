@@ -50,6 +50,18 @@ class AiDirectQuestionController
     });
   }
 
+  Future<void> decideFollowUp(
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) {
+    return _operations.run(() async {
+      await ref
+          .read(aiDirectQuestionRepositoryProvider)
+          .decideFollowUp(questionId, decision);
+      await _reload();
+    });
+  }
+
   Future<void> _reload() async {
     final history = await ref
         .read(aiDirectQuestionRepositoryProvider)

@@ -11,6 +11,7 @@ import {
   validateProactiveSuggestion,
   validateQuestionRecommendation,
   type CompletedQuestionContext,
+  type DirectQuestionContext,
 } from '../src/domain/learning-contract.ts';
 
 const context: CompletedQuestionContext = {
@@ -70,31 +71,114 @@ const context: CompletedQuestionContext = {
   ],
 };
 
+const directQuestionContext: DirectQuestionContext = {
+  questionText: '상대는 쉬는 날에 어떤 걸 하고 싶어할까?',
+  confirmedMemories: [],
+  recentCompletedQuestions: [],
+  recentSharedQuestionTexts: [
+    '요즘 함께 자주 하고 싶은 건 뭐야?',
+  ],
+};
+
 test('direct answers reject internal participant labels and blocked topics', () => {
   assert.doesNotThrow(() =>
-    validateDirectQuestionAnswer({
+    validateDirectQuestionAnswer(directQuestionContext, {
+      status: 'answered',
       text: '아직 확실히 알 만큼 기록이 충분하지 않아',
+      followUpQuestion: null,
     })
   );
   assert.throws(() =>
-    validateDirectQuestionAnswer({
+    validateDirectQuestionAnswer(directQuestionContext, {
+      status: 'answered',
       text: 'partner_a는 산책을 좋아해',
+      followUpQuestion: null,
     })
   );
   assert.throws(() =>
-    validateDirectQuestionAnswer({
+    validateDirectQuestionAnswer(directQuestionContext, {
+      status: 'answered',
       text: '정신건강 상태를 보면 이렇게 판단할 수 있어',
+      followUpQuestion: null,
     })
   );
   assert.throws(() =>
-    validateDirectQuestionAnswer({
+    validateDirectQuestionAnswer(directQuestionContext, {
+      status: 'answered',
       text: '연봉과 돈 관리 방식을 비교하면 이렇게 볼 수 있어',
+      followUpQuestion: null,
     })
   );
   assert.throws(() =>
-    validateDirectQuestionAnswer({
+    validateDirectQuestionAnswer(directQuestionContext, {
+      status: 'answered',
       text: '건강 상태와 병원 기록을 보면 이런 경향이 있어',
+      followUpQuestion: null,
     })
+  );
+});
+
+test('근거가 부족할 때만 대칭적인 공용 질문 후보를 허용한다', () => {
+  assert.doesNotThrow(() =>
+    validateDirectQuestionAnswer(directQuestionContext, {
+      status: 'insufficient',
+      text: '아직은 확실히 알기 어려워',
+      followUpQuestion: {
+        questionKey: 'direct_follow_up_shared_rest_ab12cd34',
+        text: '쉬는 날 함께 해보고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: 'light',
+        rationale: '쉬는 날의 선호를 확인할 근거가 아직 부족해',
+      },
+    })
+  );
+
+  assert.throws(
+    () =>
+      validateDirectQuestionAnswer(directQuestionContext, {
+        status: 'answered',
+        text: '조용히 쉬는 시간을 좋아한다고 했어',
+        followUpQuestion: {
+          questionKey: 'direct_follow_up_shared_rest_ab12cd34',
+          text: '쉬는 날 함께 해보고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: 'light',
+          rationale: '쉬는 날의 선호를 확인할 근거가 아직 부족해',
+        },
+      }),
+    /answered direct question cannot include a follow-up/i,
+  );
+
+  assert.throws(
+    () =>
+      validateDirectQuestionAnswer(directQuestionContext, {
+        status: 'insufficient',
+        text: '아직은 확실히 알기 어려워',
+        followUpQuestion: {
+          questionKey: 'direct_follow_up_partner_rest_ab12cd34',
+          text: '상대방은 쉬는 날 뭘 하고 싶어 해?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '상대방의 쉬는 날 선호를 묻기 위해서야',
+        },
+      }),
+    /symmetric/i,
+  );
+
+  assert.throws(
+    () =>
+      validateDirectQuestionAnswer(directQuestionContext, {
+        status: 'insufficient',
+        text: '아직은 확실히 알기 어려워',
+        followUpQuestion: {
+          questionKey: 'direct_follow_up_recent_topic_ab12cd34',
+          text: '요즘 함께 자주 하고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '최근 선호를 다시 확인하기 위해서야',
+        },
+      }),
+    /duplicate/i,
   );
 });
 

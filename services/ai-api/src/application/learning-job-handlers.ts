@@ -1,8 +1,13 @@
 import {
   anonymizeCompletedQuestionContext,
+  DirectQuestionFollowUpValidationError,
   resolveMemoryCandidates,
+  type DirectQuestionAnswer,
+  type DirectQuestionContext,
+  type DirectQuestionFollowUpValidationCode,
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
+  validateDirectQuestionFollowUp,
   validateGeneralQuestion,
   validatePersonalizedQuestion,
   validateQuestionRecommendation,
@@ -18,9 +23,11 @@ import {
   type ClaimedLearningJob,
   type LearningJobRepository,
 } from './learning-job-repository.ts';
-import type {
-  LearningModelPort,
-  LearningModelUsage,
+import {
+  LearningModelError,
+  type LearningModelErrorCode,
+  type LearningModelPort,
+  type LearningModelUsage,
 } from './learning-model-port.ts';
 
 interface DefaultLearningJobHandlerOptions {
@@ -249,15 +256,146 @@ class AnswerUserQuestionHandler implements LearningJobHandler {
   async prepare(job: ClaimedLearningJob): Promise<PreparedLearningJob> {
     const context = await this.#repository.loadDirectQuestionContext(job.jobId);
 
-    return modelJob('direct-question-v1', async () => {
-      const result = await this.#model.answerDirectQuestion(context);
-      validateDirectQuestionAnswer(result.value);
+    return modelJob('direct-question-v5', async () => {
+      const result = await generateDirectQuestionAnswer(
+        this.#model,
+        context,
+      );
+      const answer = result.answer;
       return {
-        output: { answer_text: result.value.text },
+        output: {
+          answer_status: answer.status,
+          answer_text: answer.text,
+          follow_up_generation_status: result.followUpGenerationStatus,
+          follow_up_error_code: result.followUpErrorCode,
+          follow_up_question: answer.followUpQuestion === null
+            ? null
+            : {
+                question_key: answer.followUpQuestion.questionKey,
+                question_text: answer.followUpQuestion.text,
+                category: answer.followUpQuestion.category,
+                mood: answer.followUpQuestion.mood,
+                rationale: answer.followUpQuestion.rationale,
+              },
+        },
         usage: result.usage,
       };
     });
   }
+}
+
+async function generateDirectQuestionAnswer(
+  model: LearningModelPort,
+  context: DirectQuestionContext,
+): Promise<{
+  answer: DirectQuestionAnswer;
+  followUpGenerationStatus: DirectQuestionFollowUpGenerationStatus;
+  followUpErrorCode: DirectQuestionFollowUpErrorCode | null;
+  usage: LearningModelUsage;
+}> {
+  const firstResult = await model.answerDirectQuestion(context);
+  const firstAnswer = {
+    ...firstResult.value,
+    followUpQuestion: null,
+  };
+  validateDirectQuestionAnswer(context, firstAnswer);
+  if (firstAnswer.status !== 'insufficient') {
+    return {
+      answer: firstAnswer,
+      followUpGenerationStatus: 'not_applicable',
+      followUpErrorCode: null,
+      usage: firstResult.usage,
+    };
+  }
+
+  let usage = firstResult.usage;
+  let rejectedText: string | null = null;
+  let rejectionCode: DirectQuestionFollowUpRetryCode | null = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let followUpResult: Awaited<
+      ReturnType<LearningModelPort['generateDirectQuestionFollowUp']>
+    >;
+    try {
+      followUpResult = await model.generateDirectQuestionFollowUp(
+        context,
+        { rejectedText, rejectionCode },
+      );
+    } catch (error) {
+      if (error instanceof LearningModelError) {
+        usage = combineUsage(usage, error.usage);
+      }
+      return {
+        answer: firstAnswer,
+        followUpGenerationStatus: 'generation_failed',
+        followUpErrorCode: directQuestionFollowUpGenerationErrorCode(error),
+        usage,
+      };
+    }
+
+    usage = combineUsage(usage, followUpResult.usage);
+    try {
+      validateDirectQuestionFollowUp(context, followUpResult.value);
+      return {
+        answer: {
+          ...firstAnswer,
+          followUpQuestion: followUpResult.value,
+        },
+        followUpGenerationStatus: 'generated',
+        followUpErrorCode: null,
+        usage,
+      };
+    } catch (error) {
+      const validationCode = error
+          instanceof DirectQuestionFollowUpValidationError
+        ? error.code
+        : 'candidate_validation_failed';
+      if (validationCode === 'duplicate_question') {
+        return {
+          answer: firstAnswer,
+          followUpGenerationStatus: 'duplicate',
+          followUpErrorCode: validationCode,
+          usage,
+        };
+      }
+      if (attempt === 1) {
+        return {
+          answer: firstAnswer,
+          followUpGenerationStatus: 'candidate_invalid',
+          followUpErrorCode: validationCode,
+          usage,
+        };
+      }
+      rejectedText = followUpResult.value.text;
+      rejectionCode = validationCode;
+    }
+  }
+
+  throw new Error('direct question follow-up generation exhausted');
+}
+
+type DirectQuestionFollowUpGenerationStatus =
+  | 'not_applicable'
+  | 'generated'
+  | 'generation_failed'
+  | 'candidate_invalid'
+  | 'duplicate';
+
+type DirectQuestionFollowUpErrorCode =
+  | DirectQuestionFollowUpRetryCode
+  | LearningModelErrorCode
+  | 'model_generation_failed';
+
+type DirectQuestionFollowUpRetryCode =
+  | DirectQuestionFollowUpValidationCode
+  | 'candidate_validation_failed';
+
+function directQuestionFollowUpGenerationErrorCode(
+  error: unknown,
+): DirectQuestionFollowUpErrorCode {
+  return error instanceof LearningModelError
+    ? error.code
+    : 'model_generation_failed';
 }
 
 class RebuildProfileHandler implements LearningJobHandler {

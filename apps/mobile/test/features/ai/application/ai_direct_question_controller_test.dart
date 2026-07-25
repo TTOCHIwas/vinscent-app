@@ -51,6 +51,46 @@ void main() {
       );
     },
   );
+
+  test('queues a follow-up decision behind an active refresh', () async {
+    final refreshGate = Completer<AiDirectQuestionHistory>();
+    final repository = _QueuedDirectQuestionRepository(refreshGate);
+    final container = ProviderContainer(
+      overrides: [
+        aiDirectQuestionRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      aiDirectQuestionControllerProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+
+    await container.read(aiDirectQuestionControllerProvider.future);
+    final controller = container.read(
+      aiDirectQuestionControllerProvider.notifier,
+    );
+    final refresh = controller.refresh();
+    await repository.refreshStarted.future;
+
+    final decision = controller.decideFollowUp(
+      'question-1',
+      AiDirectQuestionFollowUpDecision.approve,
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(repository.followUpDecisions, isEmpty);
+
+    refreshGate.complete(_history());
+    await refresh;
+    await decision;
+
+    expect(repository.followUpDecisions, [
+      ('question-1', AiDirectQuestionFollowUpDecision.approve),
+    ]);
+    expect(repository.fetchCount, 3);
+  });
 }
 
 class _QueuedDirectQuestionRepository implements AiDirectQuestionRepository {
@@ -59,6 +99,7 @@ class _QueuedDirectQuestionRepository implements AiDirectQuestionRepository {
   final Completer<AiDirectQuestionHistory> refreshGate;
   final refreshStarted = Completer<void>();
   final submittedQuestions = <String>[];
+  final followUpDecisions = <(String, AiDirectQuestionFollowUpDecision)>[];
   var fetchCount = 0;
 
   @override
@@ -71,6 +112,9 @@ class _QueuedDirectQuestionRepository implements AiDirectQuestionRepository {
       refreshStarted.complete();
       return refreshGate.future;
     }
+    if (submittedQuestions.isEmpty) {
+      return Future.value(_history());
+    }
     return Future.value(
       _history(
         questions: [
@@ -78,7 +122,9 @@ class _QueuedDirectQuestionRepository implements AiDirectQuestionRepository {
             id: 'pending-question',
             questionText: submittedQuestions.single,
             status: AiDirectQuestionStatus.queued,
+            resultKind: null,
             answerText: null,
+            followUp: null,
             failureCode: null,
             createdAt: DateTime.utc(2026, 7, 24),
             answeredAt: null,
@@ -96,6 +142,14 @@ class _QueuedDirectQuestionRepository implements AiDirectQuestionRepository {
   @override
   Future<void> deleteQuestion(String questionId) {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<void> decideFollowUp(
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) async {
+    followUpDecisions.add((questionId, decision));
   }
 }
 

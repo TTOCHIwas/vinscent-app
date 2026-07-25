@@ -239,10 +239,35 @@ export interface DirectQuestionContext {
   questionText: string;
   confirmedMemories: PersonalizationMemoryContext[];
   recentCompletedQuestions: PersonalizationRecentQuestionContext[];
+  recentSharedQuestionTexts: string[];
 }
 
+export type DirectQuestionAnswerStatus = 'answered' | 'insufficient';
+
+export type DirectQuestionFollowUpCandidate = PersonalizedQuestionCandidate;
+
 export interface DirectQuestionAnswer {
+  status: DirectQuestionAnswerStatus;
   text: string;
+  followUpQuestion: DirectQuestionFollowUpCandidate | null;
+}
+
+export type DirectQuestionFollowUpValidationCode =
+  | 'invalid_key'
+  | 'invalid_question'
+  | 'invalid_metadata'
+  | 'blocked_topic'
+  | 'asymmetric_question'
+  | 'duplicate_question';
+
+export class DirectQuestionFollowUpValidationError extends Error {
+  readonly code: DirectQuestionFollowUpValidationCode;
+
+  constructor(code: DirectQuestionFollowUpValidationCode) {
+    super(code);
+    this.name = 'DirectQuestionFollowUpValidationError';
+    this.code = code;
+  }
 }
 
 export type ProactiveSuggestionKind =
@@ -711,10 +736,17 @@ export function validateGeneralQuestion(
 }
 
 export function validateDirectQuestionAnswer(
+  context: DirectQuestionContext,
   candidate: DirectQuestionAnswer,
 ): void {
   requireNonBlank(candidate.text, 'direct question answer', 400);
 
+  if (
+    candidate.status !== 'answered'
+    && candidate.status !== 'insufficient'
+  ) {
+    throw new Error('unknown direct question answer status');
+  }
   if (
     internalMemoryParticipantPatterns.some(
       (pattern) => pattern.test(candidate.text),
@@ -725,6 +757,22 @@ export function validateDirectQuestionAnswer(
   if (containsBlockedAiTopic(candidate.text)) {
     throw new Error('direct question answer contains a blocked topic');
   }
+
+  if (candidate.status === 'answered') {
+    if (candidate.followUpQuestion !== null) {
+      throw new Error('answered direct question cannot include a follow-up');
+    }
+    return;
+  }
+
+  if (candidate.followUpQuestion === null) {
+    return;
+  }
+
+  validateDirectQuestionFollowUp(
+    context,
+    candidate.followUpQuestion,
+  );
 }
 
 export function validateProactiveSuggestion(
@@ -799,6 +847,81 @@ function validateGeneratedQuestion(
   if (candidate.mood !== null) {
     requireNonBlank(candidate.mood, 'generated question mood', 100);
   }
+}
+
+export function validateDirectQuestionFollowUp(
+  context: DirectQuestionContext,
+  candidate: DirectQuestionFollowUpCandidate,
+): void {
+  try {
+    requireNonBlank(candidate.questionKey, 'generated question key', 120);
+  } catch {
+    throw new DirectQuestionFollowUpValidationError('invalid_key');
+  }
+  try {
+    requireNonBlank(candidate.text, 'generated question', 300);
+  } catch {
+    throw new DirectQuestionFollowUpValidationError('invalid_question');
+  }
+  try {
+    requireNonBlank(candidate.category, 'generated question category', 100);
+    requireNonBlank(candidate.rationale, 'generated question rationale', 500);
+    if (candidate.mood !== null) {
+      requireNonBlank(candidate.mood, 'generated question mood', 100);
+    }
+  } catch {
+    throw new DirectQuestionFollowUpValidationError('invalid_metadata');
+  }
+  if (
+    containsBlockedAiTopic(candidate.text)
+    || containsBlockedAiTopic(candidate.category)
+  ) {
+    throw new DirectQuestionFollowUpValidationError('blocked_topic');
+  }
+
+  if (
+    !/^direct_follow_up_[a-z0-9_]+_[a-z0-9]{8}$/.test(
+      candidate.questionKey,
+    )
+  ) {
+    throw new DirectQuestionFollowUpValidationError('invalid_key');
+  }
+  if (!candidate.text.endsWith('?')) {
+    throw new DirectQuestionFollowUpValidationError('invalid_question');
+  }
+  if (
+    directFollowUpAsymmetricPatterns.some(
+      (pattern) => pattern.test(candidate.text),
+    )
+  ) {
+    throw new DirectQuestionFollowUpValidationError('asymmetric_question');
+  }
+
+  const normalizedCandidate = normalizeQuestionForComparison(candidate.text);
+  const isDuplicate = context.recentSharedQuestionTexts.some(
+    (questionText) =>
+      normalizeQuestionForComparison(questionText) === normalizedCandidate,
+  );
+  if (isDuplicate) {
+    throw new DirectQuestionFollowUpValidationError('duplicate_question');
+  }
+}
+
+const directFollowUpAsymmetricPatterns = [
+  /(?:^|\s)(?:너는|넌|네가|니가|당신은)(?=$|\s|[!?,'"‘’“”])/u,
+  /(?:^|\s)(?:상대|상대방|파트너)(?:은|는|이|가)(?=$|\s)/u,
+  /파트너\s*[ab]/iu,
+  /partner[_\s-]?[ab]/iu,
+  /사용자\s*[ab]/iu,
+  /(?:첫|두)\s*번째\s*(?:사용자|사람|파트너)/u,
+];
+
+function normalizeQuestionForComparison(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/gu, ' ')
+    .replace(/[?!]+$/u, '');
 }
 
 const blockedAiTopicPattern = new RegExp(

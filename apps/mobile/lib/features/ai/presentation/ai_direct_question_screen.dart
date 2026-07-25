@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/ai_direct_question_controller.dart';
 import '../data/ai_direct_question_history.dart';
+import '../data/ai_direct_question_repository.dart';
 import 'widgets/ai_direct_question_entry_view.dart';
 import 'widgets/ai_learning_error_message.dart';
 
@@ -43,6 +44,18 @@ class AiDirectQuestionScreen extends ConsumerWidget {
           onRefresh: () =>
               ref.read(aiDirectQuestionControllerProvider.notifier).refresh(),
           onDelete: (questionId) => _deleteQuestion(context, ref, questionId),
+          onApproveFollowUp: (questionId) => _decideFollowUp(
+            context,
+            ref,
+            questionId,
+            AiDirectQuestionFollowUpDecision.approve,
+          ),
+          onDismissFollowUp: (questionId) => _decideFollowUp(
+            context,
+            ref,
+            questionId,
+            AiDirectQuestionFollowUpDecision.dismiss,
+          ),
         ),
       ),
     );
@@ -66,6 +79,26 @@ class AiDirectQuestionScreen extends ConsumerWidget {
       ).showSnackBar(SnackBar(content: Text(aiLearningErrorMessage(error))));
     }
   }
+
+  Future<void> _decideFollowUp(
+    BuildContext context,
+    WidgetRef ref,
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) async {
+    try {
+      await ref
+          .read(aiDirectQuestionControllerProvider.notifier)
+          .decideFollowUp(questionId, decision);
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(aiLearningErrorMessage(error))));
+    }
+  }
 }
 
 class _QuestionHistoryList extends StatelessWidget {
@@ -73,11 +106,15 @@ class _QuestionHistoryList extends StatelessWidget {
     required this.history,
     required this.onRefresh,
     required this.onDelete,
+    required this.onApproveFollowUp,
+    required this.onDismissFollowUp,
   });
 
   final AiDirectQuestionHistory history;
   final RefreshCallback onRefresh;
   final ValueChanged<String> onDelete;
+  final Future<void> Function(String questionId) onApproveFollowUp;
+  final Future<void> Function(String questionId) onDismissFollowUp;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +153,8 @@ class _QuestionHistoryList extends StatelessWidget {
             key: ValueKey(question.id),
             entry: question,
             onDelete: () => onDelete(question.id),
+            onApproveFollowUp: onApproveFollowUp,
+            onDismissFollowUp: onDismissFollowUp,
           );
         },
       ),

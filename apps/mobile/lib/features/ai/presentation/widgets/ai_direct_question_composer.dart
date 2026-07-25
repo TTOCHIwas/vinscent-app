@@ -10,6 +10,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../application/ai_direct_question_controller.dart';
 import '../../data/ai_direct_question_history.dart';
+import '../../data/ai_direct_question_repository.dart';
 import '../ai_direct_question_composer_controller.dart';
 import 'ai_character_speech_row.dart';
 import 'ai_direct_question_entry_view.dart';
@@ -49,9 +50,41 @@ class AiDirectQuestionComposer extends ConsumerWidget {
           history: value,
           controller: controller,
           onHistoryPressed: onHistoryPressed,
+          onApproveFollowUp: (questionId) => _decideFollowUp(
+            context,
+            ref,
+            questionId,
+            AiDirectQuestionFollowUpDecision.approve,
+          ),
+          onDismissFollowUp: (questionId) => _decideFollowUp(
+            context,
+            ref,
+            questionId,
+            AiDirectQuestionFollowUpDecision.dismiss,
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _decideFollowUp(
+    BuildContext context,
+    WidgetRef ref,
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) async {
+    try {
+      await ref
+          .read(aiDirectQuestionControllerProvider.notifier)
+          .decideFollowUp(questionId, decision);
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(aiLearningErrorMessage(error))));
+    }
   }
 }
 
@@ -60,11 +93,15 @@ class _DirectQuestionComposerContent extends StatelessWidget {
     required this.history,
     required this.controller,
     required this.onHistoryPressed,
+    required this.onApproveFollowUp,
+    required this.onDismissFollowUp,
   });
 
   final AiDirectQuestionHistory history;
   final AiDirectQuestionComposerController controller;
   final VoidCallback onHistoryPressed;
+  final Future<void> Function(String questionId) onApproveFollowUp;
+  final Future<void> Function(String questionId) onDismissFollowUp;
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +136,8 @@ class _DirectQuestionComposerContent extends StatelessWidget {
             entry: latestQuestion,
             questionBubbleKey: const Key('ai-direct-latest-question-bubble'),
             isLatest: true,
+            onApproveFollowUp: onApproveFollowUp,
+            onDismissFollowUp: onDismissFollowUp,
           ),
           const SizedBox(height: 12),
           Align(

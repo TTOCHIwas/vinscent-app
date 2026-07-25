@@ -40,6 +40,43 @@ void main() {
     expect(historyPressed, isTrue);
   });
 
+  testWidgets('shows vertically separated follow-up decision actions', (
+    tester,
+  ) async {
+    final repository = _FakeDirectQuestionRepository(
+      history: _history(questions: [_questionWithPendingFollowUp]),
+    );
+    await _pump(tester, repository);
+
+    final approve = find.byKey(
+      const Key('ai-direct-follow-up-approve-completed-question'),
+    );
+    final dismiss = find.byKey(
+      const Key('ai-direct-follow-up-dismiss-completed-question'),
+    );
+    await tester.ensureVisible(dismiss);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('ai-direct-follow-up-question-completed-question')),
+      findsOneWidget,
+    );
+    expect(approve, findsOneWidget);
+    expect(dismiss, findsOneWidget);
+    expect(
+      tester.getRect(approve).bottom,
+      lessThan(tester.getRect(dismiss).top),
+    );
+
+    await tester.tap(approve);
+    await tester.pump();
+    await tester.pump();
+
+    expect(repository.followUpDecisions, [
+      ('completed-question', AiDirectQuestionFollowUpDecision.approve),
+    ]);
+  });
+
   testWidgets('cycles the guide prompt and daily remaining count', (
     tester,
   ) async {
@@ -188,7 +225,9 @@ void main() {
                 id: 'pending-question',
                 questionText: '생각 중인 질문',
                 status: AiDirectQuestionStatus.processing,
+                resultKind: null,
                 answerText: null,
+                followUp: null,
                 failureCode: null,
                 createdAt: DateTime.utc(2026, 7, 24),
                 answeredAt: null,
@@ -218,7 +257,7 @@ void main() {
     await _pump(
       tester,
       _FakeDirectQuestionRepository(
-        history: _history(questions: [_completedQuestion]),
+        history: _history(questions: [_questionWithPendingFollowUp]),
       ),
       textScaleFactor: 1.8,
     );
@@ -309,7 +348,26 @@ final _completedQuestion = AiDirectQuestionEntry(
   id: 'completed-question',
   questionText: '우리 둘은 쉬는 날에 뭘 하면 잘 맞을까?',
   status: AiDirectQuestionStatus.completed,
+  resultKind: AiDirectQuestionResultKind.answered,
   answerText: '가볍게 걸으며 이야기하는 시간이 잘 어울려',
+  followUp: null,
+  failureCode: null,
+  createdAt: DateTime.utc(2026, 7, 24),
+  answeredAt: DateTime.utc(2026, 7, 24, 0, 1),
+);
+
+final _questionWithPendingFollowUp = AiDirectQuestionEntry(
+  id: 'completed-question',
+  questionText: '상대는 쉬는 날에 뭘 하고 싶어 할까?',
+  status: AiDirectQuestionStatus.completed,
+  resultKind: AiDirectQuestionResultKind.insufficient,
+  answerText: '아직은 잘 모르겠어',
+  followUp: const AiDirectQuestionFollowUp(
+    id: 'follow-up-1',
+    questionText: '쉬는 날 함께 해보고 싶은 건 뭐야?',
+    status: AiDirectQuestionFollowUpStatus.pending,
+    sharedQuestionId: null,
+  ),
   failureCode: null,
   createdAt: DateTime.utc(2026, 7, 24),
   answeredAt: DateTime.utc(2026, 7, 24, 0, 1),
@@ -320,12 +378,21 @@ class _FakeDirectQuestionRepository implements AiDirectQuestionRepository {
 
   AiDirectQuestionHistory history;
   final List<String> submittedQuestions = [];
+  final followUpDecisions = <(String, AiDirectQuestionFollowUpDecision)>[];
 
   @override
   Future<void> deleteQuestion(String questionId) async {}
 
   @override
   Future<AiDirectQuestionHistory> fetchHistory() async => history;
+
+  @override
+  Future<void> decideFollowUp(
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) async {
+    followUpDecisions.add((questionId, decision));
+  }
 
   @override
   Future<void> submitQuestion(String questionText) async {

@@ -24,6 +24,9 @@ export function parseDirectQuestionContext(
 
   return {
     questionText: requireString(record.question_text, 300),
+    recentSharedQuestionTexts: requireArray(
+      record.recent_shared_questions ?? [],
+    ).map((questionText) => requireString(questionText, 300)),
     ...personalization,
   };
 }

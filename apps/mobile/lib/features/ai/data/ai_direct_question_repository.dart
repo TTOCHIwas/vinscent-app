@@ -17,6 +17,20 @@ abstract interface class AiDirectQuestionRepository {
   Future<void> submitQuestion(String questionText);
 
   Future<void> deleteQuestion(String questionId);
+
+  Future<void> decideFollowUp(
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  );
+}
+
+enum AiDirectQuestionFollowUpDecision {
+  approve('approve'),
+  dismiss('dismiss');
+
+  const AiDirectQuestionFollowUpDecision(this.rpcValue);
+
+  final String rpcValue;
 }
 
 class SupabaseAiDirectQuestionRepository implements AiDirectQuestionRepository {
@@ -41,6 +55,20 @@ class SupabaseAiDirectQuestionRepository implements AiDirectQuestionRepository {
     await _rpc(
       'delete_my_ai_user_question',
       params: {'requested_question_id': questionId},
+    );
+  }
+
+  @override
+  Future<void> decideFollowUp(
+    String questionId,
+    AiDirectQuestionFollowUpDecision decision,
+  ) async {
+    await _rpc(
+      'decide_ai_user_question_follow_up',
+      params: {
+        'requested_question_id': questionId,
+        'requested_decision': decision.rpcValue,
+      },
     );
   }
 
@@ -102,6 +130,15 @@ class SupabaseAiDirectQuestionRepository implements AiDirectQuestionRepository {
       'ai_sensitive_question_not_available' =>
         AiLearningFailureReason.sensitiveQuestionNotAvailable,
       'invalid_ai_user_question' => AiLearningFailureReason.invalidUserQuestion,
+      'invalid_ai_follow_up_decision' =>
+        AiLearningFailureReason.invalidFollowUpDecision,
+      'ai_follow_up_not_found' => AiLearningFailureReason.followUpNotFound,
+      'ai_follow_up_already_decided' =>
+        AiLearningFailureReason.followUpAlreadyDecided,
+      'ai_follow_up_not_available' =>
+        AiLearningFailureReason.followUpNotAvailable,
+      'ai_follow_up_duplicate' => AiLearningFailureReason.followUpDuplicate,
+      'ai_follow_up_queue_full' => AiLearningFailureReason.followUpQueueFull,
       _ => AiLearningFailureReason.unknown,
     };
   }

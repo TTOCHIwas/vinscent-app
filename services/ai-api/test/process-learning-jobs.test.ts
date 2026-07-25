@@ -109,6 +109,7 @@ const directQuestionContext: DirectQuestionContext = {
     },
   ],
   recentCompletedQuestions: [],
+  recentSharedQuestionTexts: [],
 };
 
 test('processor delegates model work to the registered job handler', async () => {
@@ -246,8 +247,13 @@ test('processor handles every learning job and restores IDs only at persistence'
     async answerDirectQuestion(context) {
       seenDirectContexts.push(context);
       return result({
+        status: 'answered',
         text: '조용히 걷는 시간을 좋아한다고 했어. 복잡하지 않은 산책이 잘 맞을 것 같아',
+        followUpQuestion: null,
       });
+    },
+    async generateDirectQuestionFollowUp() {
+      throw new Error('answered questions do not need a follow-up');
     },
     async generateProactiveSuggestion() {
       return result({
@@ -312,8 +318,12 @@ test('processor handles every learning job and restores IDs only at persistence'
     rationale: 'Their preferred ways of spending time differ.',
   });
   assert.deepEqual(repository.successes[5]?.output, {
+    answer_status: 'answered',
     answer_text:
       '조용히 걷는 시간을 좋아한다고 했어. 복잡하지 않은 산책이 잘 맞을 것 같아',
+    follow_up_generation_status: 'not_applicable',
+    follow_up_error_code: null,
+    follow_up_question: null,
   });
   assert.equal(
     JSON.stringify(seenModelContexts).includes('couple-real-id'),
@@ -329,6 +339,335 @@ test('processor handles every learning job and restores IDs only at persistence'
   assert.deepEqual(repository.directContextJobIds, ['job-direct']);
   assert.equal(repository.contextJobIds.includes('job-general'), false);
   assert.equal(repository.contextJobIds.includes('job-direct'), false);
+});
+
+test('direct question handler persists a structured follow-up proposal', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-follow-up', 'answer_user_question'),
+  ]);
+  let answerCalls = 0;
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      answerCalls += 1;
+      return result({
+        status: 'insufficient',
+        text: '아직은 확실히 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      followUpCalls += 1;
+      return result({
+        questionKey: 'direct_follow_up_shared_rest_ab12cd34',
+        text: '쉬는 날 함께 해보고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: 'light',
+        rationale: '쉬는 날의 선호를 확인할 근거가 아직 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(answerCalls, 1);
+  assert.equal(followUpCalls, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 확실히 알기 어려워',
+    follow_up_generation_status: 'generated',
+    follow_up_error_code: null,
+    follow_up_question: {
+      question_key: 'direct_follow_up_shared_rest_ab12cd34',
+      question_text: '쉬는 날 함께 해보고 싶은 건 뭐야?',
+      category: 'daily_life',
+      mood: 'light',
+      rationale: '쉬는 날의 선호를 확인할 근거가 아직 부족해',
+    },
+  });
+});
+
+test('direct question handler generates a follow-up without replacing the first answer', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-missing-follow-up', 'answer_user_question'),
+  ]);
+  let answerCalls = 0;
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      answerCalls += 1;
+      return result({
+        status: 'insufficient',
+        text: '여행 스타일은 아직 구체적으로 확인된 내용이 없어서 다 말하기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      followUpCalls += 1;
+      return result({
+        questionKey: 'direct_follow_up_travel_rhythm_ab12cd34',
+        text: '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?',
+        category: 'travel',
+        mood: null,
+        rationale: '여행지에서 선호하는 하루 시작 방식을 확인할 근거가 아직 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(answerCalls, 1);
+  assert.equal(followUpCalls, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '여행 스타일은 아직 구체적으로 확인된 내용이 없어서 다 말하기 어려워',
+    follow_up_generation_status: 'generated',
+    follow_up_error_code: null,
+    follow_up_question: {
+      question_key: 'direct_follow_up_travel_rhythm_ab12cd34',
+      question_text: '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?',
+      category: 'travel',
+      mood: null,
+      rationale: '여행지에서 선호하는 하루 시작 방식을 확인할 근거가 아직 부족해',
+    },
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 40,
+    outputTokenCount: 20,
+    latencyMs: 240,
+  });
+});
+
+test('direct question handler regenerates an asymmetric follow-up once', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-follow-up-regeneration', 'answer_user_question'),
+  ]);
+  const rejectedOptions: unknown[] = [];
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직은 해외여행과 국내여행 중 어느 쪽을 좋아하는지 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp(_context, options) {
+      rejectedOptions.push(options);
+      followUpCalls += 1;
+      if (followUpCalls === 1) {
+        return result({
+          questionKey: 'direct_follow_up_travel_scope_ab12cd34',
+          text: '상대방은 해외여행을 좋아해, 국내여행을 좋아해?',
+          category: 'travel',
+          mood: null,
+          rationale: '여행 범위 선호를 확인할 근거가 부족해',
+        });
+      }
+      return result({
+        questionKey: 'direct_follow_up_travel_scope_cd34ef56',
+        text: '여행을 간다면 해외여행과 국내여행 중 어느 쪽이 더 좋아?',
+        category: 'travel',
+        mood: null,
+        rationale: '여행 범위 선호를 확인할 근거가 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(followUpCalls, 2);
+  assert.deepEqual(rejectedOptions, [
+    {
+      rejectedText: null,
+      rejectionCode: null,
+    },
+    {
+      rejectedText: '상대방은 해외여행을 좋아해, 국내여행을 좋아해?',
+      rejectionCode: 'asymmetric_question',
+    },
+  ]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 해외여행과 국내여행 중 어느 쪽을 좋아하는지 알기 어려워',
+    follow_up_generation_status: 'generated',
+    follow_up_error_code: null,
+    follow_up_question: {
+      question_key: 'direct_follow_up_travel_scope_cd34ef56',
+      question_text: '여행을 간다면 해외여행과 국내여행 중 어느 쪽이 더 좋아?',
+      category: 'travel',
+      mood: null,
+      rationale: '여행 범위 선호를 확인할 근거가 부족해',
+    },
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 60,
+    outputTokenCount: 30,
+    latencyMs: 360,
+  });
+});
+
+test('direct question handler keeps the first answer when follow-up repair fails', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-follow-up-repair-failure', 'answer_user_question'),
+  ]);
+  let calls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      calls += 1;
+      return result({
+        status: 'insufficient',
+        text: '아직은 두 사람의 여행 리듬을 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      calls += 1;
+      throw new Error('repair unavailable');
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(calls, 2);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 두 사람의 여행 리듬을 알기 어려워',
+    follow_up_generation_status: 'generation_failed',
+    follow_up_error_code: 'model_generation_failed',
+    follow_up_question: null,
+  });
+});
+
+test('direct question handler records an invalid generated follow-up', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-invalid-follow-up', 'answer_user_question'),
+  ]);
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직은 상대의 쉬는 날을 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      followUpCalls += 1;
+      return result({
+        questionKey: 'direct_follow_up_partner_rest_ab12cd34',
+        text: '상대방은 쉬는 날 뭘 하고 싶어 해?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '상대방의 쉬는 날 선호를 확인할 근거가 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(followUpCalls, 2);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 상대의 쉬는 날을 알기 어려워',
+    follow_up_generation_status: 'candidate_invalid',
+    follow_up_error_code: 'asymmetric_question',
+    follow_up_question: null,
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 60,
+    outputTokenCount: 30,
+    latencyMs: 360,
+  });
+});
+
+test('direct question handler records a duplicate without regenerating it', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-duplicate-follow-up', 'answer_user_question'),
+  ]);
+  repository.directContext = {
+    ...directQuestionContext,
+    recentSharedQuestionTexts: ['요즘 함께 자주 하고 싶은 건 뭐야?'],
+  };
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직은 최근 취향을 더 확인해야 해',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      followUpCalls += 1;
+      return result({
+        questionKey: 'direct_follow_up_recent_topic_ab12cd34',
+        text: '요즘 함께 자주 하고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '최근 선호를 확인할 근거가 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(followUpCalls, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 최근 취향을 더 확인해야 해',
+    follow_up_generation_status: 'duplicate',
+    follow_up_error_code: 'duplicate_question',
+    follow_up_question: null,
+  });
 });
 
 test('processor records retryable model failures and continues the batch', async () => {
@@ -566,6 +905,7 @@ class FakeRepository implements LearningJobRepository {
   readonly contextJobIds: string[] = [];
   readonly generalContextJobIds: string[] = [];
   readonly directContextJobIds: string[] = [];
+  directContext: DirectQuestionContext = directQuestionContext;
   readonly startedRuns: Array<{
     jobId: string;
     provider: string;
@@ -602,7 +942,7 @@ class FakeRepository implements LearningJobRepository {
 
   async loadDirectQuestionContext(jobId: string) {
     this.directContextJobIds.push(jobId);
-    return directQuestionContext;
+    return this.directContext;
   }
 
   async startRun(
@@ -700,7 +1040,18 @@ function modelWith(
     },
     async answerDirectQuestion() {
       return result({
+        status: 'insufficient',
         text: '아직 확실히 알 만큼 기록이 충분하지 않아',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      return result({
+        questionKey: 'direct_follow_up_default_ab12cd34',
+        text: '둘이 함께 더 알아보고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '직접 답할 근거가 아직 충분하지 않아',
       });
     },
     async generateProactiveSuggestion() {

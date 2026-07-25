@@ -25,6 +25,13 @@ String aiLearningErrorMessage(Object error) {
       AiLearningFailureReason.sensitiveQuestionNotAvailable =>
         '이 주제는 아직 답할 준비가 되지 않았어',
       AiLearningFailureReason.invalidUserQuestion => '질문을 찾지 못했어.',
+      AiLearningFailureReason.invalidFollowUpDecision => '선택을 확인하지 못했어.',
+      AiLearningFailureReason.followUpNotFound => '남길 질문을 찾지 못했어.',
+      AiLearningFailureReason.followUpAlreadyDecided => '이미 선택을 마친 질문이야.',
+      AiLearningFailureReason.followUpNotAvailable => '지금은 이 질문을 남길 수 없어.',
+      AiLearningFailureReason.followUpDuplicate => '이미 비슷한 질문이 준비되어 있어.',
+      AiLearningFailureReason.followUpQueueFull =>
+        '남겨둔 질문이 있어. 먼저 그 질문에 답한 뒤 다시 알려줘.',
       AiLearningFailureReason.questionNotReady => '질문 상태가 바뀌었어요. 다시 확인해 주세요.',
       AiLearningFailureReason.invalidQuestion => '질문 정보를 확인하지 못했어요.',
       AiLearningFailureReason.configMissing => 'AI 연결 설정을 확인해 주세요.',
