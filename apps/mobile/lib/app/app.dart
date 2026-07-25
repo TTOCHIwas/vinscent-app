@@ -11,6 +11,7 @@ import '../core/presentation/widgets/app_keyboard_dismiss_scope.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_status.dart';
+import '../features/calendar/application/couple_calendar_event_realtime_controller.dart';
 import '../features/couple/application/couple_controller.dart';
 import '../features/characters/application/couple_character_controller.dart';
 import '../features/home_widgets/application/home_widget_launch_coordinator.dart';
@@ -88,6 +89,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
         ref
             .read(storyLoopRealtimeControllerProvider.notifier)
             .refreshReadModels();
+        ref
+            .read(coupleCalendarEventRealtimeControllerProvider.notifier)
+            .refreshReadModels();
         _scheduleWidgetSync();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -156,6 +160,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       ref
           .read(storyLoopRealtimeControllerProvider.notifier)
           .refreshReadModels();
+      ref
+          .read(coupleCalendarEventRealtimeControllerProvider.notifier)
+          .refreshReadModels();
       _scheduleWidgetSync();
     }
   }
@@ -204,6 +211,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     final router = ref.watch(appRouterProvider);
     ref.watch(pushTokenControllerProvider);
     ref.watch(storyLoopRealtimeControllerProvider);
+    ref.watch(coupleCalendarEventRealtimeControllerProvider);
     if (_supportsHomeWidgets) {
       ref.listen(authControllerProvider, (_, next) {
         if (next == AuthStatus.authenticated) {
