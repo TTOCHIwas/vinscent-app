@@ -231,9 +231,7 @@ class _DetailDateHeader extends StatelessWidget {
       children: [
         Text(
           '${date.month}월 ${date.day}일',
-          style: AppTextStyles.shellDayCount.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.calendarDetailDate,
         ),
         const SizedBox(height: 4),
         Text(

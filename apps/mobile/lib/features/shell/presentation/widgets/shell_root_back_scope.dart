@@ -80,21 +80,42 @@ class _ShellRootBackScopeState extends State<ShellRootBackScope> {
       ShellRootBackScope.exitConfirmationWindow,
       _resetExitConfirmation,
     );
+    final textStyle = DefaultTextStyle.of(
+      context,
+    ).style.merge(ShellRootBackScope._exitToastTextStyle);
     final textPainter = TextPainter(
-      text: const TextSpan(
+      text: TextSpan(
         text: ShellRootBackScope.exitConfirmationMessage,
-        style: ShellRootBackScope._exitToastTextStyle,
+        style: textStyle,
       ),
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
       maxLines: 1,
     )..layout();
     final textWidth = textPainter.width;
     textPainter.dispose();
-    final toastWidth = math.min(
+    final maximumToastWidth = math.max(
+      0.0,
       MediaQuery.sizeOf(context).width - 48.0,
+    );
+    final toastWidth = math.min(
+      maximumToastWidth,
       textWidth + ShellRootBackScope._exitToastHorizontalPadding * 2,
     );
+    final exitText = Text(
+      ShellRootBackScope.exitConfirmationMessage,
+      maxLines: 1,
+      softWrap: false,
+      textAlign: TextAlign.center,
+      style: textStyle,
+    );
+    final content =
+        textWidth <=
+            maximumToastWidth -
+                ShellRootBackScope._exitToastHorizontalPadding * 2
+        ? exitText
+        : FittedBox(fit: BoxFit.scaleDown, child: exitText);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -108,11 +129,7 @@ class _ShellRootBackScopeState extends State<ShellRootBackScope> {
           backgroundColor: Colors.black,
           elevation: 4,
           shape: const StadiumBorder(),
-          content: const Text(
-            ShellRootBackScope.exitConfirmationMessage,
-            textAlign: TextAlign.center,
-            style: ShellRootBackScope._exitToastTextStyle,
-          ),
+          content: content,
           duration: ShellRootBackScope.exitConfirmationWindow,
         ),
       );

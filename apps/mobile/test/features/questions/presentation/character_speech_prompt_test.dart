@@ -4,6 +4,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/questions/presentation/widgets/character_speech_prompt.dart';
 
 void main() {
+  testWidgets('aligns regular speech to the reading direction', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CharacterSpeechBubble(speechText: '여러 줄로 이어지는 캐릭터의 말'),
+        ),
+      ),
+    );
+
+    expect(tester.widget<Text>(find.byType(Text)).textAlign, TextAlign.start);
+  });
+
+  testWidgets('allows short speech to remain centered', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CharacterSpeechBubble(
+            speechText: '생각 중',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.widget<Text>(find.byType(Text)).textAlign, TextAlign.center);
+  });
+
   testWidgets('wraps Korean speech at word boundaries', (tester) async {
     const speechText = '힘든 선택을 할 때 가장 중요하게 생각하는 기준은 뭐야?';
 
@@ -29,7 +56,8 @@ void main() {
 
     final text = tester.widget<Text>(find.byType(Text));
     final renderedText = text.data!;
-    expect(renderedText.replaceAll('\u2060', ''), speechText);
+    expect(renderedText.replaceAll('\n', ' '), speechText);
+    expect(renderedText, isNot(contains('\u2060')));
     expect(text.semanticsLabel, speechText);
     final paragraph = tester.renderObject<RenderParagraph>(
       find.descendant(of: find.byType(Text), matching: find.byType(RichText)),

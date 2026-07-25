@@ -57,6 +57,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: _lightColorScheme,
       typography: _typographyFor(_lightColorScheme),
+      fontFamily: AppTypography.fontFamily,
       scaffoldBackgroundColor: AppColors.background,
       appBarTheme: const AppBarTheme(centerTitle: false),
       cardTheme: CardThemeData(
@@ -72,6 +73,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: _darkColorScheme,
       typography: _typographyFor(_darkColorScheme),
+      fontFamily: AppTypography.fontFamily,
       scaffoldBackgroundColor: _darkSurface,
       appBarTheme: const AppBarTheme(centerTitle: false),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/theme/app_text_styles.dart';
@@ -13,6 +14,35 @@ void main() {
     final resized = AppTypography.withFontSize(AppTextStyles.shellTitle, 20);
     expect(resized.height, AppTextStyles.shellTitle.height);
     expect(resized.letterSpacing, closeTo(-0.5, 0.0001));
+  });
+
+  testWidgets('bundles Pretendard weights and its license', (tester) async {
+    for (final asset in [
+      'assets/fonts/Pretendard-Regular.otf',
+      'assets/fonts/Pretendard-Medium.otf',
+      'assets/fonts/Pretendard-SemiBold.otf',
+      'assets/fonts/Pretendard-Bold.otf',
+    ]) {
+      final font = await rootBundle.load(asset);
+      expect(font.lengthInBytes, greaterThan(100000));
+    }
+
+    final license = await rootBundle.loadString(
+      'assets/fonts/Pretendard-LICENSE.txt',
+    );
+    expect(license, contains('Reserved Font Name Pretendard'));
+    expect(license, contains('SIL OPEN FONT LICENSE Version 1.1'));
+  });
+
+  testWidgets('keeps the Cafe24 font available for comparison', (tester) async {
+    final font = await rootBundle.load('assets/fonts/Cafe24PROSlimFit.ttf');
+    final license = await rootBundle.loadString(
+      'assets/fonts/Cafe24PROSlimFit-LICENSE.txt',
+    );
+
+    expect(font.lengthInBytes, greaterThan(100000));
+    expect(license, contains('Cafe24 PRO SLIM Fit'));
+    expect(license, contains('SIL OPEN FONT LICENSE Version 1.1'));
   });
 
   test('preserves semantic heights while customizing typography geometry', () {
@@ -73,9 +103,44 @@ void main() {
         );
         for (final style in _textThemeStyles(localizedTextTheme)) {
           _expectTracking(style);
+          expect(style.fontFamily, AppTypography.fontFamily);
         }
       }
     }
+  });
+
+  testWidgets('inherits Pretendard in project text styles at runtime', (
+    tester,
+  ) async {
+    late TextStyle resolvedStyle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              resolvedStyle = DefaultTextStyle.of(
+                context,
+              ).style.merge(AppTextStyles.homeBody);
+              return const Text('본문', style: AppTextStyles.homeBody);
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(resolvedStyle.fontFamily, AppTypography.fontFamily);
+  });
+
+  test('uses Cafe24 only for the D-day accent style', () {
+    expect(
+      AppTextStyles.shellDayCount.fontFamily,
+      AppTypography.accentFontFamily,
+    );
+    expect(AppTextStyles.shellDayCount.fontWeight, FontWeight.w400);
+    expect(AppTextStyles.shellDayCount.letterSpacing, 0);
+    expect(AppTextStyles.calendarDetailDate.fontFamily, isNull);
   });
 
   test('keeps project text styles aligned with their layout roles', () {
@@ -86,6 +151,7 @@ void main() {
       (AppTextStyles.homeBodyMedium, AppTypography.bodyLineHeight),
       (AppTextStyles.homeQuestionBubble, AppTypography.bodyLineHeight),
       (AppTextStyles.shellDayCount, 1.2),
+      (AppTextStyles.calendarDetailDate, 1.2),
       (AppTextStyles.homeCharacterLabel, AppTypography.bodyLineHeight),
       (AppTextStyles.onboardingTitle, 34 / 24),
       (AppTextStyles.onboardingInput, 30 / 22),
@@ -102,7 +168,11 @@ void main() {
 
     for (final (style, expectedHeight) in expectedHeights) {
       expect(style.height, closeTo(expectedHeight, 0.0001));
-      _expectTracking(style);
+      if (style.fontFamily == AppTypography.accentFontFamily) {
+        expect(style.letterSpacing, 0);
+      } else {
+        _expectTracking(style);
+      }
     }
   });
 }

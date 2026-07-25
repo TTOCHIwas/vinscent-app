@@ -7,6 +7,10 @@ Finder findTextIgnoringWordJoiners(String text) {
       return false;
     }
 
+    if (widget.semanticsLabel == text) {
+      return true;
+    }
+
     final renderedText = widget.data ?? widget.textSpan?.toPlainText();
     return renderedText?.replaceAll('\u2060', '') == text;
   });

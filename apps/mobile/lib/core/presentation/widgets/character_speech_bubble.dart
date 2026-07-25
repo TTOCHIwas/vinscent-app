@@ -23,6 +23,7 @@ class CharacterSpeechBubble extends StatelessWidget {
     this.tailPosition = SpeechBubbleTailPosition.bottom,
     this.textStyle = AppTextStyles.homeCharacterLabel,
     this.bubbleColor = _speechBubbleColor,
+    this.textAlign = TextAlign.start,
   }) : semanticLabel = speechText,
        _content = null;
 
@@ -41,6 +42,7 @@ class CharacterSpeechBubble extends StatelessWidget {
   }) : speechText = semanticLabel,
        maxLines = null,
        textStyle = AppTextStyles.homeCharacterLabel,
+       textAlign = TextAlign.start,
        _content = child;
 
   final String speechText;
@@ -52,6 +54,7 @@ class CharacterSpeechBubble extends StatelessWidget {
   final SpeechBubbleTailPosition tailPosition;
   final TextStyle textStyle;
   final Color bubbleColor;
+  final TextAlign textAlign;
   final Widget? _content;
 
   @override
@@ -91,7 +94,7 @@ class CharacterSpeechBubble extends StatelessWidget {
                       ? null
                       : TextOverflow.ellipsis,
                   semanticsLabel: semanticLabel,
-                  textAlign: TextAlign.center,
+                  textAlign: textAlign,
                   style: textStyle,
                 )
               : Semantics(

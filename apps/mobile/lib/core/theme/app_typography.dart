@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 abstract final class AppTypography {
   static const bodyLineHeight = 1.4;
   static const letterSpacingRatio = -0.025;
+  static const fontFamily = 'Pretendard';
+  static const accentFontFamily = 'Cafe24ProSlimFit';
 
   static double letterSpacingFor(double fontSize) {
     return fontSize * letterSpacingRatio;

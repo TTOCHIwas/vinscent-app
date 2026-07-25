@@ -8,6 +8,7 @@ import 'package:vinscent/core/assets/app_icons.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
+import 'package:vinscent/core/theme/app_typography.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/ai/presentation/ai_direct_question_screen.dart';
@@ -145,7 +146,9 @@ void main() {
       expect(find.byTooltip('AI'), findsOneWidget);
       expect(find.text('AI'), findsNothing);
       expect(find.text('D+2'), findsOneWidget);
-      expect(tester.widget<Text>(find.text('D+2')).style?.fontSize, 24);
+      final dayCountText = tester.widget<Text>(find.text('D+2'));
+      expect(dayCountText.style?.fontSize, 24);
+      expect(dayCountText.style?.fontFamily, AppTypography.accentFontFamily);
       final headerRow = tester.widget<Row>(
         find.byKey(const Key('app-header-layout')),
       );
@@ -569,6 +572,9 @@ void main() {
       );
       final exitText = exitSnackBar.content as Text;
       expect(exitText.textAlign, TextAlign.center);
+      expect(exitText.maxLines, 1);
+      expect(exitText.softWrap, isFalse);
+      expect(exitText.style?.fontFamily, AppTypography.fontFamily);
       expect(
         exitSnackBar.width,
         closeTo(tester.getSize(find.text(exitText.data!)).width + 24, 0.1),

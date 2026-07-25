@@ -17,6 +17,7 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.maximumContentWidth = 360,
     this.maxLines,
     this.semanticLabel,
+    this.textAlign = TextAlign.start,
   }) : _content = null;
 
   const AiCharacterSpeechRow.custom({
@@ -29,6 +30,7 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.maximumContentWidth = 360,
   }) : speechText = null,
        maxLines = null,
+       textAlign = TextAlign.start,
        _content = child;
 
   final String? speechText;
@@ -39,6 +41,7 @@ class AiCharacterSpeechRow extends StatelessWidget {
   final double maximumContentWidth;
   final int? maxLines;
   final Widget? _content;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +59,7 @@ class AiCharacterSpeechRow extends StatelessWidget {
             tailSize: const Size(10, 18),
             tailPosition: SpeechBubbleTailPosition.left,
             textStyle: AppTextStyles.homeQuestionBubble,
+            textAlign: textAlign,
           )
         : CharacterSpeechBubble.custom(
             key: bubbleKey,
@@ -88,6 +92,7 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.maximumBubbleWidth = 300,
     this.maxLines,
     this.semanticLabel,
+    this.textAlign = TextAlign.start,
   }) : _content = null;
 
   const AiCharacterSpeechColumn.custom({
@@ -100,6 +105,7 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.maximumBubbleWidth = 300,
   }) : speechText = null,
        maxLines = null,
+       textAlign = TextAlign.start,
        _content = child;
 
   final String? speechText;
@@ -110,6 +116,7 @@ class AiCharacterSpeechColumn extends StatelessWidget {
   final double maximumBubbleWidth;
   final int? maxLines;
   final Widget? _content;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +129,7 @@ class AiCharacterSpeechColumn extends StatelessWidget {
             maxLines: maxLines,
             tailPosition: SpeechBubbleTailPosition.bottom,
             textStyle: AppTextStyles.homeQuestionBubble,
+            textAlign: textAlign,
           )
         : CharacterSpeechBubble.custom(
             key: bubbleKey,
