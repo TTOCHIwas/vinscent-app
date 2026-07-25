@@ -19,10 +19,12 @@ class CalendarStoryLoopDetail extends StatelessWidget {
     super.key,
     required this.storyLoopState,
     this.currentUserId,
+    this.showDateHeader = true,
   });
 
   final StoryLoopDetailState storyLoopState;
   final String? currentUserId;
+  final bool showDateHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -30,23 +32,36 @@ class CalendarStoryLoopDetail extends StatelessWidget {
       LoadedStoryLoopDetailState(detail: final detail) => _LoadedDetailSection(
         detail: detail,
         currentUserId: currentUserId,
+        showDateHeader: showDateHeader,
       ),
       EmptyStoryLoopDetailState(targetDate: final targetDate) =>
-        _EmptyDetailSection(targetDate: targetDate),
+        _EmptyDetailSection(
+          targetDate: targetDate,
+          showDateHeader: showDateHeader,
+        ),
       UnavailableStoryLoopDetailState(
         targetDate: final targetDate,
         reason: final reason,
       ) =>
-        _UnavailableDetailSection(targetDate: targetDate, reason: reason),
+        _UnavailableDetailSection(
+          targetDate: targetDate,
+          reason: reason,
+          showDateHeader: showDateHeader,
+        ),
     };
   }
 }
 
 class _LoadedDetailSection extends StatelessWidget {
-  const _LoadedDetailSection({required this.detail, this.currentUserId});
+  const _LoadedDetailSection({
+    required this.detail,
+    required this.showDateHeader,
+    this.currentUserId,
+  });
 
   final StoryLoopDetail detail;
   final String? currentUserId;
+  final bool showDateHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -55,9 +70,9 @@ class _LoadedDetailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _DetailDateHeader(date: detail.coupleDate),
+        if (showDateHeader) CalendarDetailDateHeader(date: detail.coupleDate),
         if (detail.cards.isNotEmpty) ...[
-          const SizedBox(height: 24),
+          SizedBox(height: showDateHeader ? 24 : 4),
           CalendarStoryCardStack(
             cards: detail.cards,
             currentUserId: currentUserId,
@@ -116,17 +131,21 @@ class _LoadedDetailSection extends StatelessWidget {
 }
 
 class _EmptyDetailSection extends StatelessWidget {
-  const _EmptyDetailSection({required this.targetDate});
+  const _EmptyDetailSection({
+    required this.targetDate,
+    required this.showDateHeader,
+  });
 
   final DateTime targetDate;
+  final bool showDateHeader;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _DetailDateHeader(date: targetDate),
-        const SizedBox(height: 32),
+        if (showDateHeader) CalendarDetailDateHeader(date: targetDate),
+        SizedBox(height: showDateHeader ? 32 : 12),
         const _StateMessage(
           title: '이 날의 질문 기록이 없어요',
           message: '질문이 생성된 날짜를 선택하면 기록을 볼 수 있어요',
@@ -140,18 +159,20 @@ class _UnavailableDetailSection extends StatelessWidget {
   const _UnavailableDetailSection({
     required this.targetDate,
     required this.reason,
+    required this.showDateHeader,
   });
 
   final DateTime targetDate;
   final StoryLoopDetailUnavailableReason reason;
+  final bool showDateHeader;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _DetailDateHeader(date: targetDate),
-        const SizedBox(height: 32),
+        if (showDateHeader) CalendarDetailDateHeader(date: targetDate),
+        SizedBox(height: showDateHeader ? 32 : 12),
         _StateMessage(
           title: switch (reason) {
             StoryLoopDetailUnavailableReason.unavailable => '기록을 확인할 수 없어요',
@@ -209,8 +230,8 @@ class _CardOnlyMessage extends StatelessWidget {
   }
 }
 
-class _DetailDateHeader extends StatelessWidget {
-  const _DetailDateHeader({required this.date});
+class CalendarDetailDateHeader extends StatelessWidget {
+  const CalendarDetailDateHeader({super.key, required this.date});
 
   static const _weekdayLabels = [
     '월요일',

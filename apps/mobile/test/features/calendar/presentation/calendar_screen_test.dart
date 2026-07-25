@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,9 @@ import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_theme.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
+import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
+import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
+import 'package:vinscent/features/calendar/presentation/calendar_month_layout_metrics.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
@@ -103,6 +108,31 @@ void main() {
     );
   });
 
+  testWidgets('keeps the calendar readable on a narrow enlarged-text screen', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      textScaleFactor: 1.3,
+      calendarEvents: [
+        _calendarEvent(
+          id: 'long-event',
+          title: '함께 오래 기억하고 싶은 아주 긴 일정 제목',
+          date: DateTime(2026, 5, 10),
+        ),
+      ],
+    );
+
+    expect(find.text('2026년 05월'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('swipes one day at a time within the relationship range', (
     tester,
   ) async {
@@ -140,8 +170,6 @@ void main() {
 
     await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
     await tester.pumpAndSettle();
-    await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
-    await tester.pumpAndSettle();
 
     expect(repository.requestedDetailDates, [
       DateTime(2026, 5, 10),
@@ -153,6 +181,23 @@ void main() {
         tester,
         find.byKey(
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
+        ),
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
+    );
+
+    await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 9),
+      DateTime(2026, 5, 10),
+    ]);
+    expect(
+      _circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-11'),
         ),
       ).map((decoration) => decoration.color),
       contains(AppColors.actionPrimary),
@@ -237,7 +282,7 @@ void main() {
     expect(repository.requestedDetailDates, [DateTime(2026, 6, 2)]);
   });
 
-  testWidgets('does not move after today month', (tester) async {
+  testWidgets('moves to a future month for shared schedules', (tester) async {
     final repository = FakeStoryLoopReadRepository();
 
     await _pumpCalendar(tester, repository: repository);
@@ -245,10 +290,210 @@ void main() {
     await tester.tap(find.byIcon(Icons.chevron_right));
     await tester.pumpAndSettle();
 
-    expect(find.text('2026년 05월'), findsOneWidget);
-    expect(find.text('2026년 06월'), findsNothing);
+    expect(find.text('2026년 06월'), findsOneWidget);
+    expect(find.text('2026년 05월'), findsNothing);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
+  });
+
+  testWidgets('starts in the standard calendar height and snaps smoothly', (
+    tester,
+  ) async {
+    await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+    final scrollView = tester.widget<CustomScrollView>(
+      find.byKey(const Key('calendar-scroll-view')),
+    );
+    final controller = scrollView.controller!;
+
+    expect(
+      controller.offset,
+      closeTo(CalendarMonthLayoutMetrics.defaultScrollOffset, 0.5),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 100),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.offset, closeTo(0, 0.5));
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, -330),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      controller.offset,
+      closeTo(CalendarMonthLayoutMetrics.collapsedScrollOffset, 0.5),
+    );
+  });
+
+  testWidgets('opens the shared event editor with the selected date', (
+    tester,
+  ) async {
+    await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+
+    await tester.tap(find.byKey(const Key('calendar-add-event')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('calendar event date 2026-05-10'), findsOneWidget);
+  });
+
+  testWidgets('shows a shared event in its cell and selected day detail', (
+    tester,
+  ) async {
+    final event = _calendarEvent(
+      id: 'event-1',
+      title: '함께 여행',
+      date: DateTime(2026, 5, 5),
+    );
+    await _pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      calendarEvents: [event],
+    );
+
+    expect(
+      find.byKey(const ValueKey('calendar-event-indicator-event-1')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('함께 여행'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('calendar-event-menu-event-1')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'prioritizes artwork and shows two event drawings only when expanded',
+    (tester) async {
+      final events = [
+        _calendarEvent(
+          id: 'event-without-art',
+          title: '그림 없는 일정',
+          date: DateTime(2026, 5, 5),
+        ),
+        _calendarEvent(
+          id: 'event-with-art',
+          title: '그림 있는 일정',
+          date: DateTime(2026, 5, 5),
+          artwork: const CoupleCalendarEventArtwork(
+            previewPath: 'event.webp',
+            drawingDataPath: 'event.json.gz',
+          ),
+        ),
+        _calendarEvent(
+          id: 'event-with-second-art',
+          title: '두 번째 그림 일정',
+          date: DateTime(2026, 5, 5),
+          artwork: const CoupleCalendarEventArtwork(
+            previewPath: 'event-2.webp',
+            drawingDataPath: 'event-2.json.gz',
+          ),
+        ),
+      ];
+      await _pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        calendarEvents: events,
+      );
+
+      expect(
+        find.byKey(const ValueKey('calendar-event-indicator-event-with-art')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('calendar-event-indicator-event-with-second-art'),
+        ),
+        findsNothing,
+      );
+      expect(find.text('+2'), findsOneWidget);
+
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, 100),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(
+          const ValueKey('calendar-event-indicator-event-with-second-art'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('+1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('shows inclusive default anniversaries without stored events', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+
+    expect(find.text('10일'), findsNWidgets(2));
+  });
+
+  testWidgets('selects a future date without requesting story history', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository();
+    await _pumpCalendar(tester, repository: repository);
+
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    final futureCell = find.byKey(
+      const ValueKey('calendar-month-story-cell-empty-2026-06-02'),
+    );
+    await tester.tap(
+      find.ancestor(of: futureCell, matching: find.byType(InkWell)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('6월 2일'), findsOneWidget);
+    expect(find.text('아직 일정이 없어요'), findsOneWidget);
+    expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
+  });
+
+  testWidgets('deletes a shared event and refreshes the calendar immediately', (
+    tester,
+  ) async {
+    final event = _calendarEvent(
+      id: 'event-to-delete',
+      title: '삭제할 일정',
+      date: DateTime(2026, 5, 5),
+    );
+    await _pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      calendarEvents: [event],
+    );
+
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+    await _scrollCalendarUp(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('calendar-event-menu-event-to-delete')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('삭제'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('삭제'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('일정을 삭제했어요'), findsOneWidget);
+    expect(find.text('삭제할 일정'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('calendar-event-indicator-event-to-delete')),
+      findsNothing,
+    );
   });
 
   testWidgets(
@@ -463,7 +708,7 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
     final card = find.byKey(const ValueKey('calendar-story-card-card-2'));
-    await tester.ensureVisible(card);
+    await _scrollCalendarUp(tester);
     await tester.tap(card);
     await tester.pumpAndSettle();
 
@@ -562,7 +807,8 @@ void main() {
     ]);
     expect(find.text('기록을 불러오지 못했어요'), findsOneWidget);
 
-    await tester.tap(find.text('다시 시도'));
+    await _scrollCalendarUp(tester);
+    await tester.tap(find.byKey(const Key('calendar-story-detail-retry')));
     await tester.pumpAndSettle();
 
     expect(repository.requestedDetailDates, [
@@ -619,6 +865,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('내 답변'));
+    await _scrollCalendarUp(tester);
     await tester.tap(find.text('내 답변'));
     await tester.pumpAndSettle();
 
@@ -658,7 +905,12 @@ Future<void> _pumpCalendar(
   DateTime? today,
   DateTime? relationshipStartDate,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
+  List<CoupleCalendarEvent> calendarEvents = const [],
+  double textScaleFactor = 1,
 }) async {
+  final calendarEventRepository = _FakeCalendarEventRepository(
+    events: calendarEvents,
+  );
   final router = GoRouter(
     initialLocation: '/calendar',
     routes: [
@@ -675,6 +927,14 @@ Future<void> _pumpCalendar(
         path: '/home/question/edit',
         builder: (context, state) =>
             const Scaffold(body: Text('calendar question edit route')),
+      ),
+      GoRoute(
+        path: '/calendar/event/new',
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'calendar event date ${state.uri.queryParameters['date']}',
+          ),
+        ),
       ),
     ],
   );
@@ -703,12 +963,104 @@ Future<void> _pumpCalendar(
           );
         }),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
+        coupleCalendarEventRepositoryProvider.overrideWithValue(
+          calendarEventRepository,
+        ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+          child: child!,
+        ),
+      ),
     ),
   );
 
   await tester.pumpAndSettle();
+}
+
+Future<void> _scrollCalendarUp(WidgetTester tester) async {
+  await tester.drag(
+    find.byKey(const Key('calendar-scroll-view')),
+    const Offset(0, -600),
+  );
+  await tester.pumpAndSettle();
+}
+
+class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
+  _FakeCalendarEventRepository({required List<CoupleCalendarEvent> events})
+    : events = List.of(events);
+
+  final List<CoupleCalendarEvent> events;
+
+  @override
+  Future<void> deleteEvent({
+    required String eventId,
+    required int expectedRevision,
+  }) async {
+    events.removeWhere((event) => event.id == eventId);
+  }
+
+  @override
+  Future<CoupleCalendarEvent?> fetchEvent(String eventId) async {
+    return events.where((event) => event.id == eventId).firstOrNull;
+  }
+
+  @override
+  Future<Uint8List> fetchArtworkDrawingData(String drawingDataPath) async {
+    return Uint8List(0);
+  }
+
+  @override
+  Future<List<CoupleCalendarEvent>> fetchOccurrences({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    return events
+        .where(
+          (event) =>
+              !event.occurrenceDate.isBefore(startDate) &&
+              !event.occurrenceDate.isAfter(endDate),
+        )
+        .toList(growable: false);
+  }
+
+  @override
+  Future<CoupleCalendarEvent> saveEvent({
+    required String coupleId,
+    required CoupleCalendarEventSaveRequest request,
+    Uint8List? previewBytes,
+    Uint8List? drawingDataBytes,
+  }) {
+    throw UnimplementedError();
+  }
+}
+
+CoupleCalendarEvent _calendarEvent({
+  required String id,
+  required String title,
+  required DateTime date,
+  CoupleCalendarEventArtwork? artwork,
+}) {
+  return CoupleCalendarEvent(
+    id: id,
+    coupleId: 'couple-id',
+    title: title,
+    eventDate: date,
+    occurrenceDate: date,
+    repeatRule: CoupleCalendarEventRepeatRule.none,
+    memo: null,
+    revision: 1,
+    createdByUserId: 'user-id',
+    updatedByUserId: 'user-id',
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    reminder: const CoupleCalendarEventReminder.disabled(),
+    artwork: artwork,
+  );
 }
 
 class _FlakyStoryLoopReadRepository implements StoryLoopReadRepository {

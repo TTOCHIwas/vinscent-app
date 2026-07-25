@@ -6,6 +6,8 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../story_loops/data/story_loop_card_preview.dart';
 import '../../../story_loops/data/story_card_scene.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
+import '../../data/couple_calendar_event.dart';
+import 'calendar_event_artwork.dart';
 
 class CalendarMonthStoryCell extends StatelessWidget {
   const CalendarMonthStoryCell({
@@ -14,12 +16,18 @@ class CalendarMonthStoryCell extends StatelessWidget {
     required this.textColor,
     required this.isSelected,
     required this.summary,
+    this.events = const [],
+    this.anniversaryLabel,
+    this.eventIndicatorLimit = 1,
   });
 
   final DateTime date;
   final Color textColor;
   final bool isSelected;
   final StoryLoopMonthSummaryDay? summary;
+  final List<CoupleCalendarEvent> events;
+  final String? anniversaryLabel;
+  final int eventIndicatorLimit;
 
   @override
   Widget build(BuildContext context) {
@@ -31,38 +39,78 @@ class CalendarMonthStoryCell extends StatelessWidget {
     };
 
     return Padding(
-      key: ValueKey('calendar-month-story-cell-$displayMode-${_dateKey(date)}'),
+      key: ValueKey(
+        'calendar-month-story-cell-$displayMode-${_calendarDateKey(date)}',
+      ),
       padding: const EdgeInsets.fromLTRB(3, 3, 3, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox.square(
-            dimension: 16,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.actionPrimary
-                    : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '${date.day}',
-                  style: AppTypography.applyToStyle(
-                    AppTextStyles.homeCharacterLabel.copyWith(
-                      color: isSelected ? AppColors.textInverse : textColor,
-                      fontSize: 11,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.w400,
-                      height: 1,
+          SizedBox(
+            height: 16,
+            child: Row(
+              children: [
+                SizedBox.square(
+                  dimension: 16,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.actionPrimary
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${date.day}',
+                        style: AppTypography.applyToStyle(
+                          AppTextStyles.homeCharacterLabel.copyWith(
+                            color: isSelected
+                                ? AppColors.textInverse
+                                : textColor,
+                            fontSize: 11,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            height: 1,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                if (anniversaryLabel case final label?) ...[
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: AppTypography.applyToStyle(
+                        AppTextStyles.homeCharacterLabel.copyWith(
+                          color: textColor,
+                          fontSize: 8,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 2),
+          if (events.isNotEmpty) ...[
+            const SizedBox(height: 1),
+            SizedBox(
+              height: 14,
+              child: _CalendarEventIndicators(
+                date: date,
+                events: events,
+                limit: eventIndicatorLimit,
+              ),
+            ),
+          ],
+          const SizedBox(height: 1),
           Expanded(child: _MonthStoryPreview(cards: visibleCards)),
         ],
       ),
@@ -78,13 +126,67 @@ class CalendarMonthStoryCell extends StatelessWidget {
       ..sort((left, right) => left.submittedAt.compareTo(right.submittedAt));
     return sortedCards.take(2).toList(growable: false);
   }
+}
 
-  String _dateKey(DateTime date) {
-    final year = date.year.toString().padLeft(4, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '$year-$month-$day';
+class _CalendarEventIndicators extends StatelessWidget {
+  const _CalendarEventIndicators({
+    required this.date,
+    required this.events,
+    required this.limit,
+  });
+
+  final DateTime date;
+  final List<CoupleCalendarEvent> events;
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final sortedEvents = [...events]
+      ..sort((left, right) {
+        final artworkOrder = (right.artwork == null ? 0 : 1).compareTo(
+          left.artwork == null ? 0 : 1,
+        );
+        if (artworkOrder != 0) {
+          return artworkOrder;
+        }
+        return left.title.compareTo(right.title);
+      });
+    final visibleEvents = sortedEvents.take(limit).toList(growable: false);
+    final overflowCount = events.length - visibleEvents.length;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final event in visibleEvents) ...[
+          CalendarEventArtwork(
+            key: ValueKey('calendar-event-indicator-${event.id}'),
+            event: event,
+            size: 13,
+          ),
+          const SizedBox(width: 1),
+        ],
+        if (overflowCount > 0)
+          Text(
+            '+$overflowCount',
+            key: ValueKey('calendar-event-overflow-${_calendarDateKey(date)}'),
+            style: AppTypography.applyToStyle(
+              AppTextStyles.homeCharacterLabel.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 8,
+                height: 1,
+              ),
+            ),
+          ),
+      ],
+    );
   }
+}
+
+String _calendarDateKey(DateTime date) {
+  final year = date.year.toString().padLeft(4, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
 }
 
 class _MonthStoryPreview extends StatelessWidget {
