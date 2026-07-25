@@ -21,6 +21,7 @@ class AppDrawingToolbar extends StatelessWidget {
     required this.onStrokeWidthChanged,
     required this.onUndoPressed,
     required this.onClearPressed,
+    this.keyPrefix = 'character-drawing',
   });
 
   final AppDrawingTool selectedTool;
@@ -34,11 +35,12 @@ class AppDrawingToolbar extends StatelessWidget {
   final ValueChanged<double> onStrokeWidthChanged;
   final VoidCallback onUndoPressed;
   final VoidCallback onClearPressed;
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      key: const ValueKey('character-drawing-toolbar'),
+      key: ValueKey('$keyPrefix-toolbar'),
       color: Colors.transparent,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -53,7 +55,7 @@ class AppDrawingToolbar extends StatelessWidget {
               Row(
                 children: [
                   _ToolbarIconButton(
-                    buttonKey: const ValueKey('character-drawing-pen'),
+                    buttonKey: ValueKey('$keyPrefix-pen'),
                     tooltip: '펜',
                     icon: const Icon(Icons.edit),
                     isSelected: selectedTool == AppDrawingTool.pen,
@@ -63,7 +65,7 @@ class AppDrawingToolbar extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   _ToolbarIconButton(
-                    buttonKey: const ValueKey('character-drawing-eraser'),
+                    buttonKey: ValueKey('$keyPrefix-eraser'),
                     tooltip: '지우개',
                     icon: const AppSvgIcon(AppIcons.eraser),
                     isSelected: selectedTool == AppDrawingTool.eraser,
@@ -73,14 +75,14 @@ class AppDrawingToolbar extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   _ToolbarIconButton(
-                    buttonKey: const ValueKey('character-drawing-undo'),
+                    buttonKey: ValueKey('$keyPrefix-undo'),
                     tooltip: '되돌리기',
                     icon: const Icon(Icons.undo),
                     onPressed: canUndo ? onUndoPressed : null,
                   ),
                   const Spacer(),
                   _ToolbarIconButton(
-                    buttonKey: const ValueKey('character-drawing-clear'),
+                    buttonKey: ValueKey('$keyPrefix-clear'),
                     tooltip: '전체 삭제',
                     icon: const Icon(Icons.delete_outline),
                     onPressed: canClear ? onClearPressed : null,
@@ -99,7 +101,7 @@ class AppDrawingToolbar extends StatelessWidget {
                     index++
                   )
                     _ColorSwatch(
-                      swatchKey: ValueKey('character-drawing-color-$index'),
+                      swatchKey: ValueKey('$keyPrefix-color-$index'),
                       color: AppDrawingStyle.colorPalette[index],
                       isEnabled: !isReadOnly,
                       isSelected:

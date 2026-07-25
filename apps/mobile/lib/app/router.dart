@@ -11,6 +11,7 @@ import '../features/ai/presentation/ai_focused_question_screen.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/boot/presentation/boot_screen.dart';
+import '../features/calendar/presentation/couple_calendar_event_editor_screen.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/characters/presentation/character_editor_screen.dart';
 import '../features/couple/application/couple_controller.dart';
@@ -195,6 +196,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                       child: CalendarScreen(),
                     ),
                 routes: [
+                  GoRoute(
+                    path: 'event/new',
+                    name: 'calendarEventCreate',
+                    builder: (context, state) {
+                      final initialDate = parseQuestionRouteDate(
+                        state.uri.queryParameters['date'],
+                      );
+                      return CoupleCalendarEventEditorScreen.create(
+                        initialDate: initialDate ?? DateTime.now(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'event/:eventId',
+                    name: 'calendarEventEdit',
+                    builder: (context, state) =>
+                        CoupleCalendarEventEditorScreen.edit(
+                          eventId: state.pathParameters['eventId']!,
+                        ),
+                  ),
                   GoRoute(
                     path: 'question',
                     name: 'calendarQuestionAnswer',
