@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/calendar_cell_preview_mode.dart';
+import 'calendar_cell_preview_mode_thumbnail.dart';
 
 Future<CalendarCellPreviewMode?> showCalendarCellPreviewFilterSheet({
   required BuildContext context,
@@ -34,28 +35,34 @@ class CalendarCellPreviewFilterSheet extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Center(child: _SheetHandle()),
             const SizedBox(height: 20),
             const Text('캘린더에 표시', style: AppTextStyles.sectionTitle),
-            const SizedBox(height: 12),
-            for (
-              var index = 0;
-              index < CalendarCellPreviewMode.values.length;
-              index++
-            ) ...[
-              _PreviewModeRow(
-                mode: CalendarCellPreviewMode.values[index],
-                isSelected:
-                    CalendarCellPreviewMode.values[index] == selectedMode,
-                onTap: () => Navigator.of(
-                  context,
-                ).pop(CalendarCellPreviewMode.values[index]),
-              ),
-              if (index < CalendarCellPreviewMode.values.length - 1)
-                const SizedBox(height: 4),
-            ],
+            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (
+                  var index = 0;
+                  index < CalendarCellPreviewMode.values.length;
+                  index++
+                ) ...[
+                  Expanded(
+                    child: _PreviewModeOption(
+                      mode: CalendarCellPreviewMode.values[index],
+                      isSelected:
+                          CalendarCellPreviewMode.values[index] == selectedMode,
+                      onTap: () => Navigator.of(
+                        context,
+                      ).pop(CalendarCellPreviewMode.values[index]),
+                    ),
+                  ),
+                  if (index < CalendarCellPreviewMode.values.length - 1)
+                    const SizedBox(width: 8),
+                ],
+              ],
+            ),
           ],
         ),
       ),
@@ -78,14 +85,12 @@ class _SheetHandle extends StatelessWidget {
   }
 }
 
-class _PreviewModeRow extends StatelessWidget {
-  const _PreviewModeRow({
+class _PreviewModeOption extends StatelessWidget {
+  const _PreviewModeOption({
     required this.mode,
     required this.isSelected,
     required this.onTap,
   });
-
-  static const _selectedColor = Color(0xFFF4F4F4);
 
   final CalendarCellPreviewMode mode;
   final bool isSelected;
@@ -97,114 +102,53 @@ class _PreviewModeRow extends StatelessWidget {
       button: true,
       selected: isSelected,
       child: Material(
-        color: isSelected ? _selectedColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        color: Colors.transparent,
         child: InkWell(
           key: ValueKey('calendar-cell-preview-mode-${mode.storageValue}'),
           onTap: onTap,
           splashColor: AppColors.settingsPressed,
           highlightColor: AppColors.settingsPressed,
-          borderRadius: BorderRadius.circular(6),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 60),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  _PreviewModeIcon(mode: mode),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _labelFor(mode),
-                      style: isSelected
-                          ? AppTextStyles.homeBodyMedium
-                          : AppTextStyles.homeBody,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CalendarCellPreviewModeThumbnail(mode: mode),
+                const SizedBox(height: 10),
+                Container(
+                  key: isSelected
+                      ? ValueKey(
+                          'calendar-cell-preview-selected-${mode.storageValue}',
+                        )
+                      : null,
+                  constraints: const BoxConstraints(minHeight: 30),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: isSelected
+                      ? BoxDecoration(
+                          color: AppColors.settingsIconBackground,
+                          borderRadius: BorderRadius.circular(15),
+                        )
+                      : null,
+                  child: Text(
+                    _labelFor(mode),
+                    maxLines: 1,
+                    style: AppTextStyles.homeCharacterLabel.copyWith(
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  if (isSelected)
-                    Icon(
-                      Icons.check_rounded,
-                      key: ValueKey(
-                        'calendar-cell-preview-selected-${mode.storageValue}',
-                      ),
-                      size: 22,
-                      color: AppColors.textPrimary,
-                    )
-                  else
-                    const SizedBox.square(dimension: 22),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PreviewModeIcon extends StatelessWidget {
-  const _PreviewModeIcon({required this.mode});
-
-  final CalendarCellPreviewMode mode;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: ValueKey('calendar-cell-preview-icon-${mode.storageValue}'),
-      width: 36,
-      height: 36,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.settingsIconBackground,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: switch (mode) {
-        CalendarCellPreviewMode.all => const SizedBox.square(
-          dimension: 25,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                child: Icon(
-                  Icons.photo_outlined,
-                  size: 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.settingsIconBackground,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(1),
-                    child: Icon(
-                      Icons.sentiment_satisfied_outlined,
-                      size: 17,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        CalendarCellPreviewMode.cardsOnly => const Icon(
-          Icons.photo_outlined,
-          size: 21,
-          color: AppColors.textPrimary,
-        ),
-        CalendarCellPreviewMode.eventsOnly => const Icon(
-          Icons.sentiment_satisfied_outlined,
-          size: 21,
-          color: AppColors.textPrimary,
-        ),
-      },
     );
   }
 }

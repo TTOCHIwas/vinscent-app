@@ -440,17 +440,31 @@ void main() {
     expect(find.text('카드만'), findsOneWidget);
     expect(find.text('일정만'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('calendar-cell-preview-icon-all')),
+      find.byKey(const ValueKey('calendar-cell-preview-thumbnail-all')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('calendar-cell-preview-icon-cards_only')),
+      find.byKey(const ValueKey('calendar-cell-preview-thumbnail-cards_only')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('calendar-cell-preview-icon-events_only')),
+      find.byKey(const ValueKey('calendar-cell-preview-thumbnail-events_only')),
       findsOneWidget,
     );
+    final allThumbnailCenter = tester.getCenter(
+      find.byKey(const ValueKey('calendar-cell-preview-thumbnail-all')),
+    );
+    final cardsThumbnailCenter = tester.getCenter(
+      find.byKey(const ValueKey('calendar-cell-preview-thumbnail-cards_only')),
+    );
+    final eventsThumbnailCenter = tester.getCenter(
+      find.byKey(const ValueKey('calendar-cell-preview-thumbnail-events_only')),
+    );
+
+    expect(allThumbnailCenter.dy, closeTo(cardsThumbnailCenter.dy, 0.5));
+    expect(cardsThumbnailCenter.dy, closeTo(eventsThumbnailCenter.dy, 0.5));
+    expect(allThumbnailCenter.dx, lessThan(cardsThumbnailCenter.dx));
+    expect(cardsThumbnailCenter.dx, lessThan(eventsThumbnailCenter.dx));
 
     await tester.tap(
       find.byKey(const ValueKey('calendar-cell-preview-mode-cards_only')),
