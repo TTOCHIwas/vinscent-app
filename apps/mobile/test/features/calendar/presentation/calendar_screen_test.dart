@@ -508,10 +508,7 @@ void main() {
     await gesture.moveBy(const Offset(0, -24));
     await tester.pump();
 
-    expect(
-      controller.offset - recognizedStartOffset,
-      inInclusiveRange(5, 8),
-    );
+    expect(controller.offset - recognizedStartOffset, inInclusiveRange(5, 8));
 
     await gesture.up();
     await tester.pumpAndSettle();
@@ -525,8 +522,7 @@ void main() {
     await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
     final rebuildMessages = <String>[];
     final previousDebugPrint = debugPrint;
-    final previousDebugPrintRebuildDirtyWidgets =
-        debugPrintRebuildDirtyWidgets;
+    final previousDebugPrintRebuildDirtyWidgets = debugPrintRebuildDirtyWidgets;
     debugPrint = (message, {wrapWidth}) {
       if (message != null) {
         rebuildMessages.add(message);
@@ -542,8 +538,7 @@ void main() {
       await tester.pumpAndSettle();
     } finally {
       debugPrint = previousDebugPrint;
-      debugPrintRebuildDirtyWidgets =
-          previousDebugPrintRebuildDirtyWidgets;
+      debugPrintRebuildDirtyWidgets = previousDebugPrintRebuildDirtyWidgets;
     }
 
     expect(

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'calendar_month_layout_metrics.dart';
+import 'calendar_viewport_motion_controller.dart';
 
 class CalendarScrollBoundaryController {
   CalendarScrollBoundary? boundary;
@@ -13,17 +14,31 @@ class CalendarScrollBoundaryController {
 class CalendarStepScrollPhysics extends ClampingScrollPhysics {
   const CalendarStepScrollPhysics({
     required this.boundaryController,
+    required this.motionController,
     super.parent,
   });
 
   final CalendarScrollBoundaryController boundaryController;
+  final CalendarViewportMotionController motionController;
 
   @override
   CalendarStepScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return CalendarStepScrollPhysics(
       boundaryController: boundaryController,
+      motionController: motionController,
       parent: buildParent(ancestor),
     );
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    if (motionController.shouldSuppressBallisticMotion) {
+      return null;
+    }
+    return super.createBallisticSimulation(position, velocity);
   }
 
   @override

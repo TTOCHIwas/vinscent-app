@@ -13,7 +13,9 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
 import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
+import 'calendar_step_scroll_controller.dart';
 import 'calendar_step_scroll_physics.dart';
+import 'calendar_viewport_motion_controller.dart';
 import 'widgets/calendar_detail_date_header.dart';
 import 'widgets/calendar_responsive_month.dart';
 import 'widgets/calendar_selected_day_detail.dart';
@@ -29,9 +31,12 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   static const _dateNavigation = CalendarDateNavigation();
+  static const _viewportSnapDuration = Duration(milliseconds: 180);
+  static const _viewportSnapCurve = Cubic(0.22, 0.25, 0, 1);
 
-  late final ScrollController _scrollController;
+  late final CalendarStepScrollController _scrollController;
   late final CalendarScrollBoundaryController _scrollBoundaryController;
+  late final CalendarViewportMotionController _viewportMotionController;
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
   CalendarMonthLayoutMetrics? _layoutMetrics;
@@ -44,7 +49,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _viewportMotionController = CalendarViewportMotionController();
+    _scrollController = CalendarStepScrollController(
+      motionController: _viewportMotionController,
+    );
     _scrollBoundaryController = CalendarScrollBoundaryController();
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
     final initialDate = calendarDateOnly(widget.initialDate ?? today);
@@ -150,6 +158,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       controller: _scrollController,
                       physics: CalendarStepScrollPhysics(
                         boundaryController: _scrollBoundaryController,
+                        motionController: _viewportMotionController,
                       ),
                       slivers: [
                         CalendarResponsiveMonth(
@@ -423,6 +432,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       maxScrollExtent: _scrollController.position.maxScrollExtent,
     );
     _scrollBoundaryController.boundary = boundary;
+    _viewportMotionController.begin(
+      startState: _viewportState,
+      startedInDetail: boundary.startedInDetail,
+    );
     _activeGesture = _CalendarGestureSession(
       generation: generation,
       startState: _viewportState,
@@ -439,14 +452,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       return;
     }
 
+    final currentOffset = _viewportMotionController.isViewportTransition
+        ? gesture.startOffset +
+              _viewportMotionController.effectiveScrollDisplacement
+        : _scrollController.offset;
     final decision = metrics.resolveSnap(
       startState: gesture.startState,
       startOffset: gesture.startOffset,
-      currentOffset: _scrollController.offset,
+      currentOffset: currentOffset,
       startedInDetail: gesture.boundary.startedInDetail,
     );
     if (decision == null) {
-      _scrollBoundaryController.clear();
+      _clearCalendarGesture();
       return;
     }
 
@@ -461,15 +478,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       if ((target - _scrollController.offset).abs() > 0.5) {
         await _scrollController.animateTo(
           target,
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
+          duration: _viewportSnapDuration,
+          curve: _viewportSnapCurve,
         );
       }
     } finally {
       if (gesture.generation == _gestureGeneration) {
-        _scrollBoundaryController.clear();
+        _clearCalendarGesture();
       }
     }
+  }
+
+  void _clearCalendarGesture() {
+    _scrollBoundaryController.clear();
+    _viewportMotionController.clear();
   }
 }
 
