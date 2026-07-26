@@ -341,6 +341,50 @@ void main() {
     },
   );
 
+  testWidgets('hides the bottom bar only while the calendar is expanded', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+
+    final bottomBar = find.byType(AppBottomBar);
+    final screenHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(tester.getRect(bottomBar).top, lessThan(screenHeight));
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(bottomBar).top, greaterThanOrEqualTo(screenHeight));
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, -1000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(bottomBar).bottom, lessThanOrEqualTo(screenHeight));
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(tester.element(find.byType(CalendarScreen))).go('/home');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(tester.getRect(bottomBar).bottom, lessThanOrEqualTo(screenHeight));
+  });
+
   testWidgets('집중 질문 경로에는 전용 헤더만 보여준다', (tester) async {
     await _pumpApp(
       tester,
