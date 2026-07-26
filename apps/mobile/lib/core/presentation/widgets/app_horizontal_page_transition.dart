@@ -93,51 +93,50 @@ class _AppHorizontalPageTransitionState
       );
     }
 
-    return ClipRect(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final pageWidth = constraints.maxWidth;
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final progress = widget.curve.transform(_controller.value);
-              final incomingDirection =
-                  _direction == AppHorizontalPageDirection.next ? 1.0 : -1.0;
-              final outgoingOffset = -incomingDirection * pageWidth * progress;
-              final incomingOffset =
-                  incomingDirection * pageWidth * (1 - progress);
+    final incomingDirection = _direction == AppHorizontalPageDirection.next
+        ? 1.0
+        : -1.0;
+    final curvedAnimation = _controller.drive(CurveTween(curve: widget.curve));
+    final outgoingAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset(-incomingDirection, 0),
+    ).animate(curvedAnimation);
+    final incomingAnimation = Tween<Offset>(
+      begin: Offset(incomingDirection, 0),
+      end: Offset.zero,
+    ).animate(curvedAnimation);
 
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: ExcludeSemantics(
-                      child: IgnorePointer(
-                        child: Transform.translate(
-                          offset: Offset(outgoingOffset, 0),
-                          child: RepaintBoundary(
-                            child: KeyedSubtree(
-                              key: ValueKey(outgoingKey),
-                              child: outgoingChild,
-                            ),
-                          ),
-                        ),
-                      ),
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          Positioned.fill(
+            child: ExcludeSemantics(
+              child: IgnorePointer(
+                child: SlideTransition(
+                  position: outgoingAnimation,
+                  child: RepaintBoundary(
+                    child: KeyedSubtree(
+                      key: ValueKey(outgoingKey),
+                      child: outgoingChild,
                     ),
                   ),
-                  Transform.translate(
-                    offset: Offset(incomingOffset, 0),
-                    child: RepaintBoundary(
-                      child: KeyedSubtree(
-                        key: ValueKey(_currentKey),
-                        child: _currentChild,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
+                ),
+              ),
+            ),
+          ),
+          IgnorePointer(
+            child: SlideTransition(
+              position: incomingAnimation,
+              child: RepaintBoundary(
+                child: KeyedSubtree(
+                  key: ValueKey(_currentKey),
+                  child: _currentChild,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
