@@ -647,7 +647,7 @@ void main() {
   });
 
   testWidgets(
-    'enlarges two event artworks only on expanded days without cards',
+    'enlarges cardless event artwork across standard expanded and weekly states',
     (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
@@ -657,12 +657,12 @@ void main() {
         _calendarEvent(
           id: 'event-without-art',
           title: '그림 없는 일정',
-          date: DateTime(2026, 5, 5),
+          date: DateTime(2026, 5, 10),
         ),
         _calendarEvent(
           id: 'event-with-art',
           title: '그림 있는 일정',
-          date: DateTime(2026, 5, 5),
+          date: DateTime(2026, 5, 10),
           artwork: const CoupleCalendarEventArtwork(
             previewPath: 'event.webp',
             drawingDataPath: 'event.json.gz',
@@ -671,7 +671,7 @@ void main() {
         _calendarEvent(
           id: 'event-with-second-art',
           title: '두 번째 그림 일정',
-          date: DateTime(2026, 5, 5),
+          date: DateTime(2026, 5, 10),
           artwork: const CoupleCalendarEventArtwork(
             previewPath: 'event-2.webp',
             drawingDataPath: 'event-2.json.gz',
@@ -692,7 +692,8 @@ void main() {
         const ValueKey('calendar-event-indicator-event-with-art'),
       );
       final standardArtworkSize = tester.getSize(firstArtwork);
-      expect(standardArtworkSize, const Size.square(18));
+      expect(standardArtworkSize.width, greaterThan(18));
+      expect(standardArtworkSize.height, greaterThan(18));
       expect(
         find.byKey(
           const ValueKey('calendar-event-indicator-event-with-second-art'),
@@ -723,6 +724,28 @@ void main() {
         greaterThan(tester.getCenter(firstArtwork).dy),
       );
       expect(find.text('+1'), findsOneWidget);
+
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, -1000),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, -1000),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(
+          const ValueKey('calendar-event-indicator-event-with-second-art'),
+        ),
+        findsNothing,
+      );
+      final weeklyArtworkSize = tester.getSize(firstArtwork);
+      expect(weeklyArtworkSize.width, greaterThan(18));
+      expect(weeklyArtworkSize.height, greaterThan(18));
+      expect(find.text('+2'), findsOneWidget);
     },
   );
 
@@ -815,7 +838,10 @@ void main() {
         matching: find.text('5'),
       );
       expect(tester.getSize(firstArtwork), const Size.square(18));
-      expect(tester.getSize(eventOnlyArtwork), const Size.square(18));
+      expect(
+        tester.getSize(eventOnlyArtwork).width,
+        greaterThan(tester.getSize(firstArtwork).width),
+      );
       expect(
         tester.getSize(card).width,
         closeTo(tester.getSize(cardOnly).width, 0.1),

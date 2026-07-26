@@ -185,9 +185,7 @@ class _CalendarCellContent extends StatelessWidget {
       return _CalendarEventIndicator(
         date: date,
         events: events,
-        artworkSize: showExpandedEventArtwork
-            ? _maximumCalendarCellPreviewSize
-            : eventArtworkSize,
+        artworkSize: _maximumCalendarCellPreviewSize,
         visibleLimit: showExpandedEventArtwork ? 2 : 1,
       );
     }
