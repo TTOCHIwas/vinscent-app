@@ -24,6 +24,22 @@ void main() {
     });
   });
 
+  test('normalizes and compares calendar months', () {
+    final month = calendarMonthOnly(DateTime(2026, 5, 31, 23, 59));
+
+    expect(month, DateTime(2026, 5));
+    expect(isSameCalendarMonth(month, DateTime(2026, 5, 15)), isTrue);
+    expect(isSameCalendarMonth(month, DateTime(2026, 6)), isFalse);
+  });
+
+  test('compares and formats calendar dates without time fields', () {
+    final date = DateTime(2026, 5, 3, 23, 59);
+
+    expect(isSameCalendarDate(date, DateTime(2026, 5, 3)), isTrue);
+    expect(isSameCalendarDate(date, DateTime(2026, 5, 4)), isFalse);
+    expect(formatCalendarDate(date), '2026-05-03');
+  });
+
   group('durationUntilNextAppDate', () {
     test('returns the duration until the next KST midnight', () {
       final duration = durationUntilNextAppDate(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/date/app_date_policy.dart';
 import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -70,7 +71,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
 
         return Padding(
           key: ValueKey(
-            'calendar-month-story-cell-$displayMode-${_calendarDateKey(date)}',
+            'calendar-month-story-cell-$displayMode-${formatCalendarDate(date)}',
           ),
           padding: _cellPadding,
           child: Column(
@@ -461,7 +462,7 @@ class _CalendarEventOverflowBadge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 1),
         child: Text(
           '+$overflowCount',
-          key: ValueKey('calendar-event-overflow-${_calendarDateKey(date)}'),
+          key: ValueKey('calendar-event-overflow-${formatCalendarDate(date)}'),
           style: AppTypography.applyToStyle(
             AppTextStyles.homeCharacterLabel.copyWith(
               color: AppColors.textMuted,
@@ -473,13 +474,6 @@ class _CalendarEventOverflowBadge extends StatelessWidget {
       ),
     );
   }
-}
-
-String _calendarDateKey(DateTime date) {
-  final year = date.year.toString().padLeft(4, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '$year-$month-$day';
 }
 
 class _MonthStoryPreview extends StatelessWidget {

@@ -11,6 +11,27 @@ DateTime calendarDateOnly(DateTime value) {
   return DateTime(value.year, value.month, value.day);
 }
 
+DateTime calendarMonthOnly(DateTime value) {
+  return DateTime(value.year, value.month);
+}
+
+bool isSameCalendarDate(DateTime left, DateTime right) {
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
+}
+
+bool isSameCalendarMonth(DateTime left, DateTime right) {
+  return left.year == right.year && left.month == right.month;
+}
+
+String formatCalendarDate(DateTime value) {
+  final year = value.year.toString().padLeft(4, '0');
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
+}
+
 Duration durationUntilNextAppDate({DateTime? now}) {
   final utcNow = (now ?? DateTime.now()).toUtc();
   final appNow = utcNow.add(appTimezoneOffset);

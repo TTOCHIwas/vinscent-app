@@ -64,7 +64,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     _scrollBoundaryController = CalendarScrollBoundaryController();
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
     final initialDate = calendarDateOnly(widget.initialDate ?? today);
-    _visibleMonth = _monthOnly(initialDate);
+    _visibleMonth = calendarMonthOnly(initialDate);
     _selectedDate = initialDate;
   }
 
@@ -79,7 +79,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
     final targetDate = calendarDateOnly(nextDate ?? today);
-    _visibleMonth = _monthOnly(targetDate);
+    _visibleMonth = calendarMonthOnly(targetDate);
     _selectedDate = targetDate;
   }
 
@@ -111,7 +111,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           );
         }
 
-        final relationshipStartMonth = _monthOnly(
+        final relationshipStartMonth = calendarMonthOnly(
           couple.relationshipStartDate!,
         );
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
@@ -345,7 +345,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       _selectDate(
         targetDate,
         direction: _directionForOffset(dayOffset),
-        animateCalendar: !_isSameMonth(targetDate, selectedDate),
+        animateCalendar: !isSameCalendarMonth(targetDate, selectedDate),
         animateDetail: true,
       );
     }
@@ -367,7 +367,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         _detailPageDirection = direction;
       }
       _selectedDate = date;
-      _visibleMonth = _monthOnly(date);
+      _visibleMonth = calendarMonthOnly(date);
     });
   }
 
@@ -381,7 +381,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             !selectedDate.isBefore(calendarDateOnly(relationshipStartDate))
         ? selectedDate
         : calendarDateOnly(today);
-    context.push('/calendar/event/new?date=${_formatRouteDate(initialDate)}');
+    context.push('/calendar/event/new?date=${formatCalendarDate(initialDate)}');
   }
 
   void _adoptLayoutMetrics(CalendarMonthLayoutMetrics metrics) {
@@ -688,7 +688,7 @@ class _CalendarDetail extends StatelessWidget {
     }
 
     return CalendarSelectedDayDetail(
-      key: ValueKey('calendar-selected-detail-${_formatRouteDate(selected)}'),
+      key: ValueKey('calendar-selected-detail-${formatCalendarDate(selected)}'),
       selectedDate: selected,
       today: today,
       relationshipStartDate: relationshipStartDate,
@@ -742,10 +742,6 @@ class _CalendarStateMessage extends StatelessWidget {
   }
 }
 
-DateTime _monthOnly(DateTime date) {
-  return DateTime(date.year, date.month);
-}
-
 String _formatMonth(DateTime date) {
   return '${date.year}년 ${_twoDigits(date.month)}월';
 }
@@ -754,22 +750,11 @@ String _twoDigits(int value) {
   return value.toString().padLeft(2, '0');
 }
 
-String _formatRouteDate(DateTime date) {
-  return '${date.year.toString().padLeft(4, '0')}-'
-      '${_twoDigits(date.month)}-${_twoDigits(date.day)}';
-}
-
 bool _isSameOptionalDate(DateTime? left, DateTime? right) {
   if (left == null || right == null) {
     return left == right;
   }
-  return left.year == right.year &&
-      left.month == right.month &&
-      left.day == right.day;
-}
-
-bool _isSameMonth(DateTime left, DateTime right) {
-  return left.year == right.year && left.month == right.month;
+  return isSameCalendarDate(left, right);
 }
 
 AppHorizontalPageDirection _directionForOffset(int offset) {

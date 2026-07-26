@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/date/app_date_policy.dart';
 import 'couple_calendar_event.dart';
 import 'couple_calendar_event_artwork_path.dart';
 import 'couple_calendar_event_data_gateways.dart';
@@ -10,8 +11,7 @@ import 'couple_calendar_event_failure.dart';
 import 'couple_calendar_event_mapper.dart';
 import 'couple_calendar_event_repository_contract.dart';
 
-class SupabaseCoupleCalendarEventGateway
-    implements CoupleCalendarEventGateway {
+class SupabaseCoupleCalendarEventGateway implements CoupleCalendarEventGateway {
   const SupabaseCoupleCalendarEventGateway({
     CoupleCalendarEventMapper mapper = const CoupleCalendarEventMapper(),
   }) : _mapper = mapper;
@@ -32,8 +32,8 @@ class SupabaseCoupleCalendarEventGateway
           .rpc(
             'get_couple_calendar_event_occurrences',
             params: {
-              'target_start_date': _formatDate(startDate),
-              'target_end_date': _formatDate(endDate),
+              'target_start_date': formatCalendarDate(startDate),
+              'target_end_date': formatCalendarDate(endDate),
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
@@ -86,7 +86,7 @@ class SupabaseCoupleCalendarEventGateway
             params: {
               'requested_event_id': request.eventId,
               'requested_title': request.title,
-              'requested_event_date': _formatDate(request.eventDate),
+              'requested_event_date': formatCalendarDate(request.eventDate),
               'requested_repeat_rule': request.repeatRule.toJson(),
               'requested_memo': request.memo,
               'requested_artwork_revision': artworkRevision,
@@ -151,10 +151,8 @@ class SupabaseCoupleCalendarEventGateway
     final previewUrlsByPath = await _createPreviewUrlsByPath(paths);
     return rows
         .map(
-          (row) => _mapper.mapOccurrence(
-            row,
-            previewUrlsByPath: previewUrlsByPath,
-          ),
+          (row) =>
+              _mapper.mapOccurrence(row, previewUrlsByPath: previewUrlsByPath),
         )
         .toList(growable: false);
   }
@@ -208,12 +206,5 @@ class SupabaseCoupleCalendarEventGateway
         CoupleCalendarEventFailureReason.configMissing,
       );
     }
-  }
-
-  String _formatDate(DateTime date) {
-    final year = date.year.toString().padLeft(4, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '$year-$month-$day';
   }
 }

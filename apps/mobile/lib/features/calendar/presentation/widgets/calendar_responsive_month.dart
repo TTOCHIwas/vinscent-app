@@ -268,14 +268,17 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                             height: values.rowHeight,
                             child: _DateCell(
                               date: days[index],
-                              isCurrentMonth: _isSameMonth(
+                              isCurrentMonth: isSameCalendarMonth(
                                 days[index],
                                 visibleMonth,
                               ),
                               isEnabled: _isEnabled(days[index]),
                               isSelected:
                                   selectedDate != null &&
-                                  _isSameDate(days[index], selectedDate!),
+                                  isSameCalendarDate(
+                                    days[index],
+                                    selectedDate!,
+                                  ),
                               summary:
                                   summaryByDate[calendarDateOnly(days[index])],
                               events:
@@ -304,22 +307,26 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
 
   int _selectedRow(List<DateTime> days) {
     final selected = selectedDate;
-    if (selected != null && _isSameMonth(selected, visibleMonth)) {
-      final index = days.indexWhere((date) => _isSameDate(date, selected));
+    if (selected != null && isSameCalendarMonth(selected, visibleMonth)) {
+      final index = days.indexWhere(
+        (date) => isSameCalendarDate(date, selected),
+      );
       if (index >= 0) {
         return index ~/ DateTime.daysPerWeek;
       }
     }
 
     final monthStartIndex = days.indexWhere(
-      (date) =>
-          _isSameDate(date, DateTime(visibleMonth.year, visibleMonth.month)),
+      (date) => isSameCalendarDate(
+        date,
+        DateTime(visibleMonth.year, visibleMonth.month),
+      ),
     );
     return monthStartIndex < 0 ? 0 : monthStartIndex ~/ DateTime.daysPerWeek;
   }
 
   bool _isEnabled(DateTime date) {
-    if (!_isSameMonth(date, visibleMonth)) {
+    if (!isSameCalendarMonth(date, visibleMonth)) {
       return false;
     }
     return !calendarDateOnly(
@@ -425,26 +432,12 @@ class _DateCell extends StatelessWidget {
   }
 }
 
-DateTime _monthOnly(DateTime date) {
-  return DateTime(date.year, date.month);
-}
-
 List<DateTime> _calendarDays(DateTime visibleMonth) {
-  final firstDay = _monthOnly(visibleMonth);
+  final firstDay = calendarMonthOnly(visibleMonth);
   final sundayOffset = firstDay.weekday % DateTime.daysPerWeek;
   final startDate = firstDay.subtract(Duration(days: sundayOffset));
   return [
     for (var index = 0; index < 42; index++)
       startDate.add(Duration(days: index)),
   ];
-}
-
-bool _isSameDate(DateTime left, DateTime right) {
-  return left.year == right.year &&
-      left.month == right.month &&
-      left.day == right.day;
-}
-
-bool _isSameMonth(DateTime left, DateTime right) {
-  return left.year == right.year && left.month == right.month;
 }

@@ -1,3 +1,5 @@
+import '../../../core/date/app_date_policy.dart';
+
 enum CoupleAnniversaryKind {
   yearly,
   hundredDays,
@@ -26,8 +28,8 @@ class CoupleAnniversaryResolver {
     required DateTime startDate,
     required DateTime date,
   }) {
-    final normalizedStart = _dateOnly(startDate);
-    final normalizedDate = _dateOnly(date);
+    final normalizedStart = calendarDateOnly(startDate);
+    final normalizedDate = calendarDateOnly(date);
     if (normalizedDate.isBefore(normalizedStart)) {
       return const [];
     }
@@ -49,7 +51,7 @@ class CoupleAnniversaryResolver {
     }
 
     final anniversaryDate = _anniversaryDate(startDate, date.year);
-    if (_isSameDate(date, anniversaryDate)) {
+    if (isSameCalendarDate(date, anniversaryDate)) {
       yield CoupleAnniversaryOccurrence(
         kind: CoupleAnniversaryKind.yearly,
         label: '$elapsedYears주년',
@@ -95,15 +97,5 @@ class CoupleAnniversaryResolver {
 
   bool _isLeapYear(int year) {
     return year % 400 == 0 || (year % 4 == 0 && year % 100 != 0);
-  }
-
-  DateTime _dateOnly(DateTime value) {
-    return DateTime(value.year, value.month, value.day);
-  }
-
-  bool _isSameDate(DateTime left, DateTime right) {
-    return left.year == right.year &&
-        left.month == right.month &&
-        left.day == right.day;
   }
 }
