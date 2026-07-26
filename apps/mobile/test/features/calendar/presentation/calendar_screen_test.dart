@@ -419,7 +419,7 @@ void main() {
     );
   });
 
-  testWidgets('selects a calendar cell preview mode from the header menu', (
+  testWidgets('selects a calendar cell preview mode from the header sheet', (
     tester,
   ) async {
     await pumpCalendar(
@@ -431,6 +431,11 @@ void main() {
     await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('calendar-cell-preview-filter-sheet')),
+      findsOneWidget,
+    );
+    expect(find.text('캘린더에 표시'), findsOneWidget);
     expect(find.text('모두'), findsOneWidget);
     expect(find.text('카드만'), findsOneWidget);
     expect(find.text('일정만'), findsOneWidget);
@@ -451,6 +456,11 @@ void main() {
       find.byKey(const ValueKey('calendar-cell-preview-mode-cards_only')),
     );
     await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-cell-preview-filter-sheet')),
+      findsNothing,
+    );
 
     await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
     await tester.pumpAndSettle();
