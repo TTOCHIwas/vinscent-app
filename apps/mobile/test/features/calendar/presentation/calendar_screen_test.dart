@@ -1079,7 +1079,17 @@ void main() {
         },
       );
 
-      await _pumpCalendar(tester, repository: repository);
+      await _pumpCalendar(
+        tester,
+        repository: repository,
+        calendarEvents: [
+          _calendarEvent(
+            id: 'stacked-day-event-without-artwork',
+            title: 'plain event',
+            date: DateTime(2026, 5, 6),
+          ),
+        ],
+      );
 
       expect(
         find.byKey(
@@ -1126,6 +1136,10 @@ void main() {
       expect(tester.getSize(firstStackedCard), cardSize);
       expect(tester.getSize(secondStackedCard), cardSize);
       expect(
+        tester.getCenter(firstStackedCard).dy,
+        closeTo(tester.getCenter(secondStackedCard).dy, 0.5),
+      );
+      expect(
         cardSize.width / cardSize.height,
         closeTo(storyCardCanvasAspectRatio, 0.001),
       );
@@ -1165,8 +1179,75 @@ void main() {
       expect(tester.getSize(firstStackedCard), expandedSingleSize);
       expect(tester.getSize(secondStackedCard), expandedSingleSize);
       expect(
+        tester.getCenter(firstStackedCard).dy,
+        greaterThan(tester.getCenter(secondStackedCard).dy + 2),
+      );
+      expect(
         tester.getCenter(singleCard).dx,
         closeTo(tester.getCenter(singleCardCell).dx, 0.5),
+      );
+    },
+  );
+
+  testWidgets(
+    'keeps two expanded cards aligned when the date has event artwork',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = FakeStoryLoopReadRepository(
+        monthSummaries: {
+          DateTime(2026, 5): [
+            sampleMonthSummaryDay(
+              coupleDate: DateTime(2026, 5, 6),
+              cardCount: 2,
+              cards: [
+                samplePreviewCard(
+                  id: 'artwork-day-back-card',
+                  submittedAt: DateTime(2026, 5, 6, 9),
+                ),
+                samplePreviewCard(
+                  id: 'artwork-day-front-card',
+                  authorUserId: 'user-b',
+                  submittedAt: DateTime(2026, 5, 6, 9, 20),
+                ),
+              ],
+            ),
+          ],
+        },
+      );
+
+      await _pumpCalendar(
+        tester,
+        repository: repository,
+        calendarEvents: [
+          _calendarEvent(
+            id: 'stacked-day-event-with-artwork',
+            title: 'artwork event',
+            date: DateTime(2026, 5, 6),
+            artwork: const CoupleCalendarEventArtwork(
+              previewPath: 'event.webp',
+              drawingDataPath: 'event.json.gz',
+            ),
+          ),
+        ],
+      );
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, 1000),
+      );
+      await tester.pumpAndSettle();
+
+      final backCard = find.byKey(
+        const ValueKey('calendar-month-story-card-artwork-day-back-card'),
+      );
+      final frontCard = find.byKey(
+        const ValueKey('calendar-month-story-card-artwork-day-front-card'),
+      );
+      expect(
+        tester.getCenter(backCard).dy,
+        closeTo(tester.getCenter(frontCard).dy, 0.5),
       );
     },
   );

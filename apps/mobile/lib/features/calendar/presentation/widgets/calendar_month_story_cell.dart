@@ -177,6 +177,11 @@ class _CalendarCellContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spreadStackedCards =
+        showExpandedEventArtwork &&
+        cards.length == 2 &&
+        events.every((event) => event.artwork == null);
+
     if (cards.isEmpty) {
       if (events.isEmpty) {
         return const _MonthStoryPreview(cards: []);
@@ -191,7 +196,10 @@ class _CalendarCellContent extends StatelessWidget {
     }
 
     if (events.isEmpty || !showExpandedEventArtwork || eventArtworkSize <= 0) {
-      return _MonthStoryPreview(cards: cards);
+      return _MonthStoryPreview(
+        cards: cards,
+        spreadStackedCards: spreadStackedCards,
+      );
     }
 
     return Column(
@@ -205,7 +213,12 @@ class _CalendarCellContent extends StatelessWidget {
             artworkSize: eventArtworkSize,
           ),
         ),
-        Expanded(child: _MonthStoryPreview(cards: cards)),
+        Expanded(
+          child: _MonthStoryPreview(
+            cards: cards,
+            spreadStackedCards: spreadStackedCards,
+          ),
+        ),
       ],
     );
   }
@@ -377,11 +390,17 @@ String _calendarDateKey(DateTime date) {
 }
 
 class _MonthStoryPreview extends StatelessWidget {
-  const _MonthStoryPreview({required this.cards});
+  const _MonthStoryPreview({
+    required this.cards,
+    this.spreadStackedCards = false,
+  });
 
   static const _stackWidthFactor = 1.55;
+  static const _verticalSpreadFactor = 0.28;
+  static const _maximumVerticalSpread = 12.0;
 
   final List<StoryLoopCardPreview> cards;
+  final bool spreadStackedCards;
 
   @override
   Widget build(BuildContext context) {
@@ -412,18 +431,32 @@ class _MonthStoryPreview extends StatelessWidget {
         }
 
         final stackWidth = cardWidth * _stackWidthFactor;
+        final desiredVerticalSpread = spreadStackedCards
+            ? math.min(
+                cardHeight * _verticalSpreadFactor,
+                _maximumVerticalSpread,
+              )
+            : 0.0;
+        final availableVerticalSpread = math.max(
+          0.0,
+          constraints.maxHeight - cardHeight,
+        );
+        final verticalSpread = math.min(
+          desiredVerticalSpread,
+          availableVerticalSpread,
+        );
 
         return Align(
           alignment: Alignment.center,
           child: SizedBox(
             width: stackWidth,
-            height: cardHeight,
+            height: cardHeight + verticalSpread,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 Positioned(
                   left: 0,
-                  bottom: 0,
+                  top: 0,
                   child: _MonthStorySurface(
                     card: cards.first,
                     width: cardWidth,
