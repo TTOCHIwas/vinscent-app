@@ -11,6 +11,8 @@ import '../../../story_loops/data/story_loop_month_summary_day.dart';
 import '../../data/couple_calendar_event.dart';
 import 'calendar_event_artwork.dart';
 
+const _maximumCalendarCellPreviewSize = 48.0;
+
 class CalendarMonthStoryCell extends StatelessWidget {
   const CalendarMonthStoryCell({
     super.key,
@@ -32,7 +34,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final bool showExpandedEventArtwork;
 
   static const _cellPadding = EdgeInsets.fromLTRB(3, 2, 3, 4);
-  static const _maximumEventArtworkSize = 18.0;
+  static const _maximumCompactEventArtworkSize = 18.0;
   static const _dateMarkerSize = 18.0;
   static const _eventHeaderGap = 1.0;
   static const _headerHeight = 20.0;
@@ -51,7 +53,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
         final eventArtworkSize = math.max(
           0.0,
           math.min(
-            _maximumEventArtworkSize,
+            _maximumCompactEventArtworkSize,
             constraints.maxWidth -
                 _cellPadding.horizontal -
                 _dateMarkerSize -
@@ -183,7 +185,9 @@ class _CalendarCellContent extends StatelessWidget {
       return _CalendarEventIndicator(
         date: date,
         events: events,
-        artworkSize: eventArtworkSize,
+        artworkSize: showExpandedEventArtwork
+            ? _maximumCalendarCellPreviewSize
+            : eventArtworkSize,
         visibleLimit: showExpandedEventArtwork ? 2 : 1,
       );
     }
@@ -377,7 +381,6 @@ String _calendarDateKey(DateTime date) {
 class _MonthStoryPreview extends StatelessWidget {
   const _MonthStoryPreview({required this.cards});
 
-  static const _maximumCardWidth = 48.0;
   static const _stackWidthFactor = 1.55;
 
   final List<StoryLoopCardPreview> cards;
@@ -394,7 +397,7 @@ class _MonthStoryPreview extends StatelessWidget {
         final widthFromHeight =
             constraints.maxHeight * storyCardCanvasAspectRatio;
         final cardWidth = math.min(
-          _maximumCardWidth,
+          _maximumCalendarCellPreviewSize,
           math.min(widthFromCell, widthFromHeight),
         );
         final cardHeight = cardWidth / storyCardCanvasAspectRatio;

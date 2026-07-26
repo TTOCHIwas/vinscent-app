@@ -646,80 +646,85 @@ void main() {
     );
   });
 
-  testWidgets('shows two event artworks only on expanded days without cards', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final events = [
-      _calendarEvent(
-        id: 'event-without-art',
-        title: '그림 없는 일정',
-        date: DateTime(2026, 5, 5),
-      ),
-      _calendarEvent(
-        id: 'event-with-art',
-        title: '그림 있는 일정',
-        date: DateTime(2026, 5, 5),
-        artwork: const CoupleCalendarEventArtwork(
-          previewPath: 'event.webp',
-          drawingDataPath: 'event.json.gz',
+  testWidgets(
+    'enlarges two event artworks only on expanded days without cards',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final events = [
+        _calendarEvent(
+          id: 'event-without-art',
+          title: '그림 없는 일정',
+          date: DateTime(2026, 5, 5),
         ),
-      ),
-      _calendarEvent(
-        id: 'event-with-second-art',
-        title: '두 번째 그림 일정',
-        date: DateTime(2026, 5, 5),
-        artwork: const CoupleCalendarEventArtwork(
-          previewPath: 'event-2.webp',
-          drawingDataPath: 'event-2.json.gz',
+        _calendarEvent(
+          id: 'event-with-art',
+          title: '그림 있는 일정',
+          date: DateTime(2026, 5, 5),
+          artwork: const CoupleCalendarEventArtwork(
+            previewPath: 'event.webp',
+            drawingDataPath: 'event.json.gz',
+          ),
         ),
-      ),
-    ];
-    await _pumpCalendar(
-      tester,
-      repository: FakeStoryLoopReadRepository(),
-      calendarEvents: events,
-    );
+        _calendarEvent(
+          id: 'event-with-second-art',
+          title: '두 번째 그림 일정',
+          date: DateTime(2026, 5, 5),
+          artwork: const CoupleCalendarEventArtwork(
+            previewPath: 'event-2.webp',
+            drawingDataPath: 'event-2.json.gz',
+          ),
+        ),
+      ];
+      await _pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        calendarEvents: events,
+      );
 
-    expect(
-      find.byKey(const ValueKey('calendar-event-indicator-event-with-art')),
-      findsOneWidget,
-    );
-    final firstArtwork = find.byKey(
-      const ValueKey('calendar-event-indicator-event-with-art'),
-    );
-    final standardArtworkSize = tester.getSize(firstArtwork);
-    expect(standardArtworkSize, const Size.square(18));
-    expect(
-      find.byKey(
+      expect(
+        find.byKey(const ValueKey('calendar-event-indicator-event-with-art')),
+        findsOneWidget,
+      );
+      final firstArtwork = find.byKey(
+        const ValueKey('calendar-event-indicator-event-with-art'),
+      );
+      final standardArtworkSize = tester.getSize(firstArtwork);
+      expect(standardArtworkSize, const Size.square(18));
+      expect(
+        find.byKey(
+          const ValueKey('calendar-event-indicator-event-with-second-art'),
+        ),
+        findsNothing,
+      );
+      expect(find.text('+2'), findsOneWidget);
+
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, 1000),
+      );
+      await tester.pumpAndSettle();
+
+      final secondArtwork = find.byKey(
         const ValueKey('calendar-event-indicator-event-with-second-art'),
-      ),
-      findsNothing,
-    );
-    expect(find.text('+2'), findsOneWidget);
-
-    await tester.drag(
-      find.byKey(const Key('calendar-scroll-view')),
-      const Offset(0, 1000),
-    );
-    await tester.pumpAndSettle();
-
-    final secondArtwork = find.byKey(
-      const ValueKey('calendar-event-indicator-event-with-second-art'),
-    );
-    expect(secondArtwork, findsOneWidget);
-    final expandedArtworkSize = tester.getSize(firstArtwork);
-    expect(expandedArtworkSize, standardArtworkSize);
-    expect(tester.getSize(secondArtwork), standardArtworkSize);
-    expect(
-      tester.getCenter(secondArtwork).dy,
-      greaterThan(tester.getCenter(firstArtwork).dy),
-    );
-    expect(find.text('+1'), findsOneWidget);
-  });
+      );
+      expect(secondArtwork, findsOneWidget);
+      final expandedArtworkSize = tester.getSize(firstArtwork);
+      expect(expandedArtworkSize.width, greaterThan(standardArtworkSize.width));
+      expect(
+        expandedArtworkSize.height,
+        greaterThan(standardArtworkSize.height),
+      );
+      expect(tester.getSize(secondArtwork), expandedArtworkSize);
+      expect(
+        tester.getCenter(secondArtwork).dy,
+        greaterThan(tester.getCenter(firstArtwork).dy),
+      );
+      expect(find.text('+1'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'moves one event artwork from the date header above the expanded card',
@@ -838,7 +843,11 @@ void main() {
         const ValueKey('calendar-event-indicator-event-day-art-2'),
       );
       expect(secondArtwork, findsNothing);
-      expect(tester.getSize(firstArtwork), tester.getSize(eventOnlyArtwork));
+      expect(tester.getSize(firstArtwork), const Size.square(18));
+      expect(
+        tester.getSize(eventOnlyArtwork).width,
+        greaterThan(tester.getSize(firstArtwork).width),
+      );
       expect(
         tester.getSize(card).width,
         closeTo(tester.getSize(cardOnly).width, 0.1),
