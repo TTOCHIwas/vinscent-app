@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import '../../story_loops/data/story_card_scene.dart';
 
+const calendarMonthCompactPreviewSize = 48.0;
+
 class CalendarExpandedCellLayout {
   const CalendarExpandedCellLayout._({
     required this.cardWidth,
