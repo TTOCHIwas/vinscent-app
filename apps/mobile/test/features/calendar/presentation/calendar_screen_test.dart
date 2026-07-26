@@ -451,6 +451,11 @@ void main() {
       find.byKey(const ValueKey('calendar-cell-preview-thumbnail-events_only')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('calendar-cell-preview-smiling-doodle')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.sentiment_satisfied_outlined), findsNothing);
     final allThumbnailCenter = tester.getCenter(
       find.byKey(const ValueKey('calendar-cell-preview-thumbnail-all')),
     );
