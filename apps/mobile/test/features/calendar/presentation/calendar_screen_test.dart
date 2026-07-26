@@ -434,6 +434,18 @@ void main() {
     expect(find.text('모두'), findsOneWidget);
     expect(find.text('카드만'), findsOneWidget);
     expect(find.text('일정만'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('calendar-cell-preview-icon-all')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('calendar-cell-preview-icon-cards_only')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('calendar-cell-preview-icon-events_only')),
+      findsOneWidget,
+    );
 
     await tester.tap(
       find.byKey(const ValueKey('calendar-cell-preview-mode-cards_only')),
@@ -443,10 +455,14 @@ void main() {
     await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
     await tester.pumpAndSettle();
 
-    final selectedItem = tester.widget<CheckedPopupMenuItem<Object?>>(
-      find.byKey(const ValueKey('calendar-cell-preview-mode-cards_only')),
+    expect(
+      find.byKey(const ValueKey('calendar-cell-preview-selected-cards_only')),
+      findsOneWidget,
     );
-    expect(selectedItem.checked, isTrue);
+    expect(
+      find.byKey(const ValueKey('calendar-cell-preview-selected-all')),
+      findsNothing,
+    );
   });
 
   testWidgets(
