@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../data/couple_calendar_event.dart';
 
 class CalendarEventArtwork extends StatelessWidget {
@@ -30,24 +31,13 @@ class CalendarEventArtwork extends StatelessWidget {
       );
     }
 
-    final previewUrl = artwork.previewUrl;
-    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl);
-    final canLoadPreview =
-        previewUri != null &&
-        previewUri.hasScheme &&
-        (previewUri.scheme == 'http' || previewUri.scheme == 'https');
-
     return SizedBox.square(
       dimension: size,
-      child: canLoadPreview
-          ? Image.network(
-              previewUrl!,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return _ArtworkFallback(size: size);
-              },
-            )
-          : _ArtworkFallback(size: size),
+      child: AppSizedNetworkImage(
+        url: artwork.previewUrl,
+        logicalSize: Size.square(size),
+        fallbackBuilder: (_) => _ArtworkFallback(size: size),
+      ),
     );
   }
 }

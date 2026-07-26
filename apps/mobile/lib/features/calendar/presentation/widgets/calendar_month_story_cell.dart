@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -586,12 +587,7 @@ class _MonthStorySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previewUrl = card.previewUrl;
-    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl);
-    final hasRemotePreview =
-        previewUri != null &&
-        previewUri.hasScheme &&
-        (previewUri.scheme == 'http' || previewUri.scheme == 'https');
+    final height = width / storyCardCanvasAspectRatio;
 
     return Transform.rotate(
       angle: angle,
@@ -614,15 +610,11 @@ class _MonthStorySurface extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(2.4),
-              child: hasRemotePreview
-                  ? Image.network(
-                      previewUrl!,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _MonthStoryPlaceholder(card: card);
-                      },
-                    )
-                  : _MonthStoryPlaceholder(card: card),
+              child: AppSizedNetworkImage(
+                url: card.previewUrl,
+                logicalSize: Size(width, height),
+                fallbackBuilder: (_) => _MonthStoryPlaceholder(card: card),
+              ),
             ),
           ),
         ),

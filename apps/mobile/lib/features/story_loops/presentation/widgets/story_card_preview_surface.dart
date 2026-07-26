@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/story_card_scene.dart';
 
@@ -21,15 +22,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previewUri = previewUrl == null ? null : Uri.tryParse(previewUrl!);
-    final hasRemotePreview =
-        previewUri != null &&
-        previewUri.hasScheme &&
-        (previewUri.scheme == 'http' || previewUri.scheme == 'https');
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth = (width * pixelRatio).round();
-    final cacheHeight = (width / storyCardCanvasAspectRatio * pixelRatio)
-        .round();
+    final height = width / storyCardCanvasAspectRatio;
 
     return Semantics(
       label: semanticsLabel,
@@ -59,16 +52,12 @@ class StoryCardPreviewSurface extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(1),
-                  child: hasRemotePreview
-                      ? Image.network(
-                          previewUrl!,
-                          fit: BoxFit.contain,
-                          cacheWidth: cacheWidth,
-                          cacheHeight: cacheHeight,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const _StoryCardPreviewPlaceholder(),
-                        )
-                      : const _StoryCardPreviewPlaceholder(),
+                  child: AppSizedNetworkImage(
+                    url: previewUrl,
+                    logicalSize: Size(width, height),
+                    fallbackBuilder: (_) =>
+                        const _StoryCardPreviewPlaceholder(),
+                  ),
                 ),
               ),
             ),
