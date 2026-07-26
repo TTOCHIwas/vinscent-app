@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -496,11 +494,6 @@ void main() {
     final previousDebugPrint = debugPrint;
     final previousDebugPrintRebuildDirtyWidgets =
         debugPrintRebuildDirtyWidgets;
-    addTearDown(() {
-      debugPrint = previousDebugPrint;
-      debugPrintRebuildDirtyWidgets =
-          previousDebugPrintRebuildDirtyWidgets;
-    });
     debugPrint = (message, {wrapWidth}) {
       if (message != null) {
         rebuildMessages.add(message);
@@ -508,11 +501,17 @@ void main() {
     };
     debugPrintRebuildDirtyWidgets = true;
 
-    await tester.drag(
-      find.byKey(const Key('calendar-scroll-view')),
-      const Offset(0, 1000),
-    );
-    await tester.pumpAndSettle();
+    try {
+      await tester.drag(
+        find.byKey(const Key('calendar-scroll-view')),
+        const Offset(0, 1000),
+      );
+      await tester.pumpAndSettle();
+    } finally {
+      debugPrint = previousDebugPrint;
+      debugPrintRebuildDirtyWidgets =
+          previousDebugPrintRebuildDirtyWidgets;
+    }
 
     expect(
       rebuildMessages.where((message) => message.contains('CalendarScreen')),

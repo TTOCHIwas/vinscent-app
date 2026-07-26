@@ -451,9 +451,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     }
 
     if (_viewportState != decision.state) {
-      setState(() {
-        _viewportState = decision.state;
-      });
+      _viewportState = decision.state;
     }
     final target = decision.offset.clamp(
       0.0,

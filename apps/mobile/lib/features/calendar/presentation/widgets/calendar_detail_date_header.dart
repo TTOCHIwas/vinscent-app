@@ -36,6 +36,7 @@ class CalendarDetailDateHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
+      width: double.infinity,
       height: height,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
