@@ -647,8 +647,12 @@ void main() {
   });
 
   testWidgets(
-    'prioritizes artwork and shows two event drawings only when expanded',
+    'prioritizes artwork and expands two event drawings vertically',
     (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final events = [
         _calendarEvent(
           id: 'event-without-art',
@@ -684,6 +688,12 @@ void main() {
         find.byKey(const ValueKey('calendar-event-indicator-event-with-art')),
         findsOneWidget,
       );
+      final firstArtwork = find.byKey(
+        const ValueKey('calendar-event-indicator-event-with-art'),
+      );
+      final standardArtworkSize = tester.getSize(firstArtwork);
+      expect(standardArtworkSize.width, greaterThan(20));
+      expect(standardArtworkSize.height, standardArtworkSize.width);
       expect(
         find.byKey(
           const ValueKey('calendar-event-indicator-event-with-second-art'),
@@ -703,6 +713,20 @@ void main() {
           const ValueKey('calendar-event-indicator-event-with-second-art'),
         ),
         findsOneWidget,
+      );
+      final secondArtwork = find.byKey(
+        const ValueKey('calendar-event-indicator-event-with-second-art'),
+      );
+      final expandedArtworkSize = tester.getSize(firstArtwork);
+      expect(expandedArtworkSize.width, greaterThan(standardArtworkSize.width));
+      expect(tester.getSize(secondArtwork), expandedArtworkSize);
+      expect(
+        tester.getCenter(firstArtwork).dx,
+        closeTo(tester.getCenter(secondArtwork).dx, 0.5),
+      );
+      expect(
+        tester.getCenter(secondArtwork).dy,
+        greaterThan(tester.getCenter(firstArtwork).dy),
       );
       expect(find.text('+1'), findsOneWidget);
     },
