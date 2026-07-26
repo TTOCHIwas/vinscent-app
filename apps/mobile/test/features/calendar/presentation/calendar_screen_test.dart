@@ -646,7 +646,7 @@ void main() {
     );
   });
 
-  testWidgets('keeps one event artwork with overflow while expanding', (
+  testWidgets('shows two event artworks only on expanded days without cards', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -707,15 +707,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(
-        const ValueKey('calendar-event-indicator-event-with-second-art'),
-      ),
-      findsNothing,
+    final secondArtwork = find.byKey(
+      const ValueKey('calendar-event-indicator-event-with-second-art'),
     );
+    expect(secondArtwork, findsOneWidget);
     final expandedArtworkSize = tester.getSize(firstArtwork);
     expect(expandedArtworkSize, standardArtworkSize);
-    expect(find.text('+2'), findsOneWidget);
+    expect(tester.getSize(secondArtwork), standardArtworkSize);
+    expect(
+      tester.getCenter(secondArtwork).dy,
+      greaterThan(tester.getCenter(firstArtwork).dy),
+    );
+    expect(find.text('+1'), findsOneWidget);
   });
 
   testWidgets(

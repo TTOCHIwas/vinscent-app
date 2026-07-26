@@ -184,6 +184,7 @@ class _CalendarCellContent extends StatelessWidget {
         date: date,
         events: events,
         artworkSize: eventArtworkSize,
+        visibleLimit: showExpandedEventArtwork ? 2 : 1,
       );
     }
 
@@ -213,11 +214,15 @@ class _CalendarEventIndicator extends StatelessWidget {
     required this.date,
     required this.events,
     required this.artworkSize,
+    this.visibleLimit = 1,
   });
+
+  static const _artworkGap = 2.0;
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final double artworkSize;
+  final int visibleLimit;
 
   @override
   Widget build(BuildContext context) {
@@ -235,32 +240,70 @@ class _CalendarEventIndicator extends StatelessWidget {
         }
         return left.title.compareTo(right.title);
       });
-    final event = sortedEvents.first;
-    final overflowCount = events.length - 1;
+    final visibleEvents = sortedEvents
+        .take(math.max(1, visibleLimit))
+        .toList(growable: false);
+    final overflowCount = events.length - visibleEvents.length;
+    final isVertical = visibleLimit > 1;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final widthLimit = constraints.hasBoundedWidth
-            ? constraints.maxWidth
-            : artworkSize;
-        final heightLimit = constraints.hasBoundedHeight
-            ? constraints.maxHeight
-            : artworkSize;
-        final resolvedArtworkSize = math.max(
-          0.0,
-          math.min(artworkSize, math.min(widthLimit, heightLimit)),
+        final resolvedArtworkSize = _resolveArtworkSize(
+          constraints: constraints,
+          artworkCount: visibleEvents.length,
+          isVertical: isVertical,
         );
+        final artworkWidgets = [
+          for (var index = 0; index < visibleEvents.length; index++)
+            _CalendarEventArtworkIndicator(
+              date: date,
+              event: visibleEvents[index],
+              size: resolvedArtworkSize,
+              overflowCount: index == 0 ? overflowCount : 0,
+            ),
+        ];
 
         return Align(
           alignment: Alignment.center,
-          child: _CalendarEventArtworkIndicator(
-            date: date,
-            event: event,
-            size: resolvedArtworkSize,
-            overflowCount: overflowCount,
-          ),
+          child: isVertical
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (
+                      var index = 0;
+                      index < artworkWidgets.length;
+                      index++
+                    ) ...[
+                      if (index > 0) const SizedBox(height: _artworkGap),
+                      artworkWidgets[index],
+                    ],
+                  ],
+                )
+              : artworkWidgets.first,
         );
       },
+    );
+  }
+
+  double _resolveArtworkSize({
+    required BoxConstraints constraints,
+    required int artworkCount,
+    required bool isVertical,
+  }) {
+    final gapExtent = _artworkGap * math.max(0, artworkCount - 1);
+    final widthLimit = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : artworkSize;
+    final heightLimit = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : artworkSize;
+    final mainAxisLimit = isVertical
+        ? (heightLimit - gapExtent) / artworkCount
+        : widthLimit;
+    final crossAxisLimit = isVertical ? widthLimit : heightLimit;
+    return math.max(
+      0,
+      math.min(artworkSize, math.min(mainAxisLimit, crossAxisLimit)),
     );
   }
 }
