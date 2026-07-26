@@ -373,7 +373,7 @@ void main() {
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
   });
 
-  testWidgets('centers month navigation and keeps add at the far right', (
+  testWidgets('balances the filter and add actions around month navigation', (
     tester,
   ) async {
     await pumpCalendar(
@@ -392,6 +392,9 @@ void main() {
     final addCenter = tester
         .getCenter(find.byKey(const Key('calendar-add-event')))
         .dx;
+    final filterCenter = tester
+        .getCenter(find.byKey(const Key('calendar-cell-preview-filter')))
+        .dx;
 
     expect((previousCenter + nextCenter) / 2, closeTo(titleCenter, 0.5));
     expect(
@@ -402,6 +405,45 @@ void main() {
       ),
     );
     expect(addCenter, greaterThan(nextCenter));
+    expect(
+      filterCenter + addCenter,
+      closeTo(
+        tester.view.physicalSize.width / tester.view.devicePixelRatio,
+        0.5,
+      ),
+    );
+  });
+
+  testWidgets('selects a calendar cell preview mode from the header menu', (
+    tester,
+  ) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+
+    await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('모두'), findsOneWidget);
+    expect(find.text('카드만'), findsOneWidget);
+    expect(find.text('일정만'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('calendar-cell-preview-mode-cards_only'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
+    await tester.pumpAndSettle();
+
+    final selectedItem = tester.widget<CheckedPopupMenuItem<Object?>>(
+      find.byKey(const ValueKey('calendar-cell-preview-mode-cards_only')),
+    );
+    expect(selectedItem.checked, isTrue);
   });
 
   testWidgets('moves to previous month after relationship start month', (

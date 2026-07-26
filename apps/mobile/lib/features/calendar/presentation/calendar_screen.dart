@@ -13,11 +13,14 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
 import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notification.dart';
+import '../application/calendar_cell_preview_mode_controller.dart';
+import '../data/calendar_cell_preview_mode.dart';
 import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
 import 'calendar_step_scroll_controller.dart';
 import 'calendar_step_scroll_physics.dart';
 import 'calendar_viewport_motion_controller.dart';
+import 'widgets/calendar_cell_preview_filter_button.dart';
 import 'widgets/calendar_detail_date_header.dart';
 import 'widgets/calendar_responsive_month.dart';
 import 'widgets/calendar_selected_day_detail.dart';
@@ -93,6 +96,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final today = ref.watch(coupleCurrentDateProvider);
     final couple = ref.watch(coupleControllerProvider);
+    final previewMode =
+        ref.watch(calendarCellPreviewModeControllerProvider).asData?.value ??
+        CalendarCellPreviewMode.all;
     final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
 
     return couple.when(
@@ -123,6 +129,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               visibleMonth: _visibleMonth,
               canGoPrevious: canGoPrevious,
               canGoNext: canGoNext,
+              previewMode: previewMode,
               onPreviousPressed: canGoPrevious
                   ? () => _moveSelectedMonth(
                       -1,
@@ -141,6 +148,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       today: today,
                     )
                   : null,
+              onPreviewModeSelected: _selectPreviewMode,
             ),
             Expanded(
               child: LayoutBuilder(
@@ -384,6 +392,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     context.push('/calendar/event/new?date=${formatCalendarDate(initialDate)}');
   }
 
+  Future<void> _selectPreviewMode(CalendarCellPreviewMode mode) async {
+    try {
+      await ref
+          .read(calendarCellPreviewModeControllerProvider.notifier)
+          .selectMode(mode);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('캘린더 표시 설정을 저장하지 못했어요')));
+    }
+  }
+
   void _adoptLayoutMetrics(CalendarMonthLayoutMetrics metrics) {
     final previous = _layoutMetrics;
     if (previous == null) {
@@ -566,17 +589,21 @@ class _CalendarMonthHeader extends StatelessWidget {
     required this.visibleMonth,
     required this.canGoPrevious,
     required this.canGoNext,
+    required this.previewMode,
     required this.onPreviousPressed,
     required this.onNextPressed,
     required this.onAddPressed,
+    required this.onPreviewModeSelected,
   });
 
   final DateTime visibleMonth;
   final bool canGoPrevious;
   final bool canGoNext;
+  final CalendarCellPreviewMode previewMode;
   final VoidCallback? onPreviousPressed;
   final VoidCallback? onNextPressed;
   final VoidCallback? onAddPressed;
+  final ValueChanged<CalendarCellPreviewMode> onPreviewModeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -586,6 +613,16 @@ class _CalendarMonthHeader extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          Positioned(
+            left: 12,
+            top: 0,
+            bottom: 0,
+            child: CalendarCellPreviewFilterButton(
+              key: const Key('calendar-cell-preview-filter'),
+              selectedMode: previewMode,
+              onSelected: onPreviewModeSelected,
+            ),
+          ),
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
