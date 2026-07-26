@@ -20,7 +20,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
     required this.summary,
     this.events = const [],
     this.anniversaryLabel,
-    this.eventIndicatorLimit = 1,
+    this.showExpandedEventArtwork = false,
   });
 
   final DateTime date;
@@ -29,7 +29,13 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? anniversaryLabel;
-  final int eventIndicatorLimit;
+  final bool showExpandedEventArtwork;
+
+  static const _cellPadding = EdgeInsets.fromLTRB(3, 2, 3, 4);
+  static const _maximumEventArtworkSize = 18.0;
+  static const _dateMarkerSize = 18.0;
+  static const _eventHeaderGap = 1.0;
+  static const _headerHeight = 20.0;
 
   @override
   Widget build(BuildContext context) {
@@ -40,78 +46,104 @@ class CalendarMonthStoryCell extends StatelessWidget {
       _ => 'stacked',
     };
 
-    return Padding(
-      key: ValueKey(
-        'calendar-month-story-cell-$displayMode-${_calendarDateKey(date)}',
-      ),
-      padding: const EdgeInsets.fromLTRB(3, 3, 3, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 18,
-            child: Row(
-              children: [
-                SizedBox.square(
-                  dimension: 18,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.actionPrimary
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${date.day}',
-                        style: AppTypography.applyToStyle(
-                          AppTextStyles.homeCharacterLabel.copyWith(
-                            color: isSelected
-                                ? AppColors.textInverse
-                                : textColor,
-                            fontSize: 12,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            height: 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final eventArtworkSize = math.max(
+          0.0,
+          math.min(
+            _maximumEventArtworkSize,
+            constraints.maxWidth -
+                _cellPadding.horizontal -
+                _dateMarkerSize -
+                _eventHeaderGap,
+          ),
+        );
+
+        return Padding(
+          key: ValueKey(
+            'calendar-month-story-cell-$displayMode-${_calendarDateKey(date)}',
+          ),
+          padding: _cellPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: _headerHeight,
+                child: Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: _dateMarkerSize,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.actionPrimary
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${date.day}',
+                            style: AppTypography.applyToStyle(
+                              AppTextStyles.homeCharacterLabel.copyWith(
+                                color: isSelected
+                                    ? AppColors.textInverse
+                                    : textColor,
+                                fontSize: 12,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                height: 1,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                if (anniversaryLabel case final label?) ...[
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      softWrap: false,
-                      style: AppTypography.applyToStyle(
-                        AppTextStyles.homeCharacterLabel.copyWith(
-                          color: textColor,
-                          fontSize: 10,
-                          height: 1,
+                    if (anniversaryLabel case final label?) ...[
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                          style: AppTypography.applyToStyle(
+                            AppTextStyles.homeCharacterLabel.copyWith(
+                              color: textColor,
+                              fontSize: 10,
+                              height: 1,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+                    ] else if (visibleCards.isNotEmpty &&
+                        events.isNotEmpty &&
+                        !showExpandedEventArtwork) ...[
+                      const SizedBox(width: _eventHeaderGap),
+                      Expanded(
+                        child: _CalendarEventIndicator(
+                          date: date,
+                          events: events,
+                          artworkSize: eventArtworkSize,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _CalendarCellContent(
+                  date: date,
+                  events: events,
+                  showExpandedEventArtwork: showExpandedEventArtwork,
+                  eventArtworkSize: eventArtworkSize,
+                  cards: visibleCards,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 1),
-          Expanded(
-            child: _CalendarCellContent(
-              date: date,
-              events: events,
-              eventIndicatorLimit: eventIndicatorLimit,
-              cards: visibleCards,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -130,87 +162,69 @@ class _CalendarCellContent extends StatelessWidget {
   const _CalendarCellContent({
     required this.date,
     required this.events,
-    required this.eventIndicatorLimit,
+    required this.showExpandedEventArtwork,
+    required this.eventArtworkSize,
     required this.cards,
   });
 
-  static const _compactEventExtent = 16.0;
-  static const _expandedEventExtent = 36.0;
-  static const _minimumCardExtent = 12.0;
-
   final DateTime date;
   final List<CoupleCalendarEvent> events;
-  final int eventIndicatorLimit;
+  final bool showExpandedEventArtwork;
+  final double eventArtworkSize;
   final List<StoryLoopCardPreview> cards;
 
   @override
   Widget build(BuildContext context) {
-    if (events.isEmpty) {
-      return _MonthStoryPreview(cards: cards);
-    }
-
     if (cards.isEmpty) {
-      return _CalendarEventIndicators(
+      if (events.isEmpty) {
+        return const _MonthStoryPreview(cards: []);
+      }
+
+      return _CalendarEventIndicator(
         date: date,
         events: events,
-        limit: eventIndicatorLimit,
-        useAvailableSpace: true,
+        artworkSize: eventArtworkSize,
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final preferredEventExtent = eventIndicatorLimit > 1
-            ? _expandedEventExtent
-            : _compactEventExtent;
-        final availableEventExtent = math.max(
-          0.0,
-          constraints.maxHeight - _minimumCardExtent,
-        );
-        final eventExtent = math.min(
-          preferredEventExtent,
-          availableEventExtent,
-        );
+    if (events.isEmpty || !showExpandedEventArtwork || eventArtworkSize <= 0) {
+      return _MonthStoryPreview(cards: cards);
+    }
 
-        return Column(
-          children: [
-            SizedBox(
-              height: eventExtent,
-              child: _CalendarEventIndicators(
-                date: date,
-                events: events,
-                limit: eventIndicatorLimit,
-                useAvailableSpace: false,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Expanded(child: _MonthStoryPreview(cards: cards)),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: eventArtworkSize,
+          child: _CalendarEventIndicator(
+            date: date,
+            events: events,
+            artworkSize: eventArtworkSize,
+          ),
+        ),
+        Expanded(child: _MonthStoryPreview(cards: cards)),
+      ],
     );
   }
 }
 
-class _CalendarEventIndicators extends StatelessWidget {
-  const _CalendarEventIndicators({
+class _CalendarEventIndicator extends StatelessWidget {
+  const _CalendarEventIndicator({
     required this.date,
     required this.events,
-    required this.limit,
-    required this.useAvailableSpace,
+    required this.artworkSize,
   });
-
-  static const _maximumArtworkSize = 48.0;
-  static const _compactArtworkSize = 16.0;
-  static const _artworkGap = 2.0;
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
-  final int limit;
-  final bool useAvailableSpace;
+  final double artworkSize;
 
   @override
   Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final sortedEvents = [...events]
       ..sort((left, right) {
         final artworkOrder = (right.artwork == null ? 0 : 1).compareTo(
@@ -221,86 +235,33 @@ class _CalendarEventIndicators extends StatelessWidget {
         }
         return left.title.compareTo(right.title);
       });
-    final visibleEvents = sortedEvents.take(limit).toList(growable: false);
-    final overflowCount = events.length - visibleEvents.length;
-    final isVertical = limit > 1;
+    final event = sortedEvents.first;
+    final overflowCount = events.length - 1;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final artworkSize = _resolveArtworkSize(
-          constraints: constraints,
-          artworkCount: visibleEvents.length,
-          isVertical: isVertical,
+        final widthLimit = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : artworkSize;
+        final heightLimit = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : artworkSize;
+        final resolvedArtworkSize = math.max(
+          0.0,
+          math.min(artworkSize, math.min(widthLimit, heightLimit)),
         );
-        final artworkWidgets = [
-          for (var index = 0; index < visibleEvents.length; index++)
-            _CalendarEventArtworkIndicator(
-              date: date,
-              event: visibleEvents[index],
-              size: artworkSize,
-              overflowCount: index == 0 ? overflowCount : 0,
-            ),
-        ];
 
         return Align(
           alignment: Alignment.center,
-          child: isVertical
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _withSpacing(
-                    artworkWidgets,
-                    const SizedBox(height: _artworkGap),
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _withSpacing(
-                    artworkWidgets,
-                    const SizedBox(width: _artworkGap),
-                  ),
-                ),
+          child: _CalendarEventArtworkIndicator(
+            date: date,
+            event: event,
+            size: resolvedArtworkSize,
+            overflowCount: overflowCount,
+          ),
         );
       },
     );
-  }
-
-  double _resolveArtworkSize({
-    required BoxConstraints constraints,
-    required int artworkCount,
-    required bool isVertical,
-  }) {
-    if (artworkCount == 0) {
-      return 0;
-    }
-
-    final gapExtent = _artworkGap * math.max(0, artworkCount - 1);
-    final widthLimit = constraints.hasBoundedWidth
-        ? constraints.maxWidth
-        : _maximumArtworkSize;
-    final heightLimit = constraints.hasBoundedHeight
-        ? constraints.maxHeight
-        : _maximumArtworkSize;
-    final mainAxisLimit = isVertical
-        ? (heightLimit - gapExtent) / artworkCount
-        : (widthLimit - gapExtent) / artworkCount;
-    final crossAxisLimit = isVertical ? widthLimit : heightLimit;
-    final maximumArtworkSize = useAvailableSpace
-        ? _maximumArtworkSize
-        : _compactArtworkSize;
-
-    return math.max(
-      0,
-      math.min(maximumArtworkSize, math.min(mainAxisLimit, crossAxisLimit)),
-    );
-  }
-
-  List<Widget> _withSpacing(List<Widget> widgets, Widget spacing) {
-    return [
-      for (var index = 0; index < widgets.length; index++) ...[
-        if (index > 0) spacing,
-        widgets[index],
-      ],
-    ];
   }
 }
 

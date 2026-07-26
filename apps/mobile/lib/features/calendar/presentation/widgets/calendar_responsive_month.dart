@@ -285,7 +285,8 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                                   anniversaryLabels[calendarDateOnly(
                                     days[index],
                                   )],
-                              eventIndicatorLimit: values.eventIndicatorLimit,
+                              showExpandedEventArtwork:
+                                  values.showExpandedEventArtwork,
                               onPressed: () => onDatePressed(days[index]),
                             ),
                           ),
@@ -375,7 +376,7 @@ class _DateCell extends StatelessWidget {
     required this.summary,
     required this.events,
     required this.anniversaryLabel,
-    required this.eventIndicatorLimit,
+    required this.showExpandedEventArtwork,
     required this.onPressed,
   });
 
@@ -386,7 +387,7 @@ class _DateCell extends StatelessWidget {
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? anniversaryLabel;
-  final int eventIndicatorLimit;
+  final bool showExpandedEventArtwork;
   final VoidCallback onPressed;
 
   @override
@@ -410,7 +411,7 @@ class _DateCell extends StatelessWidget {
           summary: isCurrentMonth ? summary : null,
           events: isCurrentMonth ? events : const [],
           anniversaryLabel: isCurrentMonth ? anniversaryLabel : null,
-          eventIndicatorLimit: eventIndicatorLimit,
+          showExpandedEventArtwork: showExpandedEventArtwork,
         ),
       ),
     );
