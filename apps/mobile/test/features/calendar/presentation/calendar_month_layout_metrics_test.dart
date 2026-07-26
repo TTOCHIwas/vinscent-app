@@ -23,15 +23,20 @@ void main() {
   test('resolves expanded standard and weekly calendar values', () {
     final metrics = CalendarMonthLayoutMetrics.forViewport(720);
     final expanded = metrics.resolve(0);
+    final transitioning = metrics.resolve(metrics.standardScrollOffset / 2);
     final standard = metrics.resolve(metrics.standardScrollOffset);
     final weekly = metrics.resolve(metrics.weeklyScrollOffset);
 
     expect(expanded.rowHeight, greaterThan(standard.rowHeight));
+    expect(expanded.expandedContentProgress, 1);
     expect(expanded.showExpandedEventArtwork, isTrue);
+    expect(transitioning.expandedContentProgress, closeTo(0.5, 0.001));
     expect(standard.rowHeight, CalendarMonthLayoutMetrics.standardRowHeight);
+    expect(standard.expandedContentProgress, 0);
     expect(standard.collapseProgress, 0);
     expect(standard.showExpandedEventArtwork, isFalse);
     expect(weekly.rowHeight, CalendarMonthLayoutMetrics.weeklyRowHeight);
+    expect(weekly.expandedContentProgress, 0);
     expect(weekly.collapseProgress, 1);
     expect(weekly.showExpandedEventArtwork, isFalse);
   });

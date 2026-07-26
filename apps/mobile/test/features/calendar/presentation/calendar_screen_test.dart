@@ -1175,12 +1175,23 @@ void main() {
       await tester.pumpAndSettle();
 
       final expandedSingleSize = tester.getSize(singleCard);
+      final expandedStackedSize = tester.getSize(firstStackedCard);
       expect(expandedSingleSize.width, inInclusiveRange(24, 30));
-      expect(tester.getSize(firstStackedCard), expandedSingleSize);
-      expect(tester.getSize(secondStackedCard), expandedSingleSize);
       expect(
-        tester.getCenter(firstStackedCard).dy,
-        greaterThan(tester.getCenter(secondStackedCard).dy + 2),
+        expandedStackedSize.width,
+        greaterThan(expandedSingleSize.width * 1.2),
+      );
+      expect(tester.getSize(secondStackedCard), expandedStackedSize);
+      final expandedStackCenterGap =
+          tester.getCenter(firstStackedCard).dy -
+          tester.getCenter(secondStackedCard).dy;
+      expect(
+        expandedStackCenterGap,
+        greaterThan(expandedStackedSize.height * 0.55),
+      );
+      expect(
+        expandedStackedSize.height + expandedStackCenterGap,
+        greaterThan(tester.getSize(stackedCardCell).height * 0.5),
       );
       expect(
         tester.getCenter(singleCard).dx,
@@ -1272,6 +1283,21 @@ void main() {
               ),
             ],
           ),
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 6),
+            cardCount: 2,
+            cards: [
+              samplePreviewCard(
+                id: 'tablet-back-card',
+                submittedAt: DateTime(2026, 5, 6, 9),
+              ),
+              samplePreviewCard(
+                id: 'tablet-front-card',
+                authorUserId: 'user-b',
+                submittedAt: DateTime(2026, 5, 6, 9, 20),
+              ),
+            ],
+          ),
         ],
       },
     );
@@ -1289,8 +1315,20 @@ void main() {
     final cell = find.byKey(
       const ValueKey('calendar-month-story-cell-single-2026-05-05'),
     );
+    final backCard = find.byKey(
+      const ValueKey('calendar-month-story-card-tablet-back-card'),
+    );
+    final frontCard = find.byKey(
+      const ValueKey('calendar-month-story-card-tablet-front-card'),
+    );
     expect(tester.getSize(card).width, inInclusiveRange(40, 48));
     expect(tester.getCenter(card).dx, closeTo(tester.getCenter(cell).dx, 0.5));
+    expect(tester.getSize(backCard).width, lessThanOrEqualTo(48));
+    expect(tester.getSize(frontCard), tester.getSize(backCard));
+    expect(
+      tester.getCenter(frontCard).dy - tester.getCenter(backCard).dy,
+      greaterThan(tester.getSize(backCard).height * 0.55),
+    );
   });
 
   testWidgets('fetches selected past date and shows story loop detail', (

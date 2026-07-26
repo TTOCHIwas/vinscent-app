@@ -22,6 +22,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
     required this.summary,
     this.events = const [],
     this.anniversaryLabel,
+    this.expandedCardSpreadProgress = 0,
     this.showExpandedEventArtwork = false,
   });
 
@@ -31,6 +32,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? anniversaryLabel;
+  final double expandedCardSpreadProgress;
   final bool showExpandedEventArtwork;
 
   static const _cellPadding = EdgeInsets.fromLTRB(3, 2, 3, 4);
@@ -138,6 +140,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                   date: date,
                   events: events,
                   showExpandedEventArtwork: showExpandedEventArtwork,
+                  expandedCardSpreadProgress: expandedCardSpreadProgress,
                   eventArtworkSize: eventArtworkSize,
                   cards: visibleCards,
                 ),
@@ -165,6 +168,7 @@ class _CalendarCellContent extends StatelessWidget {
     required this.date,
     required this.events,
     required this.showExpandedEventArtwork,
+    required this.expandedCardSpreadProgress,
     required this.eventArtworkSize,
     required this.cards,
   });
@@ -172,15 +176,16 @@ class _CalendarCellContent extends StatelessWidget {
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final bool showExpandedEventArtwork;
+  final double expandedCardSpreadProgress;
   final double eventArtworkSize;
   final List<StoryLoopCardPreview> cards;
 
   @override
   Widget build(BuildContext context) {
-    final spreadStackedCards =
-        showExpandedEventArtwork &&
-        cards.length == 2 &&
-        events.every((event) => event.artwork == null);
+    final stackedCardSpreadProgress =
+        cards.length == 2 && events.every((event) => event.artwork == null)
+        ? math.min(1.0, math.max(0.0, expandedCardSpreadProgress))
+        : 0.0;
 
     if (cards.isEmpty) {
       if (events.isEmpty) {
@@ -198,7 +203,7 @@ class _CalendarCellContent extends StatelessWidget {
     if (events.isEmpty || !showExpandedEventArtwork || eventArtworkSize <= 0) {
       return _MonthStoryPreview(
         cards: cards,
-        spreadStackedCards: spreadStackedCards,
+        expandedSpreadProgress: stackedCardSpreadProgress,
       );
     }
 
@@ -216,7 +221,7 @@ class _CalendarCellContent extends StatelessWidget {
         Expanded(
           child: _MonthStoryPreview(
             cards: cards,
-            spreadStackedCards: spreadStackedCards,
+            expandedSpreadProgress: stackedCardSpreadProgress,
           ),
         ),
       ],
@@ -392,15 +397,15 @@ String _calendarDateKey(DateTime date) {
 class _MonthStoryPreview extends StatelessWidget {
   const _MonthStoryPreview({
     required this.cards,
-    this.spreadStackedCards = false,
+    this.expandedSpreadProgress = 0,
   });
 
   static const _stackWidthFactor = 1.55;
-  static const _verticalSpreadFactor = 0.28;
-  static const _maximumVerticalSpread = 12.0;
+  static const _expandedStackWidthFactor = 1.18;
+  static const _expandedVerticalSpreadFactor = 0.65;
 
   final List<StoryLoopCardPreview> cards;
-  final bool spreadStackedCards;
+  final double expandedSpreadProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -410,9 +415,20 @@ class _MonthStoryPreview extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final widthFromCell = constraints.maxWidth / _stackWidthFactor;
+        final spreadProgress = cards.length == 2
+            ? math.min(1.0, math.max(0.0, expandedSpreadProgress))
+            : 0.0;
+        final stackWidthFactor =
+            _stackWidthFactor +
+            ((_expandedStackWidthFactor - _stackWidthFactor) * spreadProgress);
+        final verticalSpreadFactor =
+            _expandedVerticalSpreadFactor * spreadProgress;
+        final stackHeightFactor = 1 + verticalSpreadFactor;
+        final widthFromCell = constraints.maxWidth / stackWidthFactor;
         final widthFromHeight =
-            constraints.maxHeight * storyCardCanvasAspectRatio;
+            constraints.maxHeight *
+            storyCardCanvasAspectRatio /
+            stackHeightFactor;
         final cardWidth = math.min(
           _maximumCalendarCellPreviewSize,
           math.min(widthFromCell, widthFromHeight),
@@ -430,21 +446,8 @@ class _MonthStoryPreview extends StatelessWidget {
           );
         }
 
-        final stackWidth = cardWidth * _stackWidthFactor;
-        final desiredVerticalSpread = spreadStackedCards
-            ? math.min(
-                cardHeight * _verticalSpreadFactor,
-                _maximumVerticalSpread,
-              )
-            : 0.0;
-        final availableVerticalSpread = math.max(
-          0.0,
-          constraints.maxHeight - cardHeight,
-        );
-        final verticalSpread = math.min(
-          desiredVerticalSpread,
-          availableVerticalSpread,
-        );
+        final stackWidth = cardWidth * stackWidthFactor;
+        final verticalSpread = cardHeight * verticalSpreadFactor;
 
         return Align(
           alignment: Alignment.center,

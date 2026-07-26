@@ -64,6 +64,7 @@ class CalendarMonthLayoutMetrics {
           standardHorizontalPadding,
           progress,
         ),
+        expandedContentProgress: 1 - progress,
         collapseProgress: 0,
         showExpandedEventArtwork: progress < 0.5,
       );
@@ -80,6 +81,7 @@ class CalendarMonthLayoutMetrics {
         weeklyHorizontalPadding,
         progress,
       ),
+      expandedContentProgress: 0,
       collapseProgress: progress,
       showExpandedEventArtwork: false,
     );
@@ -257,6 +259,7 @@ class CalendarMonthLayoutValues {
     required this.rowHeight,
     required this.rowGap,
     required this.horizontalPadding,
+    required this.expandedContentProgress,
     required this.collapseProgress,
     required this.showExpandedEventArtwork,
   });
@@ -264,6 +267,7 @@ class CalendarMonthLayoutValues {
   final double rowHeight;
   final double rowGap;
   final double horizontalPadding;
+  final double expandedContentProgress;
   final double collapseProgress;
   final bool showExpandedEventArtwork;
 }
