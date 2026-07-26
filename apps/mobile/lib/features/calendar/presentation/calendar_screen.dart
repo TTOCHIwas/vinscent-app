@@ -12,6 +12,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
+import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notification.dart';
 import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
 import 'calendar_step_scroll_controller.dart';
@@ -517,6 +518,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     if (_viewportState != decision.state) {
       _viewportState = decision.state;
+      ShellBottomBarVisibilityNotification(
+        isHidden: decision.state == CalendarViewportState.expanded,
+      ).dispatch(context);
     }
     final target = decision.offset.clamp(
       0.0,

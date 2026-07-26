@@ -79,7 +79,9 @@ void main() {
       expect(find.byType(AppBottomBar), findsOneWidget);
       final shellScaffoldFinder = find.byWidgetPredicate(
         (widget) =>
-            widget is Scaffold && widget.bottomNavigationBar is AppBottomBar,
+            widget is Scaffold &&
+            widget.bottomNavigationBar?.key ==
+                const Key('shell-bottom-bar-motion'),
       );
       expect(shellScaffoldFinder, findsOneWidget);
       expect(tester.widget<Scaffold>(shellScaffoldFinder).extendBody, isTrue);
@@ -383,6 +385,12 @@ void main() {
 
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(tester.getRect(bottomBar).bottom, lessThanOrEqualTo(screenHeight));
+
+    GoRouter.of(tester.element(find.byType(HomeScreen))).go('/calendar');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CalendarScreen), findsOneWidget);
+    expect(tester.getRect(bottomBar).top, greaterThanOrEqualTo(screenHeight));
   });
 
   testWidgets('집중 질문 경로에는 전용 헤더만 보여준다', (tester) async {
