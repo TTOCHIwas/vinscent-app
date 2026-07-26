@@ -11,6 +11,7 @@ import '../../../story_loops/application/story_loop_month_summary_provider.dart'
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
 import '../../application/couple_anniversary_resolver.dart';
 import '../../application/couple_calendar_event_provider.dart';
+import '../../data/calendar_cell_preview_mode.dart';
 import '../../data/couple_calendar_event.dart';
 import '../calendar_month_layout_metrics.dart';
 import 'calendar_detail_date_header.dart';
@@ -33,6 +34,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.onDetailSwipeRight,
     required this.onDetailSwipeLeft,
     required this.detailHeaderExtent,
+    required this.previewMode,
   });
 
   final DateTime visibleMonth;
@@ -49,25 +51,32 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final VoidCallback onDetailSwipeRight;
   final VoidCallback onDetailSwipeLeft;
   final double detailHeaderExtent;
+  final CalendarCellPreviewMode previewMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final monthSummary = ref.watch(storyLoopMonthSummaryProvider(visibleMonth));
-    final calendarEvents = ref.watch(
-      coupleCalendarEventMonthProvider(visibleMonth),
-    );
-    final summaryByDate = monthSummary.maybeWhen(
-      data: (entries) => {
-        for (final entry in entries) calendarDateOnly(entry.coupleDate): entry,
-      },
-      orElse: () => const <DateTime, StoryLoopMonthSummaryDay>{},
-    );
+    final summaryByDate = previewMode.includesCards
+        ? ref
+              .watch(storyLoopMonthSummaryProvider(visibleMonth))
+              .maybeWhen(
+                data: (entries) => {
+                  for (final entry in entries)
+                    calendarDateOnly(entry.coupleDate): entry,
+                },
+                orElse: () => const <DateTime, StoryLoopMonthSummaryDay>{},
+              )
+        : const <DateTime, StoryLoopMonthSummaryDay>{};
     final eventsByDate = <DateTime, List<CoupleCalendarEvent>>{};
-    for (final event
-        in calendarEvents.asData?.value ?? const <CoupleCalendarEvent>[]) {
-      eventsByDate
-          .putIfAbsent(calendarDateOnly(event.occurrenceDate), () => [])
-          .add(event);
+    if (previewMode.includesEvents) {
+      final calendarEvents = ref.watch(
+        coupleCalendarEventMonthProvider(visibleMonth),
+      );
+      for (final event
+          in calendarEvents.asData?.value ?? const <CoupleCalendarEvent>[]) {
+        eventsByDate
+            .putIfAbsent(calendarDateOnly(event.occurrenceDate), () => [])
+            .add(event);
+      }
     }
     final anniversaryLabels = <DateTime, String>{};
     const anniversaryResolver = CoupleAnniversaryResolver();

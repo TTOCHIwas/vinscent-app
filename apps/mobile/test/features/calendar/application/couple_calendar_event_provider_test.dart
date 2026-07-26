@@ -39,9 +39,8 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => activeCouple(
-            relationshipStartDate: DateTime(2026, 5, 1),
-          ),
+          (ref, notifier) async =>
+              activeCouple(relationshipStartDate: DateTime(2026, 5, 1)),
         ),
         coupleCalendarEventRepositoryProvider.overrideWithValue(repository),
       ],
@@ -54,6 +53,30 @@ void main() {
 
     expect(events, isEmpty);
     expect(repository.requestedRanges, isEmpty);
+  });
+
+  test('loads only the selected date for a detail-only request', () async {
+    final repository = _FakeCalendarEventRepository();
+    final container = ProviderContainer(
+      overrides: [
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => activeCouple(
+            relationshipStartDate: DateTime(2026, 5, 1),
+            currentDate: DateTime(2026, 5, 10),
+          ),
+        ),
+        coupleCalendarEventRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(
+      coupleCalendarEventDateProvider(DateTime(2026, 5, 10, 23, 30)).future,
+    );
+
+    expect(repository.requestedRanges, [
+      (DateTime(2026, 5, 10), DateTime(2026, 5, 10)),
+    ]);
   });
 }
 

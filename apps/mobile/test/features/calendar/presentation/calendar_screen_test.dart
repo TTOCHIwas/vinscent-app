@@ -4,9 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_horizontal_page_transition.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_theme.dart';
+import 'package:vinscent/features/calendar/data/calendar_cell_preview_mode.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_month_layout_metrics.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_detail_date_header.dart';
+import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_card_preview.dart';
+import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_event_indicator.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 
 import '../../../support/story_loop_fixtures.dart';
 import 'calendar_screen_test_support.dart';
@@ -431,9 +436,7 @@ void main() {
     expect(find.text('일정만'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(
-        const ValueKey('calendar-cell-preview-mode-cards_only'),
-      ),
+      find.byKey(const ValueKey('calendar-cell-preview-mode-cards_only')),
     );
     await tester.pumpAndSettle();
 
@@ -445,6 +448,109 @@ void main() {
     );
     expect(selectedItem.checked, isTrue);
   });
+
+  testWidgets(
+    'cards-only filters event previews but keeps selected-day events',
+    (tester) async {
+      final date = DateTime(2026, 5, 10);
+      final repository = FakeStoryLoopReadRepository(
+        monthSummaries: {
+          DateTime(2026, 5): [
+            StoryLoopMonthSummaryDay(
+              coupleDate: date,
+              loopStatus: StoryLoopStatus.waitingPartnerCard,
+              cardCount: 1,
+              cards: [samplePreviewCard(previewPath: '')],
+            ),
+          ],
+        },
+      );
+      final eventRequests = <CalendarEventDateRange>[];
+
+      await pumpCalendar(
+        tester,
+        repository: repository,
+        previewMode: CalendarCellPreviewMode.cardsOnly,
+        calendarEvents: [
+          calendarEvent(id: 'event-1', title: '함께 걷기', date: date),
+        ],
+        calendarEventRequests: eventRequests,
+      );
+
+      final cell = find.byKey(
+        const ValueKey('calendar-month-story-cell-single-2026-05-10'),
+      );
+      expect(
+        find.descendant(
+          of: cell,
+          matching: find.byType(CalendarMonthCardPreview),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: cell,
+          matching: find.byType(CalendarMonthEventIndicator),
+        ),
+        findsNothing,
+      );
+      expect(find.text('함께 걷기'), findsOneWidget);
+      expect(repository.requestedMonths, [DateTime(2026, 5)]);
+      expect(eventRequests, [(startDate: date, endDate: date)]);
+    },
+  );
+
+  testWidgets(
+    'events-only skips card month previews and keeps event previews',
+    (tester) async {
+      final date = DateTime(2026, 5, 10);
+      final repository = FakeStoryLoopReadRepository(
+        monthSummaries: {
+          DateTime(2026, 5): [
+            StoryLoopMonthSummaryDay(
+              coupleDate: date,
+              loopStatus: StoryLoopStatus.waitingPartnerCard,
+              cardCount: 1,
+              cards: [samplePreviewCard(previewPath: '')],
+            ),
+          ],
+        },
+      );
+      final eventRequests = <CalendarEventDateRange>[];
+
+      await pumpCalendar(
+        tester,
+        repository: repository,
+        previewMode: CalendarCellPreviewMode.eventsOnly,
+        calendarEvents: [
+          calendarEvent(id: 'event-1', title: '함께 걷기', date: date),
+        ],
+        calendarEventRequests: eventRequests,
+      );
+
+      final cell = find.byKey(
+        const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
+      );
+      expect(
+        find.descendant(
+          of: cell,
+          matching: find.byType(CalendarMonthCardPreview),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: cell,
+          matching: find.byType(CalendarMonthEventIndicator),
+        ),
+        findsOneWidget,
+      );
+      expect(repository.requestedMonths, isEmpty);
+      expect(eventRequests, [
+        (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+      ]);
+    },
+  );
 
   testWidgets('moves to previous month after relationship start month', (
     tester,

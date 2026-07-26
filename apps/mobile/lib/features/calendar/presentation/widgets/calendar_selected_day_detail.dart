@@ -11,6 +11,7 @@ import '../../../story_loops/application/story_loop_detail_provider.dart';
 import '../../application/couple_anniversary_resolver.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../application/couple_calendar_event_realtime_controller.dart';
+import '../../data/calendar_cell_preview_mode.dart';
 import '../../data/couple_calendar_event.dart';
 import '../../data/couple_calendar_event_failure.dart';
 import '../../data/couple_calendar_event_repository.dart';
@@ -24,12 +25,14 @@ class CalendarSelectedDayDetail extends ConsumerStatefulWidget {
     required this.today,
     required this.relationshipStartDate,
     required this.canEdit,
+    required this.previewMode,
   });
 
   final DateTime selectedDate;
   final DateTime today;
   final DateTime relationshipStartDate;
   final bool canEdit;
+  final CalendarCellPreviewMode previewMode;
 
   @override
   ConsumerState<CalendarSelectedDayDetail> createState() =>
@@ -43,11 +46,12 @@ class _CalendarSelectedDayDetailState
   @override
   Widget build(BuildContext context) {
     final selectedDate = calendarDateOnly(widget.selectedDate);
-    final monthEvents = ref.watch(
-      coupleCalendarEventMonthProvider(selectedDate),
-    );
+    final selectedMonth = calendarMonthOnly(selectedDate);
+    final calendarEvents = widget.previewMode.includesEvents
+        ? ref.watch(coupleCalendarEventMonthProvider(selectedMonth))
+        : ref.watch(coupleCalendarEventDateProvider(selectedDate));
     final events =
-        monthEvents.asData?.value
+        calendarEvents.asData?.value
             .where(
               (event) => calendarDateOnly(event.occurrenceDate) == selectedDate,
             )
@@ -62,10 +66,15 @@ class _CalendarSelectedDayDetailState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (monthEvents.hasError) ...[
+        if (calendarEvents.hasError) ...[
           _CalendarEventLoadFailure(
-            onRetry: () =>
-                ref.invalidate(coupleCalendarEventMonthProvider(selectedDate)),
+            onRetry: () {
+              if (widget.previewMode.includesEvents) {
+                ref.invalidate(coupleCalendarEventMonthProvider(selectedMonth));
+              } else {
+                ref.invalidate(coupleCalendarEventDateProvider(selectedDate));
+              }
+            },
           ),
         ] else if (hasCalendarEntries) ...[
           CalendarEventDetailList(

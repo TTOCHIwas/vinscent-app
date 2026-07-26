@@ -37,6 +37,29 @@ final coupleCalendarEventMonthProvider = FutureProvider.autoDispose
           .fetchOccurrences(startDate: startDate, endDate: monthEnd);
     }, retry: (_, _) => null);
 
+final coupleCalendarEventDateProvider = FutureProvider.autoDispose
+    .family<List<CoupleCalendarEvent>, DateTime>((ref, date) async {
+      ref.watch(coupleCalendarEventRevisionProvider);
+      final couple = await ref.watch(coupleControllerProvider.future);
+      if (couple == null ||
+          !couple.canReadSharedData ||
+          !couple.hasRelationshipStartDate) {
+        return const [];
+      }
+
+      final normalizedDate = calendarDateOnly(date);
+      final relationshipStartDate = calendarDateOnly(
+        couple.relationshipStartDate!,
+      );
+      if (normalizedDate.isBefore(relationshipStartDate)) {
+        return const [];
+      }
+
+      return ref
+          .watch(coupleCalendarEventRepositoryProvider)
+          .fetchOccurrences(startDate: normalizedDate, endDate: normalizedDate);
+    }, retry: (_, _) => null);
+
 final coupleCalendarEventProvider = FutureProvider.autoDispose
     .family<CoupleCalendarEvent?, String>((ref, eventId) async {
       ref.watch(coupleCalendarEventRevisionProvider);

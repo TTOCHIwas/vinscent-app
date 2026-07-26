@@ -8,6 +8,8 @@ import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
+import 'package:vinscent/features/calendar/application/calendar_cell_preview_mode_controller.dart';
+import 'package:vinscent/features/calendar/data/calendar_cell_preview_mode.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
@@ -26,6 +28,8 @@ import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
+
+typedef CalendarEventDateRange = ({DateTime startDate, DateTime endDate});
 
 List<BoxDecoration> framedDecorations(WidgetTester tester, Finder scope) {
   return tester
@@ -61,10 +65,13 @@ Future<void> pumpCalendar(
   DateTime? initialDate,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   List<CoupleCalendarEvent> calendarEvents = const [],
+  List<CalendarEventDateRange>? calendarEventRequests,
+  CalendarCellPreviewMode previewMode = CalendarCellPreviewMode.all,
   double textScaleFactor = 1,
 }) async {
   final calendarEventRepository = _FakeCalendarEventRepository(
     events: calendarEvents,
+    requests: calendarEventRequests,
   );
   final router = GoRouter(
     initialLocation: '/calendar',
@@ -110,6 +117,9 @@ Future<void> pumpCalendar(
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
         ),
+        calendarCellPreviewModeControllerProvider.overrideWithBuild(
+          (ref, notifier) async => previewMode,
+        ),
         aiQuestionFeedbackProvider.overrideWith((ref, dailyQuestionId) {
           final feedback = aiFeedbacks[dailyQuestionId];
           return Stream.value(
@@ -147,10 +157,13 @@ Future<void> scrollCalendarUp(WidgetTester tester) async {
 }
 
 class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
-  _FakeCalendarEventRepository({required List<CoupleCalendarEvent> events})
-    : events = List.of(events);
+  _FakeCalendarEventRepository({
+    required List<CoupleCalendarEvent> events,
+    required this.requests,
+  }) : events = List.of(events);
 
   final List<CoupleCalendarEvent> events;
+  final List<CalendarEventDateRange>? requests;
 
   @override
   Future<void> deleteEvent({
@@ -175,6 +188,7 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
+    requests?.add((startDate: startDate, endDate: endDate));
     return events
         .where(
           (event) =>

@@ -181,6 +181,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           visibleMonth: _visibleMonth,
                           relationshipStartDate: couple.relationshipStartDate!,
                           selectedDate: _selectedDate,
+                          previewMode: previewMode,
                           calendarTransitionKey: _calendarPageRevision,
                           calendarTransitionDirection: _calendarPageDirection,
                           detailTransitionKey: _detailPageRevision,
@@ -246,6 +247,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                     relationshipStartDate:
                                         couple.relationshipStartDate!,
                                     canEdit: couple.canEditSharedData,
+                                    previewMode: previewMode,
                                   ),
                                 ),
                               ),
@@ -707,12 +709,14 @@ class _CalendarDetail extends StatelessWidget {
     required this.today,
     required this.relationshipStartDate,
     required this.canEdit,
+    required this.previewMode,
   });
 
   final DateTime? selectedDate;
   final DateTime today;
   final DateTime relationshipStartDate;
   final bool canEdit;
+  final CalendarCellPreviewMode previewMode;
 
   @override
   Widget build(BuildContext context) {
@@ -730,6 +734,7 @@ class _CalendarDetail extends StatelessWidget {
       today: today,
       relationshipStartDate: relationshipStartDate,
       canEdit: canEdit,
+      previewMode: previewMode,
     );
   }
 }
