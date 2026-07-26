@@ -101,19 +101,15 @@ class CalendarMonthStoryCell extends StatelessWidget {
               ],
             ),
           ),
-          if (events.isNotEmpty) ...[
-            const SizedBox(height: 1),
-            SizedBox(
-              height: 16,
-              child: _CalendarEventIndicators(
-                date: date,
-                events: events,
-                limit: eventIndicatorLimit,
-              ),
-            ),
-          ],
           const SizedBox(height: 1),
-          Expanded(child: _MonthStoryPreview(cards: visibleCards)),
+          Expanded(
+            child: _CalendarCellContent(
+              date: date,
+              events: events,
+              eventIndicatorLimit: eventIndicatorLimit,
+              cards: visibleCards,
+            ),
+          ),
         ],
       ),
     );
@@ -130,16 +126,88 @@ class CalendarMonthStoryCell extends StatelessWidget {
   }
 }
 
+class _CalendarCellContent extends StatelessWidget {
+  const _CalendarCellContent({
+    required this.date,
+    required this.events,
+    required this.eventIndicatorLimit,
+    required this.cards,
+  });
+
+  static const _compactEventExtent = 16.0;
+  static const _expandedEventExtent = 36.0;
+  static const _minimumCardExtent = 12.0;
+
+  final DateTime date;
+  final List<CoupleCalendarEvent> events;
+  final int eventIndicatorLimit;
+  final List<StoryLoopCardPreview> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return _MonthStoryPreview(cards: cards);
+    }
+
+    if (cards.isEmpty) {
+      return _CalendarEventIndicators(
+        date: date,
+        events: events,
+        limit: eventIndicatorLimit,
+        useAvailableSpace: true,
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final preferredEventExtent = eventIndicatorLimit > 1
+            ? _expandedEventExtent
+            : _compactEventExtent;
+        final availableEventExtent = math.max(
+          0.0,
+          constraints.maxHeight - _minimumCardExtent,
+        );
+        final eventExtent = math.min(
+          preferredEventExtent,
+          availableEventExtent,
+        );
+
+        return Column(
+          children: [
+            SizedBox(
+              height: eventExtent,
+              child: _CalendarEventIndicators(
+                date: date,
+                events: events,
+                limit: eventIndicatorLimit,
+                useAvailableSpace: false,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Expanded(child: _MonthStoryPreview(cards: cards)),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _CalendarEventIndicators extends StatelessWidget {
   const _CalendarEventIndicators({
     required this.date,
     required this.events,
     required this.limit,
+    required this.useAvailableSpace,
   });
+
+  static const _maximumArtworkSize = 48.0;
+  static const _compactArtworkSize = 16.0;
+  static const _artworkGap = 2.0;
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final int limit;
+  final bool useAvailableSpace;
 
   @override
   Widget build(BuildContext context) {
@@ -155,31 +223,142 @@ class _CalendarEventIndicators extends StatelessWidget {
       });
     final visibleEvents = sortedEvents.take(limit).toList(growable: false);
     final overflowCount = events.length - visibleEvents.length;
+    final isVertical = limit > 1;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final event in visibleEvents) ...[
-          CalendarEventArtwork(
-            key: ValueKey('calendar-event-indicator-${event.id}'),
-            event: event,
-            size: 14,
-          ),
-          const SizedBox(width: 1),
-        ],
-        if (overflowCount > 0)
-          Text(
-            '+$overflowCount',
-            key: ValueKey('calendar-event-overflow-${_calendarDateKey(date)}'),
-            style: AppTypography.applyToStyle(
-              AppTextStyles.homeCharacterLabel.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 10,
-                height: 1,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final artworkSize = _resolveArtworkSize(
+          constraints: constraints,
+          artworkCount: visibleEvents.length,
+          isVertical: isVertical,
+        );
+        final artworkWidgets = [
+          for (var index = 0; index < visibleEvents.length; index++)
+            _CalendarEventArtworkIndicator(
+              date: date,
+              event: visibleEvents[index],
+              size: artworkSize,
+              overflowCount: index == 0 ? overflowCount : 0,
+            ),
+        ];
+
+        return Align(
+          alignment: Alignment.center,
+          child: isVertical
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _withSpacing(
+                    artworkWidgets,
+                    const SizedBox(height: _artworkGap),
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _withSpacing(
+                    artworkWidgets,
+                    const SizedBox(width: _artworkGap),
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
+  double _resolveArtworkSize({
+    required BoxConstraints constraints,
+    required int artworkCount,
+    required bool isVertical,
+  }) {
+    if (artworkCount == 0) {
+      return 0;
+    }
+
+    final gapExtent = _artworkGap * math.max(0, artworkCount - 1);
+    final widthLimit = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : _maximumArtworkSize;
+    final heightLimit = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : _maximumArtworkSize;
+    final mainAxisLimit = isVertical
+        ? (heightLimit - gapExtent) / artworkCount
+        : (widthLimit - gapExtent) / artworkCount;
+    final crossAxisLimit = isVertical ? widthLimit : heightLimit;
+    final maximumArtworkSize = useAvailableSpace
+        ? _maximumArtworkSize
+        : _compactArtworkSize;
+
+    return math.max(
+      0,
+      math.min(maximumArtworkSize, math.min(mainAxisLimit, crossAxisLimit)),
+    );
+  }
+
+  List<Widget> _withSpacing(List<Widget> widgets, Widget spacing) {
+    return [
+      for (var index = 0; index < widgets.length; index++) ...[
+        if (index > 0) spacing,
+        widgets[index],
+      ],
+    ];
+  }
+}
+
+class _CalendarEventArtworkIndicator extends StatelessWidget {
+  const _CalendarEventArtworkIndicator({
+    required this.date,
+    required this.event,
+    required this.size,
+    required this.overflowCount,
+  });
+
+  final DateTime date;
+  final CoupleCalendarEvent event;
+  final double size;
+  final int overflowCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CalendarEventArtwork(
+              key: ValueKey('calendar-event-indicator-${event.id}'),
+              event: event,
+              size: size,
             ),
           ),
-      ],
+          if (overflowCount > 0)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.background.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1),
+                  child: Text(
+                    '+$overflowCount',
+                    key: ValueKey(
+                      'calendar-event-overflow-${_calendarDateKey(date)}',
+                    ),
+                    style: AppTypography.applyToStyle(
+                      AppTextStyles.homeCharacterLabel.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
