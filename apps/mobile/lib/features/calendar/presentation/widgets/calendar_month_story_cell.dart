@@ -9,9 +9,10 @@ import '../../../story_loops/data/story_loop_card_preview.dart';
 import '../../../story_loops/data/story_card_scene.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
 import '../../data/couple_calendar_event.dart';
+import '../calendar_expanded_cell_layout.dart';
 import 'calendar_event_artwork.dart';
 
-const _maximumCalendarCellPreviewSize = 48.0;
+const _maximumCompactCalendarCellPreviewSize = 48.0;
 
 class CalendarMonthStoryCell extends StatelessWidget {
   const CalendarMonthStoryCell({
@@ -22,8 +23,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
     required this.summary,
     this.events = const [],
     this.anniversaryLabel,
-    this.expandedCardSpreadProgress = 0,
-    this.showExpandedEventArtwork = false,
+    this.expandedContentProgress = 0,
   });
 
   final DateTime date;
@@ -32,8 +32,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? anniversaryLabel;
-  final double expandedCardSpreadProgress;
-  final bool showExpandedEventArtwork;
+  final double expandedContentProgress;
 
   static const _cellPadding = EdgeInsets.fromLTRB(3, 2, 3, 4);
   static const _maximumCompactEventArtworkSize = 18.0;
@@ -44,6 +43,11 @@ class CalendarMonthStoryCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleCards = _visibleCards(summary);
+    final resolvedExpandedProgress = math.min(
+      1.0,
+      math.max(0.0, expandedContentProgress),
+    );
+    final hasEventArtwork = events.any((event) => event.artwork != null);
     final displayMode = switch (visibleCards.length) {
       0 => 'empty',
       1 => 'single',
@@ -121,15 +125,21 @@ class CalendarMonthStoryCell extends StatelessWidget {
                         ),
                       ),
                     ] else if (visibleCards.isNotEmpty &&
-                        events.isNotEmpty &&
-                        !showExpandedEventArtwork) ...[
+                        events.isNotEmpty) ...[
                       const SizedBox(width: _eventHeaderGap),
                       Expanded(
-                        child: _CalendarEventIndicator(
-                          date: date,
-                          events: events,
-                          artworkSize: eventArtworkSize,
-                        ),
+                        child: hasEventArtwork && resolvedExpandedProgress >= 1
+                            ? const SizedBox.shrink()
+                            : Opacity(
+                                opacity: hasEventArtwork
+                                    ? 1 - resolvedExpandedProgress
+                                    : 1,
+                                child: _CalendarEventIndicator(
+                                  date: date,
+                                  events: events,
+                                  artworkSize: eventArtworkSize,
+                                ),
+                              ),
                       ),
                     ],
                   ],
@@ -139,9 +149,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                 child: _CalendarCellContent(
                   date: date,
                   events: events,
-                  showExpandedEventArtwork: showExpandedEventArtwork,
-                  expandedCardSpreadProgress: expandedCardSpreadProgress,
-                  eventArtworkSize: eventArtworkSize,
+                  expandedContentProgress: resolvedExpandedProgress,
                   cards: visibleCards,
                 ),
               ),
@@ -167,26 +175,59 @@ class _CalendarCellContent extends StatelessWidget {
   const _CalendarCellContent({
     required this.date,
     required this.events,
-    required this.showExpandedEventArtwork,
-    required this.expandedCardSpreadProgress,
-    required this.eventArtworkSize,
+    required this.expandedContentProgress,
     required this.cards,
   });
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
-  final bool showExpandedEventArtwork;
-  final double expandedCardSpreadProgress;
-  final double eventArtworkSize;
+  final double expandedContentProgress;
   final List<StoryLoopCardPreview> cards;
 
   @override
   Widget build(BuildContext context) {
-    final stackedCardSpreadProgress =
-        cards.length == 2 && events.every((event) => event.artwork == null)
-        ? math.min(1.0, math.max(0.0, expandedCardSpreadProgress))
-        : 0.0;
+    final progress = math.min(1.0, math.max(0.0, expandedContentProgress));
+    final artworkEvents =
+        events.where((event) => event.artwork != null).toList(growable: false)
+          ..sort((left, right) => left.title.compareTo(right.title));
 
+    if (progress <= 0 || (artworkEvents.isEmpty && cards.isEmpty)) {
+      return _buildCompactContent();
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (cards.isEmpty && progress < 1)
+          Opacity(
+            opacity: 1 - progress,
+            child: _CalendarEventIndicator(
+              date: date,
+              events: events,
+              artworkSize: _maximumCompactCalendarCellPreviewSize,
+            ),
+          ),
+        if (artworkEvents.isNotEmpty)
+          Opacity(
+            opacity: progress,
+            child: _ExpandedCalendarEventArtworkLayer(
+              date: date,
+              events: artworkEvents,
+              totalEventCount: events.length,
+              cardCount: cards.length,
+            ),
+          ),
+        if (cards.isNotEmpty)
+          _MonthStoryPreview(
+            cards: cards,
+            expandedProgress: progress,
+            artworkCount: artworkEvents.length,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCompactContent() {
     if (cards.isEmpty) {
       if (events.isEmpty) {
         return const _MonthStoryPreview(cards: []);
@@ -195,36 +236,102 @@ class _CalendarCellContent extends StatelessWidget {
       return _CalendarEventIndicator(
         date: date,
         events: events,
-        artworkSize: _maximumCalendarCellPreviewSize,
-        visibleLimit: showExpandedEventArtwork ? 2 : 1,
+        artworkSize: _maximumCompactCalendarCellPreviewSize,
       );
     }
 
-    if (events.isEmpty || !showExpandedEventArtwork || eventArtworkSize <= 0) {
-      return _MonthStoryPreview(
-        cards: cards,
-        expandedSpreadProgress: stackedCardSpreadProgress,
-      );
-    }
+    return _MonthStoryPreview(cards: cards);
+  }
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: eventArtworkSize,
-          child: _CalendarEventIndicator(
-            date: date,
-            events: events,
-            artworkSize: eventArtworkSize,
+class _ExpandedCalendarEventArtworkLayer extends StatelessWidget {
+  const _ExpandedCalendarEventArtworkLayer({
+    required this.date,
+    required this.events,
+    required this.totalEventCount,
+    required this.cardCount,
+  });
+
+  final DateTime date;
+  final List<CoupleCalendarEvent> events;
+  final int totalEventCount;
+  final int cardCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = CalendarExpandedCellLayout.resolve(
+          size: constraints.biggest,
+          cardCount: cardCount,
+          artworkCount: events.length,
+        );
+        final visibleEvents = events
+            .take(layout.visibleArtworkCount)
+            .toList(growable: false);
+        final overflowCount = totalEventCount - visibleEvents.length;
+
+        return Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            for (var index = 0; index < visibleEvents.length; index++)
+              Positioned(
+                left: layout.artworkOrigin.dx + layout.artworkOffsets[index].dx,
+                top: layout.artworkOrigin.dy + layout.artworkOffsets[index].dy,
+                child: _ExpandedCalendarEventArtworkIndicator(
+                  date: date,
+                  event: visibleEvents[index],
+                  size: layout.artworkSize,
+                  overflowCount: index == visibleEvents.length - 1
+                      ? overflowCount
+                      : 0,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ExpandedCalendarEventArtworkIndicator extends StatelessWidget {
+  const _ExpandedCalendarEventArtworkIndicator({
+    required this.date,
+    required this.event,
+    required this.size,
+    required this.overflowCount,
+  });
+
+  final DateTime date;
+  final CoupleCalendarEvent event;
+  final double size;
+  final int overflowCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CalendarEventArtwork(
+              key: ValueKey('calendar-event-indicator-${event.id}'),
+              event: event,
+              size: size,
+            ),
           ),
-        ),
-        Expanded(
-          child: _MonthStoryPreview(
-            cards: cards,
-            expandedSpreadProgress: stackedCardSpreadProgress,
-          ),
-        ),
-      ],
+          if (overflowCount > 0)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _CalendarEventOverflowBadge(
+                date: date,
+                overflowCount: overflowCount,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -234,15 +341,11 @@ class _CalendarEventIndicator extends StatelessWidget {
     required this.date,
     required this.events,
     required this.artworkSize,
-    this.visibleLimit = 1,
   });
-
-  static const _artworkGap = 2.0;
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final double artworkSize;
-  final int visibleLimit;
 
   @override
   Widget build(BuildContext context) {
@@ -260,70 +363,38 @@ class _CalendarEventIndicator extends StatelessWidget {
         }
         return left.title.compareTo(right.title);
       });
-    final visibleEvents = sortedEvents
-        .take(math.max(1, visibleLimit))
-        .toList(growable: false);
-    final overflowCount = events.length - visibleEvents.length;
-    final isVertical = visibleLimit > 1;
+    final visibleEvent = sortedEvents.first;
+    final overflowCount = events.length - 1;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final resolvedArtworkSize = _resolveArtworkSize(
           constraints: constraints,
-          artworkCount: visibleEvents.length,
-          isVertical: isVertical,
         );
-        final artworkWidgets = [
-          for (var index = 0; index < visibleEvents.length; index++)
-            _CalendarEventArtworkIndicator(
-              date: date,
-              event: visibleEvents[index],
-              size: resolvedArtworkSize,
-              overflowCount: index == 0 ? overflowCount : 0,
-            ),
-        ];
 
         return Align(
           alignment: Alignment.center,
-          child: isVertical
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (
-                      var index = 0;
-                      index < artworkWidgets.length;
-                      index++
-                    ) ...[
-                      if (index > 0) const SizedBox(height: _artworkGap),
-                      artworkWidgets[index],
-                    ],
-                  ],
-                )
-              : artworkWidgets.first,
+          child: _CalendarEventArtworkIndicator(
+            date: date,
+            event: visibleEvent,
+            size: resolvedArtworkSize,
+            overflowCount: overflowCount,
+          ),
         );
       },
     );
   }
 
-  double _resolveArtworkSize({
-    required BoxConstraints constraints,
-    required int artworkCount,
-    required bool isVertical,
-  }) {
-    final gapExtent = _artworkGap * math.max(0, artworkCount - 1);
+  double _resolveArtworkSize({required BoxConstraints constraints}) {
     final widthLimit = constraints.hasBoundedWidth
         ? constraints.maxWidth
         : artworkSize;
     final heightLimit = constraints.hasBoundedHeight
         ? constraints.maxHeight
         : artworkSize;
-    final mainAxisLimit = isVertical
-        ? (heightLimit - gapExtent) / artworkCount
-        : widthLimit;
-    final crossAxisLimit = isVertical ? widthLimit : heightLimit;
     return math.max(
       0,
-      math.min(artworkSize, math.min(mainAxisLimit, crossAxisLimit)),
+      math.min(artworkSize, math.min(widthLimit, heightLimit)),
     );
   }
 }
@@ -358,30 +429,46 @@ class _CalendarEventArtworkIndicator extends StatelessWidget {
             Positioned(
               right: 0,
               bottom: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.background.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: Text(
-                    '+$overflowCount',
-                    key: ValueKey(
-                      'calendar-event-overflow-${_calendarDateKey(date)}',
-                    ),
-                    style: AppTypography.applyToStyle(
-                      AppTextStyles.homeCharacterLabel.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 10,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                ),
+              child: _CalendarEventOverflowBadge(
+                date: date,
+                overflowCount: overflowCount,
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _CalendarEventOverflowBadge extends StatelessWidget {
+  const _CalendarEventOverflowBadge({
+    required this.date,
+    required this.overflowCount,
+  });
+
+  final DateTime date;
+  final int overflowCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.background.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: Text(
+          '+$overflowCount',
+          key: ValueKey('calendar-event-overflow-${_calendarDateKey(date)}'),
+          style: AppTypography.applyToStyle(
+            AppTextStyles.homeCharacterLabel.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 10,
+              height: 1,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -397,15 +484,15 @@ String _calendarDateKey(DateTime date) {
 class _MonthStoryPreview extends StatelessWidget {
   const _MonthStoryPreview({
     required this.cards,
-    this.expandedSpreadProgress = 0,
+    this.expandedProgress = 0,
+    this.artworkCount = 0,
   });
 
   static const _stackWidthFactor = 1.55;
-  static const _expandedStackWidthFactor = 1.18;
-  static const _expandedVerticalSpreadFactor = 0.65;
 
   final List<StoryLoopCardPreview> cards;
-  final double expandedSpreadProgress;
+  final double expandedProgress;
+  final int artworkCount;
 
   @override
   Widget build(BuildContext context) {
@@ -415,72 +502,74 @@ class _MonthStoryPreview extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final spreadProgress = cards.length == 2
-            ? math.min(1.0, math.max(0.0, expandedSpreadProgress))
-            : 0.0;
-        final stackWidthFactor =
-            _stackWidthFactor +
-            ((_expandedStackWidthFactor - _stackWidthFactor) * spreadProgress);
-        final verticalSpreadFactor =
-            _expandedVerticalSpreadFactor * spreadProgress;
-        final stackHeightFactor = 1 + verticalSpreadFactor;
-        final widthFromCell = constraints.maxWidth / stackWidthFactor;
-        final widthFromHeight =
-            constraints.maxHeight *
-            storyCardCanvasAspectRatio /
-            stackHeightFactor;
-        final cardWidth = math.min(
-          _maximumCalendarCellPreviewSize,
-          math.min(widthFromCell, widthFromHeight),
+        final progress = math.min(1.0, math.max(0.0, expandedProgress));
+        final compactWidthFromCell = constraints.maxWidth / _stackWidthFactor;
+        final compactWidthFromHeight =
+            constraints.maxHeight * storyCardCanvasAspectRatio;
+        final compactCardWidth = math.min(
+          _maximumCompactCalendarCellPreviewSize,
+          math.min(compactWidthFromCell, compactWidthFromHeight),
         );
-        final cardHeight = cardWidth / storyCardCanvasAspectRatio;
+        final expandedLayout = CalendarExpandedCellLayout.resolve(
+          size: constraints.biggest,
+          cardCount: cards.length,
+          artworkCount: artworkCount,
+        );
+        final cardWidth =
+            compactCardWidth +
+            ((expandedLayout.cardWidth - compactCardWidth) * progress);
+        final compactCardHeight = compactCardWidth / storyCardCanvasAspectRatio;
+        final compactHorizontalOffset = cards.length == 2
+            ? compactCardWidth * (_stackWidthFactor - 1)
+            : 0.0;
+        final compactGroupSize = Size(
+          compactCardWidth + compactHorizontalOffset,
+          compactCardHeight,
+        );
+        final compactOrigin = Offset(
+          (constraints.maxWidth - compactGroupSize.width) / 2,
+          (constraints.maxHeight - compactGroupSize.height) / 2,
+        );
+        final compactOffsets = cards.length == 2
+            ? [Offset.zero, Offset(compactHorizontalOffset, 0)]
+            : const [Offset.zero];
 
-        if (cards.length == 1) {
-          return Align(
-            alignment: Alignment.center,
-            child: _MonthStorySurface(
-              card: cards.first,
-              width: cardWidth,
-              angle: 0,
-            ),
-          );
-        }
-
-        final stackWidth = cardWidth * stackWidthFactor;
-        final verticalSpread = cardHeight * verticalSpreadFactor;
-
-        return Align(
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: stackWidth,
-            height: cardHeight + verticalSpread,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: _MonthStorySurface(
-                    card: cards.first,
-                    width: cardWidth,
-                    angle: -0.12,
-                  ),
+        return Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            for (var index = 0; index < cards.length; index++)
+              Positioned(
+                left: _lerpCoordinate(
+                  compactOrigin.dx + compactOffsets[index].dx,
+                  expandedLayout.cardOrigin.dx +
+                      expandedLayout.cardOffsets[index].dx,
+                  progress,
                 ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: _MonthStorySurface(
-                    card: cards[1],
-                    width: cardWidth,
-                    angle: 0.14,
-                  ),
+                top: _lerpCoordinate(
+                  compactOrigin.dy + compactOffsets[index].dy,
+                  expandedLayout.cardOrigin.dy +
+                      expandedLayout.cardOffsets[index].dy,
+                  progress,
                 ),
-              ],
-            ),
-          ),
+                child: _MonthStorySurface(
+                  card: cards[index],
+                  width: cardWidth,
+                  angle: switch (index) {
+                    0 when cards.length == 2 => -0.12,
+                    1 => 0.14,
+                    _ => 0,
+                  },
+                ),
+              ),
+          ],
         );
       },
     );
+  }
+
+  double _lerpCoordinate(double start, double end, double progress) {
+    return start + ((end - start) * progress);
   }
 }
 

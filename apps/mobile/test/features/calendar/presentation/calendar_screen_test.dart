@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -652,7 +654,7 @@ void main() {
   });
 
   testWidgets(
-    'enlarges cardless event artwork across standard expanded and weekly states',
+    'keeps cardless event artwork readable across expanded and weekly states',
     (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
@@ -661,12 +663,12 @@ void main() {
       final events = [
         _calendarEvent(
           id: 'event-without-art',
-          title: '그림 없는 일정',
+          title: '라 그림 없는 일정',
           date: DateTime(2026, 5, 10),
         ),
         _calendarEvent(
           id: 'event-with-art',
-          title: '그림 있는 일정',
+          title: '가 그림 일정',
           date: DateTime(2026, 5, 10),
           artwork: const CoupleCalendarEventArtwork(
             previewPath: 'event.webp',
@@ -675,11 +677,20 @@ void main() {
         ),
         _calendarEvent(
           id: 'event-with-second-art',
-          title: '두 번째 그림 일정',
+          title: '나 그림 일정',
           date: DateTime(2026, 5, 10),
           artwork: const CoupleCalendarEventArtwork(
             previewPath: 'event-2.webp',
             drawingDataPath: 'event-2.json.gz',
+          ),
+        ),
+        _calendarEvent(
+          id: 'event-with-third-art',
+          title: '다 그림 일정',
+          date: DateTime(2026, 5, 10),
+          artwork: const CoupleCalendarEventArtwork(
+            previewPath: 'event-3.webp',
+            drawingDataPath: 'event-3.json.gz',
           ),
         ),
       ];
@@ -705,7 +716,7 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.text('+2'), findsOneWidget);
+      expect(find.text('+3'), findsOneWidget);
 
       await tester.drag(
         find.byKey(const Key('calendar-scroll-view')),
@@ -716,17 +727,30 @@ void main() {
       final secondArtwork = find.byKey(
         const ValueKey('calendar-event-indicator-event-with-second-art'),
       );
-      expect(secondArtwork, findsOneWidget);
-      final expandedArtworkSize = tester.getSize(firstArtwork);
-      expect(expandedArtworkSize.width, greaterThan(standardArtworkSize.width));
-      expect(
-        expandedArtworkSize.height,
-        greaterThan(standardArtworkSize.height),
+      final thirdArtwork = find.byKey(
+        const ValueKey('calendar-event-indicator-event-with-third-art'),
       );
+      expect(secondArtwork, findsOneWidget);
+      expect(thirdArtwork, findsOneWidget);
+      final expandedArtworkSize = tester.getSize(firstArtwork);
+      expect(expandedArtworkSize.width, greaterThan(18));
+      expect(expandedArtworkSize.height, greaterThan(18));
       expect(tester.getSize(secondArtwork), expandedArtworkSize);
+      expect(tester.getSize(thirdArtwork), expandedArtworkSize);
       expect(
         tester.getCenter(secondArtwork).dy,
         greaterThan(tester.getCenter(firstArtwork).dy),
+      );
+      expect(
+        tester.getCenter(thirdArtwork).dy,
+        greaterThan(tester.getCenter(secondArtwork).dy),
+      );
+      final artworkCell = find.byKey(
+        const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
+      );
+      expect(
+        tester.getRect(thirdArtwork).bottom - tester.getRect(firstArtwork).top,
+        greaterThan(tester.getSize(artworkCell).height * 0.55),
       );
       expect(find.text('+1'), findsOneWidget);
 
@@ -747,157 +771,179 @@ void main() {
         ),
         findsNothing,
       );
+      expect(
+        find.byKey(
+          const ValueKey('calendar-event-indicator-event-with-third-art'),
+        ),
+        findsNothing,
+      );
       final weeklyArtworkSize = tester.getSize(firstArtwork);
       expect(weeklyArtworkSize.width, greaterThan(18));
       expect(weeklyArtworkSize.height, greaterThan(18));
-      expect(find.text('+2'), findsOneWidget);
+      expect(find.text('+3'), findsOneWidget);
     },
   );
 
-  testWidgets(
-    'moves one event artwork from the date header above the expanded card',
-    (tester) async {
-      tester.view.physicalSize = const Size(360, 600);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final repository = FakeStoryLoopReadRepository(
-        monthSummaries: {
-          DateTime(2026, 5): [
-            sampleMonthSummaryDay(
-              coupleDate: DateTime(2026, 5, 5),
-              cardCount: 1,
-              cards: [
-                samplePreviewCard(
-                  id: 'event-day-card',
-                  submittedAt: DateTime(2026, 5, 5, 9),
-                ),
-              ],
-            ),
-            sampleMonthSummaryDay(
-              coupleDate: DateTime(2026, 5, 6),
-              cardCount: 1,
-              cards: [
-                samplePreviewCard(
-                  id: 'card-only-day-card',
-                  submittedAt: DateTime(2026, 5, 6, 9),
-                ),
-              ],
-            ),
-          ],
-        },
-      );
-      final events = [
-        _calendarEvent(
-          id: 'event-day-art-1',
-          title: '가 일정',
-          date: DateTime(2026, 5, 5),
-          artwork: const CoupleCalendarEventArtwork(
-            previewPath: 'event-1.webp',
-            drawingDataPath: 'event-1.json.gz',
+  testWidgets('moves event artwork into the expanded cell behind the card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = FakeStoryLoopReadRepository(
+      monthSummaries: {
+        DateTime(2026, 5): [
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 5),
+            cardCount: 1,
+            cards: [
+              samplePreviewCard(
+                id: 'event-day-card',
+                submittedAt: DateTime(2026, 5, 5, 9),
+              ),
+            ],
           ),
-        ),
-        _calendarEvent(
-          id: 'event-day-art-2',
-          title: '나 일정',
-          date: DateTime(2026, 5, 5),
-          artwork: const CoupleCalendarEventArtwork(
-            previewPath: 'event-2.webp',
-            drawingDataPath: 'event-2.json.gz',
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 6),
+            cardCount: 1,
+            cards: [
+              samplePreviewCard(
+                id: 'card-only-day-card',
+                submittedAt: DateTime(2026, 5, 6, 9),
+              ),
+            ],
           ),
+        ],
+      },
+    );
+    final events = [
+      _calendarEvent(
+        id: 'event-day-art-1',
+        title: '가 일정',
+        date: DateTime(2026, 5, 5),
+        artwork: const CoupleCalendarEventArtwork(
+          previewPath: 'event-1.webp',
+          drawingDataPath: 'event-1.json.gz',
         ),
-        _calendarEvent(
-          id: 'event-only-art',
-          title: '다 일정',
-          date: DateTime(2026, 5, 7),
-          artwork: const CoupleCalendarEventArtwork(
-            previewPath: 'event-only.webp',
-            drawingDataPath: 'event-only.json.gz',
-          ),
+      ),
+      _calendarEvent(
+        id: 'event-day-art-2',
+        title: '나 일정',
+        date: DateTime(2026, 5, 5),
+        artwork: const CoupleCalendarEventArtwork(
+          previewPath: 'event-2.webp',
+          drawingDataPath: 'event-2.json.gz',
         ),
-      ];
+      ),
+      _calendarEvent(
+        id: 'event-day-art-3',
+        title: '다 일정',
+        date: DateTime(2026, 5, 5),
+        artwork: const CoupleCalendarEventArtwork(
+          previewPath: 'event-3.webp',
+          drawingDataPath: 'event-3.json.gz',
+        ),
+      ),
+      _calendarEvent(
+        id: 'event-only-art',
+        title: '라 일정',
+        date: DateTime(2026, 5, 7),
+        artwork: const CoupleCalendarEventArtwork(
+          previewPath: 'event-only.webp',
+          drawingDataPath: 'event-only.json.gz',
+        ),
+      ),
+    ];
 
-      await _pumpCalendar(
-        tester,
-        repository: repository,
-        calendarEvents: events,
-      );
+    await _pumpCalendar(tester, repository: repository, calendarEvents: events);
 
-      final firstArtwork = find.byKey(
-        const ValueKey('calendar-event-indicator-event-day-art-1'),
-      );
-      final card = find.byKey(
-        const ValueKey('calendar-month-story-card-event-day-card'),
-      );
-      final cardOnly = find.byKey(
-        const ValueKey('calendar-month-story-card-card-only-day-card'),
-      );
-      final eventOnlyArtwork = find.byKey(
-        const ValueKey('calendar-event-indicator-event-only-art'),
-      );
-      final mixedCell = find.byKey(
-        const ValueKey('calendar-month-story-cell-single-2026-05-05'),
-      );
-      final dateLabel = find.descendant(
-        of: mixedCell,
-        matching: find.text('5'),
-      );
-      expect(tester.getSize(firstArtwork), const Size.square(18));
-      expect(
-        tester.getSize(eventOnlyArtwork).width,
-        greaterThan(tester.getSize(firstArtwork).width),
-      );
-      expect(
-        tester.getSize(card).width,
-        closeTo(tester.getSize(cardOnly).width, 0.1),
-      );
-      expect(
-        tester.getSize(card).height,
-        closeTo(tester.getSize(cardOnly).height, 0.1),
-      );
-      expect(
-        tester.getCenter(firstArtwork).dy,
-        closeTo(tester.getCenter(dateLabel).dy, 0.5),
-      );
-      expect(
+    final firstArtwork = find.byKey(
+      const ValueKey('calendar-event-indicator-event-day-art-1'),
+    );
+    final card = find.byKey(
+      const ValueKey('calendar-month-story-card-event-day-card'),
+    );
+    final cardOnly = find.byKey(
+      const ValueKey('calendar-month-story-card-card-only-day-card'),
+    );
+    final eventOnlyArtwork = find.byKey(
+      const ValueKey('calendar-event-indicator-event-only-art'),
+    );
+    final mixedCell = find.byKey(
+      const ValueKey('calendar-month-story-cell-single-2026-05-05'),
+    );
+    final dateLabel = find.descendant(of: mixedCell, matching: find.text('5'));
+    final overflowBadge = find.byKey(
+      const ValueKey('calendar-event-overflow-2026-05-05'),
+    );
+    final compactOverflowBadgeHeight = tester.getSize(overflowBadge).height;
+    expect(tester.getSize(firstArtwork), const Size.square(18));
+    expect(
+      tester.getSize(eventOnlyArtwork).width,
+      greaterThan(tester.getSize(firstArtwork).width),
+    );
+    expect(
+      tester.getSize(card).width,
+      closeTo(tester.getSize(cardOnly).width, 0.1),
+    );
+    expect(
+      tester.getSize(card).height,
+      closeTo(tester.getSize(cardOnly).height, 0.1),
+    );
+    expect(
+      tester.getCenter(firstArtwork).dy,
+      closeTo(tester.getCenter(dateLabel).dy, 0.5),
+    );
+    expect(
+      tester.getRect(firstArtwork).bottom,
+      lessThanOrEqualTo(tester.getRect(card).top),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
+
+    final secondArtwork = find.byKey(
+      const ValueKey('calendar-event-indicator-event-day-art-2'),
+    );
+    final thirdArtwork = find.byKey(
+      const ValueKey('calendar-event-indicator-event-day-art-3'),
+    );
+    expect(secondArtwork, findsOneWidget);
+    expect(thirdArtwork, findsNothing);
+    expect(tester.getSize(firstArtwork).width, greaterThan(18));
+    expect(
+      tester.getSize(card).width,
+      lessThanOrEqualTo(tester.getSize(cardOnly).width),
+    );
+    expect(
+      tester.getCenter(firstArtwork).dy,
+      greaterThan(tester.getCenter(dateLabel).dy + 10),
+    );
+    expect(
+      tester.getRect(secondArtwork).overlaps(tester.getRect(firstArtwork)),
+      false,
+    );
+    expect(
+      tester.getCenter(secondArtwork).dx,
+      greaterThan(tester.getCenter(firstArtwork).dx),
+    );
+    expect(
+      math.max(
         tester.getRect(firstArtwork).bottom,
-        lessThanOrEqualTo(tester.getRect(card).top),
-      );
-
-      await tester.drag(
-        find.byKey(const Key('calendar-scroll-view')),
-        const Offset(0, 1000),
-      );
-      await tester.pumpAndSettle();
-
-      final secondArtwork = find.byKey(
-        const ValueKey('calendar-event-indicator-event-day-art-2'),
-      );
-      expect(secondArtwork, findsNothing);
-      expect(tester.getSize(firstArtwork), const Size.square(18));
-      expect(
-        tester.getSize(eventOnlyArtwork).width,
-        greaterThan(tester.getSize(firstArtwork).width),
-      );
-      expect(
-        tester.getSize(card).width,
-        closeTo(tester.getSize(cardOnly).width, 0.1),
-      );
-      expect(
-        tester.getSize(card).height,
-        closeTo(tester.getSize(cardOnly).height, 0.1),
-      );
-      expect(
-        tester.getCenter(firstArtwork).dy,
-        greaterThan(tester.getCenter(dateLabel).dy + 10),
-      );
-      expect(
-        tester.getRect(firstArtwork).bottom,
-        lessThanOrEqualTo(tester.getRect(card).top),
-      );
-      expect(find.text('+1'), findsOneWidget);
-    },
-  );
+        tester.getRect(secondArtwork).bottom,
+      ),
+      lessThanOrEqualTo(tester.getRect(card).top),
+    );
+    expect(
+      tester.getSize(overflowBadge).height,
+      closeTo(compactOverflowBadgeHeight, 0.1),
+    );
+    expect(find.text('+1'), findsOneWidget);
+  });
 
   testWidgets('prioritizes the default anniversary label in a mixed cell', (
     tester,
@@ -1176,11 +1222,12 @@ void main() {
 
       final expandedSingleSize = tester.getSize(singleCard);
       final expandedStackedSize = tester.getSize(firstStackedCard);
-      expect(expandedSingleSize.width, inInclusiveRange(24, 30));
+      expect(expandedSingleSize.width, greaterThan(cardSize.width));
       expect(
-        expandedStackedSize.width,
-        greaterThan(expandedSingleSize.width * 1.2),
+        expandedSingleSize.width,
+        lessThanOrEqualTo(tester.getSize(singleCardCell).width),
       );
+      expect(expandedStackedSize.width, greaterThan(cardSize.width));
       expect(tester.getSize(secondStackedCard), expandedStackedSize);
       final expandedStackCenterGap =
           tester.getCenter(firstStackedCard).dy -
@@ -1200,70 +1247,91 @@ void main() {
     },
   );
 
-  testWidgets(
-    'keeps two expanded cards aligned when the date has event artwork',
-    (tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final repository = FakeStoryLoopReadRepository(
-        monthSummaries: {
-          DateTime(2026, 5): [
-            sampleMonthSummaryDay(
-              coupleDate: DateTime(2026, 5, 6),
-              cardCount: 2,
-              cards: [
-                samplePreviewCard(
-                  id: 'artwork-day-back-card',
-                  submittedAt: DateTime(2026, 5, 6, 9),
-                ),
-                samplePreviewCard(
-                  id: 'artwork-day-front-card',
-                  authorUserId: 'user-b',
-                  submittedAt: DateTime(2026, 5, 6, 9, 20),
-                ),
-              ],
-            ),
-          ],
-        },
-      );
-
-      await _pumpCalendar(
-        tester,
-        repository: repository,
-        calendarEvents: [
-          _calendarEvent(
-            id: 'stacked-day-event-with-artwork',
-            title: 'artwork event',
-            date: DateTime(2026, 5, 6),
-            artwork: const CoupleCalendarEventArtwork(
-              previewPath: 'event.webp',
-              drawingDataPath: 'event.json.gz',
-            ),
+  testWidgets('spreads two mixed cards below event artwork', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = FakeStoryLoopReadRepository(
+      monthSummaries: {
+        DateTime(2026, 5): [
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 6),
+            cardCount: 2,
+            cards: [
+              samplePreviewCard(
+                id: 'artwork-day-back-card',
+                submittedAt: DateTime(2026, 5, 6, 9),
+              ),
+              samplePreviewCard(
+                id: 'artwork-day-front-card',
+                authorUserId: 'user-b',
+                submittedAt: DateTime(2026, 5, 6, 9, 20),
+              ),
+            ],
           ),
         ],
-      );
-      await tester.drag(
-        find.byKey(const Key('calendar-scroll-view')),
-        const Offset(0, 1000),
-      );
-      await tester.pumpAndSettle();
+      },
+    );
 
-      final backCard = find.byKey(
-        const ValueKey('calendar-month-story-card-artwork-day-back-card'),
-      );
-      final frontCard = find.byKey(
-        const ValueKey('calendar-month-story-card-artwork-day-front-card'),
-      );
-      expect(
-        tester.getCenter(backCard).dy,
-        closeTo(tester.getCenter(frontCard).dy, 0.5),
-      );
-    },
-  );
+    await _pumpCalendar(
+      tester,
+      repository: repository,
+      calendarEvents: [
+        _calendarEvent(
+          id: 'stacked-day-event-with-artwork',
+          title: 'artwork event',
+          date: DateTime(2026, 5, 6),
+          artwork: const CoupleCalendarEventArtwork(
+            previewPath: 'event.webp',
+            drawingDataPath: 'event.json.gz',
+          ),
+        ),
+      ],
+    );
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
 
-  testWidgets('caps expanded calendar cards on a tablet viewport', (
+    final backCard = find.byKey(
+      const ValueKey('calendar-month-story-card-artwork-day-back-card'),
+    );
+    final frontCard = find.byKey(
+      const ValueKey('calendar-month-story-card-artwork-day-front-card'),
+    );
+    final artwork = find.byKey(
+      const ValueKey('calendar-event-indicator-stacked-day-event-with-artwork'),
+    );
+    final mixedCell = find.byKey(
+      const ValueKey('calendar-month-story-cell-stacked-2026-05-06'),
+    );
+    final cardCenterGap =
+        tester.getCenter(frontCard).dy - tester.getCenter(backCard).dy;
+    final cardHorizontalCenterGap =
+        tester.getCenter(frontCard).dx - tester.getCenter(backCard).dx;
+    expect(cardCenterGap, greaterThan(tester.getSize(backCard).height * 0.55));
+    expect(
+      cardHorizontalCenterGap,
+      greaterThan(tester.getSize(backCard).width * 0.3),
+    );
+    expect(
+      tester.getRect(artwork).bottom,
+      lessThanOrEqualTo(
+        math.min(tester.getRect(backCard).top, tester.getRect(frontCard).top),
+      ),
+    );
+    expect(
+      math.max(
+        tester.getRect(backCard).bottom,
+        tester.getRect(frontCard).bottom,
+      ),
+      greaterThan(tester.getCenter(mixedCell).dy),
+    );
+  });
+
+  testWidgets('scales expanded calendar cards with a tablet cell', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1024, 1366);
@@ -1321,9 +1389,17 @@ void main() {
     final frontCard = find.byKey(
       const ValueKey('calendar-month-story-card-tablet-front-card'),
     );
-    expect(tester.getSize(card).width, inInclusiveRange(40, 48));
+    expect(tester.getSize(card).width, greaterThan(48));
+    expect(
+      tester.getSize(card).width,
+      lessThanOrEqualTo(tester.getSize(cell).width),
+    );
     expect(tester.getCenter(card).dx, closeTo(tester.getCenter(cell).dx, 0.5));
-    expect(tester.getSize(backCard).width, lessThanOrEqualTo(48));
+    expect(tester.getSize(backCard).width, greaterThan(48));
+    expect(
+      tester.getSize(backCard).width,
+      lessThanOrEqualTo(tester.getSize(cell).width),
+    );
     expect(tester.getSize(frontCard), tester.getSize(backCard));
     expect(
       tester.getCenter(frontCard).dy - tester.getCenter(backCard).dy,

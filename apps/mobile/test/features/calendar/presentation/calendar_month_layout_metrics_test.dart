@@ -29,16 +29,13 @@ void main() {
 
     expect(expanded.rowHeight, greaterThan(standard.rowHeight));
     expect(expanded.expandedContentProgress, 1);
-    expect(expanded.showExpandedEventArtwork, isTrue);
     expect(transitioning.expandedContentProgress, closeTo(0.5, 0.001));
     expect(standard.rowHeight, CalendarMonthLayoutMetrics.standardRowHeight);
     expect(standard.expandedContentProgress, 0);
     expect(standard.collapseProgress, 0);
-    expect(standard.showExpandedEventArtwork, isFalse);
     expect(weekly.rowHeight, CalendarMonthLayoutMetrics.weeklyRowHeight);
     expect(weekly.expandedContentProgress, 0);
     expect(weekly.collapseProgress, 1);
-    expect(weekly.showExpandedEventArtwork, isFalse);
   });
 
   test('clamps adjacent-state thresholds between 48 and 72 pixels', () {
