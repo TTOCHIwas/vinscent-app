@@ -331,12 +331,11 @@ void main() {
     (tester) async {
       await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
       final swipeRegion = find.byKey(const Key('calendar-month-swipe-region'));
-      final gesture = await tester.startGesture(tester.getCenter(swipeRegion));
 
-      await gesture.moveBy(const Offset(-120, 0));
-      await gesture.up();
+      await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
       await tester.pump();
 
+      expect(find.text('2026년 06월'), findsOneWidget);
       expect(find.byType(AppHorizontalPageTransition), findsWidgets);
       expect(find.byType(CalendarDetailDateHeader), findsNWidgets(2));
       expect(find.text('월'), findsOneWidget);

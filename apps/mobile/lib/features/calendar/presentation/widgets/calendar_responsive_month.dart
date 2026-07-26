@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/date/app_date_policy.dart';
+import '../../../../core/presentation/widgets/app_horizontal_page_transition.dart';
 import '../../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -21,6 +22,10 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
+    required this.calendarTransitionKey,
+    required this.calendarTransitionDirection,
+    required this.detailTransitionKey,
+    required this.detailTransitionDirection,
     required this.onDatePressed,
     required this.metrics,
     required this.onSwipeRight,
@@ -33,6 +38,10 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
+  final Object calendarTransitionKey;
+  final AppHorizontalPageDirection calendarTransitionDirection;
+  final Object detailTransitionKey;
+  final AppHorizontalPageDirection detailTransitionDirection;
   final ValueChanged<DateTime> onDatePressed;
   final CalendarMonthLayoutMetrics metrics;
   final VoidCallback onSwipeRight;
@@ -78,6 +87,10 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         visibleMonth: visibleMonth,
         relationshipStartDate: relationshipStartDate,
         selectedDate: selectedDate,
+        calendarTransitionKey: calendarTransitionKey,
+        calendarTransitionDirection: calendarTransitionDirection,
+        detailTransitionKey: detailTransitionKey,
+        detailTransitionDirection: detailTransitionDirection,
         summaryByDate: summaryByDate,
         eventsByDate: eventsByDate,
         anniversaryLabels: anniversaryLabels,
@@ -98,6 +111,10 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
+    required this.calendarTransitionKey,
+    required this.calendarTransitionDirection,
+    required this.detailTransitionKey,
+    required this.detailTransitionDirection,
     required this.summaryByDate,
     required this.eventsByDate,
     required this.anniversaryLabels,
@@ -119,6 +136,10 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
+  final Object calendarTransitionKey;
+  final AppHorizontalPageDirection calendarTransitionDirection;
+  final Object detailTransitionKey;
+  final AppHorizontalPageDirection detailTransitionDirection;
   final Map<DateTime, StoryLoopMonthSummaryDay> summaryByDate;
   final Map<DateTime, List<CoupleCalendarEvent>> eventsByDate;
   final Map<DateTime, String> anniversaryLabels;
@@ -177,12 +198,17 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
               key: const Key('calendar-detail-date-swipe-region'),
               onSwipeRight: onDetailSwipeRight,
               onSwipeLeft: onDetailSwipeLeft,
-              child: selectedDate == null
-                  ? const SizedBox.expand()
-                  : CalendarDetailDateHeader(
-                      date: selectedDate!,
-                      height: detailHeaderExtent,
-                    ),
+              child: AppHorizontalPageTransition(
+                key: const Key('calendar-detail-header-transition'),
+                transitionKey: detailTransitionKey,
+                direction: detailTransitionDirection,
+                child: selectedDate == null
+                    ? const SizedBox.expand()
+                    : CalendarDetailDateHeader(
+                        date: selectedDate!,
+                        height: detailHeaderExtent,
+                      ),
+              ),
             ),
           ),
         ],
@@ -222,44 +248,49 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                 right: 0,
                 top: gridTop,
                 bottom: 0,
-                child: ClipRect(
-                  child: Stack(
-                    children: [
-                      for (var index = 0; index < days.length; index++)
-                        Positioned(
-                          left:
-                              values.horizontalPadding +
-                              ((index % DateTime.daysPerWeek) *
-                                  (cellWidth + _columnGap)),
-                          top:
-                              ((index ~/ DateTime.daysPerWeek) * rowPitch) +
-                              gridTranslation,
-                          width: cellWidth,
-                          height: values.rowHeight,
-                          child: _DateCell(
-                            date: days[index],
-                            isCurrentMonth: _isSameMonth(
-                              days[index],
-                              visibleMonth,
+                child: AppHorizontalPageTransition(
+                  key: const Key('calendar-date-grid-transition'),
+                  transitionKey: calendarTransitionKey,
+                  direction: calendarTransitionDirection,
+                  child: ClipRect(
+                    child: Stack(
+                      children: [
+                        for (var index = 0; index < days.length; index++)
+                          Positioned(
+                            left:
+                                values.horizontalPadding +
+                                ((index % DateTime.daysPerWeek) *
+                                    (cellWidth + _columnGap)),
+                            top:
+                                ((index ~/ DateTime.daysPerWeek) * rowPitch) +
+                                gridTranslation,
+                            width: cellWidth,
+                            height: values.rowHeight,
+                            child: _DateCell(
+                              date: days[index],
+                              isCurrentMonth: _isSameMonth(
+                                days[index],
+                                visibleMonth,
+                              ),
+                              isEnabled: _isEnabled(days[index]),
+                              isSelected:
+                                  selectedDate != null &&
+                                  _isSameDate(days[index], selectedDate!),
+                              summary:
+                                  summaryByDate[calendarDateOnly(days[index])],
+                              events:
+                                  eventsByDate[calendarDateOnly(days[index])] ??
+                                  const [],
+                              anniversaryLabel:
+                                  anniversaryLabels[calendarDateOnly(
+                                    days[index],
+                                  )],
+                              eventIndicatorLimit: values.eventIndicatorLimit,
+                              onPressed: () => onDatePressed(days[index]),
                             ),
-                            isEnabled: _isEnabled(days[index]),
-                            isSelected:
-                                selectedDate != null &&
-                                _isSameDate(days[index], selectedDate!),
-                            summary:
-                                summaryByDate[calendarDateOnly(days[index])],
-                            events:
-                                eventsByDate[calendarDateOnly(days[index])] ??
-                                const [],
-                            anniversaryLabel:
-                                anniversaryLabels[calendarDateOnly(
-                                  days[index],
-                                )],
-                            eventIndicatorLimit: values.eventIndicatorLimit,
-                            onPressed: () => onDatePressed(days[index]),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -305,7 +336,12 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         anniversaryLabels != oldDelegate.anniversaryLabels ||
         metrics.expandedExtent != oldDelegate.metrics.expandedExtent ||
         metrics.standardExtent != oldDelegate.metrics.standardExtent ||
-        detailHeaderExtent != oldDelegate.detailHeaderExtent;
+        detailHeaderExtent != oldDelegate.detailHeaderExtent ||
+        calendarTransitionKey != oldDelegate.calendarTransitionKey ||
+        calendarTransitionDirection !=
+            oldDelegate.calendarTransitionDirection ||
+        detailTransitionKey != oldDelegate.detailTransitionKey ||
+        detailTransitionDirection != oldDelegate.detailTransitionDirection;
   }
 }
 

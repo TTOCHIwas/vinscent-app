@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/date/app_date_policy.dart';
+import '../../../core/presentation/widgets/app_horizontal_page_transition.dart';
 import '../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -45,6 +46,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   bool _didSetInitialScrollPosition = false;
   bool _isMetricAdjustmentScheduled = false;
   int _gestureGeneration = 0;
+  int _calendarPageRevision = 0;
+  int _detailPageRevision = 0;
+  AppHorizontalPageDirection _calendarPageDirection =
+      AppHorizontalPageDirection.next;
+  AppHorizontalPageDirection _detailPageDirection =
+      AppHorizontalPageDirection.next;
 
   @override
   void initState() {
@@ -165,6 +172,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           visibleMonth: _visibleMonth,
                           relationshipStartDate: couple.relationshipStartDate!,
                           selectedDate: _selectedDate,
+                          calendarTransitionKey: _calendarPageRevision,
+                          calendarTransitionDirection: _calendarPageDirection,
+                          detailTransitionKey: _detailPageRevision,
+                          detailTransitionDirection: _detailPageDirection,
                           onDatePressed: _handleDatePressed,
                           metrics: metrics,
                           onSwipeRight: () => _moveCalendarPeriod(
@@ -214,12 +225,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 constraints: BoxConstraints(
                                   minHeight: detailMinHeight,
                                 ),
-                                child: _CalendarDetail(
-                                  selectedDate: _selectedDate,
-                                  today: today,
-                                  relationshipStartDate:
-                                      couple.relationshipStartDate!,
-                                  canEdit: couple.canEditSharedData,
+                                child: AppHorizontalPageTransition(
+                                  key: const Key(
+                                    'calendar-detail-content-transition',
+                                  ),
+                                  transitionKey: _detailPageRevision,
+                                  direction: _detailPageDirection,
+                                  child: _CalendarDetail(
+                                    selectedDate: _selectedDate,
+                                    today: today,
+                                    relationshipStartDate:
+                                        couple.relationshipStartDate!,
+                                    canEdit: couple.canEditSharedData,
+                                  ),
                                 ),
                               ),
                             ),
@@ -276,7 +294,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       relationshipStartDate: relationshipStartDate,
     );
     if (targetDate != null) {
-      _selectDate(targetDate);
+      _selectDate(
+        targetDate,
+        direction: _directionForOffset(monthOffset),
+        animateCalendar: true,
+        animateDetail: true,
+      );
     }
   }
 
@@ -294,7 +317,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       relationshipStartDate: relationshipStartDate,
     );
     if (targetDate != null) {
-      _selectDate(targetDate);
+      _selectDate(
+        targetDate,
+        direction: _directionForOffset(weekOffset),
+        animateCalendar: true,
+        animateDetail: true,
+      );
     }
   }
 
@@ -313,12 +341,30 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       relationshipStartDate: relationshipStartDate,
     );
     if (targetDate != null) {
-      _selectDate(targetDate);
+      _selectDate(
+        targetDate,
+        direction: _directionForOffset(dayOffset),
+        animateCalendar: !_isSameMonth(targetDate, selectedDate),
+        animateDetail: true,
+      );
     }
   }
 
-  void _selectDate(DateTime date) {
+  void _selectDate(
+    DateTime date, {
+    required AppHorizontalPageDirection direction,
+    required bool animateCalendar,
+    required bool animateDetail,
+  }) {
     setState(() {
+      if (animateCalendar) {
+        _calendarPageRevision += 1;
+        _calendarPageDirection = direction;
+      }
+      if (animateDetail) {
+        _detailPageRevision += 1;
+        _detailPageDirection = direction;
+      }
       _selectedDate = date;
       _visibleMonth = _monthOnly(date);
     });
@@ -716,4 +762,14 @@ bool _isSameOptionalDate(DateTime? left, DateTime? right) {
   return left.year == right.year &&
       left.month == right.month &&
       left.day == right.day;
+}
+
+bool _isSameMonth(DateTime left, DateTime right) {
+  return left.year == right.year && left.month == right.month;
+}
+
+AppHorizontalPageDirection _directionForOffset(int offset) {
+  return offset < 0
+      ? AppHorizontalPageDirection.previous
+      : AppHorizontalPageDirection.next;
 }

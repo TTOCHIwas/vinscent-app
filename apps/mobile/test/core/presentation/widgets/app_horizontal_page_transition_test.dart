@@ -12,6 +12,9 @@ void main() {
       direction: AppHorizontalPageDirection.next,
       childKey: const Key('first-page'),
     );
+    final initialLeft = tester
+        .getTopLeft(find.byKey(const Key('first-page')))
+        .dx;
 
     await _pumpTransition(
       tester,
@@ -23,11 +26,11 @@ void main() {
 
     expect(
       tester.getTopLeft(find.byKey(const Key('first-page'))).dx,
-      lessThan(0),
+      lessThan(initialLeft),
     );
     expect(
       tester.getTopLeft(find.byKey(const Key('second-page'))).dx,
-      greaterThan(0),
+      greaterThan(initialLeft),
     );
 
     await tester.pumpAndSettle();
@@ -45,6 +48,9 @@ void main() {
       direction: AppHorizontalPageDirection.previous,
       childKey: const Key('second-page'),
     );
+    final initialLeft = tester
+        .getTopLeft(find.byKey(const Key('second-page')))
+        .dx;
 
     await _pumpTransition(
       tester,
@@ -56,11 +62,11 @@ void main() {
 
     expect(
       tester.getTopLeft(find.byKey(const Key('second-page'))).dx,
-      greaterThan(0),
+      greaterThan(initialLeft),
     );
     expect(
       tester.getTopLeft(find.byKey(const Key('first-page'))).dx,
-      lessThan(0),
+      lessThan(initialLeft),
     );
   });
 
