@@ -41,33 +41,35 @@ class CalendarEventDetailSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Center(child: _SheetHandle()),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CalendarEventArtwork(event: event, size: 64),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: WordBoundaryText(
-                      event.title,
-                      style: AppTextStyles.sectionTitle,
+            Padding(
+              key: ValueKey('calendar-event-detail-sheet-header-${event.id}'),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CalendarEventArtwork(event: event, size: 64),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: WordBoundaryText(
+                        event.title,
+                        style: AppTextStyles.sectionTitle,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  key: ValueKey(
-                    'calendar-event-detail-sheet-close-${event.id}',
+                  IconButton(
+                    key: ValueKey(
+                      'calendar-event-detail-sheet-close-${event.id}',
+                    ),
+                    tooltip: '닫기',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
                   ),
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
+                ],
+              ),
             ),
             if (memo != null && memo.isNotEmpty) ...[
-              const SizedBox(height: 24),
               Text(
                 '메모',
                 style: AppTextStyles.homeCharacterLabel.copyWith(
@@ -76,8 +78,8 @@ class CalendarEventDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               WordBoundaryText(memo, style: AppTextStyles.homeBody),
+              const SizedBox(height: 24),
             ],
-            const SizedBox(height: 24),
             Column(
               children: [
                 _EventMetadata(
