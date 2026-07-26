@@ -58,10 +58,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(BottomSheet), findsOneWidget);
-    final headerPadding = tester.widget<Padding>(
-      find.byKey(const Key('calendar-event-detail-sheet-header-event-1')),
-    );
-    expect(headerPadding.padding, const EdgeInsets.symmetric(vertical: 16));
     expect(find.text('숙소 예약 번호를 다시 확인하기'), findsOneWidget);
     expect(find.text('매년 반복'), findsOneWidget);
     expect(find.textContaining('1일 전'), findsOneWidget);

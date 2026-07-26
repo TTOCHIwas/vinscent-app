@@ -154,6 +154,11 @@ void main() {
       tester.getTopLeft(headerTexts.first).dx,
       closeTo(tester.getTopLeft(scrollView).dx + 20, 0.5),
     );
+    final headerRect = tester.getRect(header);
+    final topGap = tester.getRect(headerTexts.first).top - headerRect.top;
+    final bottomGap =
+        headerRect.bottom - tester.getRect(headerTexts.last).bottom;
+    expect(topGap, closeTo(bottomGap, 0.5));
   });
 
   testWidgets('keeps the calendar readable on a narrow enlarged-text screen', (
