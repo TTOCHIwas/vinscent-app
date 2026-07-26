@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/presentation/widgets/app_horizontal_page_transition.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_theme.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
@@ -322,6 +323,28 @@ void main() {
         DateTime(2026, 6, 2),
         DateTime(2026, 5, 2),
       ]);
+    },
+  );
+
+  testWidgets(
+    'slides horizontal calendar changes while keeping weekdays fixed',
+    (tester) async {
+      await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+      final swipeRegion = find.byKey(const Key('calendar-month-swipe-region'));
+      final gesture = await tester.startGesture(tester.getCenter(swipeRegion));
+
+      await gesture.moveBy(const Offset(-120, 0));
+      await gesture.up();
+      await tester.pump();
+
+      expect(find.byType(AppHorizontalPageTransition), findsWidgets);
+      expect(find.byType(CalendarDetailDateHeader), findsNWidgets(2));
+      expect(find.text('월'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarDetailDateHeader), findsOneWidget);
+      expect(find.text('2026년 06월'), findsOneWidget);
     },
   );
 
