@@ -486,6 +486,39 @@ void main() {
     expect(controller.offset, closeTo(metrics.weeklyScrollOffset, 0.5));
   });
 
+  testWidgets('resists small drags before snapping the calendar state', (
+    tester,
+  ) async {
+    await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+    final scrollFinder = find.byKey(const Key('calendar-scroll-view'));
+    final scrollView = tester.widget<CustomScrollView>(scrollFinder);
+    final controller = scrollView.controller!;
+    final startOffset = controller.offset;
+
+    final gesture = await tester.startGesture(tester.getCenter(scrollFinder));
+    await gesture.moveBy(const Offset(0, -24));
+    await tester.pump();
+    final recognizedStartOffset = controller.offset;
+
+    await gesture.moveBy(const Offset(0, -16));
+    await tester.pump();
+
+    expect(controller.offset, closeTo(recognizedStartOffset, 0.5));
+
+    await gesture.moveBy(const Offset(0, -24));
+    await tester.pump();
+
+    expect(
+      controller.offset - recognizedStartOffset,
+      inInclusiveRange(5, 8),
+    );
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(controller.offset, closeTo(startOffset, 0.5));
+  });
+
   testWidgets('does not rebuild the full screen while snapping states', (
     tester,
   ) async {
