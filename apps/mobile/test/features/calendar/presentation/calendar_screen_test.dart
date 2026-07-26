@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,7 @@ import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_month_layout_metrics.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
+import 'package:vinscent/features/calendar/presentation/widgets/calendar_detail_date_header.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -131,6 +133,27 @@ void main() {
         ),
       ).map((decoration) => decoration.color),
       contains(AppColors.actionPrimary),
+    );
+  });
+
+  testWidgets('fills and left aligns the selected date header', (tester) async {
+    await _pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+
+    final scrollView = find.byKey(const Key('calendar-scroll-view'));
+    final header = find.byType(CalendarDetailDateHeader);
+    final headerTexts = find.descendant(
+      of: header,
+      matching: find.byType(Text),
+    );
+
+    expect(tester.getSize(header).width, tester.getSize(scrollView).width);
+    expect(
+      tester.getTopLeft(headerTexts.first).dx,
+      closeTo(tester.getTopLeft(scrollView).dx + 20, 0.5),
     );
   });
 
@@ -463,6 +486,38 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(controller.offset, closeTo(metrics.weeklyScrollOffset, 0.5));
+  });
+
+  testWidgets('does not rebuild the full screen while snapping states', (
+    tester,
+  ) async {
+    await _pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+    final rebuildMessages = <String>[];
+    final previousDebugPrint = debugPrint;
+    final previousDebugPrintRebuildDirtyWidgets =
+        debugPrintRebuildDirtyWidgets;
+    addTearDown(() {
+      debugPrint = previousDebugPrint;
+      debugPrintRebuildDirtyWidgets =
+          previousDebugPrintRebuildDirtyWidgets;
+    });
+    debugPrint = (message, {wrapWidth}) {
+      if (message != null) {
+        rebuildMessages.add(message);
+      }
+    };
+    debugPrintRebuildDirtyWidgets = true;
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      rebuildMessages.where((message) => message.contains('CalendarScreen')),
+      isEmpty,
+    );
   });
 
   testWidgets(
