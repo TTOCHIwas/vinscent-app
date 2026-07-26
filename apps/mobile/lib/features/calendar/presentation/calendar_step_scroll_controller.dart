@@ -45,6 +45,10 @@ class _CalendarStepScrollPosition extends ScrollPositionWithSingleContext {
 
   @override
   void applyUserOffset(double delta) {
-    super.applyUserOffset(motionController.applyUserOffset(delta));
+    final adjustedDelta = motionController.applyUserOffset(delta);
+    if (adjustedDelta == 0) {
+      return;
+    }
+    super.applyUserOffset(adjustedDelta);
   }
 }

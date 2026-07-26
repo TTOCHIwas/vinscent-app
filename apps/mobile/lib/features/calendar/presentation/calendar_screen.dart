@@ -446,9 +446,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   Future<void> _completeCalendarGesture(_CalendarGestureSession gesture) async {
     final metrics = _layoutMetrics;
-    if (metrics == null ||
-        !_scrollController.hasClients ||
-        gesture.generation != _gestureGeneration) {
+    if (gesture.generation != _gestureGeneration) {
+      return;
+    }
+    if (metrics == null || !_scrollController.hasClients) {
+      _clearCalendarGesture();
       return;
     }
 
