@@ -22,7 +22,7 @@ void main() {
       'https://example.com/character.png',
       'https://example.com/recording.m4a',
       'https://example.com/card.png',
-      'https://example.com/event.png',
+      'https://example.com/event.webp',
     ]);
     expect(store.refreshedTargets, [
       HomeWidgetStorage.characterTarget,
@@ -61,7 +61,11 @@ void main() {
       ..values[HomeWidgetStorage.recordingAudioVersionKey] = 'recording-v1'
       ..seedFile(HomeWidgetStorage.partnerCardImagePathKey, _pngBytes)
       ..values[HomeWidgetStorage.partnerCardImageVersionKey] = 'card-v1'
-      ..seedFile(HomeWidgetStorage.calendarEventArtworkPathKey, _pngBytes)
+      ..seedFile(
+        HomeWidgetStorage.calendarEventArtworkPathKey,
+        _webpBytes,
+        extension: 'webp',
+      )
       ..values[HomeWidgetStorage.calendarEventArtworkVersionKey] = 'event-v1'
       ..values[HomeWidgetStorage.calendarEventTitleKey] = '한강 산책'
       ..values[HomeWidgetStorage.calendarEventAdditionalCountKey] = '2';
@@ -128,6 +132,14 @@ void main() {
     expect(store.values[HomeWidgetStorage.characterImageVersionKey], isNull);
   });
 
+  test('validates WebP widget assets by their container signature', () {
+    expect(isValidHomeWidgetAsset(_webpBytes, 'webp'), isTrue);
+    expect(
+      isValidHomeWidgetAsset(Uint8List.fromList([1, 2, 3]), 'webp'),
+      isFalse,
+    );
+  });
+
   test(
     'preserves an existing asset after a recoverable source failure',
     () async {
@@ -160,7 +172,11 @@ void main() {
     'preserves an existing calendar summary after a source failure',
     () async {
       final store = _FakeHomeWidgetStore()
-        ..seedFile(HomeWidgetStorage.calendarEventArtworkPathKey, _pngBytes)
+        ..seedFile(
+          HomeWidgetStorage.calendarEventArtworkPathKey,
+          _webpBytes,
+          extension: 'webp',
+        )
         ..values[HomeWidgetStorage.calendarEventArtworkVersionKey] = 'event-v1'
         ..values[HomeWidgetStorage.calendarEventTitleKey] = '한강 산책'
         ..values[HomeWidgetStorage.calendarEventAdditionalCountKey] = '2';
@@ -222,9 +238,9 @@ const _cardAsset = HomeWidgetRemoteAsset(
   extension: 'png',
 );
 const _eventAsset = HomeWidgetRemoteAsset(
-  url: 'https://example.com/event.png',
+  url: 'https://example.com/event.webp',
   version: 'event-v1',
-  extension: 'png',
+  extension: 'webp',
 );
 
 final _pngBytes = Uint8List.fromList([
@@ -255,6 +271,20 @@ final _m4aBytes = Uint8List.fromList([
   0x41,
   0x20,
 ]);
+final _webpBytes = Uint8List.fromList([
+  0x52,
+  0x49,
+  0x46,
+  0x46,
+  0x04,
+  0x00,
+  0x00,
+  0x00,
+  0x57,
+  0x45,
+  0x42,
+  0x50,
+]);
 
 class _FakeHomeWidgetAssetDownloader implements HomeWidgetAssetDownloader {
   _FakeHomeWidgetAssetDownloader({Map<String, Uint8List>? responses})
@@ -264,7 +294,7 @@ class _FakeHomeWidgetAssetDownloader implements HomeWidgetAssetDownloader {
             'https://example.com/character.png': _pngBytes,
             'https://example.com/recording.m4a': _m4aBytes,
             'https://example.com/card.png': _pngBytes,
-            'https://example.com/event.png': _pngBytes,
+            'https://example.com/event.webp': _webpBytes,
           };
 
   final Map<String, Uint8List> responses;
@@ -286,9 +316,10 @@ class _FakeHomeWidgetStore implements HomeWidgetStore {
   final files = <String, Uint8List>{};
   final refreshedTargets = <HomeWidgetTarget>[];
 
-  void seedFile(String key, Uint8List bytes) {
-    final extension = key.contains('audio') ? 'm4a' : 'png';
-    final path = '/seed/$key.$extension';
+  void seedFile(String key, Uint8List bytes, {String? extension}) {
+    final resolvedExtension =
+        extension ?? (key.contains('audio') ? 'm4a' : 'png');
+    final path = '/seed/$key.$resolvedExtension';
     values[key] = path;
     files[path] = bytes;
   }

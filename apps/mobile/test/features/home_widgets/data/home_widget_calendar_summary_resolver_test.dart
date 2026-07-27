@@ -14,7 +14,7 @@ void main() {
           id: 'art',
           title: '한강 산책',
           date: date,
-          artworkUrl: 'https://example.com/event.png',
+          artworkUrl: 'https://example.com/event.webp',
         ),
       ],
       anniversaryLabels: const ['100일'],
@@ -23,7 +23,8 @@ void main() {
     expect(summary, isNotNull);
     expect(summary!.title, '한강 산책');
     expect(summary.additionalCount, 2);
-    expect(summary.artwork?.url, 'https://example.com/event.png');
+    expect(summary.artwork?.url, 'https://example.com/event.webp');
+    expect(summary.artwork?.extension, 'webp');
     expect(summary.artwork?.version, contains('art:3:'));
   });
 
@@ -77,7 +78,7 @@ CoupleCalendarEvent _event({
     artwork: artworkUrl == null
         ? null
         : CoupleCalendarEventArtwork(
-            previewPath: '$id/preview.png',
+            previewPath: '$id/preview.webp',
             drawingDataPath: '$id/drawing.json',
             previewUrl: artworkUrl,
           ),
