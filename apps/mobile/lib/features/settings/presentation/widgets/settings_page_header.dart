@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/presentation/widgets/app_back_button.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/app_page_header.dart';
 
 class SettingsPageHeader extends StatelessWidget {
   const SettingsPageHeader({
@@ -18,26 +16,10 @@ class SettingsPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppBackButton(
-                onPressed: onBackPressed,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(title, style: AppTextStyles.shellTitle),
-            if (action case final action?)
-              Align(alignment: Alignment.centerRight, child: action),
-          ],
-        ),
-      ),
+    return AppPageHeader(
+      title: title,
+      onBackPressed: onBackPressed,
+      action: action,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
+import 'package:vinscent/core/presentation/widgets/app_page_header.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
 import 'package:vinscent/features/shell/presentation/app_shell.dart';
@@ -61,6 +62,13 @@ void main() {
     final backButtonLeft = tester.getTopLeft(find.byType(AppBackButton)).dx;
 
     expect(backButtonLeft - headerLeft, 20);
+    expect(
+      find.descendant(
+        of: find.byType(SettingsPageHeader),
+        matching: find.byType(AppPageHeader),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('설정 항목은 섹션별 그룹 목록으로 이어서 보여준다', (tester) async {

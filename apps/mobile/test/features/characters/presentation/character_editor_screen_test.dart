@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
+import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
+import 'package:vinscent/core/presentation/widgets/app_page_header.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_failure.dart';
@@ -231,6 +233,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('settings'), findsOneWidget);
+  });
+
+  testWidgets('uses the shared page header and standard back icon size', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+
+    expect(find.byType(AppPageHeader), findsOneWidget);
+    expect(
+      tester.widget<AppBackButton>(find.byType(AppBackButton)).iconSize,
+      28,
+    );
   });
 
   testWidgets('returns to the page that opened the editor', (tester) async {
