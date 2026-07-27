@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vinscent/core/presentation/widgets/app_horizontal_page_transition.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_theme.dart';
+import 'package:vinscent/features/calendar/application/couple_default_calendar_event_resolver.dart';
 import 'package:vinscent/features/calendar/data/calendar_cell_preview_mode.dart';
 import 'package:vinscent/features/calendar/data/couple_member_birthday.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_month_layout_metrics.dart';
@@ -228,6 +230,14 @@ void main() {
 
     expect(anniversaryLabel, findsOneWidget);
     expect(
+      find.descendant(
+        of: header,
+        matching: find.byIcon(LucideIcons.calendarHeart),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.widget<Text>(anniversaryLabel).style?.fontSize, 20);
+    expect(
       find.byKey(const Key('calendar-detail-default-event-labels')),
       findsOneWidget,
     );
@@ -254,6 +264,10 @@ void main() {
       find.descendant(of: header, matching: find.text('내 생일')),
       findsOneWidget,
     );
+    expect(
+      find.descendant(of: header, matching: find.byIcon(LucideIcons.cakeSlice)),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('calendar-event-detail-list')), findsNothing);
   });
 
@@ -277,13 +291,24 @@ void main() {
         home: Scaffold(
           body: Builder(
             builder: (context) {
-              const labels = ['1주년', '400일'];
+              final events = [
+                CoupleDefaultCalendarEventOccurrence(
+                  kind: CoupleDefaultCalendarEventKind.relationshipAnniversary,
+                  label: '1주년',
+                  date: DateTime(2026, 5, 10),
+                ),
+                CoupleDefaultCalendarEventOccurrence(
+                  kind: CoupleDefaultCalendarEventKind.relationshipAnniversary,
+                  label: '400일',
+                  date: DateTime(2026, 5, 10),
+                ),
+              ];
               return CalendarDetailDateHeader(
                 date: DateTime(2026, 5, 10),
-                defaultEventLabels: labels,
+                defaultEvents: events,
                 height: CalendarDetailDateHeader.resolveExtent(
                   context,
-                  defaultEventLabels: labels,
+                  defaultEvents: events,
                 ),
               );
             },

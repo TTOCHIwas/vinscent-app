@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +24,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
-    required this.selectedDefaultEventLabels,
+    required this.selectedDefaultEvents,
     required this.memberBirthdays,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
@@ -44,7 +43,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
-  final List<String> selectedDefaultEventLabels;
+  final List<CoupleDefaultCalendarEventOccurrence> selectedDefaultEvents;
   final List<CoupleMemberBirthday> memberBirthdays;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
@@ -103,7 +102,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         visibleMonth: visibleMonth,
         relationshipStartDate: relationshipStartDate,
         selectedDate: selectedDate,
-        selectedDefaultEventLabels: selectedDefaultEventLabels,
+        selectedDefaultEvents: selectedDefaultEvents,
         calendarTransitionKey: calendarTransitionKey,
         calendarTransitionDirection: calendarTransitionDirection,
         detailTransitionKey: detailTransitionKey,
@@ -128,7 +127,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
-    required this.selectedDefaultEventLabels,
+    required this.selectedDefaultEvents,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
     required this.detailTransitionKey,
@@ -154,7 +153,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
-  final List<String> selectedDefaultEventLabels;
+  final List<CoupleDefaultCalendarEventOccurrence> selectedDefaultEvents;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
   final Object detailTransitionKey;
@@ -225,7 +224,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                     ? const SizedBox.expand()
                     : CalendarDetailDateHeader(
                         date: selectedDate!,
-                        defaultEventLabels: selectedDefaultEventLabels,
+                        defaultEvents: selectedDefaultEvents,
                         height: detailHeaderExtent,
                       ),
               ),
@@ -356,9 +355,9 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     return visibleMonth != oldDelegate.visibleMonth ||
         relationshipStartDate != oldDelegate.relationshipStartDate ||
         selectedDate != oldDelegate.selectedDate ||
-        !listEquals(
-          selectedDefaultEventLabels,
-          oldDelegate.selectedDefaultEventLabels,
+        !_sameDefaultEvents(
+          selectedDefaultEvents,
+          oldDelegate.selectedDefaultEvents,
         ) ||
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
@@ -372,6 +371,25 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         detailTransitionKey != oldDelegate.detailTransitionKey ||
         detailTransitionDirection != oldDelegate.detailTransitionDirection;
   }
+}
+
+bool _sameDefaultEvents(
+  List<CoupleDefaultCalendarEventOccurrence> left,
+  List<CoupleDefaultCalendarEventOccurrence> right,
+) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index++) {
+    final leftEvent = left[index];
+    final rightEvent = right[index];
+    if (leftEvent.kind != rightEvent.kind ||
+        leftEvent.label != rightEvent.label ||
+        leftEvent.date != rightEvent.date) {
+      return false;
+    }
+  }
+  return true;
 }
 
 class _WeekdayCell extends StatelessWidget {

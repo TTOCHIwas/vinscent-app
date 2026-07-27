@@ -144,16 +144,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           couple.relationshipStartDate!,
         );
         final selectedDate = _selectedDate;
-        final selectedDefaultEventLabels = selectedDate == null
-            ? const <String>[]
-            : const CoupleDefaultCalendarEventResolver()
-                  .resolve(
-                    relationshipStartDate: couple.relationshipStartDate!,
-                    date: selectedDate,
-                    birthdays: memberBirthdays,
-                  )
-                  .map((occurrence) => occurrence.label)
-                  .toList(growable: false);
+        final selectedDefaultEvents = selectedDate == null
+            ? const <CoupleDefaultCalendarEventOccurrence>[]
+            : const CoupleDefaultCalendarEventResolver().resolve(
+                relationshipStartDate: couple.relationshipStartDate!,
+                date: selectedDate,
+                birthdays: memberBirthdays,
+              );
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext();
 
@@ -195,7 +192,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   final detailHeaderExtent =
                       CalendarDetailDateHeader.resolveExtent(
                         context,
-                        defaultEventLabels: selectedDefaultEventLabels,
+                        defaultEvents: selectedDefaultEvents,
                       );
                   _adoptLayoutMetrics(metrics);
                   _scheduleInitialScrollPosition(metrics);
@@ -221,8 +218,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           visibleMonth: _visibleMonth,
                           relationshipStartDate: couple.relationshipStartDate!,
                           selectedDate: _selectedDate,
-                          selectedDefaultEventLabels:
-                              selectedDefaultEventLabels,
+                          selectedDefaultEvents: selectedDefaultEvents,
                           memberBirthdays: memberBirthdays,
                           previewMode: previewMode,
                           calendarTransitionKey: _calendarPageRevision,
@@ -288,7 +284,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                     selectedDate: _selectedDate,
                                     today: today,
                                     hasDefaultEvent:
-                                        selectedDefaultEventLabels.isNotEmpty,
+                                        selectedDefaultEvents.isNotEmpty,
                                     canEdit: couple.canEditSharedData,
                                   ),
                                 ),

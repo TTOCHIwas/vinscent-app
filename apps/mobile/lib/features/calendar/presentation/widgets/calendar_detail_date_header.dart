@@ -1,15 +1,17 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../application/couple_default_calendar_event_resolver.dart';
 
 class CalendarDetailDateHeader extends StatelessWidget {
   const CalendarDetailDateHeader({
     super.key,
     required this.date,
-    this.defaultEventLabels = const [],
+    this.defaultEvents = const [],
     this.height = baseExtent,
   });
 
@@ -18,7 +20,8 @@ class CalendarDetailDateHeader extends StatelessWidget {
   static const _verticalPadding = 10.0;
   static const _dateLineGap = 4.0;
   static const _sectionGap = 8.0;
-  static const _defaultEventRunSpacing = 2.0;
+  static const _defaultEventRunSpacing = 4.0;
+  static const _defaultEventIconSize = 22.0;
   static const _stackedLayoutWidth = 220.0;
   static const _weekdayLabels = [
     '월요일',
@@ -31,25 +34,28 @@ class CalendarDetailDateHeader extends StatelessWidget {
   ];
 
   final DateTime date;
-  final List<String> defaultEventLabels;
+  final List<CoupleDefaultCalendarEventOccurrence> defaultEvents;
   final double height;
 
   static double resolveExtent(
     BuildContext context, {
-    List<String> defaultEventLabels = const [],
+    List<CoupleDefaultCalendarEventOccurrence> defaultEvents = const [],
   }) {
     final textScaler = MediaQuery.textScalerOf(context);
     final dateContentHeight =
         (textScaler.scale(24) * 1.2) +
         _dateLineGap +
         (textScaler.scale(14) * 1.4);
-    final defaultEventContentHeight = defaultEventLabels.isEmpty
+    final defaultEventLineHeight = math.max(
+      textScaler.scale(20) * 1.4,
+      _defaultEventIconSize,
+    );
+    final defaultEventContentHeight = defaultEvents.isEmpty
         ? 0.0
-        : (textScaler.scale(16) * 1.4 * defaultEventLabels.length) +
-              (_defaultEventRunSpacing * (defaultEventLabels.length - 1));
+        : (defaultEventLineHeight * defaultEvents.length) +
+              (_defaultEventRunSpacing * (defaultEvents.length - 1));
     final bodyHeight =
-        defaultEventLabels.isNotEmpty &&
-            _usesStackedLayout(context, defaultEventLabels)
+        defaultEvents.isNotEmpty && _usesStackedLayout(context, defaultEvents)
         ? dateContentHeight + _sectionGap + defaultEventContentHeight
         : math.max(dateContentHeight, defaultEventContentHeight);
     final contentHeight = (_verticalPadding * 2) + bodyHeight;
@@ -59,8 +65,8 @@ class CalendarDetailDateHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateBlock = _DateBlock(date: date);
-    final defaultEventBlock = _DefaultEventLabels(labels: defaultEventLabels);
-    final usesStackedLayout = _usesStackedLayout(context, defaultEventLabels);
+    final defaultEventBlock = _DefaultEvents(events: defaultEvents);
+    final usesStackedLayout = _usesStackedLayout(context, defaultEvents);
 
     return SizedBox(
       width: double.infinity,
@@ -87,7 +93,7 @@ class CalendarDetailDateHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   dateBlock,
-                  if (defaultEventLabels.isNotEmpty) ...[
+                  if (defaultEvents.isNotEmpty) ...[
                     const SizedBox(width: 16),
                     Expanded(
                       child: Align(
@@ -104,9 +110,9 @@ class CalendarDetailDateHeader extends StatelessWidget {
 
   static bool _usesStackedLayout(
     BuildContext context,
-    List<String> defaultEventLabels,
+    List<CoupleDefaultCalendarEventOccurrence> defaultEvents,
   ) {
-    if (defaultEventLabels.isEmpty) {
+    if (defaultEvents.isEmpty) {
       return false;
     }
     final textScale = MediaQuery.textScalerOf(context).scale(1);
@@ -145,24 +151,49 @@ class _DateBlock extends StatelessWidget {
   }
 }
 
-class _DefaultEventLabels extends StatelessWidget {
-  const _DefaultEventLabels({required this.labels});
+class _DefaultEvents extends StatelessWidget {
+  const _DefaultEvents({required this.events});
 
-  final List<String> labels;
+  final List<CoupleDefaultCalendarEventOccurrence> events;
 
   @override
   Widget build(BuildContext context) {
-    if (labels.isEmpty) {
+    if (events.isEmpty) {
       return const SizedBox.shrink();
     }
     return Wrap(
       key: const Key('calendar-detail-default-event-labels'),
       alignment: WrapAlignment.end,
-      spacing: 8,
+      spacing: 12,
       runSpacing: CalendarDetailDateHeader._defaultEventRunSpacing,
+      children: [for (final event in events) _DefaultEvent(event: event)],
+    );
+  }
+}
+
+class _DefaultEvent extends StatelessWidget {
+  const _DefaultEvent({required this.event});
+
+  final CoupleDefaultCalendarEventOccurrence event;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (event.kind) {
+      CoupleDefaultCalendarEventKind.relationshipAnniversary =>
+        LucideIcons.calendarHeart,
+      CoupleDefaultCalendarEventKind.birthday => LucideIcons.cakeSlice,
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        for (final label in labels)
-          Text(label, style: AppTextStyles.homeBodyMedium),
+        Icon(
+          icon,
+          size: CalendarDetailDateHeader._defaultEventIconSize,
+          color: AppColors.textPrimary,
+        ),
+        const SizedBox(width: 6),
+        Text(event.label, style: AppTextStyles.pageTitle),
       ],
     );
   }
