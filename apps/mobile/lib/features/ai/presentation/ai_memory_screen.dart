@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -29,12 +30,7 @@ class AiMemoryScreen extends ConsumerWidget {
         context.go('/ai');
       },
       child: dashboard.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (error, stackTrace) => _MemoryLoadError(
           message: aiLearningErrorMessage(error),
           onRetry: () => ref.invalidate(aiLearningControllerProvider),
@@ -59,7 +55,7 @@ class _ConfirmedMemoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (memories.isEmpty) {
       return RefreshIndicator(
-        color: AppColors.textPrimary,
+        color: AppColors.brandAccent,
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -97,7 +93,7 @@ class _ConfirmedMemoryList extends StatelessWidget {
         .toList(growable: false);
 
     return RefreshIndicator(
-      color: AppColors.textPrimary,
+      color: AppColors.brandAccent,
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),

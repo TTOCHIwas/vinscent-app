@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_keyboard_accessory.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/ai_direct_question_controller.dart';
 import '../application/ai_learning_controller.dart';
@@ -47,9 +47,7 @@ class _AiScreenState extends ConsumerState<AiScreen> {
         ? ref.watch(aiDirectQuestionControllerProvider).value?.remainingCount
         : null;
     final content = dashboard.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.textPrimary),
-      ),
+      loading: () => const Center(child: AppLoadingIndicator()),
       error: (error, stackTrace) => _AiErrorView(
         message: aiLearningErrorMessage(error),
         onRetry: () => ref.invalidate(aiLearningControllerProvider),

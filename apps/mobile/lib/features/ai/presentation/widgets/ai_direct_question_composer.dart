@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../../core/presentation/widgets/app_keyboard_accessory.dart';
+import '../../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -26,12 +27,7 @@ class AiDirectQuestionComposer extends ConsumerWidget {
     return history.when(
       loading: () => const SizedBox(
         height: 180,
-        child: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        child: Center(child: AppLoadingIndicator(strokeWidth: 2)),
       ),
       error: (error, stackTrace) => _ComposerError(
         message: aiLearningErrorMessage(error),
@@ -106,7 +102,7 @@ class _DirectQuestionComposerContent extends StatelessWidget {
       builder: (context, constraints) {
         return TextFieldTapRegion(
           child: RefreshIndicator(
-            color: AppColors.textPrimary,
+            color: AppColors.brandAccent,
             onRefresh: onRefresh,
             child: ListView(
               key: const Key('ai-direct-question-conversation'),

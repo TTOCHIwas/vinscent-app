@@ -8,6 +8,7 @@ import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -457,7 +458,7 @@ class _RecordingSlotArtworkEditorScreenState
 
   Widget _buildCanvas(bool isReadOnly) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      return const Center(child: AppLoadingIndicator(strokeWidth: 2));
     }
     if (_loadFailed) {
       return Center(

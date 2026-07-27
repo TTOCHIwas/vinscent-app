@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_keyboard_accessory.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_focused_question_controller.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
@@ -19,6 +20,12 @@ void main() {
     expect(find.byKey(const Key('ai-focused-couple-progress')), findsOneWidget);
     expect(find.byKey(const Key('ai-focused-answer-input')), findsOneWidget);
     expect(find.byKey(const Key('ai-focused-submit')), findsNothing);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .color,
+      AppColors.brandAccent,
+    );
   });
 
   testWidgets('wraps a long question at a large system text size', (

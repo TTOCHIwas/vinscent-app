@@ -20,6 +20,10 @@ void main() {
     expect(find.text('AI 학습 시작하기'), findsOneWidget);
     expect(find.byKey(const Key('ai-learning-progress')), findsOneWidget);
     expect(
+      tester.widget<RefreshIndicator>(find.byType(RefreshIndicator)).color,
+      AppColors.brandAccent,
+    );
+    expect(
       tester
           .widget<LinearProgressIndicator>(
             find.descendant(

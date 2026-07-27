@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -92,12 +93,11 @@ class _RecordingLibraryScreenState
         context.go('/home');
       },
       child: coupleAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (_, _) => const _LibraryMessage(title: '녹음 보관함을 불러오지 못했어요.'),
         data: (couple) => overviewAsync.when(
           loading: () =>
-              const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              const Center(child: AppLoadingIndicator(strokeWidth: 2)),
           error: (_, _) => _LibraryMessage(
             title: '녹음 정보를 불러오지 못했어요.',
             actionLabel: '다시 시도',

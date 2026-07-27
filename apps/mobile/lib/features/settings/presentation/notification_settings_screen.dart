@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/assets/app_icons.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../notifications/data/notification_permission_repository.dart';
@@ -58,7 +59,7 @@ class _NotificationSettingsScreenState
       onBackPressed: () => context.pop(),
       child: preferences.when(
         loading: () =>
-            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (error, stackTrace) => _SettingsLoadError(
           onRetry: () => ref
               .read(notificationPreferencesControllerProvider.notifier)

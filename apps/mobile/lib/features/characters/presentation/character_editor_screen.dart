@@ -12,6 +12,7 @@ import '../../../core/drawing/app_drawing_painter.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/presentation/widgets/app_page_header.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -479,7 +480,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                                   clipBehavior: Clip.antiAlias,
                                   child: _isLoadingDrawing
                                       ? const Center(
-                                          child: CircularProgressIndicator(
+                                          child: AppLoadingIndicator(
                                             strokeWidth: 2,
                                           ),
                                         )

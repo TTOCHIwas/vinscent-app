@@ -7,6 +7,7 @@ import '../../../core/date/app_date_policy.dart';
 import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
@@ -263,7 +264,7 @@ class _CoupleCalendarEventEditorScreenState
                 ),
         ),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+            ? const Center(child: AppLoadingIndicator(strokeWidth: 2))
             : _loadFailed
             ? _LoadFailure(onRetry: _loadEvent)
             : _step == _CalendarEventEditorStep.basic

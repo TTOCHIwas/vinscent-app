@@ -38,7 +38,7 @@ class AiLearningDashboardView extends ConsumerWidget {
     }
 
     return RefreshIndicator(
-      color: AppColors.textPrimary,
+      color: AppColors.brandAccent,
       onRefresh: () =>
           ref.read(aiLearningControllerProvider.notifier).refresh(),
       child: ListView(

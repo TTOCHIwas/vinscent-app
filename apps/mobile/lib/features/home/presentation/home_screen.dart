@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../app/application/app_foreground_session_controller.dart';
@@ -122,7 +123,7 @@ class _CoupleStatus extends ConsumerWidget {
           alignment: Alignment.centerRight,
           child: SizedBox.square(
             dimension: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppLoadingIndicator(strokeWidth: 2),
           ),
         ),
       ),
@@ -211,7 +212,7 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
       loading: () => const Center(
         child: SizedBox.square(
           dimension: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: AppLoadingIndicator(strokeWidth: 2),
         ),
       ),
       error: (error, stackTrace) => Center(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../core/presentation/widgets/app_keyboard_accessory.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -76,12 +77,7 @@ class _AiFocusedQuestionScreenState
         context.go('/ai');
       },
       child: flow.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (error, stackTrace) => _FocusedQuestionError(
           message: aiLearningErrorMessage(error),
           onRetry: () => ref.invalidate(aiFocusedQuestionControllerProvider),
@@ -255,7 +251,7 @@ class _FocusedQuestionProgressView extends StatelessWidget {
           child: LinearProgressIndicator(
             minHeight: 6,
             value: progress.myCompletionRatio,
-            color: AppColors.textPrimary,
+            color: AppColors.brandAccent,
             backgroundColor: AppColors.settingsIconBackground,
           ),
         ),
@@ -318,10 +314,7 @@ class _FocusedQuestionHistory extends StatelessWidget {
         child: Center(
           child: SizedBox.square(
             dimension: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppColors.textMuted,
-            ),
+            child: AppLoadingIndicator(strokeWidth: 2),
           ),
         ),
       ),

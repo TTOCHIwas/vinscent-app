@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/presentation/widgets/app_horizontal_page_transition.dart';
 import '../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -834,7 +835,7 @@ class _CenteredLoader extends StatelessWidget {
     return const Center(
       child: SizedBox.square(
         dimension: 24,
-        child: CircularProgressIndicator(strokeWidth: 2),
+        child: AppLoadingIndicator(strokeWidth: 2),
       ),
     );
   }

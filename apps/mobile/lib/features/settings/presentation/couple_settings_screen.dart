@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/assets/app_icons.dart';
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -30,7 +31,7 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
       onBackPressed: () => context.pop(),
       child: couple.when(
         loading: () =>
-            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (error, stackTrace) => _CoupleSettingsMessage(
           title: '커플 정보를 불러오지 못했어요.',
           message: '잠시 후 다시 시도해 주세요.',

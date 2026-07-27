@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../couple/application/couple_controller.dart';
@@ -46,7 +47,7 @@ class BootScreen extends ConsumerWidget {
                     ],
                   ),
                 )
-              : const CircularProgressIndicator(),
+              : const AppLoadingIndicator(),
         ),
       ),
     );
