@@ -240,10 +240,7 @@ Future<void> _pump(
 }) async {
   final composerController = AiDirectQuestionComposerController();
   addTearDown(composerController.dispose);
-  final composer = AiDirectQuestionComposer(
-    controller: composerController,
-    onHistoryPressed: () {},
-  );
+  final composer = AiDirectQuestionComposer(controller: composerController);
 
   await tester.pumpWidget(
     ProviderScope(

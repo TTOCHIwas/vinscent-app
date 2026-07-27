@@ -10,6 +10,7 @@ import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/ai_learning_controller.dart';
 import '../data/ai_learning_dashboard.dart';
 import 'widgets/ai_learning_error_message.dart';
+import 'widgets/ai_learning_stop_button.dart';
 
 class AiMemoryScreen extends ConsumerWidget {
   const AiMemoryScreen({super.key});
@@ -62,14 +63,19 @@ class _ConfirmedMemoryList extends StatelessWidget {
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
-            Center(
+          children: [
+            const SizedBox(height: 120),
+            const Center(
               child: WordBoundaryText(
                 '아직 확인된 기억은 없어',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.homeBody,
               ),
+            ),
+            const SizedBox(height: 40),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: AiLearningStopButton(key: Key('ai-learning-stop')),
             ),
           ],
         ),
@@ -108,6 +114,11 @@ class _ConfirmedMemoryList extends StatelessWidget {
               const SizedBox(height: 28),
             _MemoryGroup(title: '둘에 대해', memories: coupleMemories),
           ],
+          const SizedBox(height: 36),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: AiLearningStopButton(key: Key('ai-learning-stop')),
+          ),
         ],
       ),
     );

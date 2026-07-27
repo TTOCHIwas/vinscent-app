@@ -17,6 +17,7 @@ class AiDirectQuestionExchange extends StatelessWidget {
     required this.onApproveFollowUp,
     required this.onDismissFollowUp,
     this.isLatest = false,
+    this.usePrimaryAnswerLayout = false,
   });
 
   final AiDirectQuestionEntry entry;
@@ -24,6 +25,7 @@ class AiDirectQuestionExchange extends StatelessWidget {
   final Future<void> Function(String questionId) onApproveFollowUp;
   final Future<void> Function(String questionId) onDismissFollowUp;
   final bool isLatest;
+  final bool usePrimaryAnswerLayout;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,7 @@ class AiDirectQuestionExchange extends StatelessWidget {
         AiDirectQuestionAnswerView(
           entry: entry,
           isLatest: isLatest,
+          usePrimaryLayout: usePrimaryAnswerLayout,
           onApproveFollowUp: onApproveFollowUp,
           onDismissFollowUp: onDismissFollowUp,
         ),
@@ -173,39 +176,72 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
     required this.onApproveFollowUp,
     required this.onDismissFollowUp,
     this.isLatest = false,
+    this.usePrimaryLayout = false,
   });
 
   final AiDirectQuestionEntry entry;
   final Future<void> Function(String questionId) onApproveFollowUp;
   final Future<void> Function(String questionId) onDismissFollowUp;
   final bool isLatest;
+  final bool usePrimaryLayout;
 
   @override
   Widget build(BuildContext context) {
     return switch (entry.status) {
       AiDirectQuestionStatus.queued ||
-      AiDirectQuestionStatus.processing => AiCharacterThinkingSpeechRow(
+      AiDirectQuestionStatus.processing => _pendingAnswer(),
+      AiDirectQuestionStatus.completed => _completedAnswer(),
+      AiDirectQuestionStatus.failed => _failedAnswer(),
+    };
+  }
+
+  Widget _pendingAnswer() {
+    final thinkingDotsKey = Key(
+      isLatest
+          ? 'ai-direct-answer-thinking-dots'
+          : 'ai-direct-answer-thinking-dots-${entry.id}',
+    );
+    if (usePrimaryLayout) {
+      return AiCharacterThinkingSpeechColumn(
         key: Key('ai-direct-answer-pending-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
-        thinkingDotsKey: Key(
-          isLatest
-              ? 'ai-direct-answer-thinking-dots'
-              : 'ai-direct-answer-thinking-dots-${entry.id}',
-        ),
-        characterSize: 76,
+        thinkingDotsKey: thinkingDotsKey,
+        characterSize: 156,
         message: '답을 생각하는 중',
-      ),
-      AiDirectQuestionStatus.completed => _completedAnswer(),
-      AiDirectQuestionStatus.failed => AiCharacterSpeechRow(
+      );
+    }
+
+    return AiCharacterThinkingSpeechRow(
+      key: Key('ai-direct-answer-pending-${entry.id}'),
+      characterKey: Key('ai-direct-answer-character-${entry.id}'),
+      bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
+      thinkingDotsKey: thinkingDotsKey,
+      characterSize: 76,
+      message: '답을 생각하는 중',
+    );
+  }
+
+  Widget _failedAnswer() {
+    if (usePrimaryLayout) {
+      return AiCharacterSpeechColumn(
         key: Key('ai-direct-answer-failed-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
-        characterSize: 76,
+        characterSize: 156,
         speechText: '이번에는 답을 만들지 못했어',
         textAlign: TextAlign.center,
-      ),
-    };
+      );
+    }
+
+    return AiCharacterSpeechRow(
+      key: Key('ai-direct-answer-failed-${entry.id}'),
+      characterKey: Key('ai-direct-answer-character-${entry.id}'),
+      bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
+      characterSize: 76,
+      speechText: '이번에는 답을 만들지 못했어',
+      textAlign: TextAlign.center,
+    );
   }
 
   Widget _completedAnswer() {
@@ -216,8 +252,20 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         questionId: entry.id,
         answerText: entry.answerText!,
         followUp: followUp,
+        usePrimaryLayout: usePrimaryLayout,
         onApprove: () => onApproveFollowUp(entry.id),
         onDismiss: () => onDismissFollowUp(entry.id),
+      );
+    }
+
+    if (usePrimaryLayout) {
+      return AiCharacterSpeechColumn(
+        key: Key('ai-direct-answer-completed-${entry.id}'),
+        characterKey: Key('ai-direct-answer-character-${entry.id}'),
+        bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
+        characterSize: 156,
+        speechText: entry.answerText!,
+        semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
       );
     }
 

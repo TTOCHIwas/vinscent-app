@@ -15,6 +15,7 @@ class AiDirectQuestionFollowUpView extends StatefulWidget {
     required this.followUp,
     required this.onApprove,
     required this.onDismiss,
+    this.usePrimaryLayout = false,
   });
 
   final String questionId;
@@ -22,6 +23,7 @@ class AiDirectQuestionFollowUpView extends StatefulWidget {
   final AiDirectQuestionFollowUp followUp;
   final Future<void> Function() onApprove;
   final Future<void> Function() onDismiss;
+  final bool usePrimaryLayout;
 
   @override
   State<AiDirectQuestionFollowUpView> createState() =>
@@ -40,53 +42,64 @@ class _AiDirectQuestionFollowUpViewState
         ? '${widget.answerText} 둘이 답할 질문으로 알아볼까? ${followUp.questionText}'
         : '${widget.answerText} 둘이 답할 질문으로 남겨뒀어 ${followUp.questionText}';
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        WordBoundaryText(
+          widget.answerText,
+          style: AppTextStyles.homeQuestionBubble,
+        ),
+        const SizedBox(height: 14),
+        WordBoundaryText(
+          isPending ? '둘이 답할 질문으로 알아볼까?' : '둘이 답할 질문으로 남겨뒀어',
+          style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: 6),
+        WordBoundaryText(
+          followUp.questionText,
+          key: Key('ai-direct-follow-up-question-${widget.questionId}'),
+          style: AppTextStyles.homeBodyMedium,
+        ),
+        if (isPending) ...[
+          const SizedBox(height: 16),
+          AppActionButton(
+            key: Key('ai-direct-follow-up-approve-${widget.questionId}'),
+            label: '질문으로 남기기',
+            enabled: _activeAction == null,
+            isLoading: _activeAction == _FollowUpAction.approve,
+            onPressed: () => _submit(_FollowUpAction.approve, widget.onApprove),
+          ),
+          const SizedBox(height: 10),
+          AppActionButton(
+            key: Key('ai-direct-follow-up-dismiss-${widget.questionId}'),
+            label: '괜찮아',
+            enabled: _activeAction == null,
+            isLoading: _activeAction == _FollowUpAction.dismiss,
+            isSecondary: true,
+            onPressed: () => _submit(_FollowUpAction.dismiss, widget.onDismiss),
+          ),
+        ],
+      ],
+    );
+
+    if (widget.usePrimaryLayout) {
+      return AiCharacterSpeechColumn.custom(
+        key: Key('ai-direct-answer-completed-${widget.questionId}'),
+        characterKey: Key('ai-direct-answer-character-${widget.questionId}'),
+        bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
+        characterSize: 156,
+        semanticLabel: semanticLabel,
+        child: content,
+      );
+    }
+
     return AiCharacterSpeechRow.custom(
       key: Key('ai-direct-answer-completed-${widget.questionId}'),
       characterKey: Key('ai-direct-answer-character-${widget.questionId}'),
       bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
       characterSize: 76,
       semanticLabel: semanticLabel,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          WordBoundaryText(
-            widget.answerText,
-            style: AppTextStyles.homeQuestionBubble,
-          ),
-          const SizedBox(height: 14),
-          WordBoundaryText(
-            isPending ? '둘이 답할 질문으로 알아볼까?' : '둘이 답할 질문으로 남겨뒀어',
-            style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 6),
-          WordBoundaryText(
-            followUp.questionText,
-            key: Key('ai-direct-follow-up-question-${widget.questionId}'),
-            style: AppTextStyles.homeBodyMedium,
-          ),
-          if (isPending) ...[
-            const SizedBox(height: 16),
-            AppActionButton(
-              key: Key('ai-direct-follow-up-approve-${widget.questionId}'),
-              label: '질문으로 남기기',
-              enabled: _activeAction == null,
-              isLoading: _activeAction == _FollowUpAction.approve,
-              onPressed: () =>
-                  _submit(_FollowUpAction.approve, widget.onApprove),
-            ),
-            const SizedBox(height: 10),
-            AppActionButton(
-              key: Key('ai-direct-follow-up-dismiss-${widget.questionId}'),
-              label: '괜찮아',
-              enabled: _activeAction == null,
-              isLoading: _activeAction == _FollowUpAction.dismiss,
-              isSecondary: true,
-              onPressed: () =>
-                  _submit(_FollowUpAction.dismiss, widget.onDismiss),
-            ),
-          ],
-        ],
-      ),
+      child: content,
     );
   }
 

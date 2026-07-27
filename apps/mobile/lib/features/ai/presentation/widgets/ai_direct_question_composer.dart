@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +5,6 @@ import '../../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/theme/app_typography.dart';
 import '../../application/ai_direct_question_controller.dart';
 import '../../data/ai_direct_question_history.dart';
 import '../../data/ai_direct_question_repository.dart';
@@ -17,14 +14,9 @@ import 'ai_direct_question_entry_view.dart';
 import 'ai_learning_error_message.dart';
 
 class AiDirectQuestionComposer extends ConsumerWidget {
-  const AiDirectQuestionComposer({
-    super.key,
-    required this.controller,
-    required this.onHistoryPressed,
-  });
+  const AiDirectQuestionComposer({super.key, required this.controller});
 
   final AiDirectQuestionComposerController controller;
-  final VoidCallback onHistoryPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,7 +41,8 @@ class AiDirectQuestionComposer extends ConsumerWidget {
         builder: (context, child) => _DirectQuestionComposerContent(
           history: value,
           controller: controller,
-          onHistoryPressed: onHistoryPressed,
+          onRefresh: () =>
+              ref.read(aiDirectQuestionControllerProvider.notifier).refresh(),
           onApproveFollowUp: (questionId) => _decideFollowUp(
             context,
             ref,
@@ -92,164 +85,101 @@ class _DirectQuestionComposerContent extends StatelessWidget {
   const _DirectQuestionComposerContent({
     required this.history,
     required this.controller,
-    required this.onHistoryPressed,
+    required this.onRefresh,
     required this.onApproveFollowUp,
     required this.onDismissFollowUp,
   });
 
   final AiDirectQuestionHistory history;
   final AiDirectQuestionComposerController controller;
-  final VoidCallback onHistoryPressed;
+  final RefreshCallback onRefresh;
   final Future<void> Function(String questionId) onApproveFollowUp;
   final Future<void> Function(String questionId) onDismissFollowUp;
 
   @override
   Widget build(BuildContext context) {
     final latestQuestion = history.questions.firstOrNull;
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Column(
       key: const Key('ai-direct-question-composer'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _DirectQuestionGuide(remainingCount: history.remainingCount),
-        const SizedBox(height: 20),
-        AppAnswerInput(
-          key: const Key('ai-direct-question-input'),
-          controller: controller.questionController,
-          focusNode: controller.focusNode,
-          enabled: !controller.isSubmitting && history.remainingCount > 0,
-          minLines: 3,
-          maxLines: 5,
-          maxLength: AiDirectQuestionComposerController.maxQuestionLength,
-          hintText: history.remainingCount > 0
-              ? '예: 상대는 지친 날에 어떤 걸 좋아할까?'
-              : '오늘 질문은 모두 사용했어',
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return RefreshIndicator(
+                color: AppColors.textPrimary,
+                onRefresh: onRefresh,
+                child: ListView(
+                  key: const Key('ai-direct-question-conversation'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: (constraints.maxHeight - 40).clamp(
+                          0,
+                          double.infinity,
+                        ),
+                      ),
+                      child: latestQuestion == null
+                          ? const Center(child: _DirectQuestionGuide())
+                          : Align(
+                              alignment: Alignment.topCenter,
+                              child: AiDirectQuestionExchange(
+                                entry: latestQuestion,
+                                questionBubbleKey: const Key(
+                                  'ai-direct-latest-question-bubble',
+                                ),
+                                isLatest: true,
+                                usePrimaryAnswerLayout: true,
+                                onApproveFollowUp: onApproveFollowUp,
+                                onDismissFollowUp: onDismissFollowUp,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-        if (latestQuestion != null) ...[
-          const SizedBox(height: 28),
-          Text(
-            '최근 답변',
-            style: AppTypography.withFontSize(AppTextStyles.homeBodyMedium, 18),
-          ),
-          const SizedBox(height: 12),
-          AiDirectQuestionExchange(
-            entry: latestQuestion,
-            questionBubbleKey: const Key('ai-direct-latest-question-bubble'),
-            isLatest: true,
-            onApproveFollowUp: onApproveFollowUp,
-            onDismissFollowUp: onDismissFollowUp,
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              key: const Key('ai-direct-history-open'),
-              onPressed: onHistoryPressed,
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.chevron_right_rounded, size: 20),
-              label: const Text('지난 질문 보기'),
+        ColoredBox(
+          color: AppColors.background,
+          child: Padding(
+            key: const Key('ai-direct-question-input-dock'),
+            padding: EdgeInsets.fromLTRB(24, 8, 24, keyboardVisible ? 8 : 104),
+            child: AppAnswerInput(
+              key: const Key('ai-direct-question-input'),
+              controller: controller.questionController,
+              focusNode: controller.focusNode,
+              enabled: !controller.isSubmitting && history.remainingCount > 0,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: AiDirectQuestionComposerController.maxQuestionLength,
+              hintText: history.remainingCount > 0
+                  ? '예: 상대는 지친 날에 어떤 걸 좋아할까?'
+                  : '오늘 질문은 모두 사용했어',
             ),
           ),
-        ],
+        ),
       ],
     );
   }
 }
 
-class _DirectQuestionGuide extends StatefulWidget {
-  const _DirectQuestionGuide({required this.remainingCount});
-
-  final int remainingCount;
-
-  @override
-  State<_DirectQuestionGuide> createState() => _DirectQuestionGuideState();
-}
-
-class _DirectQuestionGuideState extends State<_DirectQuestionGuide> {
-  static const _switchInterval = Duration(seconds: 4);
-  static const _transitionDuration = Duration(milliseconds: 250);
-
-  Timer? _messageTimer;
-  var _messageIndex = 0;
-  bool? _tickerEnabled;
-
-  List<String> get _messages => widget.remainingCount > 0
-      ? ['나에게 궁금한 걸 물어봐!', '오늘 ${widget.remainingCount}번 더 물어볼 수 있어']
-      : const ['오늘 질문은 모두 사용했어! 내일 다시 물어봐!'];
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final tickerEnabled = TickerMode.valuesOf(context).enabled;
-    if (_tickerEnabled == tickerEnabled) {
-      return;
-    }
-
-    _tickerEnabled = tickerEnabled;
-    _restartTimer();
-  }
-
-  @override
-  void didUpdateWidget(covariant _DirectQuestionGuide oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.remainingCount == widget.remainingCount) {
-      return;
-    }
-
-    _messageIndex = 0;
-    _restartTimer();
-  }
-
-  @override
-  void dispose() {
-    _messageTimer?.cancel();
-    super.dispose();
-  }
-
-  void _restartTimer() {
-    _messageTimer?.cancel();
-    if (_tickerEnabled != true || _messages.length < 2) {
-      return;
-    }
-
-    _messageTimer = Timer.periodic(_switchInterval, (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _messageIndex = (_messageIndex + 1) % _messages.length;
-      });
-    });
-  }
+class _DirectQuestionGuide extends StatelessWidget {
+  const _DirectQuestionGuide();
 
   @override
   Widget build(BuildContext context) {
-    final messages = _messages;
-    final message = messages[_messageIndex % messages.length];
-    final isRemainingCount = widget.remainingCount > 0 && _messageIndex == 1;
-
-    return AiCharacterSpeechColumn.custom(
-      characterKey: const Key('ai-direct-guide-character'),
-      bubbleKey: const Key('ai-direct-guide-prompt'),
+    return const AiCharacterSpeechColumn(
+      characterKey: Key('ai-direct-guide-character'),
+      bubbleKey: Key('ai-direct-guide-prompt'),
       characterSize: 156,
-      semanticLabel: message,
-      child: AnimatedSize(
-        duration: _transitionDuration,
-        curve: Curves.easeOutCubic,
-        child: AnimatedSwitcher(
-          duration: _transitionDuration,
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          child: WordBoundaryText(
-            message,
-            key: isRemainingCount
-                ? const Key('ai-direct-remaining-count')
-                : ValueKey(message),
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeQuestionBubble,
-          ),
-        ),
-      ),
+      speechText: '우리 둘에 관해 궁금한 걸 물어봐',
+      textAlign: TextAlign.center,
     );
   }
 }

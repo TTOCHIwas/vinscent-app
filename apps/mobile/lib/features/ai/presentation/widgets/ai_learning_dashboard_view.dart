@@ -12,6 +12,7 @@ import '../../data/ai_learning_dashboard.dart';
 import '../ai_direct_question_composer_controller.dart';
 import 'ai_direct_question_composer.dart';
 import 'ai_learning_error_message.dart';
+import 'ai_learning_stop_button.dart';
 import 'ai_memory_section.dart';
 
 const _memoryReviewBatchSize = 5;
@@ -28,6 +29,14 @@ class AiLearningDashboardView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (dashboard.progress.isEnabled &&
+        dashboard.progress.personalizationStatus ==
+            AiPersonalizationStatus.ready) {
+      return AiDirectQuestionComposer(
+        controller: directQuestionComposerController,
+      );
+    }
+
     return RefreshIndicator(
       color: AppColors.textPrimary,
       onRefresh: () =>
@@ -54,8 +63,6 @@ class AiLearningDashboardView extends ConsumerWidget {
             _PersonalizationSection(
               progress: dashboard.progress,
               memories: dashboard.memories,
-              directQuestionComposerController:
-                  directQuestionComposerController,
               onDecision: (memory, decision) => _runAction(
                 context,
                 () => ref
@@ -145,13 +152,11 @@ class _PersonalizationSection extends StatelessWidget {
   const _PersonalizationSection({
     required this.progress,
     required this.memories,
-    required this.directQuestionComposerController,
     required this.onDecision,
   });
 
   final AiLearningProgress progress;
   final List<AiMemory> memories;
-  final AiDirectQuestionComposerController directQuestionComposerController;
   final AiMemoryDecisionCallback onDecision;
 
   @override
@@ -186,113 +191,8 @@ class _PersonalizationSection extends StatelessWidget {
           ),
         ],
       ),
-      AiPersonalizationStatus.ready => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AiDirectQuestionComposer(
-            controller: directQuestionComposerController,
-            onHistoryPressed: () => context.push('/ai/ask'),
-          ),
-          if (memories.any(
-            (memory) => memory.state == AiMemoryState.active,
-          )) ...[
-            const SizedBox(height: 40),
-            _MemorySummarySection(
-              memoryCount: memories
-                  .where((memory) => memory.state == AiMemoryState.active)
-                  .length,
-            ),
-          ],
-        ],
-      ),
+      AiPersonalizationStatus.ready => const SizedBox.shrink(),
     };
-  }
-}
-
-class _MemorySummarySection extends StatelessWidget {
-  const _MemorySummarySection({required this.memoryCount});
-
-  final int memoryCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DashboardNavigationRow(
-      key: const Key('ai-memory-summary-open'),
-      onTap: () => context.push('/ai/memories'),
-      icon: Icons.bookmark_outline_rounded,
-      title: '기억한 내용',
-      description: '확인한 기억 $memoryCount개',
-    );
-  }
-}
-
-class _DashboardNavigationRow extends StatelessWidget {
-  const _DashboardNavigationRow({
-    super.key,
-    required this.onTap,
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  final VoidCallback onTap;
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.settingsIconBackground,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.withFontSize(
-                        AppTextStyles.homeBodyMedium,
-                        18,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    WordBoundaryText(
-                      description,
-                      style: AppTextStyles.homeBody.copyWith(
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textMuted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -388,17 +288,11 @@ class _ConsentSection extends ConsumerWidget {
       );
     }
 
-    final revokeButton = TextButton(
-      onPressed: () => _showRevokeDialog(context, ref),
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,
-        foregroundColor: AppColors.textMuted,
-      ),
-      child: const Text('AI 학습 중지'),
-    );
-
     if (!showEnabledStatus) {
-      return Align(alignment: Alignment.centerLeft, child: revokeButton);
+      return const Align(
+        alignment: Alignment.centerLeft,
+        child: AiLearningStopButton(),
+      );
     }
 
     return Column(
@@ -409,7 +303,7 @@ class _ConsentSection extends ConsumerWidget {
           label: '함께 학습 중',
         ),
         const SizedBox(height: 8),
-        revokeButton,
+        const AiLearningStopButton(),
       ],
     );
   }
@@ -484,37 +378,6 @@ Future<void> _showConsentSheet(BuildContext context, WidgetRef ref) async {
     () => ref
         .read(aiLearningControllerProvider.notifier)
         .setConsent(granted: true),
-  );
-}
-
-Future<void> _showRevokeDialog(BuildContext context, WidgetRef ref) async {
-  final shouldRevoke = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('AI 학습을 중지할까요?'),
-      content: const Text('새로운 답변 분석과 기억 생성을 중지합니다.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('취소'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('중지'),
-        ),
-      ],
-    ),
-  );
-
-  if (shouldRevoke != true || !context.mounted) {
-    return;
-  }
-
-  await _runAction(
-    context,
-    () => ref
-        .read(aiLearningControllerProvider.notifier)
-        .setConsent(granted: false),
   );
 }
 

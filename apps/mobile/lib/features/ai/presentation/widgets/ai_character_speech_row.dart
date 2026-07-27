@@ -178,20 +178,72 @@ class AiCharacterThinkingSpeechRow extends StatelessWidget {
       bubbleKey: bubbleKey,
       characterSize: characterSize,
       maximumContentWidth: maximumContentWidth,
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          WordBoundaryText(
-            message,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.homeQuestionBubble,
-          ),
-          _ThinkingDots(key: thinkingDotsKey),
-        ],
+      child: _ThinkingSpeechContent(
+        message: message,
+        thinkingDotsKey: thinkingDotsKey,
       ),
+    );
+  }
+}
+
+class AiCharacterThinkingSpeechColumn extends StatelessWidget {
+  const AiCharacterThinkingSpeechColumn({
+    super.key,
+    required this.message,
+    this.characterKey,
+    this.bubbleKey,
+    this.thinkingDotsKey,
+    this.characterSize = 132,
+    this.maximumBubbleWidth = 300,
+  });
+
+  final String message;
+  final Key? characterKey;
+  final Key? bubbleKey;
+  final Key? thinkingDotsKey;
+  final double characterSize;
+  final double maximumBubbleWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return AiCharacterSpeechColumn.custom(
+      semanticLabel: message,
+      characterKey: characterKey,
+      bubbleKey: bubbleKey,
+      characterSize: characterSize,
+      maximumBubbleWidth: maximumBubbleWidth,
+      child: _ThinkingSpeechContent(
+        message: message,
+        thinkingDotsKey: thinkingDotsKey,
+      ),
+    );
+  }
+}
+
+class _ThinkingSpeechContent extends StatelessWidget {
+  const _ThinkingSpeechContent({
+    required this.message,
+    required this.thinkingDotsKey,
+  });
+
+  final String message;
+  final Key? thinkingDotsKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        WordBoundaryText(
+          message,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.homeQuestionBubble,
+        ),
+        _ThinkingDots(key: thinkingDotsKey),
+      ],
     );
   }
 }
