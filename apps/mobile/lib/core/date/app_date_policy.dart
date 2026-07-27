@@ -1,5 +1,6 @@
 const appTimezone = 'Asia/Seoul';
 const appTimezoneOffset = Duration(hours: 9);
+final _calendarDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
 DateTime currentAppDate({DateTime? now}) {
   final utcNow = (now ?? DateTime.now()).toUtc();
@@ -30,6 +31,23 @@ String formatCalendarDate(DateTime value) {
   final month = value.month.toString().padLeft(2, '0');
   final day = value.day.toString().padLeft(2, '0');
   return '$year-$month-$day';
+}
+
+DateTime? parseCalendarDate(String? value) {
+  if (value == null || !_calendarDatePattern.hasMatch(value)) {
+    return null;
+  }
+
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null || formatCalendarDate(parsed) != value) {
+    return null;
+  }
+
+  return calendarDateOnly(parsed);
+}
+
+bool hasInvalidCalendarDate(String? value) {
+  return value != null && parseCalendarDate(value) == null;
 }
 
 Duration durationUntilNextAppDate({DateTime? now}) {

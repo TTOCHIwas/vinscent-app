@@ -73,33 +73,14 @@ class QuestionRouteContext {
   }
 }
 
-final _routeDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-
 DateTime? parseQuestionRouteDate(String? value) {
-  if (value == null) {
-    return null;
-  }
-
-  if (!_routeDatePattern.hasMatch(value)) {
-    return null;
-  }
-
-  final parsed = DateTime.tryParse(value);
-  if (parsed == null) {
-    return null;
-  }
-
-  return calendarDateOnly(parsed);
+  return parseCalendarDate(value);
 }
 
 bool hasInvalidQuestionRouteDate(String? value) {
-  return value != null && parseQuestionRouteDate(value) == null;
+  return hasInvalidCalendarDate(value);
 }
 
 String formatQuestionRouteDate(DateTime date) {
-  final normalizedDate = calendarDateOnly(date);
-  final year = normalizedDate.year.toString().padLeft(4, '0');
-  final month = normalizedDate.month.toString().padLeft(2, '0');
-  final day = normalizedDate.day.toString().padLeft(2, '0');
-  return '$year-$month-$day';
+  return formatCalendarDate(date);
 }

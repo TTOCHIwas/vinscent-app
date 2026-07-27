@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/date/app_date_policy.dart';
 import 'application/app_router_refresh_notifier.dart';
 import 'application/app_route_redirect_policy.dart';
 import '../features/ai/presentation/ai_direct_question_screen.dart';
@@ -192,7 +193,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: '/calendar',
                 name: 'calendar',
                 builder: (context, state) {
-                  final initialDate = parseQuestionRouteDate(
+                  final initialDate = parseCalendarDate(
                     state.uri.queryParameters['date'],
                   );
                   return ShellRootBackScope.secondaryTab(
@@ -204,7 +205,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'event/new',
                     name: 'calendarEventCreate',
                     builder: (context, state) {
-                      final initialDate = parseQuestionRouteDate(
+                      final initialDate = parseCalendarDate(
                         state.uri.queryParameters['date'],
                       );
                       return CoupleCalendarEventEditorScreen.create(
