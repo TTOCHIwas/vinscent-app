@@ -40,6 +40,18 @@ void main() {
     expect(formatCalendarDate(date), '2026-05-03');
   });
 
+  group('parseCalendarDate', () {
+    test('parses a strict calendar route date', () {
+      expect(parseCalendarDate('2026-07-27'), DateTime(2026, 7, 27));
+    });
+
+    test('rejects malformed and impossible dates', () {
+      expect(parseCalendarDate('2026-7-27'), isNull);
+      expect(parseCalendarDate('2026-02-30'), isNull);
+      expect(parseCalendarDate(null), isNull);
+    });
+  });
+
   group('durationUntilNextAppDate', () {
     test('returns the duration until the next KST midnight', () {
       final duration = durationUntilNextAppDate(
