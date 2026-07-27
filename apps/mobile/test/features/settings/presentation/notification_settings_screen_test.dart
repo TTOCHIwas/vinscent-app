@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/notifications/data/notification_permission_repository.dart';
+import 'package:vinscent/features/settings/application/notification_permission_controller.dart';
 import 'package:vinscent/features/settings/application/notification_preferences_controller.dart';
 import 'package:vinscent/features/settings/data/notification_preferences.dart';
 import 'package:vinscent/features/settings/presentation/notification_settings_screen.dart';
 
 void main() {
-  testWidgets('알림 항목을 하나의 그룹 목록으로 보여준다', (tester) async {
+  testWidgets('알림 항목을 사용자 작업에 맞는 그룹으로 나누어 보여준다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           notificationPreferencesControllerProvider.overrideWithBuild(
             (ref, notifier) async => _preferences,
+          ),
+          notificationPermissionControllerProvider.overrideWithBuild(
+            (ref, notifier) async => NotificationPermissionStatus.denied,
           ),
         ],
         child: const MaterialApp(
@@ -21,13 +31,28 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final group = find.byKey(const Key('notification-settings-group'));
-
-    expect(group, findsOneWidget);
     expect(
-      find.descendant(of: group, matching: find.byType(SwitchListTile)),
-      findsNWidgets(8),
+      find.byKey(const Key('notification-settings-card-question-group')),
+      findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('notification-settings-recording-group')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('notification-settings-couple-group')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('notification-settings-character-group')),
+      findsOneWidget,
+    );
+    expect(find.byType(SwitchListTile), findsNWidgets(8));
+    expect(find.text('상대가 카드를 올렸을 때'), findsOneWidget);
+    expect(find.text('새 질문이 도착했을 때'), findsOneWidget);
+    expect(find.text('캐릭터가 전하는 소식'), findsOneWidget);
+    expect(find.text('기기 알림이 꺼져 있어요'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, '설정 열기'), findsOneWidget);
   });
 }
 

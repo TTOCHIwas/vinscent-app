@@ -122,9 +122,11 @@ class SettingsToggleRow extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onChanged,
+    this.subtitle,
   });
 
   final String title;
+  final String? subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -135,8 +137,108 @@ class SettingsToggleRow extends StatelessWidget {
       child: SwitchListTile.adaptive(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         title: Text(title, style: AppTextStyles.homeBody),
+        subtitle: switch (subtitle) {
+          final subtitle? => Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              subtitle,
+              style: AppTextStyles.homeCharacterLabel.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          null => null,
+        },
         value: value,
         onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class SettingsStatusRow extends StatelessWidget {
+  const SettingsStatusRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onActionPressed,
+    this.isActionLoading = false,
+    this.showCompleted = false,
+  });
+
+  final String icon;
+  final String title;
+  final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onActionPressed;
+  final bool isActionLoading;
+  final bool showCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 72),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.settingsIconBackground,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: AppSvgIcon(
+                icon,
+                size: 18,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: AppTextStyles.homeBody),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.homeCharacterLabel.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isActionLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (actionLabel case final actionLabel?)
+              TextButton(
+                onPressed: onActionPressed,
+                child: Text(actionLabel),
+              )
+            else if (showCompleted)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 22,
+                  color: AppColors.textMuted,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
