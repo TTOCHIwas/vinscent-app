@@ -21,6 +21,12 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
     state = state.copyWith(inviteCode: value, clearErrorMessage: true);
   }
 
+  void clearError() {
+    if (state.errorMessage != null) {
+      state = state.copyWith(clearErrorMessage: true);
+    }
+  }
+
   void updateRelationshipStartDate(DateTime value) {
     final date = calendarDateOnly(value);
     final today = ref.read(todayControllerProvider);
@@ -146,8 +152,7 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.alreadyExists => '이미 연결 중인 커플이 있어요.',
       CoupleFailureReason.archivedCoupleExists =>
         '보관 중인 기존 커플 데이터가 있어요. 설정에서 보관 데이터를 정리한 뒤 새 커플을 연결해주세요.',
-      CoupleFailureReason.archivedCoupleRequired =>
-        '보관 중인 커플 데이터를 먼저 확인해주세요.',
+      CoupleFailureReason.archivedCoupleRequired => '보관 중인 커플 데이터를 먼저 확인해주세요.',
       CoupleFailureReason.inviteNotFound => '초대 코드를 찾을 수 없어요.',
       CoupleFailureReason.inviteNotPending => '이미 사용할 수 없는 초대 코드예요.',
       CoupleFailureReason.ownInvite => '내가 만든 초대 코드는 직접 사용할 수 없어요.',
@@ -156,8 +161,7 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.activeCoupleRequired => '커플 연결을 먼저 완료해주세요.',
       CoupleFailureReason.initialSetupOwnerRequired =>
         '초대 코드를 입력한 사용자만 설정할 수 있어요.',
-      CoupleFailureReason.relationshipDateRequired =>
-        '만난 날짜를 먼저 저장해주세요.',
+      CoupleFailureReason.relationshipDateRequired => '만난 날짜를 먼저 저장해주세요.',
       CoupleFailureReason.codeGenerationFailed => '초대 코드 생성에 실패했어요.',
       CoupleFailureReason.configMissing => '앱 설정이 아직 완료되지 않았어요.',
       CoupleFailureReason.unknown => '잠시 후 다시 시도해주세요.',
