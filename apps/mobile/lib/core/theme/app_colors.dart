@@ -14,6 +14,7 @@ abstract final class AppColors {
   static const actionPrimary = Color(0xFF171717);
   static const actionDisabled = Color(0xFFECECEC);
   static const actionDisabledContent = Color(0xFF8D8D8D);
+  static const formSurface = Color(0xFFF4F4F4);
   static const success = Color(0xFF1BBF73);
   static const recordingActive = Color(0xFFE5484D);
   static const divider = Color(0xFF111111);

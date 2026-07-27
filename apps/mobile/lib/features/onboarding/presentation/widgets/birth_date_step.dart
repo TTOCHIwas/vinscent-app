@@ -23,26 +23,37 @@ class BirthDateStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('생일을\n입력해 주세요.', style: AppTextStyles.onboardingTitle),
-        const SizedBox(height: 54),
+        const Text('생일은 언제야?', style: AppTextStyles.onboardingTitle),
+        const SizedBox(height: 8),
+        Text(
+          '생일은 둘의 캘린더에 기본 일정으로 표시돼',
+          style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: 32),
         Semantics(
           button: true,
           label: '생일 선택',
           child: Material(
             color: Colors.transparent,
             child: InkWell(
+              key: const Key('onboarding-birth-date-field'),
               onTap: onTap,
-              child: Container(
-                height: 56,
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.divider)),
+              borderRadius: BorderRadius.circular(6),
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: AppColors.formSurface,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         hasDate ? _formatDate(selected) : 'YYYY-MM-DD',
-                        style: AppTextStyles.onboardingInput.copyWith(
+                        style: AppTextStyles.homeBodyMedium.copyWith(
                           color: hasDate
                               ? AppColors.textPrimary
                               : AppColors.textPlaceholder,
@@ -52,7 +63,7 @@ class BirthDateStep extends StatelessWidget {
                     const AppSvgIcon(
                       AppIcons.calendar,
                       color: AppColors.textPrimary,
-                      size: 22,
+                      size: 20,
                     ),
                   ],
                 ),

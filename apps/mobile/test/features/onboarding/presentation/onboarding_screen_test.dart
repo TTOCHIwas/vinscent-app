@@ -35,7 +35,10 @@ void main() {
     expect(find.text('생일은 언제야?'), findsOneWidget);
     expect(find.text('생일은 둘의 캘린더에 기본 일정으로 표시돼'), findsOneWidget);
     expect(find.text('완료'), findsOneWidget);
-    expect(find.byKey(const Key('onboarding-birth-date-field')), findsOneWidget);
+    expect(
+      find.byKey(const Key('onboarding-birth-date-field')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('does not overflow with large text on a compact screen', (
