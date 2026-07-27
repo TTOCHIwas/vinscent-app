@@ -6,9 +6,9 @@ class HomeWidgetCalendarSummaryResolver {
 
   HomeWidgetCalendarSummary? resolve({
     required List<CoupleCalendarEvent> events,
-    required Iterable<String> anniversaryLabels,
+    required Iterable<String> defaultEventLabels,
   }) {
-    final labels = anniversaryLabels
+    final labels = defaultEventLabels
         .where((label) => label.isNotEmpty)
         .toList(growable: false);
     final totalCount = events.length + labels.length;

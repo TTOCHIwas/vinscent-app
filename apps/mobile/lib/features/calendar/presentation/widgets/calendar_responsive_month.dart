@@ -10,10 +10,11 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../story_loops/application/story_loop_month_summary_provider.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
-import '../../application/couple_anniversary_resolver.dart';
+import '../../application/couple_default_calendar_event_resolver.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../data/calendar_cell_preview_mode.dart';
 import '../../data/couple_calendar_event.dart';
+import '../../data/couple_member_birthday.dart';
 import '../calendar_month_layout_metrics.dart';
 import 'calendar_detail_date_header.dart';
 import 'calendar_month_story_cell.dart';
@@ -24,7 +25,8 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
-    required this.selectedAnniversaryLabels,
+    required this.selectedDefaultEventLabels,
+    required this.memberBirthdays,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
     required this.detailTransitionKey,
@@ -42,7 +44,8 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
-  final List<String> selectedAnniversaryLabels;
+  final List<String> selectedDefaultEventLabels;
+  final List<CoupleMemberBirthday> memberBirthdays;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
   final Object detailTransitionKey;
@@ -81,15 +84,16 @@ class CalendarResponsiveMonth extends ConsumerWidget {
             .add(event);
       }
     }
-    final anniversaryLabels = <DateTime, String>{};
-    const anniversaryResolver = CoupleAnniversaryResolver();
+    final defaultEventLabels = <DateTime, String>{};
+    const defaultEventResolver = CoupleDefaultCalendarEventResolver();
     for (final date in _calendarDays(visibleMonth)) {
-      final occurrences = anniversaryResolver.resolve(
-        startDate: relationshipStartDate,
+      final occurrences = defaultEventResolver.resolve(
+        relationshipStartDate: relationshipStartDate,
         date: date,
+        birthdays: memberBirthdays,
       );
       if (occurrences.isNotEmpty) {
-        anniversaryLabels[calendarDateOnly(date)] = occurrences.first.label;
+        defaultEventLabels[calendarDateOnly(date)] = occurrences.first.label;
       }
     }
 
@@ -99,14 +103,14 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         visibleMonth: visibleMonth,
         relationshipStartDate: relationshipStartDate,
         selectedDate: selectedDate,
-        selectedAnniversaryLabels: selectedAnniversaryLabels,
+        selectedDefaultEventLabels: selectedDefaultEventLabels,
         calendarTransitionKey: calendarTransitionKey,
         calendarTransitionDirection: calendarTransitionDirection,
         detailTransitionKey: detailTransitionKey,
         detailTransitionDirection: detailTransitionDirection,
         summaryByDate: summaryByDate,
         eventsByDate: eventsByDate,
-        anniversaryLabels: anniversaryLabels,
+        defaultEventLabels: defaultEventLabels,
         onDatePressed: onDatePressed,
         metrics: metrics,
         onSwipeRight: onSwipeRight,
@@ -124,14 +128,14 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
-    required this.selectedAnniversaryLabels,
+    required this.selectedDefaultEventLabels,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
     required this.detailTransitionKey,
     required this.detailTransitionDirection,
     required this.summaryByDate,
     required this.eventsByDate,
-    required this.anniversaryLabels,
+    required this.defaultEventLabels,
     required this.onDatePressed,
     required this.metrics,
     required this.onSwipeRight,
@@ -150,14 +154,14 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
-  final List<String> selectedAnniversaryLabels;
+  final List<String> selectedDefaultEventLabels;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
   final Object detailTransitionKey;
   final AppHorizontalPageDirection detailTransitionDirection;
   final Map<DateTime, StoryLoopMonthSummaryDay> summaryByDate;
   final Map<DateTime, List<CoupleCalendarEvent>> eventsByDate;
-  final Map<DateTime, String> anniversaryLabels;
+  final Map<DateTime, String> defaultEventLabels;
   final ValueChanged<DateTime> onDatePressed;
   final CalendarMonthLayoutMetrics metrics;
   final VoidCallback onSwipeRight;
@@ -221,7 +225,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                     ? const SizedBox.expand()
                     : CalendarDetailDateHeader(
                         date: selectedDate!,
-                        anniversaryLabels: selectedAnniversaryLabels,
+                        defaultEventLabels: selectedDefaultEventLabels,
                         height: detailHeaderExtent,
                       ),
               ),
@@ -300,8 +304,8 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                               events:
                                   eventsByDate[calendarDateOnly(days[index])] ??
                                   const [],
-                              anniversaryLabel:
-                                  anniversaryLabels[calendarDateOnly(
+                              defaultEventLabel:
+                                  defaultEventLabels[calendarDateOnly(
                                     days[index],
                                   )],
                               expandedContentProgress:
@@ -353,12 +357,12 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         relationshipStartDate != oldDelegate.relationshipStartDate ||
         selectedDate != oldDelegate.selectedDate ||
         !listEquals(
-          selectedAnniversaryLabels,
-          oldDelegate.selectedAnniversaryLabels,
+          selectedDefaultEventLabels,
+          oldDelegate.selectedDefaultEventLabels,
         ) ||
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
-        anniversaryLabels != oldDelegate.anniversaryLabels ||
+        defaultEventLabels != oldDelegate.defaultEventLabels ||
         metrics.expandedExtent != oldDelegate.metrics.expandedExtent ||
         metrics.standardExtent != oldDelegate.metrics.standardExtent ||
         detailHeaderExtent != oldDelegate.detailHeaderExtent ||
@@ -399,7 +403,7 @@ class _DateCell extends StatelessWidget {
     required this.isSelected,
     required this.summary,
     required this.events,
-    required this.anniversaryLabel,
+    required this.defaultEventLabel,
     required this.expandedContentProgress,
     required this.onPressed,
   });
@@ -410,7 +414,7 @@ class _DateCell extends StatelessWidget {
   final bool isSelected;
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
-  final String? anniversaryLabel;
+  final String? defaultEventLabel;
   final double expandedContentProgress;
   final VoidCallback onPressed;
 
@@ -422,7 +426,7 @@ class _DateCell extends StatelessWidget {
       selected: isSelected,
       label: [
         '${date.day}일',
-        ?anniversaryLabel,
+        ?defaultEventLabel,
         if (events.isNotEmpty) '일정 ${events.length}개',
         if ((summary?.cardCount ?? 0) > 0) '카드 ${summary!.cardCount}개',
       ].join(', '),
@@ -435,7 +439,7 @@ class _DateCell extends StatelessWidget {
           isSelected: isSelected,
           summary: isCurrentMonth ? summary : null,
           events: isCurrentMonth ? events : const [],
-          anniversaryLabel: isCurrentMonth ? anniversaryLabel : null,
+          defaultEventLabel: isCurrentMonth ? defaultEventLabel : null,
           expandedContentProgress: expandedContentProgress,
         ),
       ),

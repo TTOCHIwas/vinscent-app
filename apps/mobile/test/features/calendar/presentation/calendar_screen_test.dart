@@ -228,7 +228,7 @@ void main() {
 
     expect(anniversaryLabel, findsOneWidget);
     expect(
-      find.byKey(const Key('calendar-detail-anniversary-labels')),
+      find.byKey(const Key('calendar-detail-default-event-labels')),
       findsOneWidget,
     );
     expect(find.byKey(const Key('calendar-event-detail-list')), findsNothing);
@@ -280,10 +280,10 @@ void main() {
               const labels = ['1주년', '400일'];
               return CalendarDetailDateHeader(
                 date: DateTime(2026, 5, 10),
-                anniversaryLabels: labels,
+                defaultEventLabels: labels,
                 height: CalendarDetailDateHeader.resolveExtent(
                   context,
-                  anniversaryLabels: labels,
+                  defaultEventLabels: labels,
                 ),
               );
             },

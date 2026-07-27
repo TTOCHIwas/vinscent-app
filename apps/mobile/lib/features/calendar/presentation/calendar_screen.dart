@@ -14,7 +14,8 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
 import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notification.dart';
 import '../application/calendar_cell_preview_mode_controller.dart';
-import '../application/couple_anniversary_resolver.dart';
+import '../application/couple_default_calendar_event_resolver.dart';
+import '../application/couple_member_birthday_provider.dart';
 import '../data/calendar_cell_preview_mode.dart';
 import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
@@ -114,6 +115,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final today = ref.watch(coupleCurrentDateProvider);
     final couple = ref.watch(coupleControllerProvider);
+    final memberBirthdays =
+        ref.watch(coupleMemberBirthdayProvider).asData?.value ?? const [];
     final previewMode = ref
         .watch(calendarCellPreviewModeControllerProvider)
         .asData
@@ -141,12 +144,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           couple.relationshipStartDate!,
         );
         final selectedDate = _selectedDate;
-        final selectedAnniversaryLabels = selectedDate == null
+        final selectedDefaultEventLabels = selectedDate == null
             ? const <String>[]
-            : const CoupleAnniversaryResolver()
+            : const CoupleDefaultCalendarEventResolver()
                   .resolve(
-                    startDate: couple.relationshipStartDate!,
+                    relationshipStartDate: couple.relationshipStartDate!,
                     date: selectedDate,
+                    birthdays: memberBirthdays,
                   )
                   .map((occurrence) => occurrence.label)
                   .toList(growable: false);
@@ -191,7 +195,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   final detailHeaderExtent =
                       CalendarDetailDateHeader.resolveExtent(
                         context,
-                        anniversaryLabels: selectedAnniversaryLabels,
+                        defaultEventLabels: selectedDefaultEventLabels,
                       );
                   _adoptLayoutMetrics(metrics);
                   _scheduleInitialScrollPosition(metrics);
@@ -217,7 +221,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           visibleMonth: _visibleMonth,
                           relationshipStartDate: couple.relationshipStartDate!,
                           selectedDate: _selectedDate,
-                          selectedAnniversaryLabels: selectedAnniversaryLabels,
+                          selectedDefaultEventLabels:
+                              selectedDefaultEventLabels,
+                          memberBirthdays: memberBirthdays,
                           previewMode: previewMode,
                           calendarTransitionKey: _calendarPageRevision,
                           calendarTransitionDirection: _calendarPageDirection,
@@ -281,8 +287,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   child: _CalendarDetail(
                                     selectedDate: _selectedDate,
                                     today: today,
-                                    hasDefaultAnniversary:
-                                        selectedAnniversaryLabels.isNotEmpty,
+                                    hasDefaultEvent:
+                                        selectedDefaultEventLabels.isNotEmpty,
                                     canEdit: couple.canEditSharedData,
                                   ),
                                 ),
@@ -795,13 +801,13 @@ class _CalendarDetail extends StatelessWidget {
   const _CalendarDetail({
     required this.selectedDate,
     required this.today,
-    required this.hasDefaultAnniversary,
+    required this.hasDefaultEvent,
     required this.canEdit,
   });
 
   final DateTime? selectedDate;
   final DateTime today;
-  final bool hasDefaultAnniversary;
+  final bool hasDefaultEvent;
   final bool canEdit;
 
   @override
@@ -818,7 +824,7 @@ class _CalendarDetail extends StatelessWidget {
       key: ValueKey('calendar-selected-detail-${formatCalendarDate(selected)}'),
       selectedDate: selected,
       today: today,
-      hasDefaultAnniversary: hasDefaultAnniversary,
+      hasDefaultEvent: hasDefaultEvent,
       canEdit: canEdit,
     );
   }

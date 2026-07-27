@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
-import '../../calendar/application/couple_anniversary_resolver.dart';
+import '../../calendar/application/couple_default_calendar_event_resolver.dart';
 import '../../calendar/data/couple_calendar_event_repository.dart';
+import '../../calendar/data/couple_member_birthday_repository.dart';
 import '../../characters/data/couple_character_repository.dart';
 import '../../couple/data/couple_repository.dart';
 import '../../recordings/data/couple_recording_repository.dart';
@@ -20,6 +21,9 @@ final homeWidgetSnapshotRepositoryProvider =
         recordingRepository: ref.watch(coupleRecordingRepositoryProvider),
         calendarEventRepository: ref.watch(
           coupleCalendarEventRepositoryProvider,
+        ),
+        memberBirthdayRepository: ref.watch(
+          coupleMemberBirthdayRepositoryProvider,
         ),
         partnerCardRepository: ref.watch(
           homeWidgetPartnerCardRepositoryProvider,
@@ -38,12 +42,14 @@ class SupabaseHomeWidgetSnapshotRepository
     required CoupleCharacterRepository characterRepository,
     required CoupleRecordingRepository recordingRepository,
     required CoupleCalendarEventRepository calendarEventRepository,
+    required CoupleMemberBirthdayRepository memberBirthdayRepository,
     required HomeWidgetPartnerCardRepository partnerCardRepository,
   }) : _coupleRepository = coupleRepository,
        _assetLoader = HomeWidgetSnapshotAssetLoader(
          characterRepository: characterRepository,
          recordingRepository: recordingRepository,
          calendarEventRepository: calendarEventRepository,
+         memberBirthdayRepository: memberBirthdayRepository,
          partnerCardRepository: partnerCardRepository,
        );
 
@@ -79,16 +85,18 @@ class HomeWidgetSnapshotAssetLoader {
     required CoupleCharacterRepository characterRepository,
     required CoupleRecordingRepository recordingRepository,
     required CoupleCalendarEventRepository calendarEventRepository,
+    required CoupleMemberBirthdayRepository memberBirthdayRepository,
     required HomeWidgetPartnerCardRepository partnerCardRepository,
-    CoupleAnniversaryResolver anniversaryResolver =
-        const CoupleAnniversaryResolver(),
+    CoupleDefaultCalendarEventResolver defaultEventResolver =
+        const CoupleDefaultCalendarEventResolver(),
     HomeWidgetCalendarSummaryResolver calendarSummaryResolver =
         const HomeWidgetCalendarSummaryResolver(),
   }) : _characterRepository = characterRepository,
        _recordingRepository = recordingRepository,
        _calendarEventRepository = calendarEventRepository,
+       _memberBirthdayRepository = memberBirthdayRepository,
        _partnerCardRepository = partnerCardRepository,
-       _anniversaryResolver = anniversaryResolver,
+       _defaultEventResolver = defaultEventResolver,
        _calendarSummaryResolver = calendarSummaryResolver;
 
   static const _maximumImageBytes = 5 * 1024 * 1024;
@@ -97,8 +105,9 @@ class HomeWidgetSnapshotAssetLoader {
   final CoupleCharacterRepository _characterRepository;
   final CoupleRecordingRepository _recordingRepository;
   final CoupleCalendarEventRepository _calendarEventRepository;
+  final CoupleMemberBirthdayRepository _memberBirthdayRepository;
   final HomeWidgetPartnerCardRepository _partnerCardRepository;
-  final CoupleAnniversaryResolver _anniversaryResolver;
+  final CoupleDefaultCalendarEventResolver _defaultEventResolver;
   final HomeWidgetCalendarSummaryResolver _calendarSummaryResolver;
 
   Future<HomeWidgetSnapshot> fetch({
@@ -214,17 +223,22 @@ class HomeWidgetSnapshotAssetLoader {
         currentDate.month,
         currentDate.day,
       );
-      final events = await _calendarEventRepository.fetchOccurrences(
+      final eventsFuture = _calendarEventRepository.fetchOccurrences(
         startDate: normalizedDate,
         endDate: normalizedDate,
       );
-      final anniversaries = _anniversaryResolver.resolve(
-        startDate: relationshipStartDate,
+      final birthdaysFuture = _memberBirthdayRepository
+          .fetchActiveCoupleBirthdays();
+      final events = await eventsFuture;
+      final birthdays = await birthdaysFuture;
+      final defaultEvents = _defaultEventResolver.resolve(
+        relationshipStartDate: relationshipStartDate,
         date: normalizedDate,
+        birthdays: birthdays,
       );
       final summary = _calendarSummaryResolver.resolve(
         events: events,
-        anniversaryLabels: anniversaries.map((event) => event.label),
+        defaultEventLabels: defaultEvents.map((event) => event.label),
       );
       return summary == null
           ? const HomeWidgetCalendarSummaryUpdate.remove()

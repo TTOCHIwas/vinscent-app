@@ -21,7 +21,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
     required this.isSelected,
     required this.summary,
     this.events = const [],
-    this.anniversaryLabel,
+    this.defaultEventLabel,
     this.expandedContentProgress = 0,
   });
 
@@ -30,7 +30,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final bool isSelected;
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
-  final String? anniversaryLabel;
+  final String? defaultEventLabel;
   final double expandedContentProgress;
 
   static const _cellPadding = EdgeInsets.fromLTRB(3, 2, 3, 4);
@@ -110,7 +110,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (anniversaryLabel case final label?) ...[
+                    if (defaultEventLabel case final label?) ...[
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(

@@ -17,7 +17,7 @@ void main() {
           artworkUrl: 'https://example.com/event.webp',
         ),
       ],
-      anniversaryLabels: const ['100일'],
+      defaultEventLabels: const ['100일'],
     );
 
     expect(summary, isNotNull);
@@ -31,7 +31,7 @@ void main() {
   test('prioritizes a custom event without artwork over an anniversary', () {
     final summary = resolver.resolve(
       events: [_event(id: 'plain', title: '영화 보기', date: date)],
-      anniversaryLabels: const ['2주년'],
+      defaultEventLabels: const ['2주년'],
     );
 
     expect(summary?.title, '영화 보기');
@@ -42,7 +42,7 @@ void main() {
   test('uses the default anniversary when there is no custom event', () {
     final summary = resolver.resolve(
       events: const [],
-      anniversaryLabels: const ['22일'],
+      defaultEventLabels: const ['22일'],
     );
 
     expect(summary?.title, '22일');
@@ -53,7 +53,7 @@ void main() {
   test('returns null when today has no schedule', () {
     final summary = resolver.resolve(
       events: const [],
-      anniversaryLabels: const [],
+      defaultEventLabels: const [],
     );
 
     expect(summary, isNull);

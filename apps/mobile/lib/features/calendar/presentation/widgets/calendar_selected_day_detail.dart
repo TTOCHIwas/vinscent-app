@@ -22,13 +22,13 @@ class CalendarSelectedDayDetail extends ConsumerStatefulWidget {
     super.key,
     required this.selectedDate,
     required this.today,
-    required this.hasDefaultAnniversary,
+    required this.hasDefaultEvent,
     required this.canEdit,
   });
 
   final DateTime selectedDate;
   final DateTime today;
-  final bool hasDefaultAnniversary;
+  final bool hasDefaultEvent;
   final bool canEdit;
 
   @override
@@ -53,8 +53,7 @@ class _CalendarSelectedDayDetailState
             )
             .toList(growable: false) ??
         const <CoupleCalendarEvent>[];
-    final hasCalendarEntries =
-        events.isNotEmpty || widget.hasDefaultAnniversary;
+    final hasCalendarEntries = events.isNotEmpty || widget.hasDefaultEvent;
     final hasScheduleSection = calendarEvents.hasError || events.isNotEmpty;
     final hasStorySection = !selectedDate.isAfter(
       calendarDateOnly(widget.today),
