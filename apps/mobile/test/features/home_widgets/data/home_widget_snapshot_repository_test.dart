@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
+import 'package:vinscent/features/calendar/data/couple_member_birthday.dart';
+import 'package:vinscent/features/calendar/data/couple_member_birthday_repository.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_repository.dart';
 import 'package:vinscent/features/home_widgets/data/home_widget_partner_card_repository.dart';
@@ -27,6 +29,7 @@ void main() {
         ),
         recordingRepository: _FailingRecordingRepository(),
         calendarEventRepository: _CalendarEventRepository(),
+        memberBirthdayRepository: const _BirthdayRepository([]),
         partnerCardRepository: _PartnerCardRepository(
           HomeWidgetPartnerCard(
             id: 'card-id',
@@ -61,6 +64,7 @@ void main() {
       characterRepository: _CharacterRepository(null),
       recordingRepository: _RecordingRepository(),
       calendarEventRepository: _FailingCalendarEventRepository(),
+      memberBirthdayRepository: const _BirthdayRepository([]),
       partnerCardRepository: const _PartnerCardRepository(null),
     );
 
@@ -79,6 +83,30 @@ void main() {
     expect(snapshot.recordingAudio.type, HomeWidgetAssetUpdateType.remove);
     expect(snapshot.partnerCardImage.type, HomeWidgetAssetUpdateType.remove);
     expect(snapshot.requiresRetry, isTrue);
+  });
+
+  test('includes a member birthday in the character widget summary', () async {
+    final loader = HomeWidgetSnapshotAssetLoader(
+      characterRepository: _CharacterRepository(null),
+      recordingRepository: _RecordingRepository(),
+      calendarEventRepository: _CalendarEventRepository(),
+      memberBirthdayRepository: _BirthdayRepository([
+        CoupleMemberBirthday(
+          role: CoupleMemberRole.self,
+          birthDate: DateTime(1990, 7, 28),
+        ),
+      ]),
+      partnerCardRepository: const _PartnerCardRepository(null),
+    );
+
+    final snapshot = await loader.fetch(
+      coupleId: 'couple-id',
+      currentUserId: 'user-id',
+      relationshipStartDate: DateTime(2026, 1, 1),
+      currentDate: DateTime(2026, 7, 28),
+    );
+
+    expect(snapshot.calendarSummary.summary?.title, '내 생일');
   });
 }
 
@@ -143,5 +171,16 @@ class _FailingCalendarEventRepository extends Fake
     required DateTime endDate,
   }) {
     throw StateError('temporary calendar failure');
+  }
+}
+
+class _BirthdayRepository implements CoupleMemberBirthdayRepository {
+  const _BirthdayRepository(this.birthdays);
+
+  final List<CoupleMemberBirthday> birthdays;
+
+  @override
+  Future<List<CoupleMemberBirthday>> fetchActiveCoupleBirthdays() async {
+    return birthdays;
   }
 }
