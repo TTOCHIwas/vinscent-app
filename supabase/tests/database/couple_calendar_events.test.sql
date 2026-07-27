@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(30);
+select plan(31);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -109,6 +109,28 @@ select lives_ok(
     )
   $$,
   'one member can create a shared event and personal reminder'
+);
+
+select throws_ok(
+  $$
+    select *
+    from public.save_couple_calendar_event(
+      '36000000-0000-0000-0000-000000000004',
+      '이미 지난 알림',
+      timezone('Asia/Seoul', clock_timestamp())::date,
+      'none',
+      null,
+      null,
+      false,
+      true,
+      0,
+      '00:00',
+      null
+    )
+  $$,
+  'P0001',
+  'calendar_event_reminder_in_past',
+  'a reminder whose scheduled instant has passed is rejected'
 );
 
 reset role;

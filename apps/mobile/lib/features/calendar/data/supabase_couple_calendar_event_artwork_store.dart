@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -124,11 +125,18 @@ class SupabaseCoupleCalendarEventArtworkStore
             'discard_uploaded_couple_calendar_event_artwork',
             params: {
               'requested_event_id': eventId,
-              'requested_artifact_id': artifactId,
+              'requested_artwork_revision': artifactId,
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
-    } catch (_) {}
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[calendar] Failed to discard uploaded artwork: '
+          'eventId=$eventId, artifactId=$artifactId, error=$error',
+        );
+      }
+    }
   }
 
   StorageFileApi get _bucket => Supabase.instance.client.storage.from(
