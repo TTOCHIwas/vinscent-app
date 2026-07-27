@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_current_location_service.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
@@ -95,6 +96,21 @@ void main() {
         const Size.square(56),
       );
       expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      final addButton = tester.widget<IconButton>(
+        find.byKey(_storyAddButtonKey),
+      );
+      expect(
+        addButton.style?.backgroundColor?.resolve({}),
+        AppColors.brandAction,
+      );
+      expect(
+        addButton.style?.foregroundColor?.resolve({}),
+        AppColors.onBrandAction,
+      );
+      expect(
+        addButton.style?.overlayColor?.resolve({WidgetState.pressed}),
+        AppColors.brandPressed,
+      );
       expect(
         tester.getCenter(find.byKey(_storyAddButtonKey)).dx,
         lessThan(tester.getCenter(find.byType(HomeScreen)).dx),

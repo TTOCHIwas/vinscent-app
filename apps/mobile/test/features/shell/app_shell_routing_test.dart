@@ -130,7 +130,7 @@ void main() {
       expect(tester.widget<Icon>(find.byIcon(Icons.home_rounded)).size, 24);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.home_rounded)).color,
-        AppColors.actionPrimary,
+        AppColors.brandAccent,
       );
       expect(
         tester.widget<Icon>(find.byIcon(Icons.calendar_today_rounded)).color,
@@ -288,8 +288,12 @@ void main() {
     );
     final tabRect = tester.getRect(tab);
     final feedbackRect = tester.getRect(feedback);
+    final selectedIcon = tester.widget<Icon>(
+      find.descendant(of: tab, matching: find.byIcon(Icons.home_rounded)),
+    );
 
     expect(tester.getRect(inkWell), tabRect);
+    expect(selectedIcon.color, AppColors.brandAccent);
     expect(feedbackRect.left - tabRect.left, 8);
     expect(tabRect.right - feedbackRect.right, 8);
     expect(feedbackRect.top - tabRect.top, 8);

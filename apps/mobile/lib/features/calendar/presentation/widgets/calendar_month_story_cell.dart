@@ -87,7 +87,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.actionPrimary
+                              ? AppColors.brandAction
                               : Colors.transparent,
                           shape: BoxShape.circle,
                         ),
@@ -97,7 +97,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                             style: AppTypography.applyToStyle(
                               AppTextStyles.homeCharacterLabel.copyWith(
                                 color: isSelected
-                                    ? AppColors.textInverse
+                                    ? AppColors.onBrandAction
                                     : textColor,
                                 fontSize: 12,
                                 fontWeight: isSelected

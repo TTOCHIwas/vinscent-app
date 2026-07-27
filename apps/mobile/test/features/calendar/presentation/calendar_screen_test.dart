@@ -66,6 +66,11 @@ void main() {
 
     expect(text.style?.height, 1);
     expect(text.style?.fontSize, 12);
+    final marker = tester.widget<DecoratedBox>(
+      find.ancestor(of: textFinder, matching: find.byType(DecoratedBox)).first,
+    );
+    expect((marker.decoration as BoxDecoration).color, AppColors.brandAction);
+    expect(text.style?.color, AppColors.onBrandAction);
     expect(painter.height, lessThanOrEqualTo(16));
     expect(tester.takeException(), isNull);
   });
@@ -88,7 +93,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
   });
 
@@ -113,7 +118,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-09'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
   });
 
@@ -183,7 +188,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
   });
 
@@ -374,7 +379,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-09'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
 
     await tester.fling(swipeRegion, const Offset(300, 0), 1000);
@@ -399,7 +404,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
 
     await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
@@ -416,7 +421,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-11'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
   });
 
