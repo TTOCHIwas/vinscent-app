@@ -243,3 +243,90 @@ class SettingsStatusRow extends StatelessWidget {
     );
   }
 }
+
+class SettingsActionRow extends StatelessWidget {
+  const SettingsActionRow({
+    super.key,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.isDestructive = false,
+    this.isLoading = false,
+    this.enabled = true,
+  });
+
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool isDestructive;
+  final bool isLoading;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final actionColor = isDestructive
+        ? Theme.of(context).colorScheme.error
+        : AppColors.textPrimary;
+    final isEnabled = enabled && !isLoading;
+
+    return Semantics(
+      button: true,
+      enabled: isEnabled,
+      child: InkWell(
+        onTap: isEnabled ? onTap : null,
+        splashColor: AppColors.settingsPressed,
+        highlightColor: AppColors.settingsPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 60),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTextStyles.homeBody.copyWith(
+                          color: isEnabled
+                              ? actionColor
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                      if (subtitle case final subtitle?) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: AppTextStyles.homeCharacterLabel.copyWith(
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (isLoading)
+                  SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: actionColor,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 24,
+                    color: isEnabled ? actionColor : AppColors.textMuted,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

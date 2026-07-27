@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/assets/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import 'widgets/settings_group.dart';
 import 'widgets/settings_page_layout.dart';
 
 class CoupleSettingsScreen extends ConsumerStatefulWidget {
@@ -30,9 +31,11 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
       child: couple.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        error: (error, stackTrace) => const _CoupleSettingsMessage(
+        error: (error, stackTrace) => _CoupleSettingsMessage(
           title: '커플 정보를 불러오지 못했어요.',
           message: '잠시 후 다시 시도해 주세요.',
+          onRetry: () =>
+              ref.read(coupleControllerProvider.notifier).refresh(),
         ),
         data: (couple) {
           if (couple == null) {
@@ -181,6 +184,9 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
               child: const Text('취소'),
             ),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
               onPressed: () => Navigator.of(context).pop(true),
               child: Text(confirmLabel),
             ),
@@ -205,19 +211,33 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      padding: EdgeInsets.zero,
       children: [
-        Text(
-          '커플 연결을 해제하면 두 사람 모두 읽기 전용 상태로 전환되고, 데이터는 30일 동안 보관돼요.',
-          style: AppTextStyles.homeCharacterLabel.copyWith(
-            color: AppColors.textMuted,
-          ),
+        const SettingsGroup(
+          label: '연결 상태',
+          children: [
+            SettingsStatusRow(
+              icon: AppIcons.heart,
+              title: '커플로 연결되어 있어요',
+              subtitle: '카드와 답변, 녹음과 캐릭터를 함께 편집할 수 있어요',
+              showCompleted: true,
+            ),
+          ],
         ),
-        const SizedBox(height: 20),
-        AppActionButton(
-          label: '커플 연결 해제',
-          enabled: !isProcessing,
-          isSecondary: true,
-          onPressed: onDisconnectPressed,
+        const SizedBox(height: 24),
+        SettingsGroup(
+          label: '연결 관리',
+          children: [
+            SettingsActionRow(
+              key: Key('couple-settings-disconnect-action'),
+              title: '커플 연결 해제',
+              subtitle: '연결 해제 후에도 기록은 30일 동안 보관돼요',
+              isDestructive: true,
+              isLoading: isProcessing,
+              enabled: !isProcessing,
+              onTap: onDisconnectPressed,
+            ),
+          ],
         ),
       ],
     );
@@ -242,32 +262,41 @@ class _ArchivedCoupleSettingsContent extends StatelessWidget {
     final expiresAt = couple.archiveExpiresAt;
 
     return ListView(
+      padding: EdgeInsets.zero,
       children: [
-        Text(
-          '지금은 기존 기록만 읽기 전용으로 보이고 있어요.',
-          style: AppTextStyles.homeBodyMedium,
+        SettingsGroup(
+          label: '보관 상태',
+          children: [
+            SettingsStatusRow(
+              icon: AppIcons.bookmark,
+              title: '기록을 보관 중이에요',
+              subtitle: expiresAt == null
+                  ? '보관 만료일을 불러오지 못했어요'
+                  : '${_formatDate(expiresAt)}까지 읽기 전용으로 보관돼요',
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          expiresAt == null
-              ? '보관 만료 시각을 불러오지 못했어요.'
-              : '${_formatDate(expiresAt)}까지 자동 보관 후 영구 삭제돼요.',
-          style: AppTextStyles.homeCharacterLabel.copyWith(
-            color: AppColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 20),
-        AppActionButton(
-          label: '다시 연결하기',
-          enabled: !isProcessing,
-          onPressed: onReconnectPressed,
-        ),
-        const SizedBox(height: 12),
-        AppActionButton(
-          label: '보관 데이터 즉시 삭제',
-          enabled: !isProcessing,
-          isSecondary: true,
-          onPressed: onDeletePressed,
+        const SizedBox(height: 24),
+        SettingsGroup(
+          label: '연결 관리',
+          children: [
+            SettingsActionRow(
+              key: const Key('couple-settings-reconnect-action'),
+              title: '다시 연결하기',
+              subtitle: '기존 기록을 이어서 사용할 수 있어요',
+              enabled: !isProcessing,
+              onTap: onReconnectPressed,
+            ),
+            SettingsActionRow(
+              key: const Key('couple-settings-delete-action'),
+              title: '보관 데이터 즉시 삭제',
+              subtitle: '삭제한 기록은 다시 복구할 수 없어요',
+              isDestructive: true,
+              isLoading: isProcessing,
+              enabled: !isProcessing,
+              onTap: onDeletePressed,
+            ),
+          ],
         ),
       ],
     );
@@ -275,10 +304,15 @@ class _ArchivedCoupleSettingsContent extends StatelessWidget {
 }
 
 class _CoupleSettingsMessage extends StatelessWidget {
-  const _CoupleSettingsMessage({required this.title, required this.message});
+  const _CoupleSettingsMessage({
+    required this.title,
+    required this.message,
+    this.onRetry,
+  });
 
   final String title;
   final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +329,10 @@ class _CoupleSettingsMessage extends StatelessWidget {
               color: AppColors.textMuted,
             ),
           ),
+          if (onRetry case final onRetry?) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+          ],
         ],
       ),
     );
