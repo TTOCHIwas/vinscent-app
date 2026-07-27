@@ -98,10 +98,14 @@ select results_eq(
   'user A sees only the two birthday values with relative roles'
 );
 
-select is(
-  (select count(*) from public.profiles),
-  1::bigint,
-  'the existing profile policy still exposes only the current profile'
+select throws_ok(
+  $$
+    select *
+    from public.profiles
+  $$,
+  '42501',
+  'permission denied for table profiles',
+  'the RPC does not widen direct profile table access'
 );
 
 reset role;
