@@ -90,6 +90,7 @@ class OnboardingScreen extends ConsumerWidget {
     final initialDate = selectedDate ?? maxDate;
     final pickedDate = await showModalBottomSheet<DateTime>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,

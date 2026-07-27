@@ -439,6 +439,7 @@ class _StatusLine extends StatelessWidget {
 Future<void> _showConsentSheet(BuildContext context, WidgetRef ref) async {
   final shouldGrant = await showModalBottomSheet<bool>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: AppColors.background,
     shape: const RoundedRectangleBorder(
