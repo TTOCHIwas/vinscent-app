@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 enum RecordingSlotAction { artwork, homePlacement, replace, delete }
 
+enum RecordingSlotArtworkAction { add, edit, view }
+
 Future<RecordingSlotAction?> showRecordingSlotActionSheet({
   required BuildContext context,
   required String slotId,
-  required String? artworkLabel,
-  required IconData? artworkIcon,
+  required RecordingSlotArtworkAction? artworkAction,
   required bool showHomePlacement,
   required bool showReplace,
   required bool showDelete,
 }) {
-  assert(
-    (artworkLabel == null) == (artworkIcon == null),
-    'Artwork label and icon must either both be provided or both be omitted.',
-  );
-
   return showModalBottomSheet<RecordingSlotAction>(
     context: context,
     useRootNavigator: true,
@@ -29,8 +26,7 @@ Future<RecordingSlotAction?> showRecordingSlotActionSheet({
     clipBehavior: Clip.antiAlias,
     builder: (context) => RecordingSlotActionSheet(
       slotId: slotId,
-      artworkLabel: artworkLabel,
-      artworkIcon: artworkIcon,
+      artworkAction: artworkAction,
       showHomePlacement: showHomePlacement,
       showReplace: showReplace,
       showDelete: showDelete,
@@ -42,16 +38,14 @@ class RecordingSlotActionSheet extends StatelessWidget {
   const RecordingSlotActionSheet({
     super.key,
     required this.slotId,
-    required this.artworkLabel,
-    required this.artworkIcon,
+    required this.artworkAction,
     required this.showHomePlacement,
     required this.showReplace,
     required this.showDelete,
   });
 
   final String slotId;
-  final String? artworkLabel;
-  final IconData? artworkIcon;
+  final RecordingSlotArtworkAction? artworkAction;
   final bool showHomePlacement;
   final bool showReplace;
   final bool showDelete;
@@ -59,28 +53,28 @@ class RecordingSlotActionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_RecordingSlotActionItem>[
-      if (artworkLabel case final label?)
+      if (artworkAction case final action?)
         _RecordingSlotActionItem(
           action: RecordingSlotAction.artwork,
-          icon: artworkIcon!,
-          label: label,
+          icon: action.icon,
+          label: action.label,
         ),
       if (showHomePlacement)
         const _RecordingSlotActionItem(
           action: RecordingSlotAction.homePlacement,
-          icon: Icons.add_to_home_screen_outlined,
+          icon: LucideIcons.house,
           label: '홈에 배치',
         ),
       if (showReplace)
         const _RecordingSlotActionItem(
           action: RecordingSlotAction.replace,
-          icon: Icons.swap_horiz_rounded,
+          icon: LucideIcons.refreshCw,
           label: '현재 녹음으로 교체',
         ),
       if (showDelete)
         const _RecordingSlotActionItem(
           action: RecordingSlotAction.delete,
-          icon: Icons.delete_outline_rounded,
+          icon: LucideIcons.trash2,
           label: '삭제',
           isDestructive: true,
         ),
@@ -107,6 +101,20 @@ class RecordingSlotActionSheet extends StatelessWidget {
   }
 }
 
+extension on RecordingSlotArtworkAction {
+  String get label => switch (this) {
+    RecordingSlotArtworkAction.add => '그림 추가',
+    RecordingSlotArtworkAction.edit => '그림 수정',
+    RecordingSlotArtworkAction.view => '그림 보기',
+  };
+
+  IconData get icon => switch (this) {
+    RecordingSlotArtworkAction.add => LucideIcons.paintbrush,
+    RecordingSlotArtworkAction.edit => LucideIcons.pencil,
+    RecordingSlotArtworkAction.view => LucideIcons.eye,
+  };
+}
+
 class _RecordingSlotActionItem {
   const _RecordingSlotActionItem({
     required this.action,
@@ -129,9 +137,9 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = item.isDestructive
-        ? Theme.of(context).colorScheme.error
-        : AppColors.textPrimary;
+    final errorColor = Theme.of(context).colorScheme.error;
+    final iconColor = item.isDestructive ? errorColor : AppColors.textMuted;
+    final labelColor = item.isDestructive ? errorColor : AppColors.textPrimary;
 
     return Material(
       color: Colors.transparent,
@@ -148,14 +156,12 @@ class _ActionRow extends StatelessWidget {
           child: Row(
             children: [
               const SizedBox(width: 12),
-              Icon(item.icon, size: 22, color: foregroundColor),
+              Icon(item.icon, size: 22, color: iconColor),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   item.label,
-                  style: AppTextStyles.homeBodyMedium.copyWith(
-                    color: foregroundColor,
-                  ),
+                  style: AppTextStyles.homeBody.copyWith(color: labelColor),
                 ),
               ),
               const SizedBox(width: 12),

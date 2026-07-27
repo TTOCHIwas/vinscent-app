@@ -810,11 +810,6 @@ class _FilledSlotContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMine = slot.senderUserId == currentUserId;
-    final artworkLabel = slot.artwork == null
-        ? '그림 추가'
-        : canEdit
-        ? '그림 수정'
-        : '그림 보기';
     final hasMenu =
         onArtworkPressed != null ||
         onHomePlacementPressed != null ||
@@ -864,8 +859,7 @@ class _FilledSlotContent extends StatelessWidget {
                   IconButton(
                     key: ValueKey('recording-library-slot-menu-${slot.slotId}'),
                     tooltip: '더보기',
-                    onPressed: () =>
-                        _openActionSheet(context, artworkLabel: artworkLabel),
+                    onPressed: () => _openActionSheet(context),
                     icon: const Icon(Icons.more_horiz),
                   ),
               ],
@@ -876,21 +870,17 @@ class _FilledSlotContent extends StatelessWidget {
     );
   }
 
-  Future<void> _openActionSheet(
-    BuildContext context, {
-    required String artworkLabel,
-  }) async {
+  Future<void> _openActionSheet(BuildContext context) async {
     final action = await showRecordingSlotActionSheet(
       context: context,
       slotId: slot.slotId,
-      artworkLabel: onArtworkPressed == null ? null : artworkLabel,
-      artworkIcon: onArtworkPressed == null
+      artworkAction: onArtworkPressed == null
           ? null
           : slot.artwork == null
-          ? Icons.draw_outlined
+          ? RecordingSlotArtworkAction.add
           : canEdit
-          ? Icons.edit_outlined
-          : Icons.visibility_outlined,
+          ? RecordingSlotArtworkAction.edit
+          : RecordingSlotArtworkAction.view,
       showHomePlacement: onHomePlacementPressed != null,
       showReplace: onSavePressed != null,
       showDelete: onDeletePressed != null,
