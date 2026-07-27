@@ -31,3 +31,21 @@ Deno.test('dispatchInBatches rejects an invalid concurrency', async () => {
     RangeError,
   );
 });
+
+Deno.test('dispatchInBatches attempts later batches after one item fails', async () => {
+  const attemptedValues: number[] = [];
+
+  await assertRejects(
+    () =>
+      dispatchInBatches([1, 2, 3, 4], 2, async (value) => {
+        attemptedValues.push(value);
+        if (value === 2) {
+          throw new Error('dispatch failed');
+        }
+        return value;
+      }),
+    AggregateError,
+  );
+
+  assertEquals(attemptedValues, [1, 2, 3, 4]);
+});
