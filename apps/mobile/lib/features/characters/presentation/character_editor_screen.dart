@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -35,7 +36,9 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   static const _exportSize = 512;
 
   late final AppDrawingController _drawingController;
+  String _originalDrawingJson = AppDrawingData.empty().toJsonString();
   bool _isLoadingDrawing = true;
+  bool _loadFailed = false;
   bool _isSaving = false;
 
   bool get _isReadOnly {
@@ -61,6 +64,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   bool get _canSave {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
+        !_loadFailed &&
         !_isSaving &&
         _drawingController.hasVisibleContent;
   }
@@ -68,6 +72,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   bool get _canClear {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
+        !_loadFailed &&
         !_isSaving &&
         _drawingController.canClear;
   }
@@ -75,12 +80,25 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   bool get _canUndo {
     return !_isReadOnly &&
         !_isLoadingDrawing &&
+        !_loadFailed &&
         !_isSaving &&
         _drawingController.canUndo;
   }
 
   bool get _canSkip =>
-      widget.isInitialSetup && !_isReadOnly && !_isLoadingDrawing && !_isSaving;
+      widget.isInitialSetup &&
+      !_isReadOnly &&
+      !_isLoadingDrawing &&
+      !_loadFailed &&
+      !_isSaving;
+
+  bool get _isDrawingReadOnly =>
+      _isReadOnly || _isLoadingDrawing || _loadFailed || _isSaving;
+
+  bool get _hasUnsavedChanges =>
+      !_isLoadingDrawing &&
+      !_loadFailed &&
+      _drawingController.drawingData.toJsonString() != _originalDrawingJson;
 
   @override
   void initState() {
@@ -109,26 +127,44 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   Future<void> _loadExistingDrawing() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingDrawing = true;
+        _loadFailed = false;
+      });
+    }
+
     try {
       final character = await ref.read(
         coupleCharacterControllerProvider.future,
       );
-      if (!mounted || character == null) {
+      if (!mounted) {
+        return;
+      }
+
+      if (character == null) {
+        _originalDrawingJson = AppDrawingData.empty().toJsonString();
         return;
       }
 
       final drawingDataJson = await ref
           .read(coupleCharacterControllerProvider.notifier)
           .fetchDrawingData(character);
-      if (!mounted || drawingDataJson == null) {
+      if (!mounted) {
         return;
+      }
+      if (drawingDataJson == null) {
+        throw StateError('Character drawing data is missing.');
       }
 
       final drawingData = AppDrawingData.fromJsonString(drawingDataJson);
+      _originalDrawingJson = drawingData.toJsonString();
       _drawingController.replaceStrokes(drawingData.strokes);
     } catch (_) {
       if (mounted) {
-        _showSnackBar('캐릭터를 불러오지 못했어요.');
+        setState(() {
+          _loadFailed = true;
+        });
       }
     } finally {
       if (mounted) {
@@ -139,8 +175,13 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     }
   }
 
+  Future<void> _retryLoadExistingDrawing() async {
+    ref.invalidate(coupleCharacterControllerProvider);
+    await _loadExistingDrawing();
+  }
+
   void _startStroke(AppDrawingPoint point) {
-    if (_isReadOnly) {
+    if (_isDrawingReadOnly) {
       return;
     }
 
@@ -148,7 +189,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   void _updateStroke(AppDrawingPoint point) {
-    if (_isReadOnly) {
+    if (_isDrawingReadOnly) {
       return;
     }
 
@@ -156,7 +197,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   }
 
   void _endStroke() {
-    if (_isReadOnly) {
+    if (_isDrawingReadOnly) {
       return;
     }
 
@@ -224,7 +265,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
           );
 
       if (mounted) {
-        _closeEditor();
+        _closeAfterCompletion();
       }
     } catch (error) {
       if (mounted) {
@@ -251,7 +292,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     try {
       await ref.read(coupleControllerProvider.notifier).useDefaultCharacter();
       if (mounted) {
-        _closeEditor();
+        _closeAfterCompletion();
       }
     } catch (error) {
       if (mounted) {
@@ -293,8 +334,53 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _closeEditor() {
+  Future<void> _requestClose() async {
+    if (_isSaving) {
+      return;
+    }
+
+    if (_hasUnsavedChanges) {
+      final shouldDiscard = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('그림을 저장하지 않고 나갈까요?'),
+          content: const Text('지금 그린 내용은 저장되지 않아요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('계속 그리기'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('나가기'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || shouldDiscard != true) {
+        return;
+      }
+    }
+
+    _closeWithoutSaving();
+  }
+
+  void _closeWithoutSaving() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
     context.go(widget.isInitialSetup ? '/home' : '/settings');
+  }
+
+  void _closeAfterCompletion() {
+    if (widget.isInitialSetup) {
+      context.go('/home');
+      return;
+    }
+
+    _closeWithoutSaving();
   }
 
   String _defaultCharacterFailureMessage(Object error) {
@@ -339,117 +425,165 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     final couple = ref
         .watch(coupleControllerProvider)
         .maybeWhen(data: (couple) => couple, orElse: () => null);
-    final isReadOnly = _isReadOnly;
     final isArchivedReadOnly = couple?.isArchivedReadOnly ?? false;
 
-    return ColoredBox(
-      color: AppColors.background,
-      child: SafeArea(
-        top: widget.isInitialSetup,
-        bottom: false,
-        child: Column(
-          children: [
-            _CharacterEditorHeader(
-              canSave: _canSave,
-              canSkip: _canSkip,
-              showSkip: widget.isInitialSetup,
-              isSaving: _isSaving,
-              onBackPressed: _closeEditor,
-              onSkipPressed: _useDefaultCharacter,
-              onSavePressed: _save,
-            ),
-            Expanded(
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    if (isArchivedReadOnly)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
-                            border: Border.all(
-                              color: AppColors.wireframeBorder,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          unawaited(_requestClose());
+        }
+      },
+      child: ColoredBox(
+        color: AppColors.background,
+        child: SafeArea(
+          top: widget.isInitialSetup,
+          bottom: false,
+          child: Column(
+            children: [
+              _CharacterEditorHeader(
+                canSave: _canSave,
+                canSkip: _canSkip,
+                showSkip: widget.isInitialSetup,
+                isSaving: _isSaving,
+                onBackPressed: _requestClose,
+                onSkipPressed: _useDefaultCharacter,
+                onSavePressed: _save,
+              ),
+              Expanded(
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    children: [
+                      if (isArchivedReadOnly)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              border: Border.all(
+                                color: AppColors.wireframeBorder,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
-                            style: AppTextStyles.homeCharacterLabel.copyWith(
-                              color: AppColors.textMuted,
+                            child: Text(
+                              '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
+                              style: AppTextStyles.homeCharacterLabel.copyWith(
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    Expanded(
-                      child: Padding(
-                        key: const ValueKey('character-drawing-canvas-region'),
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: _exportSize.toDouble(),
-                              maxHeight: _exportSize.toDouble(),
-                            ),
-                            child: AspectRatio(
-                              aspectRatio: 1,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.white,
-                                  border: Border.all(
-                                    color: AppColors.wireframeBorder,
+                      Expanded(
+                        child: Padding(
+                          key: const ValueKey(
+                            'character-drawing-canvas-region',
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: _exportSize.toDouble(),
+                                maxHeight: _exportSize.toDouble(),
+                              ),
+                              child: AspectRatio(
+                                aspectRatio: 1,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    border: Border.all(
+                                      color: AppColors.wireframeBorder,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: _isLoadingDrawing
-                                    ? const Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                  clipBehavior: Clip.antiAlias,
+                                  child: _isLoadingDrawing
+                                      ? const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : _loadFailed
+                                      ? _CharacterLoadFailure(
+                                          onRetry: _retryLoadExistingDrawing,
+                                        )
+                                      : AppDrawingCanvas(
+                                          strokes:
+                                              _drawingController.visibleStrokes,
+                                          isReadOnly: _isDrawingReadOnly,
+                                          onStrokeStart: _startStroke,
+                                          onStrokeUpdate: _updateStroke,
+                                          onStrokeEnd: _endStroke,
                                         ),
-                                      )
-                                    : AppDrawingCanvas(
-                                        strokes:
-                                            _drawingController.visibleStrokes,
-                                        isReadOnly: isReadOnly,
-                                        onStrokeStart: _startStroke,
-                                        onStrokeUpdate: _updateStroke,
-                                        onStrokeEnd: _endStroke,
-                                      ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: AppDrawingToolbar(
-                          selectedTool: _drawingController.selectedTool,
-                          selectedColor: _drawingController.selectedColor,
-                          selectedStrokeWidth:
-                              _drawingController.selectedStrokeWidth,
-                          isReadOnly: isReadOnly,
-                          canUndo: _canUndo,
-                          canClear: _canClear,
-                          onToolChanged: _drawingController.selectTool,
-                          onColorChanged: _drawingController.selectColor,
-                          onStrokeWidthChanged:
-                              _drawingController.selectStrokeWidth,
-                          onUndoPressed: _undoLastStroke,
-                          onClearPressed: _confirmClearCanvas,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: AppDrawingToolbar(
+                            selectedTool: _drawingController.selectedTool,
+                            selectedColor: _drawingController.selectedColor,
+                            selectedStrokeWidth:
+                                _drawingController.selectedStrokeWidth,
+                            isReadOnly: _isDrawingReadOnly,
+                            canUndo: _canUndo,
+                            canClear: _canClear,
+                            onToolChanged: _drawingController.selectTool,
+                            onColorChanged: _drawingController.selectColor,
+                            onStrokeWidthChanged:
+                                _drawingController.selectStrokeWidth,
+                            onUndoPressed: _undoLastStroke,
+                            onClearPressed: _confirmClearCanvas,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CharacterLoadFailure extends StatelessWidget {
+  const _CharacterLoadFailure({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '캐릭터를 불러오지 못했어요.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.homeBodyMedium,
             ),
+            const SizedBox(height: 8),
+            Text(
+              '기존 그림을 보호하기 위해 편집을 잠시 멈췄어요.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.homeCharacterLabel.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(onPressed: onRetry, child: const Text('다시 시도')),
           ],
         ),
       ),

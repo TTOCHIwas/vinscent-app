@@ -233,6 +233,107 @@ void main() {
     expect(find.text('settings'), findsOneWidget);
   });
 
+  testWidgets('returns to the page that opened the editor', (tester) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _activeCouple,
+          ),
+          coupleCharacterRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: '/home',
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => TextButton(
+                  onPressed: () => context.push('/settings/character'),
+                  child: const Text('open editor'),
+                ),
+              ),
+              GoRoute(
+                path: '/settings/character',
+                builder: (context, state) =>
+                    const Scaffold(body: CharacterEditorScreen()),
+              ),
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const Text('settings'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('뒤로가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('open editor'), findsOneWidget);
+    expect(find.text('settings'), findsNothing);
+  });
+
+  testWidgets('confirms before discarding unsaved character changes', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository();
+
+    await _pumpCharacterEditor(tester, repository);
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('뒤로가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('그림을 저장하지 않고 나갈까요?'), findsOneWidget);
+    expect(find.text('계속 그리기'), findsOneWidget);
+    expect(find.text('나가기'), findsOneWidget);
+
+    await tester.tap(find.text('계속 그리기'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CharacterEditorScreen), findsOneWidget);
+
+    await tester.tap(find.byTooltip('뒤로가기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('나가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('settings'), findsOneWidget);
+  });
+
+  testWidgets(
+    'blocks editing and offers retry when saved drawing fails to load',
+    (tester) async {
+      final repository = _FakeCoupleCharacterRepository(
+        currentCharacter: _character,
+        drawingDataJson: _drawingDataJson,
+        fetchDrawingError: StateError('load failed'),
+      );
+
+      await _pumpCharacterEditor(tester, repository);
+
+      expect(find.text('캐릭터를 불러오지 못했어요.'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '다시 시도'), findsOneWidget);
+      expect(find.byType(AppDrawingCanvas), findsNothing);
+      expect(_saveButton(tester).onPressed, isNull);
+
+      repository.fetchDrawingError = null;
+      await tester.tap(find.widgetWithText(TextButton, '다시 시도'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppDrawingCanvas), findsOneWidget);
+      expect(find.text('캐릭터를 불러오지 못했어요.'), findsNothing);
+      expect(repository.fetchDrawingCallCount, 2);
+    },
+  );
+
   testWidgets('uses the default character when initial setup is skipped', (
     tester,
   ) async {
@@ -299,9 +400,8 @@ Future<void> _pumpCharacterEditor(
           routes: [
             GoRoute(
               path: '/settings/character',
-              builder: (context, state) => const Scaffold(
-                body: CharacterEditorScreen(),
-              ),
+              builder: (context, state) =>
+                  const Scaffold(body: CharacterEditorScreen()),
             ),
             GoRoute(
               path: '/settings',
@@ -339,20 +439,33 @@ Future<void> _waitForRoute(
 }
 
 class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
-  _FakeCoupleCharacterRepository({this.saveError});
+  _FakeCoupleCharacterRepository({
+    this.saveError,
+    this.currentCharacter,
+    this.drawingDataJson,
+    this.fetchDrawingError,
+  });
 
   final Object? saveError;
+  final CoupleCharacter? currentCharacter;
+  final String? drawingDataJson;
+  Object? fetchDrawingError;
+  int fetchDrawingCallCount = 0;
   Uint8List? savedImageBytes;
   String? savedDrawingDataJson;
 
   @override
   Future<CoupleCharacter?> fetchCurrentCharacter() async {
-    return null;
+    return currentCharacter;
   }
 
   @override
   Future<String?> fetchDrawingData(CoupleCharacter character) async {
-    return null;
+    fetchDrawingCallCount++;
+    if (fetchDrawingError case final error?) {
+      throw error;
+    }
+    return drawingDataJson;
   }
 
   @override
@@ -431,3 +544,18 @@ final _profile = UserProfile(
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
+
+final _character = CoupleCharacter(
+  coupleId: _activeCouple.id,
+  imagePath: CoupleCharacterStoragePaths.imagePathFor(_activeCouple.id),
+  drawingDataPath: CoupleCharacterStoragePaths.drawingDataPathFor(
+    _activeCouple.id,
+  ),
+  updatedBy: 'user-id',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+const _drawingDataJson =
+    '{"version":1,"strokes":[{"tool":"pen","color":"#ff111111",'
+    '"width":8.0,"points":[{"x":0.2,"y":0.2},{"x":0.8,"y":0.8}]}]}';
