@@ -13,9 +13,8 @@ class CalendarStoryCardStack extends StatelessWidget {
     this.onCardTap,
   });
 
-  static const _maximumContentWidth = 360.0;
+  static const _fallbackContentWidth = 360.0;
   static const _slotGap = 16.0;
-  static const _maximumCardWidth = (_maximumContentWidth - _slotGap) / 2;
 
   final List<StoryLoopCardDetail> cards;
   final String? currentUserId;
@@ -31,11 +30,12 @@ class CalendarStoryCardStack extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final contentWidth = constraints.hasBoundedWidth
-            ? constraints.maxWidth.clamp(0.0, _maximumContentWidth).toDouble()
-            : _maximumContentWidth;
+            ? math.max(0.0, constraints.maxWidth)
+            : _fallbackContentWidth;
+        final gap = math.min(_slotGap, contentWidth);
+        final cardWidth = math.max(0.0, (contentWidth - gap) / 2);
 
         if (visibleCards.length == 1) {
-          final cardWidth = math.min(_maximumCardWidth, contentWidth);
           return Center(
             child: _CalendarStoryCard(
               card: visibleCards.first,
@@ -45,11 +45,6 @@ class CalendarStoryCardStack extends StatelessWidget {
           );
         }
 
-        final gap = math.min(_slotGap, contentWidth);
-        final cardWidth = math.min(
-          _maximumCardWidth,
-          math.max(0.0, (contentWidth - gap) / 2),
-        );
         return Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,

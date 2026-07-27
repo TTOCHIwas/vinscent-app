@@ -330,6 +330,79 @@ void main() {
     expect(find.text('+1'), findsOneWidget);
   });
 
+  testWidgets('keeps preview cache keys stable across calendar states', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = FakeStoryLoopReadRepository(
+      monthSummaries: {
+        DateTime(2026, 5): [
+          sampleMonthSummaryDay(
+            coupleDate: DateTime(2026, 5, 5),
+            cardCount: 1,
+            cards: [
+              samplePreviewCard(
+                id: 'stable-preview-card',
+                submittedAt: DateTime(2026, 5, 5, 9),
+              ).copyWith(previewUrl: 'https://example.com/stable-card.png'),
+            ],
+          ),
+        ],
+      },
+    );
+    final event = calendarEvent(
+      id: 'stable-preview-artwork',
+      title: '그림 일정',
+      date: DateTime(2026, 5, 5),
+      artwork: const CoupleCalendarEventArtwork(
+        previewPath: 'stable-event.webp',
+        drawingDataPath: 'stable-event.json.gz',
+        previewUrl: 'https://example.com/stable-event.webp',
+      ),
+    );
+
+    await pumpCalendar(tester, repository: repository, calendarEvents: [event]);
+
+    final card = find.byKey(
+      const ValueKey('calendar-month-story-card-stable-preview-card'),
+    );
+    final artwork = find.byKey(
+      const ValueKey('calendar-event-indicator-stable-preview-artwork'),
+    );
+    final compactCardSize = tester.getSize(card);
+    final compactArtworkSize = tester.getSize(artwork);
+    final compactCardKey = await _imageProviderKey(tester, card);
+    final compactArtworkKey = await _imageProviderKey(tester, artwork);
+    expect(_imageWidget(tester, card).gaplessPlayback, true);
+    expect(_imageWidget(tester, artwork).gaplessPlayback, true);
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, 1000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(card).width, greaterThan(compactCardSize.width));
+    expect(
+      tester.getSize(artwork).width,
+      greaterThan(compactArtworkSize.width),
+    );
+    expect(await _imageProviderKey(tester, card), compactCardKey);
+    expect(await _imageProviderKey(tester, artwork), compactArtworkKey);
+
+    await tester.drag(
+      find.byKey(const Key('calendar-scroll-view')),
+      const Offset(0, -1000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(await _imageProviderKey(tester, card), compactCardKey);
+    expect(await _imageProviderKey(tester, artwork), compactArtworkKey);
+  });
+
   testWidgets('prioritizes the default anniversary label in a mixed cell', (
     tester,
   ) async {
@@ -788,4 +861,17 @@ void main() {
       greaterThan(tester.getSize(backCard).height * 0.55),
     );
   });
+}
+
+Image _imageWidget(WidgetTester tester, Finder surface) {
+  final image = find.descendant(of: surface, matching: find.byType(Image));
+  expect(image, findsOneWidget);
+  return tester.widget<Image>(image);
+}
+
+Future<Object> _imageProviderKey(WidgetTester tester, Finder surface) {
+  return _imageWidget(
+    tester,
+    surface,
+  ).image.obtainKey(const ImageConfiguration());
 }

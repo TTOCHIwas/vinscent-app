@@ -42,6 +42,10 @@ class CalendarMonthStoryCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleCards = _visibleCards(summary);
+    final previewCacheExtent = math.max(
+      1.0,
+      MediaQuery.sizeOf(context).width / DateTime.daysPerWeek,
+    );
     final resolvedExpandedProgress = math.min(
       1.0,
       math.max(0.0, expandedContentProgress),
@@ -137,6 +141,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                                   date: date,
                                   events: events,
                                   artworkSize: eventArtworkSize,
+                                  previewCacheExtent: previewCacheExtent,
                                 ),
                               ),
                       ),
@@ -150,6 +155,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                   events: events,
                   expandedContentProgress: resolvedExpandedProgress,
                   cards: visibleCards,
+                  previewCacheExtent: previewCacheExtent,
                 ),
               ),
             ],
@@ -176,12 +182,14 @@ class _CalendarCellContent extends StatelessWidget {
     required this.events,
     required this.expandedContentProgress,
     required this.cards,
+    required this.previewCacheExtent,
   });
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final double expandedContentProgress;
   final List<StoryLoopCardPreview> cards;
+  final double previewCacheExtent;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +224,7 @@ class _CalendarCellContent extends StatelessWidget {
                   date: date,
                   events: events,
                   artworkSize: calendarMonthCompactPreviewSize,
+                  previewCacheExtent: previewCacheExtent,
                 ),
               ),
             if (artworkEvents.isNotEmpty)
@@ -226,6 +235,7 @@ class _CalendarCellContent extends StatelessWidget {
                   events: artworkEvents,
                   totalEventCount: events.length,
                   layout: expandedLayout,
+                  previewCacheExtent: previewCacheExtent,
                 ),
               ),
             if (cards.isNotEmpty)
@@ -233,6 +243,7 @@ class _CalendarCellContent extends StatelessWidget {
                 cards: cards,
                 cellSize: cellSize,
                 expandedLayout: expandedLayout,
+                previewCacheExtent: previewCacheExtent,
                 expandedProgress: progress,
               ),
           ],
@@ -254,6 +265,7 @@ class _CalendarCellContent extends StatelessWidget {
         date: date,
         events: events,
         artworkSize: calendarMonthCompactPreviewSize,
+        previewCacheExtent: previewCacheExtent,
       );
     }
 
@@ -261,6 +273,7 @@ class _CalendarCellContent extends StatelessWidget {
       cards: cards,
       cellSize: cellSize,
       expandedLayout: expandedLayout,
+      previewCacheExtent: previewCacheExtent,
     );
   }
 }

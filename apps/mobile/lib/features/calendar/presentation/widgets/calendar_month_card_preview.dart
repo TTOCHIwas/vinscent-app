@@ -14,6 +14,7 @@ class CalendarMonthCardPreview extends StatelessWidget {
     required this.cards,
     required this.cellSize,
     required this.expandedLayout,
+    required this.previewCacheExtent,
     this.expandedProgress = 0,
   });
 
@@ -22,6 +23,7 @@ class CalendarMonthCardPreview extends StatelessWidget {
   final List<StoryLoopCardPreview> cards;
   final Size cellSize;
   final CalendarExpandedCellLayout expandedLayout;
+  final double previewCacheExtent;
   final double expandedProgress;
 
   @override
@@ -77,6 +79,7 @@ class CalendarMonthCardPreview extends StatelessWidget {
             child: _MonthStorySurface(
               card: cards[index],
               width: cardWidth,
+              previewCacheExtent: previewCacheExtent,
               angle: switch (index) {
                 0 when cards.length == 2 => -0.12,
                 1 => 0.14,
@@ -97,11 +100,13 @@ class _MonthStorySurface extends StatelessWidget {
   const _MonthStorySurface({
     required this.card,
     required this.width,
+    required this.previewCacheExtent,
     required this.angle,
   });
 
   final StoryLoopCardPreview card;
   final double width;
+  final double previewCacheExtent;
   final double angle;
 
   @override
@@ -132,6 +137,11 @@ class _MonthStorySurface extends StatelessWidget {
               child: AppSizedNetworkImage(
                 url: card.previewUrl,
                 logicalSize: Size(width, height),
+                cacheLogicalSize: Size(
+                  previewCacheExtent,
+                  previewCacheExtent / storyCardCanvasAspectRatio,
+                ),
+                gaplessPlayback: true,
                 fallbackBuilder: (_) => _MonthStoryPlaceholder(card: card),
               ),
             ),

@@ -16,11 +16,13 @@ class CalendarMonthEventIndicator extends StatelessWidget {
     required this.date,
     required this.events,
     required this.artworkSize,
+    required this.previewCacheExtent,
   });
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final double artworkSize;
+  final double previewCacheExtent;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +55,7 @@ class CalendarMonthEventIndicator extends StatelessWidget {
             date: date,
             event: visibleEvent,
             size: resolvedArtworkSize,
+            previewCacheExtent: previewCacheExtent,
             overflowCount: overflowCount,
           ),
         );
@@ -81,12 +84,14 @@ class CalendarExpandedEventArtworkLayer extends StatelessWidget {
     required this.events,
     required this.totalEventCount,
     required this.layout,
+    required this.previewCacheExtent,
   });
 
   final DateTime date;
   final List<CoupleCalendarEvent> events;
   final int totalEventCount;
   final CalendarExpandedCellLayout layout;
+  final double previewCacheExtent;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +112,7 @@ class CalendarExpandedEventArtworkLayer extends StatelessWidget {
               date: date,
               event: visibleEvents[index],
               size: layout.artworkSize,
+              previewCacheExtent: previewCacheExtent,
               overflowCount: index == visibleEvents.length - 1
                   ? overflowCount
                   : 0,
@@ -122,12 +128,14 @@ class _CalendarEventArtworkIndicator extends StatelessWidget {
     required this.date,
     required this.event,
     required this.size,
+    required this.previewCacheExtent,
     required this.overflowCount,
   });
 
   final DateTime date;
   final CoupleCalendarEvent event;
   final double size;
+  final double previewCacheExtent;
   final int overflowCount;
 
   @override
@@ -141,6 +149,8 @@ class _CalendarEventArtworkIndicator extends StatelessWidget {
               key: ValueKey('calendar-event-indicator-${event.id}'),
               event: event,
               size: size,
+              cacheLogicalSize: Size.square(previewCacheExtent),
+              gaplessPlayback: true,
             ),
           ),
           if (overflowCount > 0)

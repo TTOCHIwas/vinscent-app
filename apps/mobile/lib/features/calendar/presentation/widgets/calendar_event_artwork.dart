@@ -8,10 +8,14 @@ class CalendarEventArtwork extends StatelessWidget {
     super.key,
     required this.event,
     required this.size,
+    this.cacheLogicalSize,
+    this.gaplessPlayback = false,
   });
 
   final CoupleCalendarEvent event;
   final double size;
+  final Size? cacheLogicalSize;
+  final bool gaplessPlayback;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,8 @@ class CalendarEventArtwork extends StatelessWidget {
       child: AppSizedNetworkImage(
         url: artwork.previewUrl,
         logicalSize: Size.square(size),
+        cacheLogicalSize: cacheLogicalSize,
+        gaplessPlayback: gaplessPlayback,
         fallbackBuilder: (_) => _ArtworkFallback(size: size),
       ),
     );
