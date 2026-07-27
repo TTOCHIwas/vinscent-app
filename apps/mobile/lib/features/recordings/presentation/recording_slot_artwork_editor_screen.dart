@@ -7,6 +7,7 @@ import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
+import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -231,24 +232,13 @@ class _RecordingSlotArtworkEditorScreenState
       return;
     }
 
-    final shouldClear = await showDialog<bool>(
+    final shouldClear = await showAppConfirmationSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('그림을 모두 지울까요?'),
-        content: const Text('저장하기 전까지는 현재 화면에서만 지워져요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
+      title: '그림을 모두 지울까요?',
+      message: '저장하기 전까지는 현재 화면에서만 지워져요.',
+      confirmLabel: '삭제',
     );
-    if (!mounted || shouldClear != true) {
+    if (!mounted || !shouldClear) {
       return;
     }
 

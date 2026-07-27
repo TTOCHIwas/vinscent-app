@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -18,6 +19,7 @@ import '../application/recording_slot_placement_session.dart';
 import '../recording_debug_log.dart';
 import '../data/couple_recording.dart';
 import '../data/couple_recording_failure.dart';
+import 'widgets/recording_slot_action_sheet.dart';
 
 class RecordingLibraryScreen extends ConsumerStatefulWidget {
   const RecordingLibraryScreen({super.key});
@@ -336,27 +338,14 @@ class _RecordingLibraryScreenState
   }
 
   Future<void> _deleteSlot(CoupleRecordingSlot slot) async {
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await showAppConfirmationSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('슬롯을 비울까요?'),
-          content: Text("'${slot.title}' 녹음은 즉시 삭제되고 복구할 수 없어요."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('삭제'),
-            ),
-          ],
-        );
-      },
+      title: '슬롯을 비울까요?',
+      message: "'${slot.title}' 녹음은 즉시 삭제되고 복구할 수 없어요.",
+      confirmLabel: '삭제',
     );
 
-    if (shouldDelete != true || !mounted) {
+    if (!shouldDelete || !mounted) {
       return;
     }
 
@@ -762,35 +751,6 @@ class _EmptySlotContent extends StatelessWidget {
   }
 }
 
-enum _RecordingSlotMenuAction { artwork, homePlacement, replace, delete }
-
-class _RecordingSlotMenuItem extends StatelessWidget {
-  const _RecordingSlotMenuItem({
-    required this.icon,
-    required this.label,
-    this.isDestructive = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isDestructive;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isDestructive
-        ? AppColors.recordingActive
-        : AppColors.textPrimary;
-
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 12),
-        Text(label, style: TextStyle(color: color)),
-      ],
-    );
-  }
-}
-
 class _SlotArtworkThumbnail extends StatelessWidget {
   const _SlotArtworkThumbnail({required this.slot});
 
@@ -901,60 +861,12 @@ class _FilledSlotContent extends StatelessWidget {
                   size: 22,
                 ),
                 if (hasMenu)
-                  PopupMenuButton<_RecordingSlotMenuAction>(
+                  IconButton(
                     key: ValueKey('recording-library-slot-menu-${slot.slotId}'),
                     tooltip: '더보기',
-                    onSelected: (action) {
-                      switch (action) {
-                        case _RecordingSlotMenuAction.artwork:
-                          onArtworkPressed?.call();
-                        case _RecordingSlotMenuAction.homePlacement:
-                          onHomePlacementPressed?.call();
-                        case _RecordingSlotMenuAction.replace:
-                          onSavePressed?.call();
-                        case _RecordingSlotMenuAction.delete:
-                          onDeletePressed?.call();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      if (onArtworkPressed != null)
-                        PopupMenuItem(
-                          value: _RecordingSlotMenuAction.artwork,
-                          child: _RecordingSlotMenuItem(
-                            icon: slot.artwork == null
-                                ? Icons.draw_outlined
-                                : canEdit
-                                ? Icons.edit_outlined
-                                : Icons.visibility_outlined,
-                            label: artworkLabel,
-                          ),
-                        ),
-                      if (onHomePlacementPressed != null)
-                        const PopupMenuItem(
-                          value: _RecordingSlotMenuAction.homePlacement,
-                          child: _RecordingSlotMenuItem(
-                            icon: Icons.add_to_home_screen_outlined,
-                            label: '홈에 배치',
-                          ),
-                        ),
-                      if (onSavePressed != null)
-                        const PopupMenuItem(
-                          value: _RecordingSlotMenuAction.replace,
-                          child: _RecordingSlotMenuItem(
-                            icon: Icons.swap_horiz_rounded,
-                            label: '현재 녹음으로 교체',
-                          ),
-                        ),
-                      if (onDeletePressed != null)
-                        const PopupMenuItem(
-                          value: _RecordingSlotMenuAction.delete,
-                          child: _RecordingSlotMenuItem(
-                            icon: Icons.delete_outline_rounded,
-                            label: '삭제',
-                            isDestructive: true,
-                          ),
-                        ),
-                    ],
+                    onPressed: () =>
+                        _openActionSheet(context, artworkLabel: artworkLabel),
+                    icon: const Icon(Icons.more_horiz),
                   ),
               ],
             ),
@@ -962,6 +874,41 @@ class _FilledSlotContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openActionSheet(
+    BuildContext context, {
+    required String artworkLabel,
+  }) async {
+    final action = await showRecordingSlotActionSheet(
+      context: context,
+      slotId: slot.slotId,
+      artworkLabel: onArtworkPressed == null ? null : artworkLabel,
+      artworkIcon: onArtworkPressed == null
+          ? null
+          : slot.artwork == null
+          ? Icons.draw_outlined
+          : canEdit
+          ? Icons.edit_outlined
+          : Icons.visibility_outlined,
+      showHomePlacement: onHomePlacementPressed != null,
+      showReplace: onSavePressed != null,
+      showDelete: onDeletePressed != null,
+    );
+    if (!context.mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case RecordingSlotAction.artwork:
+        onArtworkPressed?.call();
+      case RecordingSlotAction.homePlacement:
+        onHomePlacementPressed?.call();
+      case RecordingSlotAction.replace:
+        onSavePressed?.call();
+      case RecordingSlotAction.delete:
+        onDeletePressed?.call();
+    }
   }
 }
 

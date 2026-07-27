@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/date/app_date_policy.dart';
 import '../../../../core/presentation/widgets/app_action_button.dart';
+import '../../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/application/profile_controller.dart';
@@ -104,24 +105,13 @@ class _CalendarSelectedDayDetailState
     if (_deletingEventIds.contains(event.id)) {
       return;
     }
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await showAppConfirmationSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('일정을 삭제할까요?'),
-        content: Text(event.title),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
+      title: '일정을 삭제할까요?',
+      message: event.title,
+      confirmLabel: '삭제',
     );
-    if (shouldDelete != true || !mounted) {
+    if (!shouldDelete || !mounted) {
       return;
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -151,25 +152,14 @@ class _AiDirectQuestionHistoryEntryState
   }
 
   Future<void> _confirmDelete() async {
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('질문을 삭제할까요?'),
-        content: const Text('질문과 답변이 함께 삭제되고 복구할 수 없어요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
+      title: '질문을 삭제할까요?',
+      message: '질문과 답변이 함께 삭제되고 복구할 수 없어요.',
+      confirmLabel: '삭제',
     );
 
-    if (!mounted || shouldDelete != true) {
+    if (!mounted || !shouldDelete) {
       return;
     }
     widget.onDelete();

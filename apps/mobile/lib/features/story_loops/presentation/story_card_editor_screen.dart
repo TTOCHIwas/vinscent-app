@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../application/story_card_editor_controller.dart';
 import '../application/story_card_editor_session.dart';
 import '../application/story_card_image_normalizer.dart';
@@ -300,24 +301,14 @@ class _StoryCardEditorContentState
       return;
     }
 
-    final shouldDiscard = await showDialog<bool>(
+    final shouldDiscard = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('수정 내용을 삭제하시겠어요?'),
-        content: const Text('현재 편집 중인 사진, 그림, 텍스트가 모두 삭제돼요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('계속 수정'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
+      title: '수정 내용을 삭제하시겠어요?',
+      message: '현재 편집 중인 사진, 그림, 텍스트가 모두 삭제돼요.',
+      confirmLabel: '삭제',
+      cancelLabel: '계속 수정',
     );
-    if (shouldDiscard != true || !mounted) {
+    if (!shouldDiscard || !mounted) {
       return;
     }
 
@@ -799,24 +790,13 @@ class _StoryCardEditorContentState
       return;
     }
 
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await showAppConfirmationSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('오늘 카드를 삭제할까요?'),
-        content: const Text('삭제하면 질문은 두 카드가 다시 완성될 때만 생성돼요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
+      title: '오늘 카드를 삭제할까요?',
+      message: '삭제하면 질문은 두 카드가 다시 완성될 때만 생성돼요.',
+      confirmLabel: '삭제',
     );
-    if (shouldDelete != true || !mounted) {
+    if (!shouldDelete || !mounted) {
       return;
     }
 

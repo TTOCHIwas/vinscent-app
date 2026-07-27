@@ -178,9 +178,7 @@ void main() {
 
     expect(find.byType(BottomSheet), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const Key('app-confirmation-confirm')),
-    );
+    await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
     await tester.pumpAndSettle();
 
     expect(_saveButton(tester).onPressed, isNull);

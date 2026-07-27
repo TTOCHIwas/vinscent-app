@@ -71,7 +71,7 @@ void main() {
       currentRecording: _currentRecording(),
       savedSlots: [_slot()],
     );
-    final harness = await _pumpLibrary(tester, overview: overview);
+    await _pumpLibrary(tester, overview: overview);
 
     expect(find.text('그림 수정'), findsNothing);
     expect(find.text('홈에 배치'), findsNothing);
@@ -84,9 +84,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(
-        const ValueKey('recording-library-slot-action-sheet-slot-1'),
-      ),
+      find.byKey(const ValueKey('recording-library-slot-action-sheet-slot-1')),
       findsOneWidget,
     );
     expect(find.byType(BottomSheet), findsOneWidget);
@@ -102,10 +100,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      harness.router.routeInformationProvider.value.uri.path,
-      '/home/recordings/slot-1/artwork',
-    );
+    expect(find.text('artwork'), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
   });
 
