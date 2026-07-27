@@ -81,7 +81,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-05'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAction),
     );
     expect(find.text('history question'), findsOneWidget);
     expect(find.byKey(const Key('question-detail-title')), findsOneWidget);
