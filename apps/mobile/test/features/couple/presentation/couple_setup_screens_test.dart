@@ -30,6 +30,12 @@ void main() {
       tester.widget<Material>(selectedMode.first).color,
       AppColors.brandSurface,
     );
+    final selectorRect = tester.getRect(
+      find.byKey(const Key('couple-connection-mode-selector')),
+    );
+    final selectedModeRect = tester.getRect(selectedMode.first);
+    expect(selectedModeRect.height, selectorRect.height - 8);
+    expect(selectedModeRect.top, selectorRect.top + 4);
 
     await tester.tap(find.text('코드 입력'));
     await tester.pumpAndSettle();

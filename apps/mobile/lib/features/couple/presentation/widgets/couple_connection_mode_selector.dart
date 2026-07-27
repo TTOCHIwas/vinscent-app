@@ -26,6 +26,7 @@ class CoupleConnectionModeSelector extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: _ModeItem(
