@@ -63,13 +63,15 @@ void main() {
     );
   });
 
-  testWidgets('slot actions are hidden in a more menu', (tester) async {
+  testWidgets('slot actions open in a bottom sheet and keep existing routing', (
+    tester,
+  ) async {
     final overview = CoupleRecordingOverview(
       slotLimit: 1,
       currentRecording: _currentRecording(),
       savedSlots: [_slot()],
     );
-    await _pumpLibrary(tester, overview: overview);
+    final harness = await _pumpLibrary(tester, overview: overview);
 
     expect(find.text('그림 수정'), findsNothing);
     expect(find.text('홈에 배치'), findsNothing);
@@ -81,10 +83,30 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(
+        const ValueKey('recording-library-slot-action-sheet-slot-1'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(BottomSheet), findsOneWidget);
     expect(find.text('그림 수정'), findsOneWidget);
     expect(find.text('홈에 배치'), findsOneWidget);
     expect(find.text('현재 녹음으로 교체'), findsOneWidget);
     expect(find.text('삭제'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('recording-library-slot-action-artwork-slot-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.router.routeInformationProvider.value.uri.path,
+      '/home/recordings/slot-1/artwork',
+    );
+    expect(find.byType(BottomSheet), findsNothing);
   });
 
   testWidgets('library rows have no border or artwork background color', (
