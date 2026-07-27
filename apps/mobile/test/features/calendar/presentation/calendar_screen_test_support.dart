@@ -9,9 +9,11 @@ import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/calendar/application/calendar_cell_preview_mode_controller.dart';
+import 'package:vinscent/features/calendar/application/couple_member_birthday_provider.dart';
 import 'package:vinscent/features/calendar/data/calendar_cell_preview_mode.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
+import 'package:vinscent/features/calendar/data/couple_member_birthday.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -66,6 +68,7 @@ Future<GoRouter> pumpCalendar(
   ValueNotifier<DateTime?>? routeDate,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   List<CoupleCalendarEvent> calendarEvents = const [],
+  List<CoupleMemberBirthday> memberBirthdays = const [],
   List<CalendarEventDateRange>? calendarEventRequests,
   CalendarCellPreviewMode previewMode = CalendarCellPreviewMode.all,
   Future<CalendarCellPreviewMode>? previewModeResult,
@@ -146,6 +149,9 @@ Future<GoRouter> pumpCalendar(
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
         coupleCalendarEventRepositoryProvider.overrideWithValue(
           calendarEventRepository,
+        ),
+        coupleMemberBirthdayProvider.overrideWith(
+          (ref) async => memberBirthdays,
         ),
       ],
       child: MaterialApp.router(

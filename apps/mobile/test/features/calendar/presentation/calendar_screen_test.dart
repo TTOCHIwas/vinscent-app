@@ -7,6 +7,7 @@ import 'package:vinscent/core/presentation/widgets/app_horizontal_page_transitio
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_theme.dart';
 import 'package:vinscent/features/calendar/data/calendar_cell_preview_mode.dart';
+import 'package:vinscent/features/calendar/data/couple_member_birthday.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_month_layout_metrics.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_detail_date_header.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_card_preview.dart';
@@ -228,6 +229,29 @@ void main() {
     expect(anniversaryLabel, findsOneWidget);
     expect(
       find.byKey(const Key('calendar-detail-anniversary-labels')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('calendar-event-detail-list')), findsNothing);
+  });
+
+  testWidgets('shows a member birthday as a default calendar event', (
+    tester,
+  ) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      relationshipStartDate: DateTime(2026, 5, 2),
+      memberBirthdays: [
+        CoupleMemberBirthday(
+          role: CoupleMemberRole.self,
+          birthDate: DateTime(1990, 5, 10),
+        ),
+      ],
+    );
+
+    final header = find.byType(CalendarDetailDateHeader);
+    expect(
+      find.descendant(of: header, matching: find.text('내 생일')),
       findsOneWidget,
     );
     expect(find.byKey(const Key('calendar-event-detail-list')), findsNothing);
