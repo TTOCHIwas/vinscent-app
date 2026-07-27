@@ -13,7 +13,7 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
     required this.reminder,
     required this.canEdit,
     required this.isSaving,
-    required this.isPast,
+    required this.isReminderUnavailable,
     required this.onDatePressed,
     required this.onRepeatRuleChanged,
     required this.onReminderEnabledChanged,
@@ -29,7 +29,7 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
   final CoupleCalendarEventReminder reminder;
   final bool canEdit;
   final bool isSaving;
-  final bool isPast;
+  final bool isReminderUnavailable;
   final VoidCallback onDatePressed;
   final ValueChanged<CoupleCalendarEventRepeatRule> onRepeatRuleChanged;
   final ValueChanged<bool> onReminderEnabledChanged;
@@ -40,7 +40,7 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveReminder = isPast
+    final effectiveReminder = isReminderUnavailable
         ? const CoupleCalendarEventReminder.disabled()
         : reminder;
 
@@ -95,9 +95,13 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
           key: const Key('calendar-event-reminder-toggle'),
           contentPadding: EdgeInsets.zero,
           title: const Text('이 일정 알림 받기'),
-          subtitle: isPast ? const Text('지난 일정에는 알림을 설정할 수 없어요') : null,
+          subtitle: isReminderUnavailable
+              ? const Text('지난 일회성 일정에는 알림을 설정할 수 없어요')
+              : null,
           value: effectiveReminder.isEnabled,
-          onChanged: _isEnabled && !isPast ? onReminderEnabledChanged : null,
+          onChanged: _isEnabled && !isReminderUnavailable
+              ? onReminderEnabledChanged
+              : null,
         ),
         if (effectiveReminder.isEnabled) ...[
           const SizedBox(height: 8),

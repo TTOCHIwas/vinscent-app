@@ -115,6 +115,12 @@ class _CoupleCalendarEventEditorScreenState
   }
 
   Future<void> _loadEvent() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _loadFailed = false;
+      });
+    }
     try {
       final data = await ref
           .read(coupleCalendarEventEditorServiceProvider)
@@ -136,6 +142,7 @@ class _CoupleCalendarEventEditorScreenState
         _repeatRule = event.repeatRule;
         _reminder = event.reminder;
         _originalDrawingJson = data.drawing.toJsonString();
+        _loadFailed = false;
       });
     } catch (_) {
       if (mounted) {
@@ -180,7 +187,7 @@ class _CoupleCalendarEventEditorScreenState
               expectedRevision: _existingEvent?.revision,
               removeArtwork: false,
               reminder:
-                  _selectedDate.isBefore(
+                  _isReminderUnavailable(
                     calendarDateOnly(couple.effectiveCurrentDate),
                   )
                   ? const CoupleCalendarEventReminder.disabled()
@@ -218,7 +225,7 @@ class _CoupleCalendarEventEditorScreenState
     final relationshipStartDate = calendarDateOnly(
       couple?.relationshipStartDate ?? today,
     );
-    final isPast = _selectedDate.isBefore(today);
+    final isReminderUnavailable = _isReminderUnavailable(today);
 
     return PopScope(
       canPop: _step == _CalendarEventEditorStep.basic,
@@ -265,7 +272,7 @@ class _CoupleCalendarEventEditorScreenState
                 reminder: _reminder,
                 canEdit: canEdit,
                 isSaving: _isSaving,
-                isPast: isPast,
+                isReminderUnavailable: isReminderUnavailable,
                 onDatePressed: () => _pickDate(relationshipStartDate, today),
                 onRepeatRuleChanged: (value) {
                   setState(() {
@@ -348,7 +355,7 @@ class _CoupleCalendarEventEditorScreenState
     if (selected != null && mounted) {
       setState(() {
         _selectedDate = calendarDateOnly(selected);
-        if (_selectedDate.isBefore(today)) {
+        if (_isReminderUnavailable(today)) {
           _reminder = const CoupleCalendarEventReminder.disabled();
         }
       });
@@ -409,6 +416,11 @@ class _CoupleCalendarEventEditorScreenState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  bool _isReminderUnavailable(DateTime currentDate) {
+    return _repeatRule == CoupleCalendarEventRepeatRule.none &&
+        _selectedDate.isBefore(currentDate);
   }
 
   String _saveFailureMessage(Object error) {
