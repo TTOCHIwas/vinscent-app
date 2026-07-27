@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/app_action_tone.dart';
 import 'package:vinscent/core/presentation/widgets/app_keyboard_accessory.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 
 void main() {
   testWidgets('hides the accessory while the keyboard is closed', (
@@ -136,6 +138,7 @@ void main() {
             actionLabel: '물어보기',
             loadingLabel: '질문 보내는 중',
             actionIcon: const Icon(Icons.arrow_upward_rounded),
+            actionTone: AppActionTone.brand,
             enabled: true,
             isLoading: false,
             horizontalPadding: 12,
@@ -156,6 +159,17 @@ void main() {
     );
     expect(find.byTooltip('물어보기'), findsOneWidget);
     expect(find.text('물어보기'), findsNothing);
+    final iconButton = tester.widget<IconButton>(
+      find.descendant(of: action, matching: find.byType(IconButton)),
+    );
+    expect(
+      iconButton.style?.backgroundColor?.resolve({}),
+      AppColors.brandAction,
+    );
+    expect(
+      iconButton.style?.overlayColor?.resolve({WidgetState.pressed}),
+      AppColors.brandPressed,
+    );
 
     await tester.tap(action);
 

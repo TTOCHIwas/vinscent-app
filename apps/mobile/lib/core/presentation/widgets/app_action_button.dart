@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+import 'app_action_tone.dart';
 
 class AppActionButton extends StatelessWidget {
   const AppActionButton({
@@ -10,27 +11,34 @@ class AppActionButton extends StatelessWidget {
     required this.enabled,
     required this.onPressed,
     this.isLoading = false,
-    this.isSecondary = false,
+    this.tone = AppActionTone.neutral,
   });
 
   final String label;
   final bool enabled;
   final bool isLoading;
-  final bool isSecondary;
+  final AppActionTone tone;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final isEnabled = enabled && !isLoading && onPressed != null;
-    final backgroundColor = isSecondary
-        ? AppColors.background
-        : isEnabled
-        ? AppColors.actionPrimary
+    final isSecondary = tone == AppActionTone.secondary;
+    final activeBackgroundColor = switch (tone) {
+      AppActionTone.neutral => AppColors.actionPrimary,
+      AppActionTone.brand => AppColors.brandAction,
+      AppActionTone.secondary => AppColors.background,
+    };
+    final activeContentColor = switch (tone) {
+      AppActionTone.neutral => AppColors.textInverse,
+      AppActionTone.brand => AppColors.onBrandAction,
+      AppActionTone.secondary => AppColors.textPrimary,
+    };
+    final backgroundColor = isSecondary || isEnabled
+        ? activeBackgroundColor
         : AppColors.actionDisabled;
-    final contentColor = isSecondary
-        ? AppColors.textPrimary
-        : isEnabled
-        ? AppColors.textInverse
+    final contentColor = isSecondary || isEnabled
+        ? activeContentColor
         : AppColors.actionDisabledContent;
 
     return SizedBox(
@@ -47,6 +55,9 @@ class AppActionButton extends StatelessWidget {
         child: InkWell(
           onTap: isEnabled ? onPressed : null,
           borderRadius: BorderRadius.circular(10),
+          overlayColor: tone == AppActionTone.brand
+              ? const WidgetStatePropertyAll(AppColors.brandPressed)
+              : null,
           child: Center(
             child: isLoading
                 ? SizedBox.square(

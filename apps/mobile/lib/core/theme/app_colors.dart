@@ -11,6 +11,12 @@ abstract final class AppColors {
 
   static const logoBackground = Color(0xFF282A30);
 
+  static const brandAccent = Color(0xFFD9735B);
+  static const brandAction = Color(0xFFB95843);
+  static const brandSurface = Color(0xFFFFF2ED);
+  static const brandPressed = Color(0xFFA64B39);
+  static const onBrandAction = Color(0xFFFFFFFF);
+
   static const actionPrimary = Color(0xFF171717);
   static const actionDisabled = Color(0xFFECECEC);
   static const actionDisabledContent = Color(0xFF8D8D8D);

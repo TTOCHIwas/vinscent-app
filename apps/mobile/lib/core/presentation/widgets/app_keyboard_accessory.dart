@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import 'app_action_tone.dart';
 import 'app_answer_input.dart';
 import 'app_header_text_action.dart';
 
@@ -123,6 +124,7 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
     this.characterCountKey,
     this.actionKey,
     this.actionIcon,
+    this.actionTone = AppActionTone.neutral,
   });
 
   final int characterCount;
@@ -136,6 +138,7 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
   final Key? characterCountKey;
   final Key? actionKey;
   final Widget? actionIcon;
+  final AppActionTone actionTone;
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +163,7 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
               isLoading: isLoading,
               onPressed: onPressed,
               icon: actionIcon,
+              tone: actionTone,
             )
           else
             AppHeaderTextAction(
@@ -187,6 +191,7 @@ class _KeyboardAccessoryIconAction extends StatelessWidget {
     required this.isLoading,
     required this.onPressed,
     required this.icon,
+    required this.tone,
   });
 
   final String label;
@@ -195,9 +200,36 @@ class _KeyboardAccessoryIconAction extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onPressed;
   final Widget icon;
+  final AppActionTone tone;
 
   @override
   Widget build(BuildContext context) {
+    final activeBackgroundColor = switch (tone) {
+      AppActionTone.neutral => AppColors.actionPrimary,
+      AppActionTone.brand => AppColors.brandAction,
+      AppActionTone.secondary => AppColors.background,
+    };
+    final activeContentColor = switch (tone) {
+      AppActionTone.neutral => AppColors.textInverse,
+      AppActionTone.brand => AppColors.onBrandAction,
+      AppActionTone.secondary => AppColors.textPrimary,
+    };
+    final baseStyle = IconButton.styleFrom(
+      fixedSize: const Size.square(44),
+      backgroundColor: activeBackgroundColor,
+      foregroundColor: activeContentColor,
+      disabledBackgroundColor: isLoading
+          ? activeBackgroundColor
+          : AppColors.actionDisabled,
+      disabledForegroundColor: isLoading
+          ? activeContentColor
+          : AppColors.actionDisabledContent,
+      side: tone == AppActionTone.secondary
+          ? const BorderSide(color: AppColors.wireframeBorder)
+          : null,
+      shape: const CircleBorder(),
+    );
+
     return Semantics(
       button: true,
       enabled: enabled,
@@ -206,23 +238,18 @@ class _KeyboardAccessoryIconAction extends StatelessWidget {
       child: IconButton(
         tooltip: label,
         onPressed: enabled && !isLoading ? onPressed : null,
-        style: IconButton.styleFrom(
-          fixedSize: const Size.square(44),
-          backgroundColor: AppColors.actionPrimary,
-          foregroundColor: AppColors.textInverse,
-          disabledBackgroundColor: isLoading
-              ? AppColors.actionPrimary
-              : AppColors.actionDisabled,
-          disabledForegroundColor: isLoading
-              ? AppColors.textInverse
-              : AppColors.actionDisabledContent,
-          shape: const CircleBorder(),
-        ),
+        style: tone == AppActionTone.brand
+            ? baseStyle.copyWith(
+                overlayColor: const WidgetStatePropertyAll(
+                  AppColors.brandPressed,
+                ),
+              )
+            : baseStyle,
         icon: isLoading
-            ? const SizedBox.square(
+            ? SizedBox.square(
                 dimension: 18,
                 child: CircularProgressIndicator(
-                  color: AppColors.textInverse,
+                  color: activeContentColor,
                   strokeWidth: 2,
                 ),
               )
