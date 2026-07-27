@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/presentation/couple_entry_screen.dart';
+import 'package:vinscent/features/couple/presentation/couple_setup_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/couple_waiting_screen.dart';
+import 'package:vinscent/features/couple/presentation/relationship_start_date_screen.dart';
 
 void main() {
   testWidgets('separates invite creation from code entry', (tester) async {
@@ -69,6 +73,52 @@ void main() {
       ),
     );
 
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses the shared date field before character setup', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          todayControllerProvider.overrideWithBuild(
+            (ref, notifier) => DateTime(2026, 7, 28),
+          ),
+        ],
+        child: const MaterialApp(home: RelationshipStartDateScreen()),
+      ),
+    );
+
+    expect(find.text('우리가 처음 만난 날은?'), findsOneWidget);
+    expect(
+      find.byKey(const Key('relationship-start-date-field')),
+      findsOneWidget,
+    );
+    expect(find.text('다음'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const Key('relationship-start-date-field')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('만난 날 선택'), findsOneWidget);
+    expect(find.byKey(const Key('app-date-picker-year')), findsOneWidget);
+  });
+
+  testWidgets('centers the waiting character on a tablet', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1024, 768));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(home: CoupleSetupWaitingScreen()),
+    );
+
+    final characterCenter = tester.getCenter(
+      find.byType(CharacterPlaceholder),
+    );
+    expect(characterCenter.dx, moreOrLessEquals(512, epsilon: 1));
+    expect(find.text('설정 중입니다.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
