@@ -142,10 +142,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byType(BottomSheet), findsOneWidget);
     expect(find.text('질문을 삭제할까요?'), findsOneWidget);
     expect(repository.deletedQuestionIds, isEmpty);
 
-    await tester.tap(find.text('취소'));
+    await tester.tap(find.byKey(const Key('app-confirmation-cancel')));
     await tester.pumpAndSettle();
     expect(repository.deletedQuestionIds, isEmpty);
 
@@ -153,7 +154,7 @@ void main() {
       find.byKey(const Key('ai-direct-history-delete-latest-question')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('삭제'));
+    await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
     await tester.pump();
     await tester.pump();
 
@@ -179,6 +180,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byType(BottomSheet), findsOneWidget);
     expect(find.text('질문을 삭제할까요?'), findsOneWidget);
     expect(find.text('취소'), findsOneWidget);
     expect(find.text('삭제'), findsOneWidget);

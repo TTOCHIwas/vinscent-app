@@ -531,7 +531,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('삭제'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('삭제'));
+    expect(find.byType(BottomSheet), findsOneWidget);
+    await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
     await tester.pumpAndSettle();
 
     expect(find.text('일정을 삭제했어요'), findsOneWidget);
