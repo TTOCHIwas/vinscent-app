@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,35 +8,28 @@ import 'package:vinscent/features/ai/data/ai_direct_question_repository.dart';
 import 'package:vinscent/features/ai/presentation/ai_direct_question_composer_controller.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_direct_question_composer.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_direct_question_keyboard_accessory.dart';
+import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 
 void main() {
-  testWidgets('shows the guide latest answer and history action', (
+  testWidgets('shows only the current exchange when a question exists', (
     tester,
   ) async {
-    var historyPressed = false;
     final repository = _FakeDirectQuestionRepository(
       history: _history(questions: [_completedQuestion]),
     );
 
-    await _pump(
-      tester,
-      repository,
-      onHistoryPressed: () => historyPressed = true,
-    );
+    await _pump(tester, repository);
 
     expect(
       find.byKey(const Key('ai-direct-question-composer')),
       findsOneWidget,
     );
-    final guideCharacter = find.byKey(const Key('ai-direct-guide-character'));
-    expect(guideCharacter, findsOneWidget);
-    expect(tester.getSize(guideCharacter), const Size.square(156));
-    await tester.ensureVisible(find.byKey(const Key('ai-direct-history-open')));
-    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsOneWidget);
+    expect(find.byKey(const Key('ai-direct-guide-character')), findsNothing);
+    expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+    expect(_wordBoundaryText('우리 둘은 쉬는 날에 뭘 하면 잘 맞을까?'), findsOneWidget);
     expect(_wordBoundaryText('가볍게 걸으며 이야기하는 시간이 잘 어울려'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('ai-direct-history-open')));
-    expect(historyPressed, isTrue);
+    expect(find.text('최근 답변'), findsNothing);
+    expect(find.byKey(const Key('ai-direct-history-open')), findsNothing);
   });
 
   testWidgets('shows vertically separated follow-up decision actions', (
@@ -77,62 +69,30 @@ void main() {
     ]);
   });
 
-  testWidgets('cycles the guide prompt and daily remaining count', (
+  testWidgets('shows one idle character before the first question', (
     tester,
   ) async {
     await _pump(tester, _FakeDirectQuestionRepository(history: _history()));
 
-    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsOneWidget);
-    expect(find.byKey(const Key('ai-direct-remaining-count')), findsNothing);
-
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
-
-    expect(_wordBoundaryText('오늘 2번 더 물어볼 수 있어'), findsOneWidget);
-    expect(find.byKey(const Key('ai-direct-remaining-count')), findsOneWidget);
+    expect(_wordBoundaryText('우리 둘에 관해 궁금한 걸 물어봐'), findsOneWidget);
+    expect(find.byKey(const Key('ai-direct-guide-character')), findsOneWidget);
+    expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
   });
 
-  testWidgets('pauses the guide cycle while its tab is inactive', (
-    tester,
-  ) async {
-    final tickerEnabled = ValueNotifier(true);
-    addTearDown(tickerEnabled.dispose);
-    await _pump(
-      tester,
-      _FakeDirectQuestionRepository(history: _history()),
-      tickerEnabled: tickerEnabled,
-    );
-
-    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsOneWidget);
-
-    tickerEnabled.value = false;
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 4));
-    tickerEnabled.value = true;
-    await tester.pump();
-
-    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsOneWidget);
-    expect(find.byKey(const Key('ai-direct-remaining-count')), findsNothing);
-
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('ai-direct-remaining-count')), findsOneWidget);
-  });
-
-  testWidgets('keeps the exhausted guide message fixed', (tester) async {
+  testWidgets('uses the exhausted state in the fixed input', (tester) async {
     await _pump(
       tester,
       _FakeDirectQuestionRepository(history: _history(remainingCount: 0)),
     );
 
-    expect(_wordBoundaryText('오늘 질문은 모두 사용했어! 내일 다시 물어봐!'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 8));
-    await tester.pumpAndSettle();
-
-    expect(_wordBoundaryText('오늘 질문은 모두 사용했어! 내일 다시 물어봐!'), findsOneWidget);
-    expect(_wordBoundaryText('나에게 궁금한 걸 물어봐!'), findsNothing);
+    final input = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const Key('ai-direct-question-input')),
+        matching: find.byType(TextField),
+      ),
+    );
+    expect(input.enabled, isFalse);
+    expect(input.decoration?.hintText, '오늘 질문은 모두 사용했어');
   });
 
   testWidgets('keeps input focus when the keyboard inset changes', (
@@ -275,28 +235,15 @@ Finder _wordBoundaryText(String text) {
 Future<void> _pump(
   WidgetTester tester,
   AiDirectQuestionRepository repository, {
-  VoidCallback? onHistoryPressed,
   double textScaleFactor = 1,
   bool settle = true,
-  ValueListenable<bool>? tickerEnabled,
 }) async {
   final composerController = AiDirectQuestionComposerController();
   addTearDown(composerController.dispose);
-  Widget composer = SingleChildScrollView(
-    padding: const EdgeInsets.all(24),
-    child: AiDirectQuestionComposer(
-      controller: composerController,
-      onHistoryPressed: onHistoryPressed ?? () {},
-    ),
+  final composer = AiDirectQuestionComposer(
+    controller: composerController,
+    onHistoryPressed: () {},
   );
-  if (tickerEnabled != null) {
-    composer = ValueListenableBuilder<bool>(
-      valueListenable: tickerEnabled,
-      child: composer,
-      builder: (context, enabled, child) =>
-          TickerMode(enabled: enabled, child: child!),
-    );
-  }
 
   await tester.pumpWidget(
     ProviderScope(
@@ -310,16 +257,20 @@ Future<void> _pump(
           ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
           child: child!,
         ),
-        home: Scaffold(
-          body: ListenableBuilder(
-            listenable: composerController.focusNode,
-            child: composer,
-            builder: (context, child) => AppKeyboardAccessoryLayout(
-              isActive: composerController.focusNode.hasFocus,
-              accessory: AiDirectQuestionKeyboardAccessory(
-                controller: composerController,
+        home: SizedBox(
+          width: 400,
+          height: 700,
+          child: Scaffold(
+            body: ListenableBuilder(
+              listenable: composerController.focusNode,
+              child: composer,
+              builder: (context, child) => AppKeyboardAccessoryLayout(
+                isActive: composerController.focusNode.hasFocus,
+                accessory: AiDirectQuestionKeyboardAccessory(
+                  controller: composerController,
+                ),
+                child: child!,
               ),
-              child: child!,
             ),
           ),
         ),

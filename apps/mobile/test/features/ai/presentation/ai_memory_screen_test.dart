@@ -44,6 +44,11 @@ void main() {
     expect(_wordBoundaryText('둘은 새로운 장소를 함께 찾는 걸 좋아해'), findsOneWidget);
     expect(_wordBoundaryText('아직 확인하지 않은 기억'), findsNothing);
     expect(find.text('확인됨'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ai-learning-stop')),
+      200,
+    );
+    expect(find.text('AI 학습 중지'), findsOneWidget);
   });
 
   testWidgets('shows an empty state when there are no confirmed memories', (

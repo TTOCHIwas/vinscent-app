@@ -14,7 +14,7 @@ void main() {
   ) async {
     await _pump(tester, _dashboard(myConsent: AiConsentStatus.revoked));
 
-    expect(_wordBoundaryText('우리 둘의 AI'), findsOneWidget);
+    expect(_wordBoundaryText('서로 알아가기'), findsOneWidget);
     expect(find.byKey(const Key('ai-consent-start')), findsOneWidget);
     expect(find.text('AI 학습 시작하기'), findsOneWidget);
     expect(find.byKey(const Key('ai-learning-progress')), findsOneWidget);
@@ -101,7 +101,7 @@ void main() {
     expect(find.text('확인할 기억 6개'), findsOneWidget);
   });
 
-  testWidgets('shows confirmed memories as one compact entry when ready', (
+  testWidgets('shows ready question header actions without dashboard clutter', (
     tester,
   ) async {
     await _pump(
@@ -128,20 +128,19 @@ void main() {
           ),
         ],
       ),
+      directQuestionHistory: _directQuestionHistory(),
     );
 
     expect(find.byKey(const Key('ai-learning-progress')), findsNothing);
-    expect(find.byKey(const Key('ai-memory-summary-open')), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('AI 학습 중지'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    expect(_wordBoundaryText('물어보기'), findsOneWidget);
+    expect(_wordBoundaryText('오늘 2번 더 물어볼 수 있어'), findsOneWidget);
+    expect(find.byKey(const Key('ai-tab-history-action')), findsOneWidget);
+    expect(find.byKey(const Key('ai-tab-memory-action')), findsOneWidget);
+    expect(find.byKey(const Key('ai-memory-summary-open')), findsNothing);
     expect(_wordBoundaryText('함께 학습 중'), findsNothing);
     expect(_wordBoundaryText('우리 둘의 AI가 준비됐어'), findsNothing);
-    expect(find.text('기억한 내용'), findsOneWidget);
-    expect(_wordBoundaryText('확인한 기억 2개'), findsOneWidget);
-    expect(find.text('AI 학습 중지'), findsOneWidget);
+    expect(find.text('기억한 내용'), findsNothing);
+    expect(find.text('AI 학습 중지'), findsNothing);
     expect(find.text('너에 대해'), findsNothing);
     expect(find.text('상대에 대해'), findsNothing);
     expect(_wordBoundaryText('함께 산책하는 시간을 좋아해요.'), findsNothing);
@@ -199,7 +198,40 @@ void main() {
     expect(find.byKey(const Key('ai-focused-continue')), findsOneWidget);
   });
 
-  testWidgets('shows the direct question composer first when ready', (
+  testWidgets(
+    'keeps the current question and answer as the ready main content',
+    (tester) async {
+      await _pump(
+        tester,
+        _dashboard(
+          completedCount: 24,
+          personalizationStatus: AiPersonalizationStatus.ready,
+          memories: [
+            _memory.copyWith(state: AiMemoryState.active, canConfirm: false),
+          ],
+        ),
+        directQuestionHistory: _directQuestionHistory(),
+      );
+
+      final composer = find.byKey(const Key('ai-direct-question-composer'));
+
+      expect(composer, findsOneWidget);
+      expect(_wordBoundaryText('우리는 쉬는 날에 뭘 하면 잘 맞을까?'), findsOneWidget);
+      expect(_wordBoundaryText('가볍게 걸으며 이야기하는 시간이 잘 어울려'), findsOneWidget);
+      expect(find.text('최근 답변'), findsNothing);
+      expect(find.byKey(const Key('ai-direct-history-open')), findsNothing);
+      expect(
+        find.descendant(
+          of: composer,
+          matching: find.byKey(const Key('ai-direct-question-input')),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('ai-memory-summary-open')), findsNothing);
+    },
+  );
+
+  testWidgets('keeps the ready input outside the conversation scroll view', (
     tester,
   ) async {
     await _pump(
@@ -207,30 +239,20 @@ void main() {
       _dashboard(
         completedCount: 24,
         personalizationStatus: AiPersonalizationStatus.ready,
-        memories: [
-          _memory.copyWith(state: AiMemoryState.active, canConfirm: false),
-        ],
       ),
       directQuestionHistory: _directQuestionHistory(),
     );
 
-    final composer = find.byKey(const Key('ai-direct-question-composer'));
-    final memorySummary = find.byKey(const Key('ai-memory-summary-open'));
+    final conversation = find.byKey(
+      const Key('ai-direct-question-conversation'),
+    );
+    final inputDock = find.byKey(const Key('ai-direct-question-input-dock'));
+    final input = find.byKey(const Key('ai-direct-question-input'));
 
-    expect(composer, findsOneWidget);
-    expect(
-      find.descendant(
-        of: composer,
-        matching: find.byKey(const Key('ai-direct-question-input')),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('ai-direct-history-open')), findsOneWidget);
-    expect(memorySummary, findsOneWidget);
-    expect(
-      tester.getTopLeft(composer).dy,
-      lessThan(tester.getTopLeft(memorySummary).dy),
-    );
+    expect(conversation, findsOneWidget);
+    expect(inputDock, findsOneWidget);
+    expect(find.descendant(of: conversation, matching: input), findsNothing);
+    expect(find.descendant(of: inputDock, matching: input), findsOneWidget);
   });
 
   testWidgets('shows the direct question action above the keyboard', (
