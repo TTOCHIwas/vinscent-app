@@ -30,7 +30,7 @@ class AppSetupPage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            if (header case final header?) header,
+            ?header,
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
