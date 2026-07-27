@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/widgets/app_keyboard_accessory.dart';
+import '../../../../core/presentation/widgets/app_action_tone.dart';
 import '../../application/ai_direct_question_controller.dart';
 import '../ai_direct_question_composer_controller.dart';
 import 'ai_learning_error_message.dart';
@@ -36,6 +37,7 @@ class AiDirectQuestionKeyboardAccessory extends ConsumerWidget {
           actionLabel: '물어보기',
           loadingLabel: '질문 보내는 중',
           actionIcon: const Icon(Icons.arrow_upward_rounded, size: 24),
+          actionTone: AppActionTone.brand,
           enabled: canSubmit,
           isLoading: controller.isSubmitting,
           horizontalPadding: 24,

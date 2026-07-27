@@ -7,6 +7,7 @@ import 'package:vinscent/features/ai/data/ai_direct_question_history.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/presentation/ai_screen.dart';
 import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 
 void main() {
   testWidgets('shows consent entry before the current member opts in', (
@@ -18,6 +19,17 @@ void main() {
     expect(find.byKey(const Key('ai-consent-start')), findsOneWidget);
     expect(find.text('AI 학습 시작하기'), findsOneWidget);
     expect(find.byKey(const Key('ai-learning-progress')), findsOneWidget);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.descendant(
+              of: find.byKey(const Key('ai-learning-progress')),
+              matching: find.byType(LinearProgressIndicator),
+            ),
+          )
+          .color,
+      AppColors.brandAccent,
+    );
   });
 
   testWidgets('shows partner waiting state after one member consents', (

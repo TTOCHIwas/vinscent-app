@@ -48,9 +48,10 @@ class AppSetupPage extends StatelessWidget {
                     padding: contentPadding,
                     child: centerContent
                         ? SizedBox(
-                            height: (constraints.maxHeight -
-                                    contentPadding.vertical)
-                                .clamp(0, double.infinity),
+                            height:
+                                (constraints.maxHeight -
+                                        contentPadding.vertical)
+                                    .clamp(0, double.infinity),
                             child: content,
                           )
                         : content,
@@ -110,10 +111,7 @@ class AppSetupHeader extends StatelessWidget {
             if (onBackPressed case final onBackPressed?)
               Align(
                 alignment: Alignment.centerLeft,
-                child: AppBackButton(
-                  onPressed: onBackPressed,
-                  tooltip: '이전',
-                ),
+                child: AppBackButton(onPressed: onBackPressed, tooltip: '이전'),
               ),
             if (currentStep != null && totalSteps != null)
               Semantics(
@@ -131,7 +129,7 @@ class AppSetupHeader extends StatelessWidget {
                           height: 3,
                           decoration: BoxDecoration(
                             color: index <= currentStep
-                                ? AppColors.textPrimary
+                                ? AppColors.brandAccent
                                 : AppColors.settingsDivider,
                             borderRadius: BorderRadius.circular(2),
                           ),

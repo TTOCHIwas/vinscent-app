@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/assets/app_icons.dart';
 import '../../../core/date/today_controller.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_action_tone.dart';
 import '../../../core/presentation/widgets/app_date_picker_sheet.dart';
 import '../../../core/presentation/widgets/app_setup_page.dart';
 import '../../../core/presentation/widgets/app_svg_icon.dart';
@@ -36,6 +37,7 @@ class RelationshipStartDateScreen extends ConsumerWidget {
             label: '다음',
             enabled: state.canSaveDate,
             isLoading: state.operation == CoupleFlowOperation.savingDate,
+            tone: AppActionTone.brand,
             onPressed: controller.saveRelationshipStartDate,
           ),
         ],

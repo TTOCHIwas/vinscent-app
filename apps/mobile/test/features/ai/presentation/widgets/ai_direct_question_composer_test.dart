@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_keyboard_accessory.dart';
 import 'package:vinscent/core/presentation/widgets/app_keyboard_dismiss_scope.dart';
 import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/data/ai_direct_question_history.dart';
 import 'package:vinscent/features/ai/data/ai_direct_question_repository.dart';
 import 'package:vinscent/features/ai/presentation/ai_direct_question_composer_controller.dart';
@@ -158,6 +159,16 @@ void main() {
     expect(
       find.descendant(of: accessory, matching: find.text('물어보기')),
       findsNothing,
+    );
+    final submitButton = tester.widget<IconButton>(
+      find.descendant(
+        of: find.byKey(const Key('ai-direct-submit')),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(
+      submitButton.style?.backgroundColor?.resolve({}),
+      AppColors.brandAction,
     );
   });
 

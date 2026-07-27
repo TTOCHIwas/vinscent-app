@@ -242,7 +242,7 @@ class _LearningProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             minHeight: 6,
             value: progress.completionRatio,
-            color: AppColors.textPrimary,
+            color: AppColors.brandAccent,
             backgroundColor: AppColors.settingsIconBackground,
           ),
         ),

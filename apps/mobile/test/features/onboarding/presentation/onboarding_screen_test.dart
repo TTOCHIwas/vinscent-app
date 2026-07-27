@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/app_action_button.dart';
+import 'package:vinscent/core/presentation/widgets/app_action_tone.dart';
 import 'package:vinscent/features/onboarding/presentation/onboarding_screen.dart';
 
 void main() {
@@ -14,6 +16,10 @@ void main() {
     expect(find.text('어떻게 불러주면 될까?'), findsOneWidget);
     expect(find.text('다음'), findsOneWidget);
     expect(find.byKey(const Key('app-setup-step-1')), findsOneWidget);
+    expect(
+      tester.widget<AppActionButton>(find.byType(AppActionButton)).tone,
+      AppActionTone.brand,
+    );
 
     final textField = tester.widget<TextField>(find.byType(TextField));
     expect(textField.decoration?.filled, isTrue);

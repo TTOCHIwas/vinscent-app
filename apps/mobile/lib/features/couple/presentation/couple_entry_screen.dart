@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_action_tone.dart';
 import '../../../core/presentation/widgets/app_setup_page.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -57,6 +58,7 @@ class _CoupleEntryScreenState extends ConsumerState<CoupleEntryScreen> {
             isLoading: isCreateMode
                 ? state.operation == CoupleFlowOperation.creating
                 : state.operation == CoupleFlowOperation.joining,
+            tone: AppActionTone.brand,
             onPressed: isCreateMode
                 ? controller.createInvite
                 : controller.joinByCode,

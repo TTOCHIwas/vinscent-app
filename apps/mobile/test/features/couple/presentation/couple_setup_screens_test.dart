@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/presentation/widgets/app_action_button.dart';
 import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/presentation/couple_entry_screen.dart';
@@ -19,6 +21,15 @@ void main() {
     expect(find.byKey(const Key('couple-connection-mode-selector')), findsOne);
     expect(find.text('초대 코드 만들기'), findsOne);
     expect(find.byType(TextField), findsNothing);
+    expect(_primaryActionColor(tester), AppColors.brandAction);
+    final selectedMode = find.ancestor(
+      of: find.text('초대하기'),
+      matching: find.byType(Material),
+    );
+    expect(
+      tester.widget<Material>(selectedMode.first).color,
+      AppColors.brandSurface,
+    );
 
     await tester.tap(find.text('코드 입력'));
     await tester.pumpAndSettle();
@@ -117,6 +128,15 @@ void main() {
     expect(find.text('설정 중입니다.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+Color? _primaryActionColor(WidgetTester tester) {
+  final action = find.byType(AppActionButton);
+  return tester
+      .widget<Material>(
+        find.descendant(of: action, matching: find.byType(Material)),
+      )
+      .color;
 }
 
 final _pendingCouple = Couple(
