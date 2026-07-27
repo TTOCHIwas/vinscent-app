@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Vinscent</string>
+    <string name="app_name">단짠</string>
     <string name="character_widget_description">커플 캐릭터와 녹음</string>
     <string name="character_widget_playback">녹음 재생</string>
     <string name="character_widget_record">녹음하기</string>

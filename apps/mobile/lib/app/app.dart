@@ -253,7 +253,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     }
 
     return MaterialApp.router(
-      title: 'Vinscent',
+      title: '단짠',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

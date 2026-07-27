@@ -1,3 +1,4 @@
+import { appDisplayName } from '../_shared/app_brand.ts';
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
@@ -60,7 +61,7 @@ Deno.serve(async (request) => {
       notificationType: 'couple_disconnect',
       sourceId: couple.id,
       receiverUserId,
-      title: 'Vinscent',
+      title: appDisplayName,
       body: '상대방이 커플 연결을 해제했어요.',
       preferenceColumn: 'couple_disconnect_enabled',
       data: {

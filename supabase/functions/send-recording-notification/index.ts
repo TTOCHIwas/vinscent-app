@@ -1,3 +1,4 @@
+import { appDisplayName } from '../_shared/app_brand.ts';
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
@@ -57,7 +58,7 @@ Deno.serve(async (request) => {
       notificationType: 'recording_activity',
       sourceId: event.id,
       receiverUserId: event.receiver_user_id,
-      title: 'Vinscent',
+      title: appDisplayName,
       body: notificationBodyFor(event),
       preferenceColumn: 'recording_enabled',
       data: notificationDataFor(event),

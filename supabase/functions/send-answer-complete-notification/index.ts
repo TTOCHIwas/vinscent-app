@@ -1,3 +1,4 @@
+import { appDisplayName } from '../_shared/app_brand.ts';
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
@@ -54,7 +55,7 @@ Deno.serve(async (request) => {
       notificationType: 'partner_answer_completed',
       sourceId: context.answer_id,
       receiverUserId: context.receiver_user_id,
-      title: 'Vinscent',
+      title: appDisplayName,
       body: '상대방이 오늘 질문에 답변을 남겼어요.',
       preferenceColumn: 'partner_answer_enabled',
       data: {

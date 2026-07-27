@@ -1,3 +1,4 @@
+import { appDisplayName } from '../_shared/app_brand.ts';
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import { dispatchInBatches } from './dispatch_in_batches.ts';
@@ -58,7 +59,7 @@ export async function dispatchUnansweredQuestionReminderJobs(
       notificationType: 'unanswered_reminder',
       sourceId: job.dailyQuestionId,
       receiverUserId: job.receiverUserId,
-      title: 'Vinscent',
+      title: appDisplayName,
       body: '아직 오늘 질문에 답변하지 않았어요.',
       accessToken: params.accessToken,
       preferenceColumn: 'reminder_enabled',

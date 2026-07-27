@@ -53,7 +53,7 @@ private struct VinscentCharacterWidget: Widget {
       VinscentCharacterWidgetView(entry: entry)
         .containerBackground(.clear, for: .widget)
     }
-    .configurationDisplayName("Vinscent Character")
+    .configurationDisplayName("단짠 캐릭터")
     .description("Play or record your shared couple message.")
     .supportedFamilies([.systemSmall])
     .contentMarginsDisabled()
@@ -346,7 +346,7 @@ private struct VinscentCardWidget: Widget {
       VinscentCardWidgetView(entry: entry)
         .containerBackground(.clear, for: .widget)
     }
-    .configurationDisplayName("Vinscent Card")
+    .configurationDisplayName("단짠 카드")
     .description("Show your partner's latest card.")
     .supportedFamilies([.systemSmall])
     .contentMarginsDisabled()

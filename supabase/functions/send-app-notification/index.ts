@@ -1,3 +1,4 @@
+import { appDisplayName } from '../_shared/app_brand.ts';
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
@@ -61,7 +62,7 @@ Deno.serve(async (request) => {
       notificationType: notificationTypeFor(event.event_type),
       sourceId: event.id,
       receiverUserId: event.receiver_user_id,
-      title: 'Vinscent',
+      title: appDisplayName,
       body: notificationBodyFor(event.event_type),
       preferenceColumn: preferenceColumnFor(event.event_type),
       data: notificationDataFor(event),

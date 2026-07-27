@@ -103,7 +103,7 @@ class FirebasePushTokenRepository implements PushTokenRepository {
     if (defaultTargetPlatform == TargetPlatform.android) {
       _debugPushLog('Android foreground notification channel setup started');
       const androidSettings = AndroidInitializationSettings(
-        '@mipmap/ic_launcher',
+        'ic_widget_notification',
       );
       const initializationSettings = InitializationSettings(
         android: androidSettings,
