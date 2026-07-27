@@ -32,7 +32,7 @@ class HomeWidgetCalendarSummaryResolver {
                 version:
                     '${selectedEvent.id}:${selectedEvent.revision}:'
                     '${selectedEvent.updatedAt.microsecondsSinceEpoch}',
-                extension: 'png',
+                extension: 'webp',
               ),
       );
     }
