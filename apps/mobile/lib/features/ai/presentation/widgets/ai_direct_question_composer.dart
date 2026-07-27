@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/widgets/app_answer_input.dart';
+import '../../../../core/presentation/widgets/app_keyboard_accessory.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -99,72 +100,88 @@ class _DirectQuestionComposerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final latestQuestion = history.questions.firstOrNull;
-    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final keyboardVisible = AppKeyboardVisibility.of(context);
 
-    return Column(
-      key: const Key('ai-direct-question-composer'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return RefreshIndicator(
-                color: AppColors.textPrimary,
-                onRefresh: onRefresh,
-                child: ListView(
-                  key: const Key('ai-direct-question-conversation'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: (constraints.maxHeight - 40).clamp(
-                          0,
-                          double.infinity,
-                        ),
-                      ),
-                      child: latestQuestion == null
-                          ? const Center(child: _DirectQuestionGuide())
-                          : Align(
-                              alignment: Alignment.topCenter,
-                              child: AiDirectQuestionExchange(
-                                entry: latestQuestion,
-                                questionBubbleKey: const Key(
-                                  'ai-direct-latest-question-bubble',
-                                ),
-                                isLatest: true,
-                                usePrimaryAnswerLayout: true,
-                                onApproveFollowUp: onApproveFollowUp,
-                                onDismissFollowUp: onDismissFollowUp,
-                              ),
-                            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return TextFieldTapRegion(
+          child: RefreshIndicator(
+            color: AppColors.textPrimary,
+            onRefresh: onRefresh,
+            child: ListView(
+              key: const Key('ai-direct-question-conversation'),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              children: [
+                GestureDetector(
+                  key: const Key('ai-direct-question-content'),
+                  behavior: HitTestBehavior.translucent,
+                  onTap: controller.focusNode.unfocus,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                  ],
+                    child: Column(
+                      key: const Key('ai-direct-question-composer'),
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                          child: latestQuestion == null
+                              ? const Center(child: _DirectQuestionGuide())
+                              : Align(
+                                  alignment: Alignment.topCenter,
+                                  child: AiDirectQuestionExchange(
+                                    entry: latestQuestion,
+                                    questionBubbleKey: const Key(
+                                      'ai-direct-latest-question-bubble',
+                                    ),
+                                    isLatest: true,
+                                    usePrimaryAnswerLayout: true,
+                                    onApproveFollowUp: onApproveFollowUp,
+                                    onDismissFollowUp: onDismissFollowUp,
+                                  ),
+                                ),
+                        ),
+                        ColoredBox(
+                          color: AppColors.background,
+                          child: Padding(
+                            key: const Key('ai-direct-question-input-dock'),
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              8,
+                              24,
+                              keyboardVisible ? 8 : 104,
+                            ),
+                            child: AppAnswerInput(
+                              key: const Key('ai-direct-question-input'),
+                              controller: controller.questionController,
+                              focusNode: controller.focusNode,
+                              enabled:
+                                  !controller.isSubmitting &&
+                                  history.remainingCount > 0,
+                              minLines: keyboardVisible ? 1 : 3,
+                              maxLines: keyboardVisible ? 3 : 5,
+                              maxLength: AiDirectQuestionComposerController
+                                  .maxQuestionLength,
+                              hintText: history.remainingCount > 0
+                                  ? '예: 상대는 지친 날에 어떤 걸 좋아할까?'
+                                  : '오늘 질문은 모두 사용했어',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              );
-            },
-          ),
-        ),
-        ColoredBox(
-          color: AppColors.background,
-          child: Padding(
-            key: const Key('ai-direct-question-input-dock'),
-            padding: EdgeInsets.fromLTRB(24, 8, 24, keyboardVisible ? 8 : 104),
-            child: AppAnswerInput(
-              key: const Key('ai-direct-question-input'),
-              controller: controller.questionController,
-              focusNode: controller.focusNode,
-              enabled: !controller.isSubmitting && history.remainingCount > 0,
-              minLines: 3,
-              maxLines: 5,
-              maxLength: AiDirectQuestionComposerController.maxQuestionLength,
-              hintText: history.remainingCount > 0
-                  ? '예: 상대는 지친 날에 어떤 걸 좋아할까?'
-                  : '오늘 질문은 모두 사용했어',
+              ],
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

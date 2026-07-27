@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_keyboard_accessory.dart';
+import 'package:vinscent/core/presentation/widgets/app_keyboard_dismiss_scope.dart';
 import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 import 'package:vinscent/features/ai/data/ai_direct_question_history.dart';
 import 'package:vinscent/features/ai/data/ai_direct_question_repository.dart';
@@ -149,6 +150,130 @@ void main() {
     expect(find.text('물어보기'), findsOneWidget);
   });
 
+  testWidgets('scrolls the conversation without dismissing the keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await _pump(
+      tester,
+      _FakeDirectQuestionRepository(
+        history: _history(questions: [_completedQuestion]),
+      ),
+    );
+
+    final input = find.descendant(
+      of: find.byKey(const Key('ai-direct-question-input')),
+      matching: find.byType(TextField),
+    );
+    expect(tester.widget<TextField>(input).minLines, 3);
+
+    await tester.tap(input);
+    await tester.pump();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+
+    final inputDock = tester.widget<Padding>(
+      find.byKey(const Key('ai-direct-question-input-dock')),
+    );
+
+    expect(
+      find.byKey(const Key('ai-direct-question-conversation')),
+      findsOneWidget,
+    );
+    expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+    expect(tester.widget<TextField>(input).minLines, 1);
+    expect(tester.widget<TextField>(input).maxLines, 3);
+    expect((inputDock.padding as EdgeInsets).bottom, 8);
+
+    final editableText = tester.widget<EditableText>(
+      find.descendant(of: input, matching: find.byType(EditableText)),
+    );
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byKey(const Key('ai-direct-question-conversation')),
+        matching: find.byType(Scrollable),
+      ).first,
+    );
+
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+
+    await tester.drag(
+      find.byKey(const Key('ai-direct-question-content')),
+      const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+
+    expect(editableText.focusNode.hasFocus, isTrue);
+    expect(scrollable.position.pixels, greaterThan(0));
+
+    final character = find.byType(CoupleCharacterAvatar);
+    expect(
+      tester.getRect(character).bottom,
+      lessThanOrEqualTo(tester.getRect(input).top),
+    );
+  });
+
+  testWidgets('restores the dock after the keyboard closes', (tester) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await _pump(tester, _FakeDirectQuestionRepository(history: _history()));
+
+    final input = find.descendant(
+      of: find.byKey(const Key('ai-direct-question-input')),
+      matching: find.byType(TextField),
+    );
+
+    await tester.tap(input);
+    await tester.pump();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+
+    var inputDock = tester.widget<Padding>(
+      find.byKey(const Key('ai-direct-question-input-dock')),
+    );
+    expect((inputDock.padding as EdgeInsets).bottom, 8);
+    expect(tester.widget<TextField>(input).minLines, 1);
+
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pump();
+
+    inputDock = tester.widget<Padding>(
+      find.byKey(const Key('ai-direct-question-input-dock')),
+    );
+    expect((inputDock.padding as EdgeInsets).bottom, 104);
+    expect(tester.widget<TextField>(input).minLines, 3);
+  });
+
+  testWidgets('dismisses the keyboard after a completed content tap', (
+    tester,
+  ) async {
+    await _pump(tester, _FakeDirectQuestionRepository(history: _history()));
+
+    final input = find.descendant(
+      of: find.byKey(const Key('ai-direct-question-input')),
+      matching: find.byType(TextField),
+    );
+    final editableText = tester.widget<EditableText>(
+      find.descendant(of: input, matching: find.byType(EditableText)),
+    );
+
+    await tester.tap(input);
+    await tester.pump();
+    expect(editableText.focusNode.hasFocus, isTrue);
+
+    await tester.tap(find.byKey(const Key('ai-direct-question-content')));
+    await tester.pump();
+
+    expect(editableText.focusNode.hasFocus, isFalse);
+  });
+
   testWidgets('submits a question from the keyboard accessory', (tester) async {
     addTearDown(tester.view.resetViewInsets);
     final repository = _FakeDirectQuestionRepository(history: _history());
@@ -257,16 +382,18 @@ Future<void> _pump(
         home: SizedBox(
           width: 400,
           height: 700,
-          child: Scaffold(
-            body: ListenableBuilder(
-              listenable: composerController.focusNode,
-              child: composer,
-              builder: (context, child) => AppKeyboardAccessoryLayout(
-                isActive: composerController.focusNode.hasFocus,
-                accessory: AiDirectQuestionKeyboardAccessory(
-                  controller: composerController,
+          child: AppKeyboardDismissScope(
+            child: Scaffold(
+              body: ListenableBuilder(
+                listenable: composerController.focusNode,
+                child: composer,
+                builder: (context, child) => AppKeyboardAccessoryLayout(
+                  isActive: composerController.focusNode.hasFocus,
+                  accessory: AiDirectQuestionKeyboardAccessory(
+                    controller: composerController,
+                  ),
+                  child: child!,
                 ),
-                child: child!,
               ),
             ),
           ),

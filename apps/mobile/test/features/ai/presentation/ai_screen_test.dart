@@ -231,7 +231,7 @@ void main() {
     },
   );
 
-  testWidgets('keeps the ready input outside the conversation scroll view', (
+  testWidgets('keeps the ready input inside the conversation scroll view', (
     tester,
   ) async {
     await _pump(
@@ -251,7 +251,7 @@ void main() {
 
     expect(conversation, findsOneWidget);
     expect(inputDock, findsOneWidget);
-    expect(find.descendant(of: conversation, matching: input), findsNothing);
+    expect(find.descendant(of: conversation, matching: input), findsOneWidget);
     expect(find.descendant(of: inputDock, matching: input), findsOneWidget);
   });
 

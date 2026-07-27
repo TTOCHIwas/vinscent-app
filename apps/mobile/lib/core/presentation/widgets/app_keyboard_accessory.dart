@@ -4,6 +4,27 @@ import '../../theme/app_colors.dart';
 import 'app_answer_input.dart';
 import 'app_header_text_action.dart';
 
+class AppKeyboardVisibility extends InheritedWidget {
+  const AppKeyboardVisibility({
+    super.key,
+    required this.isVisible,
+    required super.child,
+  });
+
+  final bool isVisible;
+
+  static bool of(BuildContext context) {
+    final visibility = context
+        .dependOnInheritedWidgetOfExactType<AppKeyboardVisibility>();
+    return visibility?.isVisible ?? MediaQuery.viewInsetsOf(context).bottom > 0;
+  }
+
+  @override
+  bool updateShouldNotify(AppKeyboardVisibility oldWidget) {
+    return isVisible != oldWidget.isVisible;
+  }
+}
+
 class AppKeyboardAccessoryLayout extends StatefulWidget {
   const AppKeyboardAccessoryLayout({
     super.key,
@@ -46,12 +67,15 @@ class _AppKeyboardAccessoryLayoutState extends State<AppKeyboardAccessoryLayout>
   Widget build(BuildContext context) {
     final keyboardVisible = View.of(context).viewInsets.bottom > 0;
 
-    return Column(
-      children: [
-        Expanded(child: widget.child),
-        if (widget.isActive && keyboardVisible)
-          TextFieldTapRegion(child: widget.accessory),
-      ],
+    return AppKeyboardVisibility(
+      isVisible: keyboardVisible,
+      child: Column(
+        children: [
+          Expanded(child: widget.child),
+          if (widget.isActive && keyboardVisible)
+            TextFieldTapRegion(child: widget.accessory),
+        ],
+      ),
     );
   }
 }
