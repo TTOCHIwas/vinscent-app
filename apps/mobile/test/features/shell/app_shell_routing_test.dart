@@ -134,7 +134,7 @@ void main() {
       );
       expect(
         tester.widget<Icon>(find.byIcon(Icons.calendar_today_rounded)).color,
-        AppColors.textMuted,
+        AppColors.shellBottomBarIconIdle,
       );
       expect(
         find.descendant(

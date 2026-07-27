@@ -6,9 +6,14 @@ import WidgetKit
 
 private enum VinscentWidgetPalette {
   static let brandAction = Color(
-    red: 185.0 / 255.0,
-    green: 88.0 / 255.0,
-    blue: 67.0 / 255.0
+    red: 220.0 / 255.0,
+    green: 105.0 / 255.0,
+    blue: 87.0 / 255.0
+  )
+  static let onBrandAction = Color(
+    red: 255.0 / 255.0,
+    green: 255.0 / 255.0,
+    blue: 255.0 / 255.0
   )
 }
 
@@ -59,7 +64,7 @@ private struct VinscentCharacterWidget: Widget {
       provider: VinscentCharacterProvider()
     ) { entry in
       VinscentCharacterWidgetView(entry: entry)
-        .containerBackground(.clear, for: .widget)
+        .containerBackground(.white, for: .widget)
     }
     .configurationDisplayName("단짠 캐릭터")
     .description("Play or record your shared couple message.")
@@ -178,7 +183,7 @@ private struct VinscentCharacterWidgetView: View {
       recordingButtonSurface {
         ProgressView()
           .controlSize(.small)
-          .tint(.white)
+          .tint(VinscentWidgetPalette.onBrandAction)
       }
       .accessibilityLabel("Saving recording")
     case .recording:
@@ -214,7 +219,7 @@ private struct VinscentCharacterWidgetView: View {
     recordingButtonSurface {
       Image(systemName: "mic.fill")
         .font(.system(size: 18, weight: .semibold))
-        .foregroundStyle(.white)
+        .foregroundStyle(VinscentWidgetPalette.onBrandAction)
     }
   }
 

@@ -69,7 +69,7 @@ class _ShellTabState extends State<ShellTab> {
                       size: 24,
                       color: widget.isSelected
                           ? AppColors.brandAccent
-                          : AppColors.textMuted,
+                          : AppColors.shellBottomBarIconIdle,
                     ),
                   ),
                 ),
