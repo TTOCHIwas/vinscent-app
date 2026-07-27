@@ -5,6 +5,7 @@ import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_sections.dart';
+import 'package:vinscent/features/questions/presentation/widgets/question_detail_title.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
@@ -60,6 +61,12 @@ void main() {
     final partnerCardRect = tester.getRect(partnerCard);
     expect(myCardRect.right, lessThanOrEqualTo(partnerCardRect.left));
     expect(myCardRect.top, partnerCardRect.top);
+    final detailContent = find.byKey(
+      const Key('calendar-story-detail-content'),
+    );
+    final detailContentRect = tester.getRect(detailContent);
+    expect(myCardRect.left, closeTo(detailContentRect.left, 0.5));
+    expect(partnerCardRect.right, closeTo(detailContentRect.right, 0.5));
     expect(
       find.descendant(of: cardStack, matching: find.byType(Transform)),
       findsNothing,
@@ -79,7 +86,27 @@ void main() {
     expect(find.text('history question'), findsOneWidget);
     expect(find.byKey(const Key('question-detail-title')), findsOneWidget);
     expect(find.byType(QuestionAnswerPromptRow), findsNothing);
-    expect(find.byType(QuestionAnswerOverview), findsOneWidget);
+    expect(find.byKey(const Key('calendar-schedule-section')), findsNothing);
+    expect(find.byKey(const Key('calendar-story-section')), findsOneWidget);
+    expect(find.text('우리 기록'), findsOneWidget);
+    final scrollView = find.byKey(const Key('calendar-scroll-view'));
+    expect(tester.getSize(detailContent).width, 520);
+    expect(
+      tester.getCenter(detailContent).dx,
+      closeTo(tester.getCenter(scrollView).dx, 0.5),
+    );
+    final questionTitle = tester.widget<QuestionDetailTitle>(
+      find.byType(QuestionDetailTitle),
+    );
+    expect(questionTitle.textAlign, TextAlign.start);
+    final answerOverview = tester.widget<QuestionAnswerOverview>(
+      find.byType(QuestionAnswerOverview),
+    );
+    expect(answerOverview.displayStyle, QuestionAnswerDisplayStyle.plain);
+    expect(
+      find.byKey(const Key('question-answer-grouped-surface')),
+      findsNothing,
+    );
     expect(find.text('my answer'), findsOneWidget);
     expect(find.text('partner answer'), findsOneWidget);
     expect(find.text('종합'), findsNothing);
@@ -115,6 +142,79 @@ void main() {
     expect(find.byKey(const Key('story-card-detail-card-2')), findsOneWidget);
   });
 
+  testWidgets('separates schedules and shared records in date detail', (
+    tester,
+  ) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(
+        details: {DateTime(2026, 5, 5): completedDetail},
+      ),
+      initialDate: DateTime(2026, 5, 5),
+      calendarEvents: [
+        calendarEvent(
+          id: 'shared-event',
+          title: '함께 보는 일정',
+          date: DateTime(2026, 5, 5),
+        ),
+      ],
+    );
+
+    final scheduleSection = find.byKey(const Key('calendar-schedule-section'));
+    final storySection = find.byKey(const Key('calendar-story-section'));
+
+    expect(scheduleSection, findsOneWidget);
+    expect(storySection, findsOneWidget);
+    expect(
+      find.descendant(of: scheduleSection, matching: find.text('일정')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: storySection, matching: find.text('우리 기록')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getRect(scheduleSection).bottom,
+      lessThan(tester.getRect(storySection).top),
+    );
+  });
+
+  testWidgets('keeps styled detail within a narrow enlarged-text viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(
+        details: {DateTime(2026, 5, 5): completedDetail},
+      ),
+      initialDate: DateTime(2026, 5, 5),
+      textScaleFactor: 1.3,
+    );
+
+    final detailContent = find.byKey(
+      const Key('calendar-story-detail-content'),
+    );
+    final scrollView = find.byKey(const Key('calendar-scroll-view'));
+    final storySection = find.byKey(const Key('calendar-story-section'));
+
+    expect(tester.getSize(detailContent).width, 320);
+    expect(tester.getSize(storySection).width, 320);
+    expect(
+      tester.getRect(storySection).right,
+      lessThanOrEqualTo(tester.getRect(scrollView).right - 20),
+    );
+    expect(
+      find.byKey(const Key('question-answer-grouped-surface')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows card only detail when question has not been generated', (
     tester,
   ) async {
@@ -131,7 +231,20 @@ void main() {
       DateTime(2026, 5, 10),
       DateTime(2026, 5, 5),
     ]);
-    expect(find.byType(CalendarStoryCardStack), findsOneWidget);
+    final cardStack = find.byType(CalendarStoryCardStack);
+    final card = find.byKey(const ValueKey('calendar-story-card-card-1'));
+    final detailContent = find.byKey(
+      const Key('calendar-story-detail-content'),
+    );
+    expect(cardStack, findsOneWidget);
+    expect(
+      tester.getSize(card).width,
+      closeTo((tester.getSize(detailContent).width - 16) / 2, 0.5),
+    );
+    expect(
+      tester.getCenter(card).dx,
+      closeTo(tester.getCenter(detailContent).dx, 0.5),
+    );
     expect(find.text('스토리 카드가 먼저 도착했어요'), findsOneWidget);
     expect(find.text('두 사람의 카드가 모두 올라오면 질문이 생성돼요'), findsOneWidget);
     expect(find.text('history question'), findsNothing);

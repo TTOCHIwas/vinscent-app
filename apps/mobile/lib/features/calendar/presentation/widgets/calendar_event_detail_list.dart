@@ -3,30 +3,28 @@ import 'package:flutter/material.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../application/couple_anniversary_resolver.dart';
 import '../../data/couple_calendar_event.dart';
 import 'calendar_event_artwork.dart';
+import 'calendar_event_action_sheet.dart';
 import 'calendar_event_detail_sheet.dart';
 
 class CalendarEventDetailList extends StatelessWidget {
   const CalendarEventDetailList({
     super.key,
     required this.events,
-    required this.anniversaries,
     required this.canEdit,
     required this.onEdit,
     required this.onDelete,
   });
 
   final List<CoupleCalendarEvent> events;
-  final List<CoupleAnniversaryOccurrence> anniversaries;
   final bool canEdit;
   final ValueChanged<CoupleCalendarEvent> onEdit;
   final ValueChanged<CoupleCalendarEvent> onDelete;
 
   @override
   Widget build(BuildContext context) {
-    if (events.isEmpty && anniversaries.isEmpty) {
+    if (events.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -40,9 +38,7 @@ class CalendarEventDetailList extends StatelessWidget {
         }
         return left.title.compareTo(right.title);
       });
-    final rows = <Widget>[
-      for (final anniversary in anniversaries)
-        _AnniversaryRow(anniversary: anniversary),
+    final rows = [
       for (final event in sortedEvents)
         _EventRow(
           event: event,
@@ -66,31 +62,6 @@ class CalendarEventDetailList extends StatelessWidget {
   }
 }
 
-class _AnniversaryRow extends StatelessWidget {
-  const _AnniversaryRow({required this.anniversary});
-
-  final CoupleAnniversaryOccurrence anniversary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      key: ValueKey('calendar-anniversary-detail-${anniversary.kind.name}'),
-      color: const Color(0xFFF4F4F4),
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: WordBoundaryText(
-            anniversary.label,
-            style: AppTextStyles.homeBodyMedium,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _EventRow extends StatelessWidget {
   const _EventRow({
     required this.event,
@@ -108,16 +79,22 @@ class _EventRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(6);
+
     return Material(
       key: ValueKey('calendar-event-row-surface-${event.id}'),
-      color: const Color(0xFFF4F4F4),
-      borderRadius: BorderRadius.circular(6),
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: borderRadius,
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey('calendar-event-open-${event.id}'),
         onTap: onOpen,
         splashColor: AppColors.settingsPressed,
         highlightColor: AppColors.settingsPressed,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: borderRadius,
         child: Padding(
           key: ValueKey('calendar-event-row-padding-${event.id}'),
           padding: const EdgeInsets.all(12),
@@ -135,29 +112,11 @@ class _EventRow extends StatelessWidget {
               ),
               if (canEdit) ...[
                 const SizedBox(width: 8),
-                PopupMenuButton<_CalendarEventAction>(
+                IconButton(
                   key: ValueKey('calendar-event-menu-${event.id}'),
                   tooltip: '일정 메뉴',
-                  padding: EdgeInsets.zero,
+                  onPressed: () => _openActionSheet(context),
                   icon: const Icon(Icons.more_horiz),
-                  onSelected: (action) {
-                    switch (action) {
-                      case _CalendarEventAction.edit:
-                        onEdit();
-                      case _CalendarEventAction.delete:
-                        onDelete();
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: _CalendarEventAction.edit,
-                      child: Text('수정'),
-                    ),
-                    PopupMenuItem(
-                      value: _CalendarEventAction.delete,
-                      child: Text('삭제'),
-                    ),
-                  ],
                 ),
               ],
             ],
@@ -166,6 +125,21 @@ class _EventRow extends StatelessWidget {
       ),
     );
   }
-}
 
-enum _CalendarEventAction { edit, delete }
+  Future<void> _openActionSheet(BuildContext context) async {
+    final action = await showCalendarEventActionSheet(
+      context: context,
+      eventId: event.id,
+    );
+    if (!context.mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case CalendarEventAction.edit:
+        onEdit();
+      case CalendarEventAction.delete:
+        onDelete();
+    }
+  }
+}

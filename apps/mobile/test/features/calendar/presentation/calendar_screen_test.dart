@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -112,6 +114,76 @@ void main() {
     );
   });
 
+  testWidgets('resets the viewport when the routed date changes', (
+    tester,
+  ) async {
+    final routeDate = ValueNotifier<DateTime?>(DateTime(2026, 5, 9));
+    addTearDown(routeDate.dispose);
+    final repository = FakeStoryLoopReadRepository();
+    await pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 1),
+      routeDate: routeDate,
+    );
+
+    final scrollFinder = find.byKey(const Key('calendar-scroll-view'));
+    final scrollView = tester.widget<CustomScrollView>(scrollFinder);
+    final metrics = CalendarMonthLayoutMetrics.forViewport(
+      tester.getSize(scrollFinder).height,
+    );
+
+    await tester.drag(scrollFinder, const Offset(0, 1000));
+    await tester.pumpAndSettle();
+    expect(scrollView.controller!.offset, closeTo(0, 0.5));
+
+    routeDate.value = DateTime(2026, 5, 8);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDetailDates, contains(DateTime(2026, 5, 8)));
+    expect(
+      scrollView.controller!.offset,
+      closeTo(metrics.standardScrollOffset, 0.5),
+    );
+  });
+
+  testWidgets('reopens a routed date after browsing away inside calendar', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository();
+    final router = await pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+
+    await tester.tap(find.text('9').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/calendar?date=2026-05-09',
+    );
+
+    router.go('/calendar?date=2026-05-10');
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDetailDates, [
+      DateTime(2026, 5, 10),
+      DateTime(2026, 5, 9),
+      DateTime(2026, 5, 10),
+    ]);
+    expect(
+      circularDecorations(
+        tester,
+        find.byKey(
+          const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
+        ),
+      ).map((decoration) => decoration.color),
+      contains(AppColors.actionPrimary),
+    );
+  });
+
   testWidgets('fills and left aligns the selected date header', (tester) async {
     await pumpCalendar(
       tester,
@@ -121,21 +193,84 @@ void main() {
 
     final scrollView = find.byKey(const Key('calendar-scroll-view'));
     final header = find.byType(CalendarDetailDateHeader);
-    final headerTexts = find.descendant(
+    final dateText = find.descendant(of: header, matching: find.text('5월 10일'));
+    final metadataText = find.descendant(
       of: header,
-      matching: find.byType(Text),
+      matching: find.text('2026 · 일요일'),
     );
 
     expect(tester.getSize(header).width, tester.getSize(scrollView).width);
     expect(
-      tester.getTopLeft(headerTexts.first).dx,
+      tester.getTopLeft(dateText).dx,
       closeTo(tester.getTopLeft(scrollView).dx + 20, 0.5),
     );
     final headerRect = tester.getRect(header);
-    final topGap = tester.getRect(headerTexts.first).top - headerRect.top;
-    final bottomGap =
-        headerRect.bottom - tester.getRect(headerTexts.last).bottom;
+    final topGap = tester.getRect(dateText).top - headerRect.top;
+    final bottomGap = headerRect.bottom - tester.getRect(metadataText).bottom;
     expect(topGap, closeTo(bottomGap, 0.5));
+  });
+
+  testWidgets('shows default anniversaries in the selected date header', (
+    tester,
+  ) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+
+    final header = find.byType(CalendarDetailDateHeader);
+    final anniversaryLabel = find.descendant(
+      of: header,
+      matching: find.text('10일'),
+    );
+
+    expect(anniversaryLabel, findsOneWidget);
+    expect(
+      find.byKey(const Key('calendar-detail-anniversary-labels')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('calendar-event-detail-list')), findsNothing);
+  });
+
+  testWidgets('stacks default anniversaries on a narrow enlarged-text header', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(280, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(1.6)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              const labels = ['1주년', '400일'];
+              return CalendarDetailDateHeader(
+                date: DateTime(2026, 5, 10),
+                anniversaryLabels: labels,
+                height: CalendarDetailDateHeader.resolveExtent(
+                  context,
+                  anniversaryLabels: labels,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('1주년'), findsOneWidget);
+    expect(find.text('400일'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('keeps the calendar readable on a narrow enlarged-text screen', (
@@ -546,6 +681,30 @@ void main() {
   );
 
   testWidgets(
+    'all mode loads month previews and selected-day events independently',
+    (tester) async {
+      final date = DateTime(2026, 5, 10);
+      final eventRequests = <CalendarEventDateRange>[];
+
+      await pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        previewMode: CalendarCellPreviewMode.all,
+        calendarEvents: [
+          calendarEvent(id: 'event-1', title: '함께 걷기', date: date),
+        ],
+        calendarEventRequests: eventRequests,
+      );
+
+      expect(eventRequests, [
+        (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+        (startDate: date, endDate: date),
+      ]);
+      expect(find.text('함께 걷기'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'events-only skips card month previews and keeps event previews',
     (tester) async {
       final date = DateTime(2026, 5, 10);
@@ -593,6 +752,43 @@ void main() {
       expect(repository.requestedMonths, isEmpty);
       expect(eventRequests, [
         (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+        (startDate: date, endDate: date),
+      ]);
+    },
+  );
+
+  testWidgets(
+    'waits for the preview preference before loading month previews',
+    (tester) async {
+      final previewMode = Completer<CalendarCellPreviewMode>();
+      final repository = FakeStoryLoopReadRepository();
+      final eventRequests = <CalendarEventDateRange>[];
+
+      await pumpCalendar(
+        tester,
+        repository: repository,
+        relationshipStartDate: DateTime(2026, 5, 1),
+        previewModeResult: previewMode.future,
+        calendarEventRequests: eventRequests,
+      );
+
+      expect(repository.requestedMonths, isEmpty);
+      expect(eventRequests, [
+        (startDate: DateTime(2026, 5, 10), endDate: DateTime(2026, 5, 10)),
+      ]);
+      await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
+      await tester.pump();
+      expect(
+        find.byKey(const Key('calendar-cell-preview-filter-sheet')),
+        findsNothing,
+      );
+
+      previewMode.complete(CalendarCellPreviewMode.cardsOnly);
+      await tester.pumpAndSettle();
+
+      expect(repository.requestedMonths, [DateTime(2026, 5)]);
+      expect(eventRequests, [
+        (startDate: DateTime(2026, 5, 10), endDate: DateTime(2026, 5, 10)),
       ]);
     },
   );
@@ -633,6 +829,49 @@ void main() {
     expect(find.text('2026년 05월'), findsNothing);
     expect(repository.requestedMonths, [DateTime(2026, 5)]);
     expect(repository.requestedDetailDates, [DateTime(2026, 5, 10)]);
+  });
+
+  testWidgets('does not add detail scrolling when empty content fits', (
+    tester,
+  ) async {
+    await pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+    final scrollFinder = find.byKey(const Key('calendar-scroll-view'));
+    final scrollView = tester.widget<CustomScrollView>(scrollFinder);
+    final metrics = CalendarMonthLayoutMetrics.forViewport(
+      tester.getSize(scrollFinder).height,
+    );
+
+    expect(
+      scrollView.controller!.position.maxScrollExtent,
+      closeTo(metrics.weeklyScrollOffset, 0.5),
+    );
+  });
+
+  testWidgets('does not add detail scrolling when cards and answers fit', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(
+        details: {DateTime(2026, 5, 5): completedDetail},
+      ),
+      initialDate: DateTime(2026, 5, 5),
+    );
+    final scrollFinder = find.byKey(const Key('calendar-scroll-view'));
+    final scrollView = tester.widget<CustomScrollView>(scrollFinder);
+    final metrics = CalendarMonthLayoutMetrics.forViewport(
+      tester.getSize(scrollFinder).height,
+    );
+
+    expect(
+      scrollView.controller!.position.maxScrollExtent,
+      closeTo(metrics.weeklyScrollOffset, 0.5),
+    );
   });
 
   testWidgets('uses thresholds and moves only one calendar state per gesture', (

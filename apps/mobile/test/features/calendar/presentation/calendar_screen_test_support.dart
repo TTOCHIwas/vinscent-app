@@ -57,16 +57,18 @@ List<BoxDecoration> circularDecorations(WidgetTester tester, Finder scope) {
       .toList(growable: false);
 }
 
-Future<void> pumpCalendar(
+Future<GoRouter> pumpCalendar(
   WidgetTester tester, {
   required StoryLoopReadRepository repository,
   DateTime? today,
   DateTime? relationshipStartDate,
   DateTime? initialDate,
+  ValueNotifier<DateTime?>? routeDate,
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   List<CoupleCalendarEvent> calendarEvents = const [],
   List<CalendarEventDateRange>? calendarEventRequests,
   CalendarCellPreviewMode previewMode = CalendarCellPreviewMode.all,
+  Future<CalendarCellPreviewMode>? previewModeResult,
   double textScaleFactor = 1,
 }) async {
   final calendarEventRepository = _FakeCalendarEventRepository(
@@ -78,8 +80,20 @@ Future<void> pumpCalendar(
     routes: [
       GoRoute(
         path: '/calendar',
-        builder: (context, state) =>
-            Scaffold(body: CalendarScreen(initialDate: initialDate)),
+        builder: (context, state) {
+          final routedDate = parseCalendarDate(
+            state.uri.queryParameters['date'],
+          );
+          return Scaffold(
+            body: routeDate == null
+                ? CalendarScreen(initialDate: initialDate ?? routedDate)
+                : ValueListenableBuilder<DateTime?>(
+                    valueListenable: routeDate,
+                    builder: (context, value, child) =>
+                        CalendarScreen(initialDate: value),
+                  ),
+          );
+        },
       ),
       GoRoute(
         path: '/calendar/question',
@@ -118,7 +132,8 @@ Future<void> pumpCalendar(
           (ref, notifier) async => _profile,
         ),
         calendarCellPreviewModeControllerProvider.overrideWithBuild(
-          (ref, notifier) async => previewMode,
+          (ref, notifier) async =>
+              await (previewModeResult ?? Future.value(previewMode)),
         ),
         aiQuestionFeedbackProvider.overrideWith((ref, dailyQuestionId) {
           final feedback = aiFeedbacks[dailyQuestionId];
@@ -146,6 +161,7 @@ Future<void> pumpCalendar(
   );
 
   await tester.pumpAndSettle();
+  return router;
 }
 
 Future<void> scrollCalendarUp(WidgetTester tester) async {

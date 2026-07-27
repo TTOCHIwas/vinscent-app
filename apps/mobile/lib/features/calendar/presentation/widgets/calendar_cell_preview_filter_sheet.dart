@@ -11,6 +11,7 @@ Future<CalendarCellPreviewMode?> showCalendarCellPreviewFilterSheet({
 }) {
   return showModalBottomSheet<CalendarCellPreviewMode>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: AppColors.background,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),

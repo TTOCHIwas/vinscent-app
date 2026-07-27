@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,6 +24,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
+    required this.selectedAnniversaryLabels,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
     required this.detailTransitionKey,
@@ -40,6 +42,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
+  final List<String> selectedAnniversaryLabels;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
   final Object detailTransitionKey;
@@ -51,11 +54,11 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final VoidCallback onDetailSwipeRight;
   final VoidCallback onDetailSwipeLeft;
   final double detailHeaderExtent;
-  final CalendarCellPreviewMode previewMode;
+  final CalendarCellPreviewMode? previewMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summaryByDate = previewMode.includesCards
+    final summaryByDate = previewMode?.includesCards == true
         ? ref
               .watch(storyLoopMonthSummaryProvider(visibleMonth))
               .maybeWhen(
@@ -67,7 +70,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
               )
         : const <DateTime, StoryLoopMonthSummaryDay>{};
     final eventsByDate = <DateTime, List<CoupleCalendarEvent>>{};
-    if (previewMode.includesEvents) {
+    if (previewMode?.includesEvents == true) {
       final calendarEvents = ref.watch(
         coupleCalendarEventMonthProvider(visibleMonth),
       );
@@ -96,6 +99,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         visibleMonth: visibleMonth,
         relationshipStartDate: relationshipStartDate,
         selectedDate: selectedDate,
+        selectedAnniversaryLabels: selectedAnniversaryLabels,
         calendarTransitionKey: calendarTransitionKey,
         calendarTransitionDirection: calendarTransitionDirection,
         detailTransitionKey: detailTransitionKey,
@@ -120,6 +124,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.visibleMonth,
     required this.relationshipStartDate,
     required this.selectedDate,
+    required this.selectedAnniversaryLabels,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
     required this.detailTransitionKey,
@@ -145,6 +150,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final DateTime visibleMonth;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
+  final List<String> selectedAnniversaryLabels;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
   final Object detailTransitionKey;
@@ -215,6 +221,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                     ? const SizedBox.expand()
                     : CalendarDetailDateHeader(
                         date: selectedDate!,
+                        anniversaryLabels: selectedAnniversaryLabels,
                         height: detailHeaderExtent,
                       ),
               ),
@@ -326,10 +333,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     }
 
     final monthStartIndex = days.indexWhere(
-      (date) => isSameCalendarDate(
-        date,
-        DateTime(visibleMonth.year, visibleMonth.month),
-      ),
+      (date) => isSameCalendarDate(date, calendarMonthOnly(visibleMonth)),
     );
     return monthStartIndex < 0 ? 0 : monthStartIndex ~/ DateTime.daysPerWeek;
   }
@@ -348,6 +352,10 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     return visibleMonth != oldDelegate.visibleMonth ||
         relationshipStartDate != oldDelegate.relationshipStartDate ||
         selectedDate != oldDelegate.selectedDate ||
+        !listEquals(
+          selectedAnniversaryLabels,
+          oldDelegate.selectedAnniversaryLabels,
+        ) ||
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
         anniversaryLabels != oldDelegate.anniversaryLabels ||
@@ -416,6 +424,7 @@ class _DateCell extends StatelessWidget {
         '${date.day}일',
         ?anniversaryLabel,
         if (events.isNotEmpty) '일정 ${events.length}개',
+        if ((summary?.cardCount ?? 0) > 0) '카드 ${summary!.cardCount}개',
       ].join(', '),
       child: InkWell(
         onTap: isEnabled ? onPressed : null,

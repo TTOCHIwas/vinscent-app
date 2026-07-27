@@ -8,10 +8,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../../story_loops/application/story_loop_detail_provider.dart';
-import '../../application/couple_anniversary_resolver.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../application/couple_calendar_event_realtime_controller.dart';
-import '../../data/calendar_cell_preview_mode.dart';
 import '../../data/couple_calendar_event.dart';
 import '../../data/couple_calendar_event_failure.dart';
 import '../../data/couple_calendar_event_repository.dart';
@@ -23,16 +21,14 @@ class CalendarSelectedDayDetail extends ConsumerStatefulWidget {
     super.key,
     required this.selectedDate,
     required this.today,
-    required this.relationshipStartDate,
+    required this.hasDefaultAnniversary,
     required this.canEdit,
-    required this.previewMode,
   });
 
   final DateTime selectedDate;
   final DateTime today;
-  final DateTime relationshipStartDate;
+  final bool hasDefaultAnniversary;
   final bool canEdit;
-  final CalendarCellPreviewMode previewMode;
 
   @override
   ConsumerState<CalendarSelectedDayDetail> createState() =>
@@ -46,10 +42,9 @@ class _CalendarSelectedDayDetailState
   @override
   Widget build(BuildContext context) {
     final selectedDate = calendarDateOnly(widget.selectedDate);
-    final selectedMonth = calendarMonthOnly(selectedDate);
-    final calendarEvents = widget.previewMode.includesEvents
-        ? ref.watch(coupleCalendarEventMonthProvider(selectedMonth))
-        : ref.watch(coupleCalendarEventDateProvider(selectedDate));
+    final calendarEvents = ref.watch(
+      coupleCalendarEventDateProvider(selectedDate),
+    );
     final events =
         calendarEvents.asData?.value
             .where(
@@ -57,42 +52,45 @@ class _CalendarSelectedDayDetailState
             )
             .toList(growable: false) ??
         const <CoupleCalendarEvent>[];
-    final anniversaries = const CoupleAnniversaryResolver().resolve(
-      startDate: widget.relationshipStartDate,
-      date: selectedDate,
+    final hasCalendarEntries =
+        events.isNotEmpty || widget.hasDefaultAnniversary;
+    final hasScheduleSection = calendarEvents.hasError || events.isNotEmpty;
+    final hasStorySection = !selectedDate.isAfter(
+      calendarDateOnly(widget.today),
     );
-    final hasCalendarEntries = events.isNotEmpty || anniversaries.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (calendarEvents.hasError) ...[
-          _CalendarEventLoadFailure(
-            onRetry: () {
-              if (widget.previewMode.includesEvents) {
-                ref.invalidate(coupleCalendarEventMonthProvider(selectedMonth));
-              } else {
-                ref.invalidate(coupleCalendarEventDateProvider(selectedDate));
-              }
-            },
+        if (hasScheduleSection)
+          _CalendarDetailSection(
+            key: const Key('calendar-schedule-section'),
+            title: '일정',
+            child: calendarEvents.hasError
+                ? _CalendarEventLoadFailure(
+                    onRetry: () => ref.invalidate(
+                      coupleCalendarEventDateProvider(selectedDate),
+                    ),
+                  )
+                : CalendarEventDetailList(
+                    events: events,
+                    canEdit: widget.canEdit,
+                    onEdit: _editEvent,
+                    onDelete: _confirmDeleteEvent,
+                  ),
           ),
-        ] else if (hasCalendarEntries) ...[
-          CalendarEventDetailList(
-            events: events,
-            anniversaries: anniversaries,
-            canEdit: widget.canEdit,
-            onEdit: _editEvent,
-            onDelete: _confirmDeleteEvent,
-          ),
-        ],
-        if (selectedDate.isAfter(calendarDateOnly(widget.today))) ...[
+        if (hasScheduleSection && hasStorySection) const SizedBox(height: 36),
+        if (!hasStorySection) ...[
           if (!hasCalendarEntries) ...[
             const SizedBox(height: 28),
             const _FutureDateMessage(),
           ],
         ] else ...[
-          const SizedBox(height: 20),
-          _StoryDetail(selectedDate: selectedDate),
+          _CalendarDetailSection(
+            key: const Key('calendar-story-section'),
+            title: '우리 기록',
+            child: _StoryDetail(selectedDate: selectedDate),
+          ),
         ],
       ],
     );
@@ -165,6 +163,43 @@ class _CalendarSelectedDayDetailState
       return '상대방이 일정을 먼저 수정했어요. 다시 확인해 주세요';
     }
     return '일정을 삭제하지 못했어요';
+  }
+}
+
+class _CalendarDetailSection extends StatelessWidget {
+  const _CalendarDetailSection({
+    super.key,
+    required this.title,
+    required this.child,
+  });
+
+  static const _maximumContentWidth = 520.0;
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maximumContentWidth),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(title, style: AppTextStyles.sectionTitle),
+              ),
+              const SizedBox(height: 18),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -12,7 +12,7 @@ class CalendarCellPreviewFilterButton extends StatelessWidget {
   });
 
   final CalendarCellPreviewMode selectedMode;
-  final ValueChanged<CalendarCellPreviewMode> onSelected;
+  final ValueChanged<CalendarCellPreviewMode>? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -22,17 +22,23 @@ class CalendarCellPreviewFilterButton extends StatelessWidget {
         tooltip: '캘린더 표시',
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-        onPressed: () => _openFilterSheet(context),
-        icon: const Icon(
+        onPressed: onSelected == null ? null : () => _openFilterSheet(context),
+        icon: Icon(
           Icons.tune_rounded,
           size: 24,
-          color: AppColors.textPrimary,
+          color: onSelected == null
+              ? AppColors.textPlaceholder
+              : AppColors.textPrimary,
         ),
       ),
     );
   }
 
   Future<void> _openFilterSheet(BuildContext context) async {
+    final selectMode = onSelected;
+    if (selectMode == null) {
+      return;
+    }
     final mode = await showCalendarCellPreviewFilterSheet(
       context: context,
       selectedMode: selectedMode,
@@ -41,6 +47,6 @@ class CalendarCellPreviewFilterButton extends StatelessWidget {
     if (!context.mounted || mode == null || mode == selectedMode) {
       return;
     }
-    onSelected(mode);
+    selectMode(mode);
   }
 }

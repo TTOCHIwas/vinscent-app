@@ -14,6 +14,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
 import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notification.dart';
 import '../application/calendar_cell_preview_mode_controller.dart';
+import '../application/couple_anniversary_resolver.dart';
 import '../data/calendar_cell_preview_mode.dart';
 import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
@@ -49,6 +50,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   _CalendarGestureSession? _activeGesture;
   bool _didSetInitialScrollPosition = false;
   bool _isMetricAdjustmentScheduled = false;
+  bool _shouldResetViewportAfterRouteChange = false;
+  bool _isRouteViewportResetScheduled = false;
   int _gestureGeneration = 0;
   int _calendarPageRevision = 0;
   int _detailPageRevision = 0;
@@ -66,7 +69,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
     _scrollBoundaryController = CalendarScrollBoundaryController();
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
-    final initialDate = calendarDateOnly(widget.initialDate ?? today);
+    final initialDate = clampCalendarDate(widget.initialDate ?? today);
     _visibleMonth = calendarMonthOnly(initialDate);
     _selectedDate = initialDate;
   }
@@ -81,9 +84,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     }
 
     final today = calendarDateOnly(ref.read(coupleCurrentDateProvider));
-    final targetDate = calendarDateOnly(nextDate ?? today);
+    final targetDate = clampCalendarDate(nextDate ?? today);
+    final previousSelectedDate = _selectedDate;
+    if (previousSelectedDate != null &&
+        isSameCalendarDate(previousSelectedDate, targetDate)) {
+      return;
+    }
+    final direction =
+        previousSelectedDate != null &&
+            targetDate.isBefore(previousSelectedDate)
+        ? AppHorizontalPageDirection.previous
+        : AppHorizontalPageDirection.next;
+    _calendarPageRevision += 1;
+    _calendarPageDirection = direction;
+    _detailPageRevision += 1;
+    _detailPageDirection = direction;
     _visibleMonth = calendarMonthOnly(targetDate);
     _selectedDate = targetDate;
+    _prepareViewportForRouteChange();
   }
 
   @override
@@ -96,9 +114,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final today = ref.watch(coupleCurrentDateProvider);
     final couple = ref.watch(coupleControllerProvider);
-    final previewMode =
-        ref.watch(calendarCellPreviewModeControllerProvider).asData?.value ??
-        CalendarCellPreviewMode.all;
+    final previewMode = ref
+        .watch(calendarCellPreviewModeControllerProvider)
+        .asData
+        ?.value;
+    final selectedPreviewMode = previewMode ?? CalendarCellPreviewMode.all;
     final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
 
     return couple.when(
@@ -120,6 +140,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         final relationshipStartMonth = calendarMonthOnly(
           couple.relationshipStartDate!,
         );
+        final selectedDate = _selectedDate;
+        final selectedAnniversaryLabels = selectedDate == null
+            ? const <String>[]
+            : const CoupleAnniversaryResolver()
+                  .resolve(
+                    startDate: couple.relationshipStartDate!,
+                    date: selectedDate,
+                  )
+                  .map((occurrence) => occurrence.label)
+                  .toList(growable: false);
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext();
 
@@ -129,7 +159,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               visibleMonth: _visibleMonth,
               canGoPrevious: canGoPrevious,
               canGoNext: canGoNext,
-              previewMode: previewMode,
+              previewMode: selectedPreviewMode,
               onPreviousPressed: canGoPrevious
                   ? () => _moveSelectedMonth(
                       -1,
@@ -148,7 +178,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       today: today,
                     )
                   : null,
-              onPreviewModeSelected: _selectPreviewMode,
+              onPreviewModeSelected: previewMode == null
+                  ? null
+                  : _selectPreviewMode,
             ),
             Expanded(
               child: LayoutBuilder(
@@ -157,9 +189,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     constraints.maxHeight,
                   );
                   final detailHeaderExtent =
-                      CalendarDetailDateHeader.resolveExtent(context);
+                      CalendarDetailDateHeader.resolveExtent(
+                        context,
+                        anniversaryLabels: selectedAnniversaryLabels,
+                      );
                   _adoptLayoutMetrics(metrics);
                   _scheduleInitialScrollPosition(metrics);
+                  _scheduleRouteViewportReset(metrics);
                   final detailMinHeight = math.max(
                     0.0,
                     constraints.maxHeight -
@@ -181,6 +217,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           visibleMonth: _visibleMonth,
                           relationshipStartDate: couple.relationshipStartDate!,
                           selectedDate: _selectedDate,
+                          selectedAnniversaryLabels: selectedAnniversaryLabels,
                           previewMode: previewMode,
                           calendarTransitionKey: _calendarPageRevision,
                           calendarTransitionDirection: _calendarPageDirection,
@@ -223,17 +260,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               relationshipStartDate:
                                   couple.relationshipStartDate!,
                             ),
-                            child: Padding(
-                              key: const Key('calendar-detail-padding'),
-                              padding: EdgeInsets.fromLTRB(
-                                20,
-                                16,
-                                20,
-                                40 + bottomNavigationClearance,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: detailMinHeight,
                               ),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: detailMinHeight,
+                              child: Padding(
+                                key: const Key('calendar-detail-padding'),
+                                padding: EdgeInsets.fromLTRB(
+                                  20,
+                                  16,
+                                  20,
+                                  40 + bottomNavigationClearance,
                                 ),
                                 child: AppHorizontalPageTransition(
                                   key: const Key(
@@ -244,10 +281,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   child: _CalendarDetail(
                                     selectedDate: _selectedDate,
                                     today: today,
-                                    relationshipStartDate:
-                                        couple.relationshipStartDate!,
+                                    hasDefaultAnniversary:
+                                        selectedAnniversaryLabels.isNotEmpty,
                                     canEdit: couple.canEditSharedData,
-                                    previewMode: previewMode,
                                   ),
                                 ),
                               ),
@@ -271,13 +307,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   bool _canGoNext() {
-    return _visibleMonth.isBefore(DateTime(2100, 12));
+    return _visibleMonth.isBefore(
+      calendarMonthOnly(appCalendarLastSupportedDate),
+    );
   }
 
   void _handleDatePressed(DateTime date) {
+    final selectedDate = calendarDateOnly(date);
     setState(() {
-      _selectedDate = calendarDateOnly(date);
+      _selectedDate = selectedDate;
     });
+    _replaceCalendarRoute(selectedDate);
   }
 
   void _moveCalendarPeriod(
@@ -379,6 +419,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       _selectedDate = date;
       _visibleMonth = calendarMonthOnly(date);
     });
+    _replaceCalendarRoute(date);
+  }
+
+  void _replaceCalendarRoute(DateTime date) {
+    final formattedDate = formatCalendarDate(date);
+    final currentUri = GoRouterState.of(context).uri;
+    if (currentUri.path == '/calendar' &&
+        currentUri.queryParameters['date'] == formattedDate) {
+      return;
+    }
+    context.replace('/calendar?date=$formattedDate');
   }
 
   void _addEvent({
@@ -396,6 +447,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   Future<void> _selectPreviewMode(CalendarCellPreviewMode mode) async {
     try {
+      await ref.read(calendarCellPreviewModeControllerProvider.future);
+      if (!mounted) {
+        return;
+      }
       await ref
           .read(calendarCellPreviewModeControllerProvider.notifier)
           .selectMode(mode);
@@ -464,6 +519,39 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           _scrollController.position.maxScrollExtent,
         ),
       );
+    });
+  }
+
+  void _prepareViewportForRouteChange() {
+    _gestureGeneration += 1;
+    _activeGesture = null;
+    _viewportState = CalendarViewportState.standard;
+    _shouldResetViewportAfterRouteChange = true;
+    _clearCalendarGesture();
+  }
+
+  void _scheduleRouteViewportReset(CalendarMonthLayoutMetrics metrics) {
+    if (!_shouldResetViewportAfterRouteChange ||
+        _isRouteViewportResetScheduled) {
+      return;
+    }
+
+    _isRouteViewportResetScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isRouteViewportResetScheduled = false;
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+
+      _shouldResetViewportAfterRouteChange = false;
+      final target = metrics.standardScrollOffset.clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+      _scrollController.jumpTo(target);
+      const ShellBottomBarVisibilityNotification(
+        isHidden: false,
+      ).dispatch(context);
     });
   }
 
@@ -605,7 +693,7 @@ class _CalendarMonthHeader extends StatelessWidget {
   final VoidCallback? onPreviousPressed;
   final VoidCallback? onNextPressed;
   final VoidCallback? onAddPressed;
-  final ValueChanged<CalendarCellPreviewMode> onPreviewModeSelected;
+  final ValueChanged<CalendarCellPreviewMode>? onPreviewModeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -707,16 +795,14 @@ class _CalendarDetail extends StatelessWidget {
   const _CalendarDetail({
     required this.selectedDate,
     required this.today,
-    required this.relationshipStartDate,
+    required this.hasDefaultAnniversary,
     required this.canEdit,
-    required this.previewMode,
   });
 
   final DateTime? selectedDate;
   final DateTime today;
-  final DateTime relationshipStartDate;
+  final bool hasDefaultAnniversary;
   final bool canEdit;
-  final CalendarCellPreviewMode previewMode;
 
   @override
   Widget build(BuildContext context) {
@@ -732,9 +818,8 @@ class _CalendarDetail extends StatelessWidget {
       key: ValueKey('calendar-selected-detail-${formatCalendarDate(selected)}'),
       selectedDate: selected,
       today: today,
-      relationshipStartDate: relationshipStartDate,
+      hasDefaultAnniversary: hasDefaultAnniversary,
       canEdit: canEdit,
-      previewMode: previewMode,
     );
   }
 }

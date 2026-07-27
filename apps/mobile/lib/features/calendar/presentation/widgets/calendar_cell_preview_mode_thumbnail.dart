@@ -8,7 +8,7 @@ import '../../data/calendar_cell_preview_mode.dart';
 class CalendarCellPreviewModeThumbnail extends StatelessWidget {
   const CalendarCellPreviewModeThumbnail({super.key, required this.mode});
 
-  static const _surfaceColor = Color(0xFFF2F2F4);
+  static const _surfaceColor = Color(0xFFF8F8F9);
   static const _firstCardColor = Color(0xFFDCE7E2);
   static const _secondCardColor = Color(0xFFE8E2EC);
 

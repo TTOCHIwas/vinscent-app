@@ -12,6 +12,7 @@ Future<void> showCalendarEventDetailSheet({
 }) async {
   await showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: AppColors.background,
     shape: const RoundedRectangleBorder(
@@ -48,21 +49,19 @@ class CalendarEventDetailSheet extends StatelessWidget {
                 CalendarEventArtwork(event: event, size: 64),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: WordBoundaryText(
-                      event.title,
-                      style: AppTextStyles.sectionTitle,
+                  child: ConstrainedBox(
+                    key: ValueKey(
+                      'calendar-event-detail-sheet-title-${event.id}',
+                    ),
+                    constraints: const BoxConstraints(minHeight: 64),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: WordBoundaryText(
+                        event.title,
+                        style: AppTextStyles.sectionTitle,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  key: ValueKey(
-                    'calendar-event-detail-sheet-close-${event.id}',
-                  ),
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),

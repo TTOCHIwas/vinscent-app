@@ -68,46 +68,54 @@ class _LoadedDetailSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final question = detail.question;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showDateHeader) CalendarDetailDateHeader(date: detail.coupleDate),
-        if (detail.cards.isNotEmpty) ...[
-          SizedBox(height: showDateHeader ? 24 : 4),
-          CalendarStoryCardStack(
-            cards: detail.cards,
-            currentUserId: currentUserId,
-            onCardTap: (card) => showStoryCardDetailOverlay(
-              context: context,
-              cardId: card.id,
-              previewUrl: card.previewUrl,
+    return SizedBox(
+      key: const Key('calendar-story-detail-content'),
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showDateHeader) CalendarDetailDateHeader(date: detail.coupleDate),
+          if (detail.cards.isNotEmpty) ...[
+            SizedBox(height: showDateHeader ? 24 : 4),
+            CalendarStoryCardStack(
+              cards: detail.cards,
+              currentUserId: currentUserId,
+              onCardTap: (card) => showStoryCardDetailOverlay(
+                context: context,
+                cardId: card.id,
+                previewUrl: card.previewUrl,
+              ),
             ),
-          ),
-        ],
-        if (question == null) ...[
-          const SizedBox(height: 32),
-          _CardOnlyMessage(detail: detail),
-        ] else ...[
-          const SizedBox(height: 28),
-          QuestionDetailTitle(questionText: question.question.questionText),
-          const SizedBox(height: 28),
-          QuestionAnswerOverview(
-            answerState: question.answerState,
-            partnerHiddenMessage:
-                PartnerQuestionAnswerSection.historyHiddenMessage,
-            onMyAnswerPressed: _buildQuestionPressed(
-              context: context,
-              detail: detail,
+          ],
+          if (question == null) ...[
+            const SizedBox(height: 32),
+            _CardOnlyMessage(detail: detail),
+          ] else ...[
+            const SizedBox(height: 32),
+            QuestionDetailTitle(
+              questionText: question.question.questionText,
+              textAlign: TextAlign.start,
+            ),
+            const SizedBox(height: 20),
+            QuestionAnswerOverview(
               answerState: question.answerState,
+              displayStyle: QuestionAnswerDisplayStyle.plain,
+              partnerHiddenMessage:
+                  PartnerQuestionAnswerSection.historyHiddenMessage,
+              onMyAnswerPressed: _buildQuestionPressed(
+                context: context,
+                detail: detail,
+                answerState: question.answerState,
+              ),
             ),
-          ),
-          if (question.answerState.hasBothAnswers)
-            AiQuestionFeedbackSection(
-              dailyQuestionId: question.question.dailyQuestionId,
-              presentation: AiQuestionFeedbackPresentation.characterSpeech,
-            ),
+            if (question.answerState.hasBothAnswers)
+              AiQuestionFeedbackSection(
+                dailyQuestionId: question.question.dailyQuestionId,
+                presentation: AiQuestionFeedbackPresentation.characterSpeech,
+              ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
