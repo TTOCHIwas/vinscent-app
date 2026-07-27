@@ -101,15 +101,11 @@ void main() {
       );
       expect(
         addButton.style?.backgroundColor?.resolve({}),
-        AppColors.brandAction,
+        AppColors.actionPrimary,
       );
       expect(
         addButton.style?.foregroundColor?.resolve({}),
-        AppColors.onBrandAction,
-      );
-      expect(
-        addButton.style?.overlayColor?.resolve({WidgetState.pressed}),
-        AppColors.brandPressed,
+        AppColors.textInverse,
       );
       expect(
         tester.getCenter(find.byKey(_storyAddButtonKey)).dx,

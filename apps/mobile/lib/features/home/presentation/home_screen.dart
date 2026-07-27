@@ -685,17 +685,12 @@ class _HomeStoryAddButton extends StatelessWidget {
         key: const Key('home-story-add-button'),
         onPressed: onPressed,
         tooltip: _homeStoryCreateTooltip,
-        style:
-            IconButton.styleFrom(
-              fixedSize: const Size.square(56),
-              backgroundColor: AppColors.brandAction,
-              foregroundColor: AppColors.onBrandAction,
-              shape: const CircleBorder(),
-            ).copyWith(
-              overlayColor: const WidgetStatePropertyAll(
-                AppColors.brandPressed,
-              ),
-            ),
+        style: IconButton.styleFrom(
+          fixedSize: const Size.square(56),
+          backgroundColor: AppColors.actionPrimary,
+          foregroundColor: AppColors.textInverse,
+          shape: const CircleBorder(),
+        ),
         icon: const Icon(Icons.add_rounded, size: 28),
       ),
     );
