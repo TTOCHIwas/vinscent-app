@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
@@ -102,6 +103,56 @@ void main() {
 
     expect(find.text('artwork'), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('slot actions use one restrained line icon hierarchy', (
+    tester,
+  ) async {
+    final overview = CoupleRecordingOverview(
+      slotLimit: 1,
+      currentRecording: _currentRecording(),
+      savedSlots: [_slot()],
+    );
+    await _pumpLibrary(tester, overview: overview);
+
+    await tester.tap(
+      find.byKey(const ValueKey('recording-library-slot-menu-slot-1')),
+    );
+    await tester.pumpAndSettle();
+
+    final regularActions = ['artwork', 'homePlacement', 'replace'];
+    for (final action in regularActions) {
+      final row = find.byKey(
+        ValueKey('recording-library-slot-action-$action-slot-1'),
+      );
+      final icon = tester.widget<Icon>(
+        find.descendant(of: row, matching: find.byType(Icon)),
+      );
+      final label = tester.widget<Text>(
+        find.descendant(of: row, matching: find.byType(Text)),
+      );
+
+      expect(icon.icon?.fontFamily, isNot('MaterialIcons'));
+      expect(icon.color, AppColors.textMuted);
+      expect(label.style?.fontWeight, FontWeight.w400);
+      expect(label.style?.color, AppColors.textPrimary);
+    }
+
+    final deleteRow = find.byKey(
+      const ValueKey('recording-library-slot-action-delete-slot-1'),
+    );
+    final deleteIcon = tester.widget<Icon>(
+      find.descendant(of: deleteRow, matching: find.byType(Icon)),
+    );
+    final deleteLabel = tester.widget<Text>(
+      find.descendant(of: deleteRow, matching: find.byType(Text)),
+    );
+    final errorColor = Theme.of(tester.element(deleteRow)).colorScheme.error;
+
+    expect(deleteIcon.icon?.fontFamily, isNot('MaterialIcons'));
+    expect(deleteIcon.color, errorColor);
+    expect(deleteLabel.style?.fontWeight, FontWeight.w400);
+    expect(deleteLabel.style?.color, errorColor);
   });
 
   testWidgets('library rows have no border or artwork background color', (
