@@ -97,9 +97,7 @@ void main() {
     );
     expect(find.text('다음'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const Key('relationship-start-date-field')),
-    );
+    await tester.tap(find.byKey(const Key('relationship-start-date-field')));
     await tester.pumpAndSettle();
 
     expect(find.text('만난 날 선택'), findsOneWidget);
@@ -114,9 +112,7 @@ void main() {
       const MaterialApp(home: CoupleSetupWaitingScreen()),
     );
 
-    final characterCenter = tester.getCenter(
-      find.byType(CharacterPlaceholder),
-    );
+    final characterCenter = tester.getCenter(find.byType(CharacterPlaceholder));
     expect(characterCenter.dx, moreOrLessEquals(512, epsilon: 1));
     expect(find.text('설정 중입니다.'), findsOneWidget);
     expect(tester.takeException(), isNull);

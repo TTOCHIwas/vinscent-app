@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/assets/app_icons.dart';
 import '../../../core/date/today_controller.dart';
+import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_date_picker_sheet.dart';
+import '../../../core/presentation/widgets/app_setup_page.dart';
 import '../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/couple_flow_controller.dart';
 import '../application/couple_flow_state.dart';
-import 'widgets/couple_action_button.dart';
 
 class RelationshipStartDateScreen extends ConsumerWidget {
   const RelationshipStartDateScreen({super.key});
@@ -20,94 +22,125 @@ class RelationshipStartDateScreen extends ConsumerWidget {
     final selectedDate = state.relationshipStartDate;
     final today = ref.watch(todayControllerProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(32, 24, 32, 34),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              const Text('첫 만남일을 알려주세요', style: AppTextStyles.onboardingTitle),
-              const SizedBox(height: 12),
-              Text(
-                '둘만의 디데이와 기록은 이 날짜를 기준으로 보여줄게요.',
-                style: AppTextStyles.homeBody.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 36),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () =>
-                      _pickDate(context, controller, selectedDate, today),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 18,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.wireframeBorder),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const AppSvgIcon(
-                          AppIcons.calendar,
-                          color: AppColors.wireframeIcon,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          selectedDate == null
-                              ? '날짜 선택'
-                              : _formatDate(selectedDate),
-                          style: selectedDate == null
-                              ? AppTextStyles.onboardingHint
-                              : AppTextStyles.homeBodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              if (state.errorMessage != null) ...[
-                const SizedBox(height: 14),
-                Text(state.errorMessage!, style: AppTextStyles.compactError),
-              ],
-              const Spacer(),
-              CoupleActionButton(
-                label: '완료',
-                enabled: state.canSaveDate,
-                isLoading: state.operation == CoupleFlowOperation.savingDate,
-                onPressed: controller.saveRelationshipStartDate,
-              ),
-            ],
+    return AppSetupPage(
+      header: const AppSetupHeader(),
+      bottomAction: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (state.errorMessage case final errorMessage?) ...[
+            Text(errorMessage, style: AppTextStyles.compactError),
+            const SizedBox(height: 10),
+          ],
+          AppActionButton(
+            label: '다음',
+            enabled: state.canSaveDate,
+            isLoading: state.operation == CoupleFlowOperation.savingDate,
+            onPressed: controller.saveRelationshipStartDate,
           ),
-        ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('우리가 처음 만난 날은?', style: AppTextStyles.onboardingTitle),
+          const SizedBox(height: 8),
+          Text(
+            '디데이와 둘만의 기념일을 계산하는 기준이야',
+            style: AppTextStyles.homeBody.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 32),
+          _RelationshipDateField(
+            selectedDate: selectedDate,
+            onTap: () => _pickDate(
+              context,
+              controller,
+              selectedDate: selectedDate,
+              today: today,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Future<void> _pickDate(
     BuildContext context,
-    CoupleFlowController controller,
-    DateTime? selectedDate,
-    DateTime today,
-  ) async {
-    final pickedDate = await showDatePicker(
+    CoupleFlowController controller, {
+    required DateTime? selectedDate,
+    required DateTime today,
+  }) async {
+    final pickedDate = await showAppDatePickerSheet(
       context: context,
+      title: '만난 날 선택',
       initialDate: selectedDate ?? today,
-      firstDate: DateTime(1900),
-      lastDate: today,
+      minDate: DateTime(1900),
+      maxDate: today,
     );
 
     if (pickedDate != null) {
       controller.updateRelationshipStartDate(pickedDate);
     }
+  }
+}
+
+class _RelationshipDateField extends StatelessWidget {
+  const _RelationshipDateField({
+    required this.selectedDate,
+    required this.onTap,
+  });
+
+  final DateTime? selectedDate;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedDate = this.selectedDate;
+
+    return Semantics(
+      button: true,
+      label: '만난 날 선택',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const Key('relationship-start-date-field'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: AppColors.formSurface,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                const AppSvgIcon(
+                  AppIcons.calendar,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    selectedDate == null ? '날짜 선택' : _formatDate(selectedDate),
+                    style: AppTextStyles.homeBodyMedium.copyWith(
+                      color: selectedDate == null
+                          ? AppColors.textPlaceholder
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
