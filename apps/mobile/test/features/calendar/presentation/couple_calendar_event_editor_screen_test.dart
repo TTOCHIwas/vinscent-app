@@ -138,6 +138,113 @@ void main() {
       '바다 근처에서 쉬기',
     );
   });
+
+  testWidgets('keeps reminders available for a past yearly event', (
+    tester,
+  ) async {
+    final repository = _FakeCalendarEventRepository();
+    final router = GoRouter(
+      initialLocation: '/calendar/event/new',
+      routes: [
+        GoRoute(
+          path: '/calendar',
+          builder: (context, state) => const Text('calendar'),
+        ),
+        GoRoute(
+          path: '/calendar/event/new',
+          builder: (context, state) => Scaffold(
+            body: CoupleCalendarEventEditorScreen.create(
+              initialDate: DateTime(2026, 7, 25),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _eventEditorApp(router: router, repository: repository),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('calendar-event-title-field')),
+      '생일',
+    );
+    final repeatControl = tester
+        .widget<SegmentedButton<CoupleCalendarEventRepeatRule>>(
+          find.byType(SegmentedButton<CoupleCalendarEventRepeatRule>),
+        );
+    repeatControl.onSelectionChanged?.call({
+      CoupleCalendarEventRepeatRule.yearly,
+    });
+    await tester.pump();
+
+    final reminderToggle = tester.widget<SwitchListTile>(
+      find.byKey(const Key('calendar-event-reminder-toggle')),
+    );
+    expect(reminderToggle.onChanged, isNotNull);
+    reminderToggle.onChanged?.call(true);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('calendar-event-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('calendar-event-save')));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.lastRequest?.repeatRule,
+      CoupleCalendarEventRepeatRule.yearly,
+    );
+    expect(repository.lastRequest?.reminder.isEnabled, isTrue);
+  });
+
+  testWidgets('recovers after loading an event succeeds on retry', (
+    tester,
+  ) async {
+    final event = _calendarEvent();
+    final repository = _FakeCalendarEventRepository(
+      fetchResults: [StateError('temporary failure'), event],
+    );
+    final router = GoRouter(
+      initialLocation: '/calendar/event/${event.id}',
+      routes: [
+        GoRoute(
+          path: '/calendar',
+          builder: (context, state) => const Text('calendar'),
+        ),
+        GoRoute(
+          path: '/calendar/event/:eventId',
+          builder: (context, state) => Scaffold(
+            body: CoupleCalendarEventEditorScreen.edit(
+              eventId: state.pathParameters['eventId']!,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _eventEditorApp(router: router, repository: repository),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('일정을 불러오지 못했어요'), findsOneWidget);
+
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('일정을 불러오지 못했어요'), findsNothing);
+    expect(find.byKey(const Key('calendar-event-basic-step')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const Key('calendar-event-title-field')),
+          )
+          .controller
+          ?.text,
+      event.title,
+    );
+  });
 }
 
 GoRouter _eventEditorRouter() {
@@ -179,6 +286,10 @@ Widget _eventEditorApp({
 }
 
 class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
+  _FakeCalendarEventRepository({List<Object?> fetchResults = const []})
+    : _fetchResults = List<Object?>.of(fetchResults);
+
+  final List<Object?> _fetchResults;
   CoupleCalendarEventSaveRequest? lastRequest;
   Uint8List? lastPreviewBytes;
 
@@ -189,7 +300,19 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
   }) async {}
 
   @override
-  Future<CoupleCalendarEvent?> fetchEvent(String eventId) async => null;
+  Future<CoupleCalendarEvent?> fetchEvent(String eventId) async {
+    if (_fetchResults.isEmpty) {
+      return null;
+    }
+    final result = _fetchResults.removeAt(0);
+    if (result is Error) {
+      throw result;
+    }
+    if (result is Exception) {
+      throw result;
+    }
+    return result as CoupleCalendarEvent?;
+  }
 
   @override
   Future<Uint8List> fetchArtworkDrawingData(String drawingDataPath) async {
@@ -227,4 +350,27 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
       reminder: request.reminder,
     );
   }
+}
+
+CoupleCalendarEvent _calendarEvent() {
+  return CoupleCalendarEvent(
+    id: 'event-1',
+    coupleId: 'couple-1',
+    title: '함께하는 생일',
+    eventDate: DateTime(2026, 5, 2),
+    occurrenceDate: DateTime(2026, 5, 2),
+    repeatRule: CoupleCalendarEventRepeatRule.yearly,
+    memo: null,
+    revision: 1,
+    createdByUserId: 'user-a',
+    updatedByUserId: 'user-a',
+    createdAt: DateTime(2026, 5, 1),
+    updatedAt: DateTime(2026, 5, 1),
+    reminder: const CoupleCalendarEventReminder(
+      isEnabled: true,
+      offsetDays: 1,
+      hour: 9,
+      minute: 0,
+    ),
+  );
 }
