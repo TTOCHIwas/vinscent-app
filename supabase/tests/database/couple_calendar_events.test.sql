@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(32);
+select plan(33);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -258,6 +258,57 @@ select is(
   ),
   2::bigint,
   'each member keeps an independent reminder'
+);
+
+insert into public.couple_calendar_events (
+  id,
+  couple_id,
+  title,
+  event_date,
+  repeat_rule,
+  created_by_user_id,
+  updated_by_user_id
+)
+values (
+  '36000000-0000-0000-0000-000000000005',
+  '26000000-0000-0000-0000-000000000001',
+  '지난 반복 일정',
+  '2024-03-01',
+  'yearly',
+  '16000000-0000-0000-0000-000000000001',
+  '16000000-0000-0000-0000-000000000001'
+);
+
+insert into public.couple_calendar_event_reminders (
+  event_id,
+  couple_id,
+  user_id,
+  is_enabled,
+  offset_days,
+  reminder_time
+)
+values (
+  '36000000-0000-0000-0000-000000000005',
+  '26000000-0000-0000-0000-000000000001',
+  '16000000-0000-0000-0000-000000000001',
+  true,
+  0,
+  '09:00'
+);
+
+update public.couple_calendar_events
+set repeat_rule = 'none'
+where id = '36000000-0000-0000-0000-000000000005';
+
+select is(
+  (
+    select is_enabled
+    from public.couple_calendar_event_reminders
+    where event_id = '36000000-0000-0000-0000-000000000005'
+      and user_id = '16000000-0000-0000-0000-000000000001'
+  ),
+  false,
+  'changing an event disables reminders whose instant is already past'
 );
 
 set local role authenticated;
