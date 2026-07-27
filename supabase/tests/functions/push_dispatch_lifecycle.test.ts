@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   finalizeExhaustedPushNotificationDispatches,
+  isPushNotificationRetryEligible,
 } from '../../functions/_shared/push_dispatch_repository.ts';
 import {
   sendPushNotification,
@@ -44,6 +45,37 @@ test('rejects an invalid exhausted dispatch finalization result', async () => {
       ),
     /exhausted_push_dispatch_finalize_result_invalid/,
   );
+});
+
+test('loads retry eligibility through the database contract', async () => {
+  const calls: Array<{ name: string; params: Record<string, unknown> }> = [];
+  const supabase = {
+    rpc(name: string, params: Record<string, unknown>) {
+      calls.push({ name, params });
+      return Promise.resolve({ data: false, error: null });
+    },
+  };
+
+  const isEligible = await isPushNotificationRetryEligible(
+    supabase as never,
+    {
+      notificationType: 'unanswered_reminder',
+      sourceId: 'source-id',
+      receiverUserId: 'receiver-id',
+      data: { assigned_date: '2026-07-27' },
+    },
+  );
+
+  assert.equal(isEligible, false);
+  assert.deepEqual(calls, [{
+    name: 'is_push_notification_retry_eligible',
+    params: {
+      requested_notification_type: 'unanswered_reminder',
+      requested_source_id: 'source-id',
+      requested_receiver_user_id: 'receiver-id',
+      requested_data: { assigned_date: '2026-07-27' },
+    },
+  }]);
 });
 
 test('finalizes a claimed dispatch when notification preflight fails', async () => {

@@ -8,10 +8,25 @@ export async function dispatchInBatches<T, R>(
   }
 
   const results: R[] = [];
+  const failures: unknown[] = [];
   for (let offset = 0; offset < items.length; offset += concurrency) {
     const batch = items.slice(offset, offset + concurrency);
-    const batchResults = await Promise.all(batch.map(dispatch));
-    results.push(...batchResults);
+    const batchResults = await Promise.allSettled(batch.map(dispatch));
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        failures.push(result.reason);
+      }
+    }
   }
+
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      `${failures.length} scheduled notification dispatches failed`,
+    );
+  }
+
   return results;
 }

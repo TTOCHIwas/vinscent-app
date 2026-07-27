@@ -61,6 +61,7 @@ type SendPushNotificationParams = {
   preferenceColumn?: PreferenceColumn;
   accessToken?: string;
   maxAttempts?: number;
+  eligibilityCheck?: () => PromiseLike<boolean>;
 };
 
 export async function sendPushNotification(
@@ -87,6 +88,29 @@ export async function sendPushNotification(
     };
   }
 
+  if (params.eligibilityCheck) {
+    const isEligible = await runClaimedPreflight(
+      params,
+      dispatchClaim.claim_token,
+      params.eligibilityCheck,
+    );
+
+    if (!isEligible) {
+      await completeSkippedDelivery(
+        params,
+        dispatchClaim.claim_token,
+        'notification_no_longer_eligible',
+      );
+
+      return {
+        status: 'skipped',
+        targetTokenCount: 0,
+        successCount: 0,
+        failureCount: 0,
+      };
+    }
+  }
+
   const preferenceColumn = params.preferenceColumn;
   if (preferenceColumn) {
     const isEnabled = await runClaimedPreflight(
@@ -101,17 +125,11 @@ export async function sendPushNotification(
     );
 
     if (!isEnabled) {
-      await completePushNotificationDelivery(params.supabase, {
-        notificationType: params.notificationType,
-        sourceId: params.sourceId,
-        receiverUserId: params.receiverUserId,
-        claimToken: dispatchClaim.claim_token,
-        targetTokenCount: 0,
-        successCount: 0,
-        failureCount: 0,
-        status: 'skipped',
-        errorMessage: 'notification_disabled',
-      });
+      await completeSkippedDelivery(
+        params,
+        dispatchClaim.claim_token,
+        'notification_disabled',
+      );
 
       return {
         status: 'skipped',
@@ -332,4 +350,22 @@ async function runClaimedPreflight<T>(
 
     throw error;
   }
+}
+
+function completeSkippedDelivery(
+  params: SendPushNotificationParams,
+  claimToken: string,
+  reason: string,
+) {
+  return completePushNotificationDelivery(params.supabase, {
+    notificationType: params.notificationType,
+    sourceId: params.sourceId,
+    receiverUserId: params.receiverUserId,
+    claimToken,
+    targetTokenCount: 0,
+    successCount: 0,
+    failureCount: 0,
+    status: 'skipped',
+    errorMessage: reason,
+  });
 }

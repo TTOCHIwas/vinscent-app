@@ -1,5 +1,6 @@
 import {
   finalizeExhaustedPushNotificationDispatches,
+  isPushNotificationRetryEligible,
   loadRetryablePushNotificationDispatches,
   type RetryablePushNotificationDispatch,
 } from '../_shared/push_dispatch_repository.ts';
@@ -62,6 +63,13 @@ export function dispatchRetryablePushNotificationJobs(
       preferenceColumn: job.preference_column ?? undefined,
       accessToken: params.accessToken,
       maxAttempts: job.max_attempts,
+      eligibilityCheck: () =>
+        isPushNotificationRetryEligible(params.supabase, {
+          notificationType: job.notification_type,
+          sourceId: job.source_id,
+          receiverUserId: job.receiver_user_id,
+          data: job.data,
+        }),
     });
 
     return { notificationType: job.notification_type, ...result };

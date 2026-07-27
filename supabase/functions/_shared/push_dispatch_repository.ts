@@ -134,6 +134,31 @@ export async function finalizeExhaustedPushNotificationDispatches(
   return data;
 }
 
+export async function isPushNotificationRetryEligible(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  params: PushDispatchKey & { data: Record<string, string> },
+) {
+  const { data, error } = await supabase.rpc(
+    'is_push_notification_retry_eligible',
+    {
+      requested_notification_type: params.notificationType,
+      requested_source_id: params.sourceId,
+      requested_receiver_user_id: params.receiverUserId,
+      requested_data: params.data,
+    },
+  );
+
+  if (error) {
+    throw new Error(`push_retry_eligibility_query_failed:${error.message}`);
+  }
+
+  if (typeof data !== 'boolean') {
+    throw new Error('push_retry_eligibility_result_invalid');
+  }
+
+  return data;
+}
+
 export async function completePushNotificationDelivery(
   supabase: ReturnType<typeof createServiceRoleClient>,
   params: PushDeliveryCompletion,

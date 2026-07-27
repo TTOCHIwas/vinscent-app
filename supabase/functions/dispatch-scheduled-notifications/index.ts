@@ -42,7 +42,6 @@ Deno.serve(async (request) => {
       loadDueUnansweredQuestionReminderJobs(
         supabase,
         runAt,
-        lookbackMinutes,
       ),
       loadDueCalendarEventReminderJobs(
         supabase,
