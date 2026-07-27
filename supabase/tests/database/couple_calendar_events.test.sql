@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(31);
+select plan(32);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -460,6 +460,19 @@ select is(
   ),
   1::bigint,
   'the scheduler resolves reminder time in the couple timezone'
+);
+
+select is(
+  (
+    select count(*)
+    from public.get_due_couple_calendar_event_reminders(
+      (select due_run_at from calendar_test_context),
+      10,
+      1
+    )
+  ),
+  1::bigint,
+  'the scheduler bounds each reminder batch'
 );
 
 select is(

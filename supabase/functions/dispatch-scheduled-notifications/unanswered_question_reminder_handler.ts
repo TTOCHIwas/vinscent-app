@@ -1,5 +1,6 @@
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
+import { dispatchInBatches } from './dispatch_in_batches.ts';
 
 type StoryLoopRow = {
   id: string;
@@ -43,6 +44,7 @@ type UnansweredQuestionReminderHandlerParams = {
 };
 
 const reminderDelayMinutes = 60;
+const dispatchConcurrency = 4;
 
 export async function loadDueUnansweredQuestionReminderJobs(
   supabase: ReturnType<typeof createServiceRoleClient>,
@@ -169,9 +171,7 @@ export async function dispatchUnansweredQuestionReminderJobs(
   jobs: ReminderJob[],
   params: UnansweredQuestionReminderHandlerParams,
 ) {
-  const results = [];
-
-  for (const job of jobs) {
+  return dispatchInBatches(jobs, dispatchConcurrency, async (job) => {
     const result = await sendPushNotification({
       supabase: params.supabase,
       notificationType: 'unanswered_reminder',
@@ -186,10 +186,8 @@ export async function dispatchUnansweredQuestionReminderJobs(
         assigned_date: job.assignedDate,
       },
     });
-    results.push({ notificationType: 'unanswered_reminder', ...result });
-  }
-
-  return results;
+    return { notificationType: 'unanswered_reminder', ...result };
+  });
 }
 
 async function loadPreferencesByUserId(

@@ -1,6 +1,7 @@
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import { buildCalendarEventReminderBody } from './calendar_event_reminder_message.ts';
+import { dispatchInBatches } from './dispatch_in_batches.ts';
 
 type CalendarEventReminderRow = {
   source_id: string;
@@ -18,6 +19,9 @@ type CalendarEventReminderHandlerParams = {
   accessToken: string;
 };
 
+const calendarReminderBatchSize = 100;
+const dispatchConcurrency = 4;
+
 export async function loadDueCalendarEventReminderJobs(
   supabase: ReturnType<typeof createServiceRoleClient>,
   runAt: Date,
@@ -28,6 +32,7 @@ export async function loadDueCalendarEventReminderJobs(
     {
       requested_run_at: runAt.toISOString(),
       requested_lookback_minutes: lookbackMinutes,
+      requested_limit: calendarReminderBatchSize,
     },
   );
 
@@ -42,9 +47,7 @@ export async function dispatchCalendarEventReminderJobs(
   jobs: CalendarEventReminderRow[],
   params: CalendarEventReminderHandlerParams,
 ) {
-  const results = [];
-
-  for (const job of jobs) {
+  return dispatchInBatches(jobs, dispatchConcurrency, async (job) => {
     const result = await sendPushNotification({
       supabase: params.supabase,
       notificationType: 'calendar_event_reminder',
@@ -60,8 +63,6 @@ export async function dispatchCalendarEventReminderJobs(
         route: `/calendar?date=${job.occurrence_date}`,
       },
     });
-    results.push({ notificationType: 'calendar_event_reminder', ...result });
-  }
-
-  return results;
+    return { notificationType: 'calendar_event_reminder', ...result };
+  });
 }

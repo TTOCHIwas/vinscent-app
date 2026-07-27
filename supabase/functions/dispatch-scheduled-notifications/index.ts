@@ -61,14 +61,16 @@ Deno.serve(async (request) => {
     }
 
     const accessToken = await createFcmAccessToken();
-    const questionResults = await dispatchUnansweredQuestionReminderJobs(
-      questionJobs,
-      { supabase, accessToken },
-    );
-    const calendarResults = await dispatchCalendarEventReminderJobs(
-      calendarJobs,
-      { supabase, accessToken },
-    );
+    const [questionResults, calendarResults] = await Promise.all([
+      dispatchUnansweredQuestionReminderJobs(
+        questionJobs,
+        { supabase, accessToken },
+      ),
+      dispatchCalendarEventReminderJobs(
+        calendarJobs,
+        { supabase, accessToken },
+      ),
+    ]);
 
     return jsonResponse({
       status: 'ok',
