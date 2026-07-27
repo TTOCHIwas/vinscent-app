@@ -101,6 +101,16 @@ void main() {
       expect(location, '/calendar');
     });
 
+    test('rejects a calendar route beyond the supported range', () {
+      final location = resolvePushNotificationLocation({
+        'type': 'calendar_event_reminder',
+        'event_date': '2101-01-01',
+        'route': '/calendar?date=2101-01-01',
+      });
+
+      expect(location, '/calendar');
+    });
+
     test('returns null for an unknown notification', () {
       expect(resolvePushNotificationLocation({'type': 'unknown'}), isNull);
     });

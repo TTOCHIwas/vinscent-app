@@ -1,3 +1,4 @@
+import '../../../core/date/app_date_policy.dart';
 import 'couple_calendar_event.dart';
 
 class CoupleCalendarEventMapper {
@@ -55,7 +56,7 @@ class CoupleCalendarEventMapper {
     if (parsed == null) {
       throw const FormatException('Calendar event date is invalid.');
     }
-    return DateTime(parsed.year, parsed.month, parsed.day);
+    return calendarDateOnly(parsed);
   }
 
   (int, int) _parseTime(Object? value) {

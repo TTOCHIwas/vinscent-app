@@ -1,5 +1,7 @@
 const appTimezone = 'Asia/Seoul';
 const appTimezoneOffset = Duration(hours: 9);
+final appCalendarFirstSupportedDate = DateTime(1);
+final appCalendarLastSupportedDate = DateTime(2100, 12, 31);
 final _calendarDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
 DateTime currentAppDate({DateTime? now}) {
@@ -14,6 +16,33 @@ DateTime calendarDateOnly(DateTime value) {
 
 DateTime calendarMonthOnly(DateTime value) {
   return DateTime(value.year, value.month);
+}
+
+bool isSupportedCalendarDate(DateTime value) {
+  final date = calendarDateOnly(value);
+  return !date.isBefore(appCalendarFirstSupportedDate) &&
+      !date.isAfter(appCalendarLastSupportedDate);
+}
+
+DateTime clampCalendarDate(DateTime value, {DateTime? firstDate}) {
+  final date = calendarDateOnly(value);
+  final requestedFirstDate = calendarDateOnly(
+    firstDate ?? appCalendarFirstSupportedDate,
+  );
+  final supportedFirstDate =
+      requestedFirstDate.isAfter(appCalendarLastSupportedDate)
+      ? appCalendarLastSupportedDate
+      : requestedFirstDate.isBefore(appCalendarFirstSupportedDate)
+      ? appCalendarFirstSupportedDate
+      : requestedFirstDate;
+
+  if (date.isBefore(supportedFirstDate)) {
+    return supportedFirstDate;
+  }
+  if (date.isAfter(appCalendarLastSupportedDate)) {
+    return appCalendarLastSupportedDate;
+  }
+  return date;
 }
 
 bool isSameCalendarDate(DateTime left, DateTime right) {
@@ -43,7 +72,8 @@ DateTime? parseCalendarDate(String? value) {
     return null;
   }
 
-  return calendarDateOnly(parsed);
+  final date = calendarDateOnly(parsed);
+  return isSupportedCalendarDate(date) ? date : null;
 }
 
 bool hasInvalidCalendarDate(String? value) {

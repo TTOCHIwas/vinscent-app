@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/app_date_policy.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../profile/application/profile_controller.dart';
 import 'story_loop_detail_provider.dart';
@@ -91,9 +92,7 @@ class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
     ref.invalidate(storyLoopDetailProvider(null));
     ref.invalidate(storyLoopDetailProvider(coupleDate));
     ref.invalidate(
-      storyLoopMonthSummaryProvider(
-        DateTime(coupleDate.year, coupleDate.month),
-      ),
+      storyLoopMonthSummaryProvider(calendarMonthOnly(coupleDate)),
     );
   }
 }

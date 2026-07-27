@@ -50,6 +50,19 @@ void main() {
       expect(parseCalendarDate('2026-02-30'), isNull);
       expect(parseCalendarDate(null), isNull);
     });
+
+    test('accepts only dates inside the shared calendar range', () {
+      expect(parseCalendarDate('2100-12-31'), appCalendarLastSupportedDate);
+      expect(parseCalendarDate('2101-01-01'), isNull);
+      expect(parseCalendarDate('0000-12-31'), isNull);
+    });
+  });
+
+  test('clamps invalid caller bounds to the shared calendar range', () {
+    expect(
+      clampCalendarDate(DateTime(2026, 7, 27), firstDate: DateTime(2101)),
+      appCalendarLastSupportedDate,
+    );
   });
 
   group('durationUntilNextAppDate', () {

@@ -350,7 +350,7 @@ class _CoupleCalendarEventEditorScreenState
           ? relationshipStartDate
           : _selectedDate,
       firstDate: relationshipStartDate,
-      lastDate: DateTime(2100, 12, 31),
+      lastDate: appCalendarLastSupportedDate,
     );
     if (selected != null && mounted) {
       setState(() {

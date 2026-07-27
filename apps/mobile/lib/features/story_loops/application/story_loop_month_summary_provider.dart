@@ -20,12 +20,9 @@ final storyLoopMonthSummaryProvider = FutureProvider.autoDispose
       final relationshipStartDate = calendarDateOnly(
         couple.relationshipStartDate!,
       );
-      final normalizedMonth = DateTime(month.year, month.month);
-      final currentMonth = DateTime(currentDate.year, currentDate.month);
-      final relationshipStartMonth = DateTime(
-        relationshipStartDate.year,
-        relationshipStartDate.month,
-      );
+      final normalizedMonth = calendarMonthOnly(month);
+      final currentMonth = calendarMonthOnly(currentDate);
+      final relationshipStartMonth = calendarMonthOnly(relationshipStartDate);
 
       if (normalizedMonth.isAfter(currentMonth) ||
           normalizedMonth.isBefore(relationshipStartMonth)) {

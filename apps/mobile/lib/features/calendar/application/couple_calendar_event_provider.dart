@@ -16,14 +16,11 @@ final coupleCalendarEventMonthProvider = FutureProvider.autoDispose
         return const [];
       }
 
-      final normalizedMonth = DateTime(month.year, month.month);
+      final normalizedMonth = calendarMonthOnly(month);
       final relationshipStartDate = calendarDateOnly(
         couple.relationshipStartDate!,
       );
-      final relationshipStartMonth = DateTime(
-        relationshipStartDate.year,
-        relationshipStartDate.month,
-      );
+      final relationshipStartMonth = calendarMonthOnly(relationshipStartDate);
       if (normalizedMonth.isBefore(relationshipStartMonth)) {
         return const [];
       }

@@ -1,3 +1,5 @@
+import '../../../core/date/app_date_policy.dart';
+
 String? resolvePushNotificationLocation(Map<String, dynamic> data) {
   final explicitRoute = _allowListedRoute(data['route']);
   if (explicitRoute != null) {
@@ -99,18 +101,5 @@ String _questionLocation(Object? assignedDate) {
 }
 
 bool _isDate(Object? value) {
-  if (value is! String || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
-    return false;
-  }
-
-  final parsed = DateTime.tryParse(value);
-  if (parsed == null) {
-    return false;
-  }
-
-  final normalized =
-      '${parsed.year.toString().padLeft(4, '0')}-'
-      '${parsed.month.toString().padLeft(2, '0')}-'
-      '${parsed.day.toString().padLeft(2, '0')}';
-  return normalized == value;
+  return value is String && parseCalendarDate(value) != null;
 }

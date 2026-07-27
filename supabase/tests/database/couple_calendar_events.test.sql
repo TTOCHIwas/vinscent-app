@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(36);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -352,6 +352,28 @@ select throws_ok(
     select *
     from public.save_couple_calendar_event(
       '36000000-0000-0000-0000-000000000002',
+      '지원 범위 밖 일정',
+      '2101-01-01',
+      'none',
+      null,
+      null,
+      false,
+      false,
+      0,
+      '09:00',
+      null
+    )
+  $$,
+  'P0001',
+  'invalid_calendar_event_date',
+  'events after the shared calendar range are rejected'
+);
+
+select throws_ok(
+  $$
+    select *
+    from public.save_couple_calendar_event(
+      '36000000-0000-0000-0000-000000000002',
       repeat('가', 31),
       '2026-08-01',
       'none',
@@ -546,6 +568,34 @@ select is(
       and receiver_user_id = '16000000-0000-0000-0000-000000000002'
   ),
   'the same occurrence has a stable notification source id'
+);
+
+select is(
+  (
+    select count(*)
+    from public.get_due_couple_calendar_event_reminders(
+      (select due_run_at + interval '20 minutes' from calendar_test_context),
+      10
+    )
+    where event_id = '36000000-0000-0000-0000-000000000001'
+      and receiver_user_id = '16000000-0000-0000-0000-000000000002'
+  ),
+  1::bigint,
+  'an undispatched reminder remains recoverable after the polling lookback'
+);
+
+select is(
+  (
+    select count(*)
+    from public.get_due_couple_calendar_event_reminders(
+      (select due_run_at + interval '1 day' from calendar_test_context),
+      10
+    )
+    where event_id = '36000000-0000-0000-0000-000000000001'
+      and receiver_user_id = '16000000-0000-0000-0000-000000000002'
+  ),
+  0::bigint,
+  'a missed one-time reminder is not delivered after the event date'
 );
 
 select set_config(

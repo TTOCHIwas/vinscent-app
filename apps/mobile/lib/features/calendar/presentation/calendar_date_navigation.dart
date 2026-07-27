@@ -5,8 +5,6 @@ import '../../../core/date/app_date_policy.dart';
 class CalendarDateNavigation {
   const CalendarDateNavigation();
 
-  static final _lastSupportedDate = DateTime(2100, 12, 31);
-
   DateTime? moveByDay({
     required DateTime selectedDate,
     required int dayOffset,
@@ -36,12 +34,12 @@ class CalendarDateNavigation {
   }) {
     final selected = calendarDateOnly(selectedDate);
     final targetMonth = DateTime(selected.year, selected.month + monthOffset);
-    if (targetMonth.year > _lastSupportedDate.year) {
+    if (targetMonth.year > appCalendarLastSupportedDate.year) {
       return null;
     }
 
     final start = calendarDateOnly(relationshipStartDate);
-    final startMonth = DateTime(start.year, start.month);
+    final startMonth = calendarMonthOnly(start);
     if (targetMonth.isBefore(startMonth)) {
       return null;
     }
@@ -63,7 +61,8 @@ class CalendarDateNavigation {
     DateTime relationshipStartDate,
   ) {
     final start = calendarDateOnly(relationshipStartDate);
-    if (target.isBefore(start) || target.isAfter(_lastSupportedDate)) {
+    if (target.isBefore(start) ||
+        target.isAfter(appCalendarLastSupportedDate)) {
       return null;
     }
     return target;
