@@ -53,13 +53,13 @@ class StoryCardEditorHeader extends StatelessWidget {
                         onPressed: onDeletePressed,
                         icon: const Icon(Icons.delete_outline),
                       ),
-                    TextButton(
+                    IconButton(
                       key: const ValueKey('story-card-editor-save'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                      ),
+                      tooltip: '카드 올리기',
+                      color: Colors.white,
+                      disabledColor: Colors.white38,
                       onPressed: canSave ? onSavePressed : null,
-                      child: isSaving
+                      icon: isSaving
                           ? const SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(
@@ -67,7 +67,7 @@ class StoryCardEditorHeader extends StatelessWidget {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text('올리기'),
+                          : const Icon(Icons.check_rounded, size: 26),
                     ),
                   ],
                 ),

@@ -168,7 +168,17 @@ void main() {
       expect(recordingLibraryIcon.assetName, AppIcons.cassetteTape);
       expect(recordingLibraryIcon.color, Colors.black);
       expect(find.byTooltip('\ub179\uc74c \ubcf4\uad00\ud568'), findsOneWidget);
-      expect(find.byKey(const Key('app-header-settings')), findsOneWidget);
+      final settingsAction = find.byKey(const Key('app-header-settings'));
+      expect(settingsAction, findsOneWidget);
+      expect(
+        find.descendant(
+          of: settingsAction,
+          matching: find.byIcon(Icons.settings_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('\uc124\uc815'), findsOneWidget);
+      expect(find.text('\uc124\uc815'), findsNothing);
       expect(find.byType(ShellTab), findsNWidgets(3));
       expect(find.text(_dailyQuestion.questionText), findsOneWidget);
       expect(find.text('\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac'), findsNothing);
@@ -222,6 +232,18 @@ void main() {
 
     await tester.tap(find.byKey(const Key('app-header-recording-library')));
     await tester.pumpAndSettle();
+    final addSlotAction = find.byKey(const Key('recording-library-add-slot'));
+    expect(addSlotAction, findsOneWidget);
+    expect(
+      find.descendant(
+        of: addSlotAction,
+        matching: find.byIcon(Icons.add_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('\uc2ac\ub86f \ucd94\uac00'), findsOneWidget);
+    expect(find.text('\uc2ac\ub86f \ucd94\uac00'), findsNothing);
+
     await tester.tap(
       find.byKey(const ValueKey('recording-library-empty-slot-save-1')),
     );

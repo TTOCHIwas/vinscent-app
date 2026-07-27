@@ -731,7 +731,7 @@ void main() {
       );
       expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('저장'), findsOneWidget);
+      expect(find.text('저장'), findsNothing);
       final saveBar = find.byKey(const Key('answer-save-bar'));
       final characterCount = find.byKey(const Key('answer-character-count'));
       final saveAction = find.byKey(const Key('answer-save-action'));
@@ -739,9 +739,9 @@ void main() {
         of: characterCount,
         matching: find.text('0 / 500'),
       );
-      final saveText = find.descendant(
+      final saveIcon = find.descendant(
         of: saveAction,
-        matching: find.text('저장'),
+        matching: find.byIcon(Icons.check_rounded),
       );
       final textFieldRect = tester.getRect(find.byType(TextField));
       final saveBarRect = tester.getRect(saveBar);
@@ -763,7 +763,11 @@ void main() {
         tester.getRect(characterCountText).left,
         closeTo(textFieldRect.left, 0.5),
       );
-      expect(tester.getRect(saveText).right, closeTo(textFieldRect.right, 0.5));
+      expect(saveIcon, findsOneWidget);
+      expect(
+        tester.getRect(saveAction).right,
+        closeTo(textFieldRect.right, 0.5),
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -942,7 +946,14 @@ void main() {
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
         'hello',
       );
-      expect(find.text('저장'), findsOneWidget);
+      expect(find.text('저장'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('answer-save-action')),
+          matching: find.byIcon(Icons.check_rounded),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('상대방 답변'), findsNothing);
     });
 

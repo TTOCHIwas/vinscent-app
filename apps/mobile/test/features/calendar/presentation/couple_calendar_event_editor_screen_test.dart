@@ -77,7 +77,14 @@ void main() {
     );
 
     final saveButton = find.byKey(const Key('calendar-event-save'));
-    expect(tester.widget<TextButton>(saveButton).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(saveButton).onPressed, isNotNull);
+    expect(
+      find.descendant(
+        of: saveButton,
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(saveButton);
     await tester.pumpAndSettle();
 

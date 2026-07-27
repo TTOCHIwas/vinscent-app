@@ -75,25 +75,19 @@ class AppHeader extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Semantics(
-                  button: true,
-                  label: '설정',
-                  child: InkWell(
-                    key: const Key('app-header-settings'),
-                    onTap: onSettingsPressed,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 6,
-                      ),
-                      child: Text(
-                        '설정',
-                        style: AppTextStyles.shellNavigation.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
+                IconButton(
+                  key: const Key('app-header-settings'),
+                  tooltip: '설정',
+                  onPressed: onSettingsPressed,
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    size: 26,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],

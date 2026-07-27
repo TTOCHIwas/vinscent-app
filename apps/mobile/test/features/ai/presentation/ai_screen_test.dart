@@ -286,9 +286,10 @@ void main() {
       of: accessory,
       matching: find.text('0 / 300'),
     );
-    final submitText = find.descendant(
+    final submitAction = find.byKey(const Key('ai-direct-submit'));
+    final submitIcon = find.descendant(
       of: accessory,
-      matching: find.text('물어보기'),
+      matching: find.byIcon(Icons.arrow_upward_rounded),
     );
     expect(accessory, findsOneWidget);
     expect(tester.getRect(accessory).bottom, 400);
@@ -297,9 +298,11 @@ void main() {
       closeTo(tester.getRect(input).left, 0.5),
     );
     expect(
-      tester.getRect(submitText).right,
+      tester.getRect(submitAction).right,
       closeTo(tester.getRect(input).right, 0.5),
     );
+    expect(submitIcon, findsOneWidget);
+    expect(find.byTooltip('물어보기'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byKey(const Key('ai-direct-question-composer')),

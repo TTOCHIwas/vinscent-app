@@ -604,14 +604,16 @@ class _CharacterEditorHeader extends StatelessWidget {
           : null,
       action: SizedBox(
         width: 72,
-        child: TextButton(
+        child: IconButton(
+          key: const ValueKey('character-editor-save'),
+          tooltip: '저장',
           onPressed: canSave ? onSavePressed : null,
-          child: isSaving
+          icon: isSaving
               ? const SizedBox.square(
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('저장'),
+              : const Icon(Icons.check_rounded),
         ),
       ),
     );

@@ -35,6 +35,7 @@ class AiDirectQuestionKeyboardAccessory extends ConsumerWidget {
           actionKey: const Key('ai-direct-submit'),
           actionLabel: '물어보기',
           loadingLabel: '질문 보내는 중',
+          actionIcon: const Icon(Icons.arrow_upward_rounded, size: 24),
           enabled: canSubmit,
           isLoading: controller.isSubmitting,
           horizontalPadding: 24,

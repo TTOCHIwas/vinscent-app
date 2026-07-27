@@ -119,13 +119,12 @@ class _StoryCardCaptionInputOverlayState
                         onPressed: widget.onCancelled,
                         icon: const Icon(Icons.close),
                       ),
-                      TextButton(
+                      IconButton(
                         key: const ValueKey('story-card-caption-input-done'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                        ),
+                        tooltip: '짧은 글 입력 완료',
+                        color: Colors.white,
                         onPressed: () => widget.onSubmitted(_controller.text),
-                        child: const Text('완료'),
+                        icon: const Icon(Icons.check_rounded),
                       ),
                     ],
                   ),

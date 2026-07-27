@@ -36,7 +36,16 @@ void main() {
 
     expect(_saveButton(tester).onPressed, isNotNull);
 
-    await tester.tap(find.text('저장'));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('character-editor-save')),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('저장'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('character-editor-save')));
     await _waitForRoute(tester, router, '/settings');
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -76,7 +85,7 @@ void main() {
 
       expect(_saveButton(tester).onPressed, isNotNull);
 
-      await tester.tap(find.text('저장'));
+      await tester.tap(find.byKey(const ValueKey('character-editor-save')));
       await tester.pump();
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 100)),
@@ -205,7 +214,7 @@ void main() {
     await tester.pump();
 
     await tester.runAsync(() async {
-      await tester.tap(find.text('저장'));
+      await tester.tap(find.byKey(const ValueKey('character-editor-save')));
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pump();
@@ -436,8 +445,10 @@ Future<void> _pumpCharacterEditor(
   await tester.pumpAndSettle();
 }
 
-TextButton _saveButton(WidgetTester tester) {
-  return tester.widget<TextButton>(find.widgetWithText(TextButton, '저장'));
+IconButton _saveButton(WidgetTester tester) {
+  return tester.widget<IconButton>(
+    find.byKey(const ValueKey('character-editor-save')),
+  );
 }
 
 Future<void> _waitForRoute(

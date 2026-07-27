@@ -59,7 +59,9 @@ void main() {
     expect(_saveButton(tester).onPressed, isNotNull);
 
     await tester.runAsync(() async {
-      await tester.tap(find.text('저장'));
+      await tester.tap(
+        find.byKey(const ValueKey('recording-slot-artwork-save')),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     await _waitForRoute(tester, router, '/home/recordings');
@@ -96,7 +98,9 @@ void main() {
     expect(_saveButton(tester).onPressed, isNotNull);
 
     await tester.runAsync(() async {
-      await tester.tap(find.text('저장'));
+      await tester.tap(
+        find.byKey(const ValueKey('recording-slot-artwork-save')),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     await _waitForRoute(tester, router, '/home/recordings');
@@ -131,7 +135,9 @@ void main() {
       await tester.pump();
 
       await tester.runAsync(() async {
-        await tester.tap(find.text('저장'));
+        await tester.tap(
+          find.byKey(const ValueKey('recording-slot-artwork-save')),
+        );
       });
       await _waitForCondition(
         tester,
@@ -147,7 +153,9 @@ void main() {
       );
 
       await tester.runAsync(() async {
-        await tester.tap(find.text('저장'));
+        await tester.tap(
+          find.byKey(const ValueKey('recording-slot-artwork-save')),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 500));
       });
       await _waitForRoute(tester, router, '/home/recordings');
@@ -229,8 +237,10 @@ Future<void> _waitForCondition(
   await tester.pump();
 }
 
-TextButton _saveButton(WidgetTester tester) {
-  return tester.widget<TextButton>(find.widgetWithText(TextButton, '저장'));
+IconButton _saveButton(WidgetTester tester) {
+  return tester.widget<IconButton>(
+    find.byKey(const ValueKey('recording-slot-artwork-save')),
+  );
 }
 
 class _FakeRecordingRepository implements CoupleRecordingRepository {

@@ -122,6 +122,7 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
     required this.horizontalPadding,
     this.characterCountKey,
     this.actionKey,
+    this.actionIcon,
   });
 
   final int characterCount;
@@ -134,6 +135,7 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
   final double horizontalPadding;
   final Key? characterCountKey;
   final Key? actionKey;
+  final Widget? actionIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -149,17 +151,82 @@ class AppTextInputKeyboardAccessory extends StatelessWidget {
               alignment: Alignment.centerLeft,
             ),
           ),
-          AppHeaderTextAction(
-            key: actionKey,
-            label: actionLabel,
-            loadingLabel: loadingLabel,
-            enabled: enabled,
-            isLoading: isLoading,
-            onPressed: onPressed,
-            alignment: Alignment.centerRight,
-            padding: EdgeInsets.zero,
-          ),
+          if (actionIcon case final actionIcon?)
+            _KeyboardAccessoryIconAction(
+              key: actionKey,
+              label: actionLabel,
+              loadingLabel: loadingLabel,
+              enabled: enabled,
+              isLoading: isLoading,
+              onPressed: onPressed,
+              icon: actionIcon,
+            )
+          else
+            AppHeaderTextAction(
+              key: actionKey,
+              label: actionLabel,
+              loadingLabel: loadingLabel,
+              enabled: enabled,
+              isLoading: isLoading,
+              onPressed: onPressed,
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.zero,
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _KeyboardAccessoryIconAction extends StatelessWidget {
+  const _KeyboardAccessoryIconAction({
+    super.key,
+    required this.label,
+    required this.loadingLabel,
+    required this.enabled,
+    required this.isLoading,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  final String label;
+  final String loadingLabel;
+  final bool enabled;
+  final bool isLoading;
+  final VoidCallback onPressed;
+  final Widget icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: isLoading ? loadingLabel : label,
+      excludeSemantics: true,
+      child: IconButton(
+        tooltip: label,
+        onPressed: enabled && !isLoading ? onPressed : null,
+        style: IconButton.styleFrom(
+          fixedSize: const Size.square(44),
+          backgroundColor: AppColors.actionPrimary,
+          foregroundColor: AppColors.textInverse,
+          disabledBackgroundColor: isLoading
+              ? AppColors.actionPrimary
+              : AppColors.actionDisabled,
+          disabledForegroundColor: isLoading
+              ? AppColors.textInverse
+              : AppColors.actionDisabledContent,
+          shape: const CircleBorder(),
+        ),
+        icon: isLoading
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  color: AppColors.textInverse,
+                  strokeWidth: 2,
+                ),
+              )
+            : icon,
       ),
     );
   }

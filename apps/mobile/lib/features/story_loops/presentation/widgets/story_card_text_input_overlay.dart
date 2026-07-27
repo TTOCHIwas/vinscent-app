@@ -108,13 +108,12 @@ class _StoryCardTextInputOverlayState extends State<StoryCardTextInputOverlay> {
                         onPressed: widget.onCancelled,
                         icon: const Icon(Icons.close),
                       ),
-                      TextButton(
+                      IconButton(
                         key: const ValueKey('story-card-text-input-done'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                        ),
+                        tooltip: '텍스트 입력 완료',
+                        color: Colors.white,
                         onPressed: _submit,
-                        child: const Text('완료'),
+                        icon: const Icon(Icons.check_rounded),
                       ),
                     ],
                   ),

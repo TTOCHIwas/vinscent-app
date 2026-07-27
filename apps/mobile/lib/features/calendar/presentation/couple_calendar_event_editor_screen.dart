@@ -244,22 +244,23 @@ class _CoupleCalendarEventEditorScreenState
         onBackPressed: _handleBackPressed,
         action: SizedBox(
           width: 64,
-          child: TextButton(
-            key: _step == _CalendarEventEditorStep.basic
-                ? const Key('calendar-event-next')
-                : const Key('calendar-event-save'),
-            onPressed: _canSave && canEdit
-                ? _step == _CalendarEventEditorStep.basic
-                      ? _showExtrasStep
-                      : _save
-                : null,
-            child: _isSaving && _step == _CalendarEventEditorStep.extras
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(_step == _CalendarEventEditorStep.basic ? '다음' : '저장'),
-          ),
+          child: _step == _CalendarEventEditorStep.basic
+              ? TextButton(
+                  key: const Key('calendar-event-next'),
+                  onPressed: _canSave && canEdit ? _showExtrasStep : null,
+                  child: const Text('다음'),
+                )
+              : IconButton(
+                  key: const Key('calendar-event-save'),
+                  tooltip: '일정 저장',
+                  onPressed: _canSave && canEdit ? _save : null,
+                  icon: _isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_rounded),
+                ),
         ),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(strokeWidth: 2))

@@ -145,9 +145,20 @@ void main() {
     );
     expect(
       find.descendant(of: accessory, matching: find.byType(IconButton)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('ai-direct-submit')),
+        matching: find.byIcon(Icons.arrow_upward_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('물어보기'), findsOneWidget);
+    expect(
+      find.descendant(of: accessory, matching: find.text('물어보기')),
       findsNothing,
     );
-    expect(find.text('물어보기'), findsOneWidget);
   });
 
   testWidgets('scrolls the conversation without dismissing the keyboard', (
@@ -193,10 +204,12 @@ void main() {
       find.descendant(of: input, matching: find.byType(EditableText)),
     );
     final scrollable = tester.state<ScrollableState>(
-      find.descendant(
-        of: find.byKey(const Key('ai-direct-question-conversation')),
-        matching: find.byType(Scrollable),
-      ).first,
+      find
+          .descendant(
+            of: find.byKey(const Key('ai-direct-question-conversation')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
 
     expect(scrollable.position.maxScrollExtent, greaterThan(0));

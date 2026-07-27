@@ -431,7 +431,9 @@ class _RecordingLibraryScreenState
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('취소'),
             ),
-            TextButton(
+            IconButton(
+              key: const ValueKey('recording-library-slot-title-save'),
+              tooltip: '저장',
               onPressed: () {
                 if (!formKey.currentState!.validate()) {
                   return;
@@ -439,7 +441,7 @@ class _RecordingLibraryScreenState
 
                 Navigator.of(context).pop(controller.text.trim());
               },
-              child: const Text('저장'),
+              icon: const Icon(Icons.check_rounded),
             ),
           ],
         );
@@ -543,7 +545,12 @@ class _LibrarySectionHeader extends StatelessWidget {
           ),
         ),
         if (actionLabel != null)
-          TextButton(onPressed: onAction, child: Text(actionLabel)),
+          IconButton(
+            key: const Key('recording-library-add-slot'),
+            tooltip: actionLabel,
+            onPressed: onAction,
+            icon: const Icon(Icons.add_rounded),
+          ),
       ],
     );
   }
@@ -742,7 +749,7 @@ class _EmptySlotContent extends StatelessWidget {
                 key: ValueKey('recording-library-empty-slot-save-$slotIndex'),
                 tooltip: '현재 녹음 저장',
                 onPressed: hasCurrentRecording ? onSavePressed : null,
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(Icons.check_rounded),
               ),
           ],
         ),

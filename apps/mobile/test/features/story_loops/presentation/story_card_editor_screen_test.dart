@@ -26,6 +26,12 @@ void main() {
     expect(tester.getSize(header).height, 56);
     expect(tester.getTopLeft(header).dy, 0);
     expect(tester.getRect(save).overlaps(tester.getRect(textTool)), isFalse);
+    expect(
+      find.descendant(of: save, matching: find.byIcon(Icons.check_rounded)),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('카드 올리기'), findsOneWidget);
+    expect(find.text('올리기'), findsNothing);
   });
 
   testWidgets('uses a 4:5 polaroid frame in the editor', (tester) async {
@@ -55,6 +61,14 @@ void main() {
       expect(input.maxLength, storyCardMaxCaptionCharacters);
       expect(input.maxLines, storyCardMaxCaptionLines);
       expect(input.textAlign, TextAlign.center);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('story-card-caption-input-done')),
+          matching: find.byIcon(Icons.check_rounded),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('짧은 글 입력 완료'), findsOneWidget);
 
       await tester.enterText(inputFinder, 'first date');
       await tester.tap(
@@ -137,7 +151,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final save = tester.widget<TextButton>(
+    final save = tester.widget<IconButton>(
       find.byKey(const ValueKey('story-card-editor-save')),
     );
     expect(save.onPressed, isNull);
@@ -194,6 +208,14 @@ void main() {
     expect(input.style?.color, Colors.white);
     expect(input.cursorColor, Colors.white);
     expect(tester.testTextInput.isVisible, isTrue);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('story-card-text-input-done')),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('텍스트 입력 완료'), findsOneWidget);
   });
 
   testWidgets('creates centered text with the selected input color', (
@@ -252,7 +274,7 @@ void main() {
       findsNothing,
     );
     expect(find.text('cancelled text'), findsNothing);
-    final save = tester.widget<TextButton>(
+    final save = tester.widget<IconButton>(
       find.byKey(const ValueKey('story-card-editor-save')),
     );
     expect(save.onPressed, isNull);
@@ -295,7 +317,7 @@ void main() {
   testWidgets('delivers drawing pointer events to the canvas', (tester) async {
     await _pumpEditor(tester, draft: _existingEmptyDraft());
 
-    TextButton saveButton() => tester.widget<TextButton>(
+    IconButton saveButton() => tester.widget<IconButton>(
       find.byKey(const ValueKey('story-card-editor-save')),
     );
 
@@ -323,6 +345,14 @@ void main() {
     expect(find.byKey(const ValueKey('story-card-drawing-eraser')), findsOne);
     expect(find.byKey(const ValueKey('story-card-drawing-undo')), findsOne);
     expect(find.byKey(const ValueKey('story-card-drawing-done')), findsOne);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('story-card-drawing-done')),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('그리기 완료'), findsOneWidget);
     expect(find.byIcon(Icons.crop), findsNothing);
 
     final eraserIcon = find.descendant(
@@ -339,7 +369,7 @@ void main() {
   testWidgets('undo removes the last completed drawing stroke', (tester) async {
     await _pumpEditor(tester, draft: _existingEmptyDraft());
 
-    TextButton saveButton() => tester.widget<TextButton>(
+    IconButton saveButton() => tester.widget<IconButton>(
       find.byKey(const ValueKey('story-card-editor-save')),
     );
 

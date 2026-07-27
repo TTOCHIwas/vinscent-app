@@ -105,6 +105,39 @@ void main() {
     expect(find.byType(BottomSheet), findsNothing);
   });
 
+  testWidgets('slot title save uses the shared check action', (tester) async {
+    final overview = CoupleRecordingOverview(
+      slotLimit: 1,
+      currentRecording: _currentRecording(),
+      savedSlots: [_slot()],
+    );
+    await _pumpLibrary(tester, overview: overview);
+
+    await tester.tap(
+      find.byKey(const ValueKey('recording-library-slot-menu-slot-1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey('recording-library-slot-action-replace-slot-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final saveAction = find.byKey(
+      const ValueKey('recording-library-slot-title-save'),
+    );
+    expect(saveAction, findsOneWidget);
+    expect(
+      find.descendant(
+        of: saveAction,
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('저장'), findsOneWidget);
+  });
+
   testWidgets('slot actions use one restrained line icon hierarchy', (
     tester,
   ) async {
@@ -201,6 +234,13 @@ void main() {
       const ValueKey('recording-library-empty-slot-save-2'),
     );
     expect(addButton, findsOneWidget);
+    expect(
+      find.descendant(
+        of: addButton,
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(addButton);
     await tester.pumpAndSettle();

@@ -120,6 +120,47 @@ void main() {
       closeTo(surfaceWidth - tester.getRect(actionText).right, 0.5),
     );
   });
+
+  testWidgets('shows an optional icon action without changing text actions', (
+    tester,
+  ) async {
+    var pressed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AppTextInputKeyboardAccessory(
+            characterCount: 12,
+            maxLength: 300,
+            actionKey: const Key('test-icon-action'),
+            actionLabel: '물어보기',
+            loadingLabel: '질문 보내는 중',
+            actionIcon: const Icon(Icons.arrow_upward_rounded),
+            enabled: true,
+            isLoading: false,
+            horizontalPadding: 12,
+            onPressed: () => pressed = true,
+          ),
+        ),
+      ),
+    );
+
+    final action = find.byKey(const Key('test-icon-action'));
+    expect(action, findsOneWidget);
+    expect(
+      find.descendant(
+        of: action,
+        matching: find.byIcon(Icons.arrow_upward_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('물어보기'), findsOneWidget);
+    expect(find.text('물어보기'), findsNothing);
+
+    await tester.tap(action);
+
+    expect(pressed, isTrue);
+  });
 }
 
 Future<void> _pump(

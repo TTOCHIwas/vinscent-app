@@ -543,6 +543,7 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
           actionKey: const Key('answer-save-action'),
           actionLabel: '저장',
           loadingLabel: '저장 중',
+          actionIcon: const Icon(Icons.check_rounded),
           enabled: _canSubmit,
           isLoading: _isSubmitting,
           horizontalPadding: 32,
