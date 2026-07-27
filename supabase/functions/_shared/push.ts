@@ -4,32 +4,38 @@ import {
   completePushNotificationDelivery,
   type PushDeliveryStatus,
 } from './push_dispatch_repository.ts';
-import { createServiceRoleClient } from './supabase.ts';
+import type { createServiceRoleClient } from './supabase.ts';
 import { isRecord } from './webhook.ts';
 
-export type NotificationType =
-  | 'partner_answer_completed'
-  | 'daily_question_delivery'
-  | 'unanswered_reminder'
-  | 'couple_disconnect'
-  | 'recording_activity'
-  | 'partner_story_card_uploaded'
-  | 'question_generated'
-  | 'couple_activity'
-  | 'ai_update'
-  | 'calendar_event_reminder';
+const notificationTypes = [
+  'partner_answer_completed',
+  'daily_question_delivery',
+  'unanswered_reminder',
+  'couple_disconnect',
+  'recording_activity',
+  'partner_story_card_uploaded',
+  'question_generated',
+  'couple_activity',
+  'ai_update',
+  'calendar_event_reminder',
+] as const;
+
+export type NotificationType = typeof notificationTypes[number];
 
 export type DeliveryStatus = PushDeliveryStatus;
 
-export type PreferenceColumn =
-  | 'partner_answer_enabled'
-  | 'daily_question_enabled'
-  | 'reminder_enabled'
-  | 'couple_disconnect_enabled'
-  | 'recording_enabled'
-  | 'partner_story_card_enabled'
-  | 'couple_activity_enabled'
-  | 'ai_updates_enabled';
+const preferenceColumns = [
+  'partner_answer_enabled',
+  'daily_question_enabled',
+  'reminder_enabled',
+  'couple_disconnect_enabled',
+  'recording_enabled',
+  'partner_story_card_enabled',
+  'couple_activity_enabled',
+  'ai_updates_enabled',
+] as const;
+
+export type PreferenceColumn = typeof preferenceColumns[number];
 
 type PushTokenRow = {
   id: string;
@@ -54,6 +60,7 @@ type SendPushNotificationParams = {
   data: Record<string, string>;
   preferenceColumn?: PreferenceColumn;
   accessToken?: string;
+  maxAttempts?: number;
 };
 
 export async function sendPushNotification(
@@ -63,6 +70,11 @@ export async function sendPushNotification(
     notificationType: params.notificationType,
     sourceId: params.sourceId,
     receiverUserId: params.receiverUserId,
+    title: params.title,
+    body: params.body,
+    data: params.data,
+    preferenceColumn: params.preferenceColumn ?? null,
+    maxAttempts: params.maxAttempts ?? 5,
   });
 
   if (dispatchClaim.claim_result !== 'claimed') {
@@ -75,11 +87,17 @@ export async function sendPushNotification(
     };
   }
 
-  if (params.preferenceColumn) {
-    const isEnabled = await isNotificationEnabled(
-      params.supabase,
-      params.receiverUserId,
-      params.preferenceColumn,
+  const preferenceColumn = params.preferenceColumn;
+  if (preferenceColumn) {
+    const isEnabled = await runClaimedPreflight(
+      params,
+      dispatchClaim.claim_token,
+      () =>
+        isNotificationEnabled(
+          params.supabase,
+          params.receiverUserId,
+          preferenceColumn,
+        ),
     );
 
     if (!isEnabled) {
@@ -104,11 +122,17 @@ export async function sendPushNotification(
     }
   }
 
-  const { data: pushTokenRows, error: tokenError } = await params.supabase
-    .from('user_push_tokens')
-    .select('id, token')
-    .eq('user_id', params.receiverUserId)
-    .eq('is_active', true);
+  const { data: pushTokenRows, error: tokenError } =
+    await runClaimedPreflight(
+      params,
+      dispatchClaim.claim_token,
+      () =>
+        params.supabase
+          .from('user_push_tokens')
+          .select('id, token')
+          .eq('user_id', params.receiverUserId)
+          .eq('is_active', true),
+    );
 
   if (tokenError) {
     await completePushNotificationDelivery(params.supabase, {
@@ -148,7 +172,12 @@ export async function sendPushNotification(
     };
   }
 
-  const accessToken = params.accessToken ?? (await createFcmAccessToken());
+  const accessToken = params.accessToken ??
+    (await runClaimedPreflight(
+      params,
+      dispatchClaim.claim_token,
+      createFcmAccessToken,
+    ));
   const results = await Promise.all(
     pushTokens.map(async (pushToken) => {
       try {
@@ -209,6 +238,16 @@ export async function sendPushNotification(
   };
 }
 
+export function isNotificationType(value: string): value is NotificationType {
+  return (notificationTypes as readonly string[]).includes(value);
+}
+
+export function isPreferenceColumn(
+  value: string,
+): value is PreferenceColumn {
+  return (preferenceColumns as readonly string[]).includes(value);
+}
+
 async function isNotificationEnabled(
   supabase: ReturnType<typeof createServiceRoleClient>,
   receiverUserId: string,
@@ -262,4 +301,35 @@ function summarizeErrors(
 
 function formatError(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function runClaimedPreflight<T>(
+  params: SendPushNotificationParams,
+  claimToken: string,
+  operation: () => PromiseLike<T>,
+) {
+  try {
+    return await operation();
+  } catch (error) {
+    try {
+      await completePushNotificationDelivery(params.supabase, {
+        notificationType: params.notificationType,
+        sourceId: params.sourceId,
+        receiverUserId: params.receiverUserId,
+        claimToken,
+        targetTokenCount: 0,
+        successCount: 0,
+        failureCount: 0,
+        status: 'failed',
+        errorMessage: `push_preflight_failed:${formatError(error)}`,
+      });
+    } catch (completionError) {
+      throw new Error(
+        'push_preflight_failure_persistence_failed:' +
+          `${formatError(completionError)};cause=${formatError(error)}`,
+      );
+    }
+
+    throw error;
+  }
 }

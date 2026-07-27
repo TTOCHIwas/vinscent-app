@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  claimPushNotificationDispatch,
   completePushNotificationDelivery,
+  loadRetryablePushNotificationDispatches,
   parsePushDispatchClaim,
   runPushPersistenceOperation,
 } from '../../functions/_shared/push_dispatch_repository.ts';
@@ -36,17 +38,18 @@ test('throws when push persistence remains unavailable', async () => {
   let attempts = 0;
 
   await assert.rejects(
-    () => runPushPersistenceOperation(
-      'complete_push_notification_delivery',
-      async () => {
-        attempts += 1;
-        throw new Error('connection reset');
-      },
-      {
-        maxAttempts: 3,
-        delay: async () => {},
-      },
-    ),
+    () =>
+      runPushPersistenceOperation(
+        'complete_push_notification_delivery',
+        async () => {
+          attempts += 1;
+          throw new Error('connection reset');
+        },
+        {
+          maxAttempts: 3,
+          delay: async () => {},
+        },
+      ),
     /complete_push_notification_delivery_failed:connection reset/,
   );
 
@@ -55,14 +58,15 @@ test('throws when push persistence remains unavailable', async () => {
 
 test('requires an ownership token in every push dispatch claim', () => {
   assert.throws(
-    () => parsePushDispatchClaim({
-      claim_result: 'claimed',
-      notification_type: 'recording_activity',
-      source_id: 'source-id',
-      receiver_user_id: 'receiver-id',
-      dispatch_status: 'processing',
-      claimed_at: '2026-07-22T00:00:00.000Z',
-    }),
+    () =>
+      parsePushDispatchClaim({
+        claim_result: 'claimed',
+        notification_type: 'recording_activity',
+        source_id: 'source-id',
+        receiver_user_id: 'receiver-id',
+        dispatch_status: 'processing',
+        claimed_at: '2026-07-22T00:00:00.000Z',
+      }),
     /dispatch_claim_token_missing/,
   );
 
@@ -75,9 +79,123 @@ test('requires an ownership token in every push dispatch claim', () => {
       claim_token: 'claim-token',
       dispatch_status: 'processing',
       claimed_at: '2026-07-22T00:00:00.000Z',
+      attempt_count: 1,
+      max_attempts: 5,
+      available_at: '2026-07-22T00:00:00.000Z',
     }).claim_token,
     'claim-token',
   );
+});
+
+test('parses retry ownership metadata from a push dispatch claim', () => {
+  const claim = parsePushDispatchClaim({
+    claim_result: 'claimed',
+    notification_type: 'recording_activity',
+    source_id: 'source-id',
+    receiver_user_id: 'receiver-id',
+    claim_token: 'claim-token',
+    dispatch_status: 'processing',
+    claimed_at: '2026-07-22T00:00:00.000Z',
+    attempt_count: 2,
+    max_attempts: 5,
+    available_at: '2026-07-22T00:01:00.000Z',
+  });
+
+  assert.equal(claim.attempt_count, 2);
+  assert.equal(claim.max_attempts, 5);
+});
+
+test('persists the notification payload when claiming a dispatch', async () => {
+  const calls: Array<{ name: string; params: Record<string, unknown> }> = [];
+  const supabase = {
+    rpc(name: string, params: Record<string, unknown>) {
+      calls.push({ name, params });
+      return {
+        single: async () => ({
+          data: {
+            claim_result: 'claimed',
+            notification_type: 'calendar_event_reminder',
+            source_id: 'source-id',
+            receiver_user_id: 'receiver-id',
+            claim_token: 'claim-token',
+            dispatch_status: 'processing',
+            claimed_at: '2026-07-22T00:00:00.000Z',
+            attempt_count: 1,
+            max_attempts: 5,
+            available_at: '2026-07-22T00:00:00.000Z',
+          },
+          error: null,
+        }),
+      };
+    },
+  };
+
+  await claimPushNotificationDispatch(supabase as never, {
+    notificationType: 'calendar_event_reminder',
+    sourceId: 'source-id',
+    receiverUserId: 'receiver-id',
+    title: 'Vinscent',
+    body: '오늘 일정이 있어요.',
+    data: {
+      event_id: 'event-id',
+      route: '/calendar?date=2026-07-27',
+    },
+    preferenceColumn: null,
+    maxAttempts: 5,
+  });
+
+  assert.deepEqual(calls, [{
+    name: 'claim_push_notification_dispatch',
+    params: {
+      requested_notification_type: 'calendar_event_reminder',
+      requested_source_id: 'source-id',
+      requested_receiver_user_id: 'receiver-id',
+      requested_title: 'Vinscent',
+      requested_body: '오늘 일정이 있어요.',
+      requested_data: {
+        event_id: 'event-id',
+        route: '/calendar?date=2026-07-27',
+      },
+      requested_preference_column: null,
+      requested_max_attempts: 5,
+    },
+  }]);
+});
+
+test('loads eligible failed dispatches for the scheduled retry worker', async () => {
+  const calls: Array<{ name: string; params: Record<string, unknown> }> = [];
+  const supabase = {
+    rpc(name: string, params: Record<string, unknown>) {
+      calls.push({ name, params });
+      return Promise.resolve({
+        data: [{
+          notification_type: 'calendar_event_reminder',
+          source_id: 'source-id',
+          receiver_user_id: 'receiver-id',
+          title: 'Vinscent',
+          body: '오늘 일정이 있어요.',
+          data: { route: '/calendar?date=2026-07-27' },
+          preference_column: null,
+          attempt_count: 1,
+          max_attempts: 5,
+          available_at: '2026-07-22T00:01:00.000Z',
+        }],
+        error: null,
+      });
+    },
+  };
+
+  const rows = await loadRetryablePushNotificationDispatches(
+    supabase as never,
+    50,
+  );
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].source_id, 'source-id');
+  assert.deepEqual(calls, [{
+    name: 'get_retryable_push_notification_dispatches',
+    params: { requested_limit: 50 },
+  }]);
 });
 
 test('completes a delivery through the atomic ownership-aware RPC', async () => {

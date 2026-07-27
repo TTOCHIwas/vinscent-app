@@ -1,9 +1,6 @@
 import { createFcmAccessToken } from '../_shared/fcm.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
-import {
-  jsonResponse,
-  verifyWebhookSecret,
-} from '../_shared/webhook.ts';
+import { jsonResponse, verifyWebhookSecret } from '../_shared/webhook.ts';
 import {
   dispatchCalendarEventReminderJobs,
   loadDueCalendarEventReminderJobs,
@@ -12,6 +9,10 @@ import {
   dispatchUnansweredQuestionReminderJobs,
   loadDueUnansweredQuestionReminderJobs,
 } from './unanswered_question_reminder_handler.ts';
+import {
+  dispatchRetryablePushNotificationJobs,
+  loadRetryablePushNotificationJobs,
+} from './push_retry_handler.ts';
 
 const defaultLookbackMinutes = 10;
 
@@ -37,7 +38,7 @@ Deno.serve(async (request) => {
 
   try {
     const supabase = createServiceRoleClient();
-    const [questionJobs, calendarJobs] = await Promise.all([
+    const [questionJobs, calendarJobs, retryJobs] = await Promise.all([
       loadDueUnansweredQuestionReminderJobs(
         supabase,
         runAt,
@@ -48,8 +49,11 @@ Deno.serve(async (request) => {
         runAt,
         lookbackMinutes,
       ),
+      loadRetryablePushNotificationJobs(supabase),
     ]);
-    const processedCount = questionJobs.length + calendarJobs.length;
+    const processedCount = questionJobs.length +
+      calendarJobs.length +
+      retryJobs.length;
 
     if (processedCount === 0) {
       return jsonResponse({
@@ -61,13 +65,17 @@ Deno.serve(async (request) => {
     }
 
     const accessToken = await createFcmAccessToken();
-    const [questionResults, calendarResults] = await Promise.all([
+    const [questionResults, calendarResults, retryResults] = await Promise.all([
       dispatchUnansweredQuestionReminderJobs(
         questionJobs,
         { supabase, accessToken },
       ),
       dispatchCalendarEventReminderJobs(
         calendarJobs,
+        { supabase, accessToken },
+      ),
+      dispatchRetryablePushNotificationJobs(
+        retryJobs,
         { supabase, accessToken },
       ),
     ]);
@@ -77,11 +85,18 @@ Deno.serve(async (request) => {
       runAt: runAt.toISOString(),
       lookbackMinutes,
       processedCount,
-      results: [...questionResults, ...calendarResults],
+      results: [
+        ...questionResults,
+        ...calendarResults,
+        ...retryResults,
+      ],
     });
   } catch (error) {
     return jsonResponse(
-      { error: 'scheduled_notification_dispatch_failed', detail: String(error) },
+      {
+        error: 'scheduled_notification_dispatch_failed',
+        detail: String(error),
+      },
       500,
     );
   }
