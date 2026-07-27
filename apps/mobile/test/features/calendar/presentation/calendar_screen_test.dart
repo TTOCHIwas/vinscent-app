@@ -69,8 +69,8 @@ void main() {
     final marker = tester.widget<DecoratedBox>(
       find.ancestor(of: textFinder, matching: find.byType(DecoratedBox)).first,
     );
-    expect((marker.decoration as BoxDecoration).color, AppColors.brandAction);
-    expect(text.style?.color, AppColors.onBrandAction);
+    expect((marker.decoration as BoxDecoration).color, AppColors.actionPrimary);
+    expect(text.style?.color, AppColors.textInverse);
     expect(painter.height, lessThanOrEqualTo(16));
     expect(tester.takeException(), isNull);
   });
@@ -93,7 +93,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.brandAction),
+      contains(AppColors.actionPrimary),
     );
   });
 
@@ -118,7 +118,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-09'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.brandAction),
+      contains(AppColors.actionPrimary),
     );
   });
 
@@ -188,7 +188,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.brandAction),
+      contains(AppColors.actionPrimary),
     );
   });
 
@@ -379,7 +379,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-09'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.brandAction),
+      contains(AppColors.actionPrimary),
     );
 
     await tester.fling(swipeRegion, const Offset(300, 0), 1000);
@@ -404,7 +404,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.brandAction),
+      contains(AppColors.actionPrimary),
     );
 
     await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
@@ -421,7 +421,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-11'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.brandAction),
+      contains(AppColors.actionPrimary),
     );
   });
 
