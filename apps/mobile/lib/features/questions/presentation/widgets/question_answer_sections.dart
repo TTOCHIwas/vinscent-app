@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/daily_question_answer_state.dart';
@@ -24,22 +25,21 @@ class QuestionAnswerOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final myAnswer = MyQuestionAnswerSection(
+      answerState: answerState,
+      displayStyle: displayStyle,
+      emptyMessage: myEmptyMessage,
+      onPressed: onMyAnswerPressed,
+    );
+    final partnerAnswer = PartnerQuestionAnswerSection(
+      answerState: answerState,
+      hiddenMessage: partnerHiddenMessage,
+      displayStyle: displayStyle,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MyQuestionAnswerSection(
-          answerState: answerState,
-          displayStyle: displayStyle,
-          emptyMessage: myEmptyMessage,
-          onPressed: onMyAnswerPressed,
-        ),
-        const SizedBox(height: 28),
-        PartnerQuestionAnswerSection(
-          answerState: answerState,
-          hiddenMessage: partnerHiddenMessage,
-          displayStyle: displayStyle,
-        ),
-      ],
+      children: [myAnswer, const SizedBox(height: 28), partnerAnswer],
     );
   }
 }
@@ -228,14 +228,25 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+    return SizedBox(
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.homeCharacterLabel),
-          const SizedBox(height: 4),
-          Text(body, style: _plainBodyStyle(isMuted)),
+          Text(
+            title,
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          WordBoundaryText(
+            body,
+            style: AppTextStyles.homeBody.copyWith(
+              color: isMuted ? AppColors.textMuted : AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -246,10 +257,4 @@ TextStyle _boxedBodyStyle(bool isMuted) {
   return isMuted
       ? AppTextStyles.homeCharacterLabel.copyWith(color: AppColors.textMuted)
       : AppTextStyles.homeBody;
-}
-
-TextStyle _plainBodyStyle(bool isMuted) {
-  return AppTextStyles.homeCharacterLabel.copyWith(
-    color: isMuted ? AppColors.textMuted : AppColors.textPrimary,
-  );
 }
