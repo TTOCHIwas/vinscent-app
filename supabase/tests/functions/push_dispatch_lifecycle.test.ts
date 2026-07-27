@@ -123,3 +123,59 @@ test('finalizes a claimed dispatch when notification preflight fails', async () 
     /push_preflight_failed:notification_preference_query_failed/,
   );
 });
+
+test('skips a claimed retry when its source is no longer eligible', async () => {
+  const rpcCalls: Array<{
+    name: string;
+    params: Record<string, unknown>;
+  }> = [];
+  const supabase = {
+    rpc(name: string, params: Record<string, unknown>) {
+      rpcCalls.push({ name, params });
+      if (name === 'claim_push_notification_dispatch') {
+        return {
+          single: async () => ({
+            data: {
+              claim_result: 'claimed',
+              notification_type: 'unanswered_reminder',
+              source_id: 'source-id',
+              receiver_user_id: 'receiver-id',
+              claim_token: 'claim-token',
+              dispatch_status: 'processing',
+              claimed_at: '2026-07-27T00:00:00.000Z',
+              attempt_count: 2,
+              max_attempts: 5,
+              available_at: '2026-07-27T00:00:00.000Z',
+            },
+            error: null,
+          }),
+        };
+      }
+
+      return Promise.resolve({ data: 'completed', error: null });
+    },
+    from() {
+      throw new Error('push token query should not run');
+    },
+  };
+
+  const result = await sendPushNotification({
+    supabase: supabase as never,
+    notificationType: 'unanswered_reminder',
+    sourceId: 'source-id',
+    receiverUserId: 'receiver-id',
+    title: 'Vinscent',
+    body: '답변을 기다리고 있어요',
+    data: {},
+    accessToken: 'access-token',
+    eligibilityCheck: async () => false,
+  });
+
+  assert.equal(result.status, 'skipped');
+  assert.equal(rpcCalls.length, 2);
+  assert.equal(rpcCalls[1].params.requested_status, 'skipped');
+  assert.equal(
+    rpcCalls[1].params.requested_error_message,
+    'notification_no_longer_eligible',
+  );
+});
