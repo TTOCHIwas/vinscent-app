@@ -53,6 +53,17 @@ values (
   now()
 );
 
+create temp table calendar_test_context on commit drop as
+with context_date as (
+  select timezone('Asia/Seoul', clock_timestamp())::date + 30 as event_date
+)
+select
+  event_date,
+  ((event_date + time '09:05') at time zone 'Asia/Seoul') as due_run_at
+from context_date;
+
+grant select on calendar_test_context to authenticated;
+
 select has_table(
   'public',
   'couple_calendar_events',
@@ -97,7 +108,7 @@ select lives_ok(
     from public.save_couple_calendar_event(
       '36000000-0000-0000-0000-000000000001',
       '  첫 여행  ',
-      '2026-07-26',
+      (select event_date from calendar_test_context),
       'none',
       '준비물 챙기기',
       null,
@@ -172,11 +183,14 @@ select results_eq(
   $$
     select occurrence_date, title, own_reminder_enabled
     from public.get_couple_calendar_event_occurrences(
-      '2026-07-01',
-      '2026-07-31'
+      (select event_date from calendar_test_context),
+      (select event_date from calendar_test_context)
     )
   $$,
-  $$ values ('2026-07-26'::date, '첫 여행'::text, true) $$,
+  $$
+    select event_date, '첫 여행'::text, true
+    from calendar_test_context
+  $$,
   'the creator reads the event occurrence and own reminder'
 );
 
@@ -192,11 +206,14 @@ select results_eq(
   $$
     select occurrence_date, title, own_reminder_enabled
     from public.get_couple_calendar_event_occurrences(
-      '2026-07-01',
-      '2026-07-31'
+      (select event_date from calendar_test_context),
+      (select event_date from calendar_test_context)
     )
   $$,
-  $$ values ('2026-07-26'::date, '첫 여행'::text, false) $$,
+  $$
+    select event_date, '첫 여행'::text, false
+    from calendar_test_context
+  $$,
   'the partner reads the shared event without seeing the creator reminder'
 );
 
@@ -405,7 +422,7 @@ select lives_ok(
     from public.save_couple_calendar_event(
       '36000000-0000-0000-0000-000000000001',
       '알림 일정',
-      '2026-07-26',
+      (select event_date from calendar_test_context),
       'none',
       null,
       null,
@@ -435,7 +452,7 @@ select is(
   (
     select count(*)
     from public.get_due_couple_calendar_event_reminders(
-      '2026-07-26 00:05:00+00',
+      (select due_run_at from calendar_test_context),
       10
     )
     where event_id = '36000000-0000-0000-0000-000000000001'
@@ -449,7 +466,7 @@ select is(
   (
     select source_id
     from public.get_due_couple_calendar_event_reminders(
-      '2026-07-26 00:05:00+00',
+      (select due_run_at from calendar_test_context),
       10
     )
     where event_id = '36000000-0000-0000-0000-000000000001'
@@ -458,7 +475,7 @@ select is(
   (
     select source_id
     from public.get_due_couple_calendar_event_reminders(
-      '2026-07-26 00:06:00+00',
+      (select due_run_at + interval '1 minute' from calendar_test_context),
       10
     )
     where event_id = '36000000-0000-0000-0000-000000000001'

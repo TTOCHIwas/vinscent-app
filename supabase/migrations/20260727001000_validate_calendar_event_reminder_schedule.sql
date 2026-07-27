@@ -13,11 +13,9 @@ begin
     return new;
   end if;
 
-  select calendar_event, couple.timezone
-  into target_event, couple_timezone
+  select calendar_event.*
+  into target_event
   from public.couple_calendar_events as calendar_event
-  join public.couples as couple
-    on couple.id = calendar_event.couple_id
   where calendar_event.id = new.event_id;
 
   if not found then
@@ -25,6 +23,11 @@ begin
   end if;
 
   if target_event.repeat_rule = 'none' then
+    select couple.timezone
+    into couple_timezone
+    from public.couples as couple
+    where couple.id = target_event.couple_id;
+
     scheduled_at := (
       (target_event.event_date - new.offset_days) + new.reminder_time
     ) at time zone couple_timezone;
