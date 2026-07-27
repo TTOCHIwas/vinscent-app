@@ -14,14 +14,12 @@ void main() {
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () async {
-                selectedDate = await showModalBottomSheet<DateTime>(
+                selectedDate = await showAppDatePickerSheet(
                   context: context,
-                  builder: (context) => AppDatePickerSheet(
-                    title: '날짜 선택',
-                    initialDate: DateTime(2030, 1, 1),
-                    minDate: DateTime(1900, 1, 1),
-                    maxDate: DateTime(2026, 7, 28),
-                  ),
+                  title: '날짜 선택',
+                  initialDate: DateTime(2030, 1, 1),
+                  minDate: DateTime(1900, 1, 1),
+                  maxDate: DateTime(2026, 7, 28),
                 );
               },
               child: const Text('열기'),
