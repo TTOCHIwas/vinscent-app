@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(6);
+select plan(7);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -164,7 +164,11 @@ values (
 select is(
   public.is_push_notification_retry_eligible(
     'calendar_event_reminder',
-    '65000000-0000-0000-0000-000000000031',
+    md5(
+      '55000000-0000-0000-0000-000000000031'
+      || ':15000000-0000-0000-0000-000000000032:'
+      || (current_date + 1)::text
+    )::uuid,
     '15000000-0000-0000-0000-000000000032',
     jsonb_build_object(
       'event_id',
@@ -177,6 +181,52 @@ select is(
   'an enabled current calendar reminder remains retryable'
 );
 
+create temporary table exhausted_calendar_claim as
+select *
+from public.claim_push_notification_dispatch(
+  requested_notification_type => 'calendar_event_reminder',
+  requested_source_id => md5(
+    '55000000-0000-0000-0000-000000000031'
+    || ':15000000-0000-0000-0000-000000000032:'
+    || (current_date + 1)::text
+  )::uuid,
+  requested_receiver_user_id => '15000000-0000-0000-0000-000000000032',
+  requested_title => 'Vinscent',
+  requested_body => '일정 알림',
+  requested_data => jsonb_build_object(
+    'event_id',
+    '55000000-0000-0000-0000-000000000031',
+    'event_date',
+    (current_date + 1)::text
+  ),
+  requested_preference_column => null,
+  requested_max_attempts => 1
+);
+
+update public.push_notification_dispatches
+set claimed_at = now() - interval '6 minutes'
+where notification_type = 'calendar_event_reminder'
+  and source_id = (
+    select source_id
+    from exhausted_calendar_claim
+  )
+  and receiver_user_id = '15000000-0000-0000-0000-000000000032';
+
+select is(
+  (
+    select count(*)
+    from public.get_due_couple_calendar_event_reminders(
+      (current_date + time '10:00') at time zone 'UTC',
+      10,
+      100
+    )
+    where event_id = '55000000-0000-0000-0000-000000000031'
+      and receiver_user_id = '15000000-0000-0000-0000-000000000032'
+  ),
+  0::bigint,
+  'calendar backlog loading never competes with an existing retry lifecycle'
+);
+
 update public.couple_calendar_event_reminders
 set is_enabled = false
 where event_id = '55000000-0000-0000-0000-000000000031'
@@ -185,7 +235,11 @@ where event_id = '55000000-0000-0000-0000-000000000031'
 select is(
   public.is_push_notification_retry_eligible(
     'calendar_event_reminder',
-    '65000000-0000-0000-0000-000000000031',
+    md5(
+      '55000000-0000-0000-0000-000000000031'
+      || ':15000000-0000-0000-0000-000000000032:'
+      || (current_date + 1)::text
+    )::uuid,
     '15000000-0000-0000-0000-000000000032',
     jsonb_build_object(
       'event_id',
@@ -204,7 +258,11 @@ where id = '55000000-0000-0000-0000-000000000031';
 select is(
   public.is_push_notification_retry_eligible(
     'calendar_event_reminder',
-    '65000000-0000-0000-0000-000000000031',
+    md5(
+      '55000000-0000-0000-0000-000000000031'
+      || ':15000000-0000-0000-0000-000000000032:'
+      || (current_date + 1)::text
+    )::uuid,
     '15000000-0000-0000-0000-000000000032',
     jsonb_build_object(
       'event_id',
