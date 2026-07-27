@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(28);
+select plan(30);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -513,6 +513,19 @@ select ok(
       and tablename = 'couple_calendar_events'
   ),
   'shared event changes are published for realtime refresh'
+);
+
+select has_function(
+  'private',
+  'broadcast_couple_calendar_event_change',
+  'calendar event changes have a database broadcast function'
+);
+
+select has_trigger(
+  'public',
+  'couple_calendar_events',
+  'broadcast_couple_calendar_event_change',
+  'calendar event inserts, updates, and deletes are broadcast'
 );
 
 select * from finish();

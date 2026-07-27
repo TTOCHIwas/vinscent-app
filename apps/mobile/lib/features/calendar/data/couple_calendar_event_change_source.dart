@@ -19,6 +19,8 @@ class SupabaseCoupleCalendarEventChangeSource
     implements CoupleCalendarEventChangeSource {
   const SupabaseCoupleCalendarEventChangeSource();
 
+  static const _changeEvent = 'calendar_event_changed';
+
   @override
   Stream<void> watch({required String coupleId}) {
     if (!AppConfig.isSupabaseConfigured) {
@@ -29,16 +31,12 @@ class SupabaseCoupleCalendarEventChangeSource
     final controller = StreamController<void>();
     var isCancelled = false;
     final channel = client
-        .channel('couple-calendar-events:$coupleId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'couple_calendar_events',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'couple_id',
-            value: coupleId,
-          ),
+        .channel(
+          'couple-calendar-events:$coupleId',
+          opts: const RealtimeChannelConfig(private: true),
+        )
+        .onBroadcast(
+          event: _changeEvent,
           callback: (_) {
             if (!isCancelled) {
               controller.add(null);
