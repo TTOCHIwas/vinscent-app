@@ -4,6 +4,14 @@ import SwiftUI
 import UIKit
 import WidgetKit
 
+private enum VinscentWidgetPalette {
+  static let brandAction = Color(
+    red: 185.0 / 255.0,
+    green: 88.0 / 255.0,
+    blue: 67.0 / 255.0
+  )
+}
+
 @main
 struct VinscentWidgets: WidgetBundle {
   var body: some Widget {
@@ -170,7 +178,7 @@ private struct VinscentCharacterWidgetView: View {
       recordingButtonSurface {
         ProgressView()
           .controlSize(.small)
-          .tint(.black)
+          .tint(.white)
       }
       .accessibilityLabel("Saving recording")
     case .recording:
@@ -206,7 +214,7 @@ private struct VinscentCharacterWidgetView: View {
     recordingButtonSurface {
       Image(systemName: "mic.fill")
         .font(.system(size: 18, weight: .semibold))
-        .foregroundStyle(.black)
+        .foregroundStyle(.white)
     }
   }
 
@@ -243,7 +251,7 @@ private struct VinscentCharacterWidgetView: View {
         .fill(
           entry.snapshot.recordingPhase == .recording
             ? Color.red
-            : Color.white.opacity(0.96)
+            : VinscentWidgetPalette.brandAction
         )
         .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
       content()
