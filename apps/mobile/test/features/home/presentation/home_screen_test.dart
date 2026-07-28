@@ -1551,6 +1551,12 @@ class _FakeProactiveSuggestionStore implements AiProactiveSuggestionStore {
   final Set<String> dismissedSessions = {};
 
   @override
+  Future<void> clearForUser(String userId) async {
+    cachedSuggestion = null;
+    dismissedSessions.clear();
+  }
+
+  @override
   Future<bool> hasDismissedInSession({
     required String userId,
     required String sessionId,

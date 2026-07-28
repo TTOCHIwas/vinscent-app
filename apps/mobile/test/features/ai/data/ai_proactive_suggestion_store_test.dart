@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/ai/data/ai_proactive_suggestion.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
 
 void main() {
@@ -46,6 +47,42 @@ void main() {
         userId: 'user-1',
         sessionId: 'session-1',
         contextDate: '2026-07-25',
+      ),
+      isFalse,
+    );
+  });
+
+  test('clears only the targeted user suggestion and dismissals', () async {
+    final preferences = _MemoryPreferences();
+    final store = SharedPreferencesAiProactiveSuggestionStore(
+      preferences: preferences,
+    );
+    final suggestion = AiProactiveSuggestion(
+      id: 'suggestion-1',
+      text: '오늘의 추천',
+      kind: AiProactiveSuggestionKind.dateIdea,
+      generatedAt: DateTime.utc(2026, 7, 29),
+      validUntil: DateTime.utc(2026, 7, 30),
+      contextDate: '2026-07-29',
+      hasCardToday: false,
+    );
+    await store.saveSuggestion('user-1', suggestion);
+    await store.saveSuggestion('user-2', suggestion);
+    await store.markDismissed(
+      userId: 'user-1',
+      sessionId: 'session-1',
+      contextDate: '2026-07-29',
+    );
+
+    await store.clearForUser('user-1');
+
+    expect(await store.loadSuggestion('user-1'), isNull);
+    expect(await store.loadSuggestion('user-2'), isNotNull);
+    expect(
+      await store.hasDismissedInSession(
+        userId: 'user-1',
+        sessionId: 'session-1',
+        contextDate: '2026-07-29',
       ),
       isFalse,
     );

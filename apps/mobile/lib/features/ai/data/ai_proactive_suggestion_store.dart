@@ -14,6 +14,8 @@ abstract interface class AiProactiveSuggestionStore {
 
   Future<void> saveSuggestion(String userId, AiProactiveSuggestion suggestion);
 
+  Future<void> clearForUser(String userId);
+
   Future<bool> hasDismissedInSession({
     required String userId,
     required String sessionId,
@@ -63,6 +65,14 @@ class SharedPreferencesAiProactiveSuggestionStore
       '$_suggestionPrefix.$userId',
       jsonEncode(suggestion.toJson()),
     );
+  }
+
+  @override
+  Future<void> clearForUser(String userId) async {
+    await Future.wait([
+      _preferences.remove('$_suggestionPrefix.$userId'),
+      _preferences.remove('$_dismissalPrefix.$userId'),
+    ]);
   }
 
   @override
