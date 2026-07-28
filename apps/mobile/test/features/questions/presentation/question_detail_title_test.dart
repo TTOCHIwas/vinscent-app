@@ -31,5 +31,32 @@ void main() {
     );
     expect(renderedText.data, '가나다라\n마바사아');
     expect(renderedText.semanticsLabel, question);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('marks an AI-generated question title when requested', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: QuestionDetailTitle(
+            questionText: 'AI가 만든 질문',
+            showGeneratedIndicator: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byType(QuestionDetailTitle),
+        matching: find.byKey(const Key('ai-generated-content-indicator')),
+      ),
+      findsOneWidget,
+    );
   });
 }
