@@ -137,5 +137,7 @@ class _FakeAccountDeletionRepository implements AccountDeletionRepository {
   final Future<AccountDeletionReceipt> Function() onDelete;
 
   @override
-  Future<AccountDeletionReceipt> deleteAccount() => onDelete();
+  Future<AccountDeletionReceipt> deleteAccount({
+    String? appleAuthorizationCode,
+  }) => onDelete();
 }

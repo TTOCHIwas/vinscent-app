@@ -10,10 +10,13 @@ final accountDeletionRepositoryProvider = Provider<AccountDeletionRepository>(
 );
 
 abstract interface class AccountDeletionRepository {
-  Future<AccountDeletionReceipt> deleteAccount();
+  Future<AccountDeletionReceipt> deleteAccount({
+    String? appleAuthorizationCode,
+  });
 }
 
-typedef AccountDeletionFunctionInvoker = Future<Object?> Function();
+typedef AccountDeletionFunctionInvoker =
+    Future<Object?> Function(String? appleAuthorizationCode);
 
 class SupabaseAccountDeletionRepository implements AccountDeletionRepository {
   SupabaseAccountDeletionRepository({
@@ -31,7 +34,9 @@ class SupabaseAccountDeletionRepository implements AccountDeletionRepository {
   final Duration _timeout;
 
   @override
-  Future<AccountDeletionReceipt> deleteAccount() async {
+  Future<AccountDeletionReceipt> deleteAccount({
+    String? appleAuthorizationCode,
+  }) async {
     if (!_isConfigured) {
       throw const AccountDeletionException(
         AccountDeletionFailureReason.configMissing,
@@ -39,7 +44,13 @@ class SupabaseAccountDeletionRepository implements AccountDeletionRepository {
     }
 
     try {
-      final data = await _invoke().timeout(_timeout);
+      final normalizedAuthorizationCode = appleAuthorizationCode?.trim();
+      final data = await _invoke(
+        normalizedAuthorizationCode == null ||
+                normalizedAuthorizationCode.isEmpty
+            ? null
+            : normalizedAuthorizationCode,
+      ).timeout(_timeout);
       final payload = switch (data) {
         Map<String, dynamic>() => data,
         Map() => Map<String, dynamic>.from(data),
@@ -63,9 +74,11 @@ class SupabaseAccountDeletionRepository implements AccountDeletionRepository {
       );
     } on FunctionException catch (error) {
       throw AccountDeletionException(
-        error.status == 401
-            ? AccountDeletionFailureReason.sessionExpired
-            : AccountDeletionFailureReason.requestFailed,
+        switch (error.status) {
+          401 => AccountDeletionFailureReason.sessionExpired,
+          409 => AccountDeletionFailureReason.reauthenticationRequired,
+          _ => AccountDeletionFailureReason.requestFailed,
+        },
       );
     } on FormatException {
       throw const AccountDeletionException(
@@ -80,9 +93,14 @@ class SupabaseAccountDeletionRepository implements AccountDeletionRepository {
     }
   }
 
-  static Future<Object?> _invokeDeleteAccount() async {
+  static Future<Object?> _invokeDeleteAccount(
+    String? appleAuthorizationCode,
+  ) async {
     final response = await Supabase.instance.client.functions.invoke(
       'delete-account',
+      body: appleAuthorizationCode == null
+          ? null
+          : {'appleAuthorizationCode': appleAuthorizationCode},
     );
     return response.data;
   }
@@ -106,6 +124,7 @@ class AccountDeletionReceipt {
 enum AccountDeletionFailureReason {
   configMissing,
   sessionExpired,
+  reauthenticationRequired,
   requestTimeout,
   requestFailed,
   invalidResponse,
