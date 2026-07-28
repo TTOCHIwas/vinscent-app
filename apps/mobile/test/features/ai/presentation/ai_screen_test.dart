@@ -6,6 +6,8 @@ import 'package:vinscent/features/ai/application/ai_direct_question_controller.d
 import 'package:vinscent/features/ai/data/ai_direct_question_history.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/presentation/ai_screen.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 
@@ -89,6 +91,41 @@ void main() {
     expect(confirmRect.width, greaterThan(200));
     expect(rejectRect.width, confirmRect.width);
     expect(rejectRect.top - confirmRect.bottom, greaterThanOrEqualTo(8));
+  });
+
+  testWidgets('reports an AI-generated memory candidate', (tester) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    await _pump(
+      tester,
+      _dashboard(
+        completedCount: 24,
+        personalizationStatus: AiPersonalizationStatus.reviewing,
+        memories: [_memory],
+        myPendingReviewCount: 1,
+      ),
+      safetyReportRepository: safetyRepository,
+    );
+
+    final indicator = find.byKey(
+      const ValueKey('ai-memory-generated-indicator-memory-id'),
+    );
+    expect(indicator, findsOneWidget);
+
+    await tester.tap(indicator);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.aiMemory,
+        id: 'memory-id',
+      ),
+    );
   });
 
   testWidgets('shows at most five actionable memories in one review batch', (
@@ -352,6 +389,7 @@ Future<void> _pump(
   AiLearningDashboard dashboard, {
   double textScaleFactor = 1,
   AiDirectQuestionHistory? directQuestionHistory,
+  SafetyReportRepository? safetyReportRepository,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -363,6 +401,10 @@ Future<void> _pump(
           (ref, notifier) async =>
               directQuestionHistory ?? _directQuestionHistory(),
         ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp(
         builder: (context, child) => MediaQuery(
@@ -376,6 +418,15 @@ Future<void> _pump(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final requests = <SafetyReportRequest>[];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
+  }
 }
 
 AiDirectQuestionHistory _directQuestionHistory() {

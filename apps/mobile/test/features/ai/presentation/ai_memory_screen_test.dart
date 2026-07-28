@@ -5,6 +5,8 @@ import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/presentation/ai_memory_screen.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 
 void main() {
   testWidgets('groups only confirmed memories for read-only viewing', (
@@ -65,6 +67,38 @@ void main() {
 
     expect(_wordBoundaryText('아직 확인된 기억은 없어'), findsOneWidget);
   });
+  testWidgets('reports a confirmed AI-generated memory', (tester) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    await _pump(tester, [
+      _memory(
+        id: 'confirmed-memory',
+        statement: 'Confirmed memory',
+        scope: AiMemoryScope.personal,
+        isMine: true,
+      ),
+    ], safetyReportRepository: safetyRepository);
+
+    final indicator = find.byKey(
+      const ValueKey('ai-memory-generated-indicator-confirmed-memory'),
+    );
+    expect(indicator, findsOneWidget);
+
+    await tester.tap(indicator);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.aiMemory,
+        id: 'confirmed-memory',
+      ),
+    );
+  });
 }
 
 Finder _wordBoundaryText(String text) {
@@ -73,18 +107,35 @@ Finder _wordBoundaryText(String text) {
   );
 }
 
-Future<void> _pump(WidgetTester tester, List<AiMemory> memories) async {
+Future<void> _pump(
+  WidgetTester tester,
+  List<AiMemory> memories, {
+  SafetyReportRepository? safetyReportRepository,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         aiLearningControllerProvider.overrideWithBuild(
           (ref, notifier) async => _dashboard(memories),
         ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: const MaterialApp(home: AiMemoryScreen()),
     ),
   );
   await tester.pumpAndSettle();
+}
+
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final requests = <SafetyReportRequest>[];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
+  }
 }
 
 AiLearningDashboard _dashboard(List<AiMemory> memories) {
