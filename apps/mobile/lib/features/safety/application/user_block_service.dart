@@ -5,19 +5,29 @@ import '../data/user_block_repository.dart';
 import 'user_safety_realtime_controller.dart';
 
 final userBlockServiceProvider = Provider<UserBlockService>(
-  UserBlockService.new,
+  DefaultUserBlockService.new,
 );
 
-class UserBlockService {
-  const UserBlockService(this._ref);
+abstract interface class UserBlockService {
+  Future<void> blockCurrentPartner();
+
+  Future<bool> unblockUser(String userId);
+
+  Future<void> createReconnectInvite(String coupleId);
+}
+
+class DefaultUserBlockService implements UserBlockService {
+  const DefaultUserBlockService(this._ref);
 
   final Ref _ref;
 
+  @override
   Future<void> blockCurrentPartner() async {
     await _ref.read(userBlockRepositoryProvider).blockCurrentPartner();
     await _refreshSafetyBoundary();
   }
 
+  @override
   Future<bool> unblockUser(String userId) async {
     final wasUnblocked = await _ref
         .read(userBlockRepositoryProvider)
@@ -28,6 +38,7 @@ class UserBlockService {
     return wasUnblocked;
   }
 
+  @override
   Future<void> createReconnectInvite(String coupleId) async {
     await _ref
         .read(userBlockRepositoryProvider)
