@@ -8,6 +8,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../profile/application/profile_controller.dart';
+import '../../safety/data/safety_report.dart';
+import '../../safety/presentation/safety_report_sheet.dart';
 import 'widgets/settings_group.dart';
 import 'widgets/settings_page_layout.dart';
 
@@ -25,18 +28,19 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final couple = ref.watch(coupleControllerProvider);
+    final currentUserId = ref
+        .watch(profileControllerProvider)
+        .maybeWhen(data: (profile) => profile?.id, orElse: () => null);
 
     return SettingsPageLayout(
       title: '커플 설정',
       onBackPressed: () => context.pop(),
       child: couple.when(
-        loading: () =>
-            const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (error, stackTrace) => _CoupleSettingsMessage(
           title: '커플 정보를 불러오지 못했어요.',
           message: '잠시 후 다시 시도해 주세요.',
-          onRetry: () =>
-              ref.read(coupleControllerProvider.notifier).refresh(),
+          onRetry: () => ref.read(coupleControllerProvider.notifier).refresh(),
         ),
         data: (couple) {
           if (couple == null) {
@@ -62,9 +66,16 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
             );
           }
 
+          final partnerUserId = _partnerUserId(
+            couple: couple,
+            currentUserId: currentUserId,
+          );
           return _ActiveCoupleSettingsContent(
             isProcessing: _isProcessing,
             onDisconnectPressed: _disconnectCouple,
+            onReportPartnerPressed: partnerUserId == null
+                ? null
+                : () => _reportPartner(partnerUserId),
           );
         },
       ),
@@ -112,6 +123,16 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
         });
       }
     }
+  }
+
+  Future<void> _reportPartner(String partnerUserId) {
+    return showSafetyReportSheet(
+      context: context,
+      target: SafetyReportTarget(
+        type: SafetyReportTargetType.partner,
+        id: partnerUserId,
+      ),
+    );
   }
 
   Future<void> _deleteArchiveNow() async {
@@ -204,10 +225,12 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
   const _ActiveCoupleSettingsContent({
     required this.isProcessing,
     required this.onDisconnectPressed,
+    required this.onReportPartnerPressed,
   });
 
   final bool isProcessing;
   final VoidCallback onDisconnectPressed;
+  final VoidCallback? onReportPartnerPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +249,21 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
+        if (onReportPartnerPressed != null) ...[
+          SettingsGroup(
+            label: '안전',
+            children: [
+              SettingsActionRow(
+                key: const Key('couple-settings-report-partner-action'),
+                title: '상대방 신고',
+                subtitle: '문제가 있는 행동을 비공개로 알려주세요',
+                enabled: !isProcessing,
+                onTap: onReportPartnerPressed!,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
         SettingsGroup(
           label: '연결 관리',
           children: [
@@ -345,4 +383,20 @@ String _formatDate(DateTime value) {
   final month = value.month.toString().padLeft(2, '0');
   final day = value.day.toString().padLeft(2, '0');
   return '$year.$month.$day';
+}
+
+String? _partnerUserId({
+  required Couple couple,
+  required String? currentUserId,
+}) {
+  if (currentUserId == null || !couple.isActive) {
+    return null;
+  }
+  if (couple.userAId == currentUserId) {
+    return couple.userBId;
+  }
+  if (couple.userBId == currentUserId) {
+    return couple.userAId;
+  }
+  return null;
 }
