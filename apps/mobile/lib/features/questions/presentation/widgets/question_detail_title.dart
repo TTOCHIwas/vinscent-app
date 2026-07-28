@@ -11,11 +11,13 @@ class QuestionDetailTitle extends StatelessWidget {
     required this.questionText,
     this.textAlign = TextAlign.center,
     this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   });
 
   final String questionText;
   final TextAlign textAlign;
   final bool showGeneratedIndicator;
+  final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,9 @@ class QuestionDetailTitle extends StatelessWidget {
                     TextAlign.end => AlignmentDirectional.centerEnd,
                     _ => AlignmentDirectional.centerStart,
                   },
-                  child: const AiGeneratedContentIndicator(),
+                  child: AiGeneratedContentIndicator(
+                    onPressed: onGeneratedIndicatorPressed,
+                  ),
                 ),
               ),
           ],
