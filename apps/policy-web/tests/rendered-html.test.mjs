@@ -4,13 +4,13 @@ import test from "node:test";
 
 const projectRoot = new URL("../", import.meta.url);
 
-async function render() {
+async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(pathname, "http://localhost"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -34,8 +34,30 @@ test("server-renders the Danjjan policy entry point", async () => {
   assert.match(html, /<html[^>]*lang="ko"/i);
   assert.match(html, /<title>단짠 정책 및 지원<\/title>/i);
   assert.match(html, /정책 및 지원/);
-  assert.match(html, /계정 관리 안내/);
+  assert.match(html, /개인정보처리방침/);
+  assert.match(html, /서비스 이용약관/);
+  assert.match(html, /계정 삭제 안내/);
+  assert.match(html, /name="robots" content="noindex, nofollow"/i);
   assert.doesNotMatch(html, /codex-preview|Codex/i);
+});
+
+test("server-renders every policy route with shared navigation", async () => {
+  const routes = [
+    ["/privacy", "개인정보처리방침"],
+    ["/terms", "서비스 이용약관"],
+    ["/account-deletion", "계정 삭제 안내"],
+  ];
+
+  for (const [pathname, title] of routes) {
+    const response = await render(pathname);
+    assert.equal(response.status, 200);
+
+    const html = await response.text();
+    assert.match(html, new RegExp(`<title>${title} \\| 단짠</title>`, "i"));
+    assert.match(html, new RegExp(`<h1>${title}</h1>`));
+    assert.match(html, /공개 전 검토 중입니다/);
+    assert.match(html, /aria-label="정책 문서"/);
+  }
 });
 
 test("removes starter-only capabilities", async () => {
