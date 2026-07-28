@@ -28,6 +28,8 @@ import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -397,6 +399,47 @@ void main() {
     );
   });
 
+  testWidgets('reports an AI-generated daily question on home', (tester) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    final aiQuestion = sampleDailyQuestion(
+      assignedDate: _today,
+      questionSource: QuestionSource.ai,
+    );
+
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+        question: StoryLoopQuestionSummary(
+          question: aiQuestion,
+          myAnswerExists: false,
+          partnerAnswerExists: false,
+          answerCount: 0,
+        ),
+      ),
+      recordingOverview: _emptyRecordingOverview,
+      safetyReportRepository: safetyRepository,
+    );
+
+    await _submitVisibleAiReport(tester);
+
+    expect(
+      safetyRepository.requests.single.target,
+      SafetyReportTarget(
+        type: SafetyReportTargetType.aiQuestion,
+        id: aiQuestion.dailyQuestionId,
+      ),
+    );
+  });
+
   testWidgets(
     '\uc9c8\ubb38 \uc0dd\uc131 \uc804 \ub0b4 \uce74\ub4dc\ub294 \uc218\uc815 \ud654\uba74\uc744 \uc5f0\ub2e4',
     (tester) async {
@@ -574,6 +617,32 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/home/question');
   });
 
+  testWidgets('reports published AI feedback from home', (tester) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: _completedTodaySummary(),
+      safetyReportRepository: safetyRepository,
+      aiFeedbacks: {
+        _dailyQuestion.dailyQuestionId: AiQuestionFeedback(
+          dailyQuestionId: _dailyQuestion.dailyQuestionId,
+          feedbackText: _aiFeedbackText,
+          publishedAt: DateTime.utc(2026, 5, 31, 12),
+        ),
+      },
+    );
+
+    await _submitVisibleAiReport(tester);
+
+    expect(
+      safetyRepository.requests.single.target,
+      SafetyReportTarget(
+        type: SafetyReportTargetType.aiFeedback,
+        id: _dailyQuestion.dailyQuestionId,
+      ),
+    );
+  });
+
   testWidgets('briefly announces that completed answers are being read', (
     tester,
   ) async {
@@ -741,6 +810,45 @@ void main() {
 
     expect(findTextIgnoringWordJoiners(suggestion.text), findsNothing);
     expect(store.dismissedSessions, hasLength(1));
+  });
+
+  testWidgets('reports a proactive suggestion with its visible snapshot', (
+    tester,
+  ) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    final suggestion = AiProactiveSuggestion(
+      id: 'proactive-report',
+      text: '날이 괜찮다면 함께 걷다가 마음에 드는 장면을 카드로 남겨도 좋겠다',
+      kind: AiProactiveSuggestionKind.cardIdea,
+      generatedAt: DateTime.now(),
+      validUntil: DateTime.now().add(const Duration(hours: 1)),
+      contextDate: '2026-05-31',
+      hasCardToday: true,
+    );
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _todaySummaryWithMyCard(),
+      recordingOverview: _recordingOverviewWithSavedSlot(),
+      aiDashboard: _aiDashboard(personalizationEnabled: true),
+      proactiveRepository: _FakeProactiveSuggestionRepository(suggestion),
+      proactiveStore: _FakeProactiveSuggestionStore(),
+      proactiveLocationService: _FakeProactiveLocationService(),
+      safetyReportRepository: safetyRepository,
+    );
+
+    await _submitVisibleAiReport(tester);
+
+    expect(
+      safetyRepository.requests.single.target,
+      SafetyReportTarget(
+        type: SafetyReportTargetType.aiProactiveSuggestion,
+        id: suggestion.id,
+        contentSnapshot: suggestion.text,
+      ),
+    );
   });
 
   testWidgets(
@@ -1265,6 +1373,7 @@ Future<GoRouter> _pumpRoutedHome(
   Set<String> processingAiFeedbackIds = const {},
   HomeFeedbackImpressionStore? feedbackImpressionStore,
   AiLearningDashboard? aiDashboard,
+  SafetyReportRepository? safetyReportRepository,
 }) async {
   final router = GoRouter(
     initialLocation: '/home',
@@ -1341,6 +1450,10 @@ Future<GoRouter> _pumpRoutedHome(
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
           ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -1363,6 +1476,7 @@ Future<void> _pumpHome(
   AiProactiveSuggestionRepository? proactiveRepository,
   AiProactiveSuggestionStore? proactiveStore,
   AiCurrentLocationService? proactiveLocationService,
+  SafetyReportRepository? safetyReportRepository,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -1408,6 +1522,10 @@ Future<void> _pumpHome(
           coupleRecordingOverviewControllerProvider.overrideWithBuild(
             (ref, notifier) => recordingOverview,
           ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
     ),
@@ -1420,6 +1538,16 @@ Future<void> _pumpHome(
       await tester.pump(const Duration(milliseconds: 20));
     }
   }
+}
+
+Future<void> _submitVisibleAiReport(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+  await tester.pump();
+  await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+  await tester.tap(find.byKey(const Key('safety-report-submit')));
+  await tester.pumpAndSettle();
 }
 
 AiQuestionFeedbackState _aiFeedbackState(
@@ -1464,6 +1592,15 @@ class _FakeHomeFeedbackImpressionStore implements HomeFeedbackImpressionStore {
     required String dailyQuestionId,
   }) async {
     lastShownByUser[userId] = dailyQuestionId;
+  }
+}
+
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final List<SafetyReportRequest> requests = [];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
   }
 }
 
