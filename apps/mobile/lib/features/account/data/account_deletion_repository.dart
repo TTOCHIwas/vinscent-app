@@ -125,6 +125,8 @@ enum AccountDeletionFailureReason {
   configMissing,
   sessionExpired,
   reauthenticationRequired,
+  reauthenticationCancelled,
+  reauthenticationFailed,
   requestTimeout,
   requestFailed,
   invalidResponse,

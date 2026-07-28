@@ -133,6 +133,10 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
         '로그인 세션이 만료됐어요. 다시 로그인해 주세요',
       AccountDeletionFailureReason.reauthenticationRequired =>
         'Apple 로그인 확인이 필요해요. 다시 시도해 주세요',
+      AccountDeletionFailureReason.reauthenticationCancelled =>
+        'Apple 로그인 확인을 취소했어요',
+      AccountDeletionFailureReason.reauthenticationFailed =>
+        'Apple 로그인 확인을 완료하지 못했어요. 다시 시도해 주세요',
       AccountDeletionFailureReason.requestTimeout => '요청 시간이 초과됐어요. 다시 시도해 주세요',
       AccountDeletionFailureReason.requestFailed ||
       AccountDeletionFailureReason.invalidResponse ||
