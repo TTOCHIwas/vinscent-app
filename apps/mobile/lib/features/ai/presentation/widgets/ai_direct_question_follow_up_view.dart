@@ -92,6 +92,7 @@ class _AiDirectQuestionFollowUpViewState
         bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
         characterSize: widget.primaryCharacterSize,
         semanticLabel: semanticLabel,
+        showGeneratedIndicator: true,
         child: content,
       );
     }
@@ -102,6 +103,7 @@ class _AiDirectQuestionFollowUpViewState
       bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
       characterSize: 76,
       semanticLabel: semanticLabel,
+      showGeneratedIndicator: true,
       child: content,
     );
   }

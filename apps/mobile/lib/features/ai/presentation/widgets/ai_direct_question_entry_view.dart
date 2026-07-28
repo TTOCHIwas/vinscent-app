@@ -272,6 +272,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         characterSize: primaryCharacterSize,
         speechText: entry.answerText!,
         semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
+        showGeneratedIndicator: true,
       );
     }
 
@@ -282,6 +283,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
       characterSize: 76,
       speechText: entry.answerText!,
       semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
+      showGeneratedIndicator: true,
     );
   }
 }
