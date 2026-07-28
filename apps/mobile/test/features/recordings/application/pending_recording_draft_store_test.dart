@@ -70,6 +70,26 @@ void main() {
     expect(await store.load(), isNull);
   });
 
+  test('clear removes all pending audio files and metadata', () async {
+    const draft = PendingRecordingDraft(
+      recordingId: '30000000-0000-0000-0000-000000000004',
+      coupleId: '20000000-0000-0000-0000-000000000001',
+      durationMs: 700,
+    );
+    final filePath = await store.createFilePath(draft.recordingId);
+    final draftDirectory = File(filePath).parent;
+    await File(filePath).writeAsBytes([7, 8, 9]);
+    await File(
+      '${draftDirectory.path}${Platform.pathSeparator}orphan.m4a',
+    ).writeAsBytes([10, 11, 12]);
+    await store.persist(draft);
+
+    await store.clear();
+
+    expect(await draftDirectory.exists(), isFalse);
+    expect(metadataStore.value, isNull);
+  });
+
   test('load clears stale metadata when the audio file is missing', () async {
     const draft = PendingRecordingDraft(
       recordingId: '30000000-0000-0000-0000-000000000003',
