@@ -19,6 +19,20 @@ void main() {
     expect(find.text('character editor'), findsOneWidget);
   });
 
+  testWidgets('계정 설정 화면을 연다', (tester) async {
+    await _pumpSettings(tester);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-account')),
+      100,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.byKey(const Key('settings-row-account')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('account settings'), findsOneWidget);
+  });
+
   testWidgets('작은 화면과 확대 글자에서도 설정 항목을 스크롤해 확인한다', (tester) async {
     tester.view.physicalSize = const Size(320, 480);
     tester.view.devicePixelRatio = 1;
@@ -78,9 +92,11 @@ void main() {
       const Key('settings-group-notifications'),
     );
     final coupleGroup = find.byKey(const Key('settings-group-couple'));
+    final accountGroup = find.byKey(const Key('settings-group-account'));
 
     expect(notificationGroup, findsOneWidget);
     expect(coupleGroup, findsOneWidget);
+    expect(accountGroup, findsOneWidget);
     expect(
       find.descendant(
         of: notificationGroup,
@@ -102,6 +118,13 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: accountGroup,
+        matching: find.byKey(const Key('settings-row-account')),
+      ),
+      findsOneWidget,
+    );
   });
 }
 
@@ -119,6 +142,10 @@ Future<void> _pumpSettings(
       GoRoute(
         path: '/settings/character',
         builder: (context, state) => const Text('character editor'),
+      ),
+      GoRoute(
+        path: '/settings/account',
+        builder: (context, state) => const Text('account settings'),
       ),
     ],
   );
