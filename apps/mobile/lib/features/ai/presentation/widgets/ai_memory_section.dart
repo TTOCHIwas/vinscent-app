@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../data/ai_learning_dashboard.dart';
+import 'ai_memory_generated_indicator.dart';
 
 typedef AiMemoryDecisionCallback =
     Future<void> Function(AiMemory memory, AiMemoryDecision decision);
@@ -104,11 +105,24 @@ class _MemoryRowState extends State<_MemoryRow> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _memorySubjectLabel(memory),
-                      style: AppTextStyles.homeCharacterLabel.copyWith(
-                        color: AppColors.textMuted,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _memorySubjectLabel(memory),
+                            style: AppTextStyles.homeCharacterLabel.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        AiMemoryGeneratedIndicator(
+                          key: ValueKey(
+                            'ai-memory-generated-indicator-${memory.id}',
+                          ),
+                          memoryId: memory.id,
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     WordBoundaryText(

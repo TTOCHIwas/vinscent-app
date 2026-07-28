@@ -12,6 +12,7 @@ import '../application/ai_learning_controller.dart';
 import '../data/ai_learning_dashboard.dart';
 import 'widgets/ai_learning_error_message.dart';
 import 'widgets/ai_learning_stop_button.dart';
+import 'widgets/ai_memory_generated_indicator.dart';
 
 class AiMemoryScreen extends ConsumerWidget {
   const AiMemoryScreen({super.key});
@@ -140,9 +141,23 @@ class _MemoryGroup extends StatelessWidget {
         for (var index = 0; index < memories.length; index++) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            child: WordBoundaryText(
-              memories[index].statement,
-              style: AppTextStyles.homeBody,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: WordBoundaryText(
+                    memories[index].statement,
+                    style: AppTextStyles.homeBody,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                AiMemoryGeneratedIndicator(
+                  key: ValueKey(
+                    'ai-memory-generated-indicator-${memories[index].id}',
+                  ),
+                  memoryId: memories[index].id,
+                ),
+              ],
             ),
           ),
           if (index < memories.length - 1)
