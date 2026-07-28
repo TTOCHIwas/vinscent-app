@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(4);
+select plan(7);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -49,6 +49,33 @@ values (
   now() + interval '30 days'
 );
 
+insert into storage.objects (bucket_id, name)
+values
+  (
+    'couple-recordings',
+    '20000000-0000-0000-0000-000000000011/recordings/orphan.m4a'
+  ),
+  (
+    'couple-characters',
+    '20000000-0000-0000-0000-000000000011/revisions/30000000-0000-0000-0000-000000000011/preview.png'
+  ),
+  (
+    'story-cards',
+    '20000000-0000-0000-0000-000000000011/loops/2026-07-29/10000000-0000-0000-0000-000000000011/revision/preview.png'
+  ),
+  (
+    'couple-recording-artworks',
+    '20000000-0000-0000-0000-000000000011/slots/30000000-0000-0000-0000-000000000012/artworks/30000000-0000-0000-0000-000000000013/preview.webp'
+  ),
+  (
+    'couple-calendar-artworks',
+    '20000000-0000-0000-0000-000000000011/events/30000000-0000-0000-0000-000000000014/artworks/30000000-0000-0000-0000-000000000015/preview.webp'
+  ),
+  (
+    'couple-recordings',
+    '20000000-0000-0000-0000-000000000099/recordings/untouched.m4a'
+  );
+
 select set_config(
   'request.jwt.claim.sub',
   '10000000-0000-0000-0000-000000000011',
@@ -71,6 +98,47 @@ select is(
   ),
   0::bigint,
   'the archive is removed after the first request'
+);
+
+select is(
+  (
+    select count(*)
+    from public.storage_cleanup_requests
+    where object_path like
+      '20000000-0000-0000-0000-000000000011/%'
+  ),
+  5::bigint,
+  'all couple-prefixed storage objects are queued'
+);
+
+select results_eq(
+  $$
+    select bucket_id, cleanup_reason
+    from public.storage_cleanup_requests
+    where object_path like
+      '20000000-0000-0000-0000-000000000011/%'
+    order by bucket_id
+  $$,
+  $$
+    values
+      ('couple-calendar-artworks'::text, 'archive_calendar_artwork'::text),
+      ('couple-characters'::text, 'archive_character'::text),
+      ('couple-recording-artworks'::text, 'archive_recording_artwork'::text),
+      ('couple-recordings'::text, 'archive_recording'::text),
+      ('story-cards'::text, 'archive_story_card'::text)
+  $$,
+  'each storage bucket uses its supported archive cleanup reason'
+);
+
+select is(
+  (
+    select count(*)
+    from public.storage_cleanup_requests
+    where object_path =
+      '20000000-0000-0000-0000-000000000099/recordings/untouched.m4a'
+  ),
+  0::bigint,
+  'storage objects from another couple prefix are not queued'
 );
 
 select set_config(
