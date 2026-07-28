@@ -33,6 +33,20 @@ void main() {
     expect(find.text('account settings'), findsOneWidget);
   });
 
+  testWidgets('차단한 사용자 관리 화면을 연다', (tester) async {
+    await _pumpSettings(tester);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-blocked-users')),
+      100,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.byKey(const Key('settings-row-blocked-users')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('blocked users'), findsOneWidget);
+  });
+
   testWidgets('작은 화면과 확대 글자에서도 설정 항목을 스크롤해 확인한다', (tester) async {
     tester.view.physicalSize = const Size(320, 480);
     tester.view.devicePixelRatio = 1;
@@ -146,6 +160,10 @@ Future<void> _pumpSettings(
       GoRoute(
         path: '/settings/account',
         builder: (context, state) => const Text('account settings'),
+      ),
+      GoRoute(
+        path: '/settings/blocked-users',
+        builder: (context, state) => const Text('blocked users'),
       ),
     ],
   );

@@ -39,6 +39,13 @@ void main() {
       expect(_resolve(profile: const AsyncData(null)), '/onboarding');
       expect(_resolve(couple: const AsyncLoading()), '/boot');
       expect(_resolve(couple: const AsyncData(null)), '/couple');
+      expect(
+        _resolve(
+          couple: const AsyncData(null),
+          path: '/settings/blocked-users',
+        ),
+        isNull,
+      );
       expect(_resolve(couple: AsyncData(pendingCouple())), '/couple/waiting');
     });
 
