@@ -4,7 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-enum RecordingSlotAction { artwork, homePlacement, replace, delete }
+enum RecordingSlotAction { artwork, homePlacement, replace, report, delete }
 
 enum RecordingSlotArtworkAction { add, edit, view }
 
@@ -14,6 +14,7 @@ Future<RecordingSlotAction?> showRecordingSlotActionSheet({
   required RecordingSlotArtworkAction? artworkAction,
   required bool showHomePlacement,
   required bool showReplace,
+  required bool showReport,
   required bool showDelete,
 }) {
   return showModalBottomSheet<RecordingSlotAction>(
@@ -29,6 +30,7 @@ Future<RecordingSlotAction?> showRecordingSlotActionSheet({
       artworkAction: artworkAction,
       showHomePlacement: showHomePlacement,
       showReplace: showReplace,
+      showReport: showReport,
       showDelete: showDelete,
     ),
   );
@@ -41,6 +43,7 @@ class RecordingSlotActionSheet extends StatelessWidget {
     required this.artworkAction,
     required this.showHomePlacement,
     required this.showReplace,
+    required this.showReport,
     required this.showDelete,
   });
 
@@ -48,6 +51,7 @@ class RecordingSlotActionSheet extends StatelessWidget {
   final RecordingSlotArtworkAction? artworkAction;
   final bool showHomePlacement;
   final bool showReplace;
+  final bool showReport;
   final bool showDelete;
 
   @override
@@ -70,6 +74,12 @@ class RecordingSlotActionSheet extends StatelessWidget {
           action: RecordingSlotAction.replace,
           icon: LucideIcons.refreshCw,
           label: '현재 녹음으로 교체',
+        ),
+      if (showReport)
+        const _RecordingSlotActionItem(
+          action: RecordingSlotAction.report,
+          icon: LucideIcons.flag,
+          label: '\uc2e0\uace0',
         ),
       if (showDelete)
         const _RecordingSlotActionItem(

@@ -12,6 +12,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
+import '../../safety/data/safety_report.dart';
+import '../../safety/presentation/safety_report_sheet.dart';
 import '../../settings/presentation/widgets/settings_group.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/couple_recording_overview_controller.dart';
@@ -158,6 +160,17 @@ class _RecordingLibraryScreenState
                 onPlayPressed: () => unawaited(
                   playbackController.toggle(currentPlaybackTarget!),
                 ),
+                onReportPressed:
+                    couple.isActive &&
+                        currentUserId != null &&
+                        currentRecording.senderUserId != currentUserId
+                    ? () => unawaited(
+                        _showRecordingReport(
+                          context,
+                          currentRecording.recordingId,
+                        ),
+                      )
+                    : null,
               ),
           ],
         ),
@@ -215,10 +228,50 @@ class _RecordingLibraryScreenState
                         slot: slotsByIndex[index]!,
                         overview: overview,
                       ),
+                onReportPressed: couple.isActive
+                    ? _buildSlotReportCallback(
+                        context: context,
+                        slot: slotsByIndex[index],
+                        currentUserId: currentUserId,
+                      )
+                    : null,
               ),
           ],
         ),
       ],
+    );
+  }
+
+  VoidCallback? _buildSlotReportCallback({
+    required BuildContext context,
+    required CoupleRecordingSlot? slot,
+    required String? currentUserId,
+  }) {
+    if (slot == null || currentUserId == null) {
+      return null;
+    }
+
+    final latestSlotAuthorId =
+        slot.updatedByUserId ?? slot.createdByUserId ?? slot.senderUserId;
+    final targetId = latestSlotAuthorId != currentUserId
+        ? slot.slotId
+        : slot.senderUserId != currentUserId
+        ? slot.recordingId
+        : null;
+    if (targetId == null) {
+      return null;
+    }
+
+    return () => unawaited(_showRecordingReport(context, targetId));
+  }
+
+  Future<void> _showRecordingReport(BuildContext context, String targetId) {
+    return showSafetyReportSheet(
+      context: context,
+      target: SafetyReportTarget(
+        type: SafetyReportTargetType.recording,
+        id: targetId,
+      ),
     );
   }
 
@@ -587,12 +640,14 @@ class _CurrentRecordingPreview extends StatelessWidget {
     required this.isMine,
     required this.isPlaying,
     required this.onPlayPressed,
+    this.onReportPressed,
   });
 
   final CurrentCoupleRecording recording;
   final bool isMine;
   final bool isPlaying;
   final VoidCallback onPlayPressed;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -637,6 +692,13 @@ class _CurrentRecordingPreview extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (onReportPressed != null)
+                  IconButton(
+                    key: const Key('recording-library-current-report'),
+                    onPressed: onReportPressed,
+                    tooltip: '\ub179\uc74c \uc2e0\uace0',
+                    icon: const Icon(Icons.flag_outlined, size: 20),
+                  ),
               ],
             ),
           ),
@@ -659,6 +721,7 @@ class _RecordingSlotTile extends StatelessWidget {
     this.onDeletePressed,
     this.onArtworkPressed,
     this.onHomePlacementPressed,
+    this.onReportPressed,
   });
 
   final int slotIndex;
@@ -672,6 +735,7 @@ class _RecordingSlotTile extends StatelessWidget {
   final VoidCallback? onDeletePressed;
   final VoidCallback? onArtworkPressed;
   final VoidCallback? onHomePlacementPressed;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -694,6 +758,7 @@ class _RecordingSlotTile extends StatelessWidget {
             onDeletePressed: onDeletePressed,
             onArtworkPressed: onArtworkPressed,
             onHomePlacementPressed: onHomePlacementPressed,
+            onReportPressed: onReportPressed,
           );
   }
 }
@@ -802,6 +867,7 @@ class _FilledSlotContent extends StatelessWidget {
     this.onDeletePressed,
     this.onArtworkPressed,
     this.onHomePlacementPressed,
+    this.onReportPressed,
   });
 
   final CoupleRecordingSlot slot;
@@ -813,6 +879,7 @@ class _FilledSlotContent extends StatelessWidget {
   final VoidCallback? onDeletePressed;
   final VoidCallback? onArtworkPressed;
   final VoidCallback? onHomePlacementPressed;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -821,7 +888,8 @@ class _FilledSlotContent extends StatelessWidget {
         onArtworkPressed != null ||
         onHomePlacementPressed != null ||
         onSavePressed != null ||
-        onDeletePressed != null;
+        onDeletePressed != null ||
+        onReportPressed != null;
 
     return Semantics(
       button: true,
@@ -890,6 +958,7 @@ class _FilledSlotContent extends StatelessWidget {
           : RecordingSlotArtworkAction.view,
       showHomePlacement: onHomePlacementPressed != null,
       showReplace: onSavePressed != null,
+      showReport: onReportPressed != null,
       showDelete: onDeletePressed != null,
     );
     if (!context.mounted || action == null) {
@@ -903,6 +972,8 @@ class _FilledSlotContent extends StatelessWidget {
         onHomePlacementPressed?.call();
       case RecordingSlotAction.replace:
         onSavePressed?.call();
+      case RecordingSlotAction.report:
+        onReportPressed?.call();
       case RecordingSlotAction.delete:
         onDeletePressed?.call();
     }

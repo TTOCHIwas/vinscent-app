@@ -120,9 +120,7 @@ void main() {
       safetyReportRepository: safetyRepository,
     );
 
-    await tester.tap(
-      find.byKey(const Key('recording-library-current-report')),
-    );
+    await tester.tap(find.byKey(const Key('recording-library-current-report')));
     await tester.pumpAndSettle();
     await _submitReport(tester);
 
@@ -141,10 +139,7 @@ void main() {
       slotLimit: 1,
       currentRecording: null,
       savedSlots: [
-        _slot(
-          senderUserId: 'partner-id',
-          updatedByUserId: 'partner-id',
-        ),
+        _slot(senderUserId: 'partner-id', updatedByUserId: 'partner-id'),
       ],
     );
     await _pumpLibrary(
@@ -158,9 +153,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(
-        const ValueKey('recording-library-slot-action-report-slot-1'),
-      ),
+      find.byKey(const ValueKey('recording-library-slot-action-report-slot-1')),
     );
     await tester.pumpAndSettle();
     await _submitReport(tester);
@@ -182,10 +175,7 @@ void main() {
       slotLimit: 1,
       currentRecording: null,
       savedSlots: [
-        _slot(
-          senderUserId: 'partner-id',
-          updatedByUserId: _profile.id,
-        ),
+        _slot(senderUserId: 'partner-id', updatedByUserId: _profile.id),
       ],
     );
     await _pumpLibrary(
@@ -199,9 +189,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(
-        const ValueKey('recording-library-slot-action-report-slot-1'),
-      ),
+      find.byKey(const ValueKey('recording-library-slot-action-report-slot-1')),
     );
     await tester.pumpAndSettle();
     await _submitReport(tester);
@@ -451,9 +439,7 @@ Future<_LibraryHarness> _pumpLibrary(
 }
 
 Future<void> _submitReport(WidgetTester tester) async {
-  await tester.tap(
-    find.byKey(const Key('safety-report-reason-inappropriate')),
-  );
+  await tester.tap(find.byKey(const Key('safety-report-reason-inappropriate')));
   await tester.pump();
   await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
   await tester.tap(find.byKey(const Key('safety-report-submit')));
