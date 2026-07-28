@@ -37,17 +37,17 @@ values
   (
     '19100000-0000-0000-0000-000000000001',
     '사용자A',
-    current_date - interval '20 years'
+    (current_date - interval '20 years')::date
   ),
   (
     '19100000-0000-0000-0000-000000000002',
     '사용자B',
-    current_date - interval '20 years'
+    (current_date - interval '20 years')::date
   ),
   (
     '19100000-0000-0000-0000-000000000003',
     '새상대',
-    current_date - interval '20 years'
+    (current_date - interval '20 years')::date
   );
 
 insert into public.couples (
@@ -195,7 +195,7 @@ select is(
     from public.couples
     where id = '29100000-0000-0000-0000-000000000001'
   ),
-  null,
+  null::text,
   'successful reconnection clears the block separation marker'
 );
 select is(
@@ -204,7 +204,7 @@ select is(
     from public.couples
     where id = '29100000-0000-0000-0000-000000000001'
   ),
-  null,
+  null::timestamptz,
   'successful reconnection cancels scheduled archive deletion'
 );
 select is(

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(34);
+select plan(35);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -29,12 +29,12 @@ values
   (
     '19000000-0000-0000-0000-000000000001',
     '차단자',
-    current_date - interval '20 years'
+    (current_date - interval '20 years')::date
   ),
   (
     '19000000-0000-0000-0000-000000000002',
     '상대방',
-    current_date - interval '20 years'
+    (current_date - interval '20 years')::date
   );
 
 insert into public.couples (
@@ -107,6 +107,10 @@ set local role authenticated;
 select lives_ok(
   $$ select public.block_current_partner() $$,
   'blocking the current partner succeeds'
+);
+select lives_ok(
+  $$ select public.delete_disconnected_couple_archive_now() $$,
+  'the ordinary archive deletion flow cannot remove a hidden blocked archive'
 );
 
 reset role;
