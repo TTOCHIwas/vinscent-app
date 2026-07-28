@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/presentation/widgets/app_action_button.dart';
+import 'package:vinscent/core/presentation/widgets/app_confirmation_sheet.dart';
 import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -11,6 +13,9 @@ import 'package:vinscent/features/couple/presentation/couple_entry_screen.dart';
 import 'package:vinscent/features/couple/presentation/couple_setup_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/couple_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/relationship_start_date_screen.dart';
+import 'package:vinscent/features/safety/application/user_block_providers.dart';
+import 'package:vinscent/features/safety/application/user_block_service.dart';
+import 'package:vinscent/features/safety/data/user_block.dart';
 
 void main() {
   testWidgets('separates invite creation from code entry', (tester) async {
@@ -93,6 +98,64 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('offers an explicit reconnect invite for an available archive', (
+    tester,
+  ) async {
+    final service = _FakeUserBlockService();
+    await _pumpCoupleEntry(
+      tester,
+      service: service,
+      reconnectableArchives: [
+        ReconnectableCoupleArchive(
+          coupleId: 'archived-couple-id',
+          partnerUserId: 'partner-id',
+          partnerDisplayName: '또치',
+          archiveExpiresAt: DateTime(2026, 8, 27),
+        ),
+      ],
+    );
+
+    expect(find.text('또치님과 다시 연결'), findsOneWidget);
+    expect(find.text('2026.08.27까지 기존 기록을 이어갈 수 있어'), findsOneWidget);
+    expect(find.text('초대 코드 만들기'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const Key('couple-reconnect-archive-archived-couple-id')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppConfirmationSheet), findsOneWidget);
+    expect(find.text('차단 해제만으로는 다시 연결되지 않아'), findsOneWidget);
+
+    await tester.tap(find.text('재연결 초대 만들기'));
+    await tester.pumpAndSettle();
+
+    expect(service.reconnectedCoupleId, 'archived-couple-id');
+  });
+
+  testWidgets('opens blocked user management only when a block exists', (
+    tester,
+  ) async {
+    await _pumpCoupleEntry(
+      tester,
+      service: _FakeUserBlockService(),
+      blockedUsers: [
+        BlockedUser(
+          userId: 'blocked-user-id',
+          displayName: '또치',
+          blockedAt: DateTime(2026, 7, 28),
+        ),
+      ],
+    );
+
+    await tester.tap(
+      find.byKey(const Key('couple-entry-blocked-users-action')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('blocked users'), findsOneWidget);
+  });
+
   testWidgets('uses the shared date field before character setup', (
     tester,
   ) async {
@@ -155,3 +218,54 @@ final _pendingCouple = Couple(
   createdAt: DateTime(2026, 7, 28),
   updatedAt: DateTime(2026, 7, 28),
 );
+
+Future<void> _pumpCoupleEntry(
+  WidgetTester tester, {
+  required _FakeUserBlockService service,
+  List<BlockedUser> blockedUsers = const [],
+  List<ReconnectableCoupleArchive> reconnectableArchives = const [],
+}) async {
+  final router = GoRouter(
+    initialLocation: '/couple',
+    routes: [
+      GoRoute(
+        path: '/couple',
+        builder: (context, state) => const CoupleEntryScreen(),
+      ),
+      GoRoute(
+        path: '/settings/blocked-users',
+        builder: (context, state) => const Text('blocked users'),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        blockedUsersProvider.overrideWith((ref) async => blockedUsers),
+        reconnectableCoupleArchivesProvider.overrideWith(
+          (ref) async => reconnectableArchives,
+        ),
+        userBlockServiceProvider.overrideWithValue(service),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+class _FakeUserBlockService implements UserBlockService {
+  String? reconnectedCoupleId;
+
+  @override
+  Future<void> blockCurrentPartner() => throw UnimplementedError();
+
+  @override
+  Future<void> createReconnectInvite(String coupleId) async {
+    reconnectedCoupleId = coupleId;
+  }
+
+  @override
+  Future<bool> unblockUser(String userId) => throw UnimplementedError();
+}
