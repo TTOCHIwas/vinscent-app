@@ -138,6 +138,24 @@ test('Gemini client sends structured generateContent request and reports usage',
   );
   const body = JSON.parse(String(capturedInit?.body));
   assert.equal(body.contents[0].parts[0].text, 'Return a short response.');
+  assert.deepEqual(body.safetySettings, [
+    {
+      category: 'HARM_CATEGORY_HARASSMENT',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+    },
+    {
+      category: 'HARM_CATEGORY_HATE_SPEECH',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+    },
+    {
+      category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+    },
+    {
+      category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+      threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+    },
+  ]);
   assert.equal(
     Object.hasOwn(body.generationConfig, 'temperature'),
     false,
@@ -178,6 +196,93 @@ test('Gemini client reads generateContent candidate parts', async () => {
   });
 
   assert.deepEqual(result.value, { feedback_text: 'Step output' });
+});
+
+test('Gemini client classifies a blocked prompt as a safety failure', async () => {
+  const clockValues = [1_000, 1_180];
+  const client = new GeminiStructuredGenerationClient({
+    apiKey: 'test-api-key',
+    now: () => clockValues.shift() ?? 1_180,
+    fetcher: async () => new Response(
+      JSON.stringify({
+        promptFeedback: {
+          blockReason: 'SAFETY',
+          safetyRatings: [
+            {
+              category: 'HARM_CATEGORY_HARASSMENT',
+              probability: 'HIGH',
+            },
+          ],
+        },
+        usageMetadata: { promptTokenCount: 9 },
+      }),
+    ),
+  });
+
+  await assert.rejects(
+    () => client.generateStructured({
+      prompt: 'Return feedback.',
+      schema: { type: 'object' },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(
+        (error as { code?: string }).code,
+        'gemini_content_blocked',
+      );
+      assert.equal((error as { blockSource?: string }).blockSource, 'prompt');
+      assert.equal((error as { retryable?: boolean }).retryable, false);
+      assert.deepEqual(
+        (error as { usage?: unknown }).usage,
+        {
+          inputTokenCount: 9,
+          outputTokenCount: null,
+          latencyMs: 180,
+        },
+      );
+      return true;
+    },
+  );
+});
+
+test('Gemini client classifies a safety-stopped candidate as a safety failure', async () => {
+  const client = new GeminiStructuredGenerationClient({
+    apiKey: 'test-api-key',
+    fetcher: async () => new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            finishReason: 'SAFETY',
+            safetyRatings: [
+              {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                probability: 'MEDIUM',
+              },
+            ],
+          },
+        ],
+      }),
+    ),
+  });
+
+  await assert.rejects(
+    () => client.generateStructured({
+      prompt: 'Return feedback.',
+      schema: { type: 'object' },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(
+        (error as { code?: string }).code,
+        'gemini_content_blocked',
+      );
+      assert.equal(
+        (error as { blockSource?: string }).blockSource,
+        'candidate',
+      );
+      return true;
+    },
+  );
 });
 
 test('Gemini client classifies rate limits as retryable', async () => {
@@ -413,6 +518,36 @@ test('Gemini model translates provider failures into the model error contract', 
         inputTokenCount: null,
         outputTokenCount: null,
         latencyMs: 275,
+      });
+      return true;
+    },
+  );
+});
+
+test('Gemini model translates safety blocks into a provider-neutral error', async () => {
+  const client = new GeminiStructuredGenerationClient({
+    apiKey: 'test-api-key',
+    fetcher: async () => new Response(
+      JSON.stringify({
+        promptFeedback: {
+          blockReason: 'PROHIBITED_CONTENT',
+        },
+        usageMetadata: { promptTokenCount: 12 },
+      }),
+    ),
+  });
+  const model = new GeminiLearningModel(client);
+
+  await assert.rejects(
+    () => model.generateCoupleFeedback(context),
+    (error: unknown) => {
+      assert.ok(error instanceof LearningModelError);
+      assert.equal(error.code, 'model_content_blocked');
+      assert.equal(error.retryable, false);
+      assert.deepEqual(error.usage, {
+        inputTokenCount: 12,
+        outputTokenCount: null,
+        latencyMs: 0,
       });
       return true;
     },

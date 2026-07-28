@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   LearningModelError,
+  type LearningModelErrorCode,
   type LearningModelPort,
   type LearningModelResult,
 } from '../src/application/learning-model-port.ts';
@@ -727,6 +728,49 @@ test('processor records retryable model failures and continues the batch', async
   assert.equal(repository.failures[0]?.retryAfterMs, 45_000);
   assert.equal(repository.failures[0]?.usage.latencyMs, 275);
   assert.equal(repository.successes[0]?.runId, 'run-job-next');
+});
+
+test('processor records content safety blocks as flagged terminal failures', async () => {
+  const repository = new FakeRepository([
+    job('job-content-blocked', 'generate_feedback'),
+  ]);
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      throw new LearningModelError({
+        code: 'model_content_blocked' as LearningModelErrorCode,
+        retryable: false,
+        usage: {
+          inputTokenCount: 14,
+          outputTokenCount: 0,
+          latencyMs: 90,
+        },
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 0,
+    retried: 0,
+    failed: 1,
+  });
+  assert.equal(repository.failures[0]?.errorCode, 'model_content_blocked');
+  assert.equal(repository.failures[0]?.safetyStatus, 'flagged');
+  assert.equal(repository.failures[0]?.retryable, false);
+  assert.deepEqual(repository.failures[0]?.usage, {
+    inputTokenCount: 14,
+    outputTokenCount: 0,
+    latencyMs: 90,
+  });
 });
 
 test('processor regenerates shared feedback once after a contract violation', async () => {
