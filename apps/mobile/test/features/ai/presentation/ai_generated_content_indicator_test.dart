@@ -7,9 +7,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: AiGeneratedContentIndicator()),
-      ),
+      const MaterialApp(home: Scaffold(body: AiGeneratedContentIndicator())),
     );
 
     expect(
@@ -39,9 +37,7 @@ void main() {
       ),
     );
 
-    await tester.tap(
-      find.byKey(const Key('ai-generated-content-indicator')),
-    );
+    await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
 
     expect(pressed, isTrue);
     expect(find.byTooltip('AI 생성 내용'), findsOneWidget);
