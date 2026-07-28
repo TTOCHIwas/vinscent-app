@@ -4,7 +4,10 @@ import 'account_local_data_cleanup.dart';
 typedef AccountSessionFinalizer = Future<void> Function();
 
 abstract interface class AccountDeletionExecutor {
-  Future<AccountDeletionOutcome> execute({required String userId});
+  Future<AccountDeletionOutcome> execute({
+    required String userId,
+    String? appleAuthorizationCode,
+  });
 }
 
 class AccountDeletionOutcome {
@@ -35,8 +38,13 @@ class AccountDeletionService implements AccountDeletionExecutor {
   final AccountSessionFinalizer _clearSession;
 
   @override
-  Future<AccountDeletionOutcome> execute({required String userId}) async {
-    final receipt = await _repository.deleteAccount();
+  Future<AccountDeletionOutcome> execute({
+    required String userId,
+    String? appleAuthorizationCode,
+  }) async {
+    final receipt = await _repository.deleteAccount(
+      appleAuthorizationCode: appleAuthorizationCode,
+    );
     final localCleanup = await _localDataCleanup.execute(userId);
     Object? sessionFinalizationError;
     StackTrace? sessionFinalizationStackTrace;

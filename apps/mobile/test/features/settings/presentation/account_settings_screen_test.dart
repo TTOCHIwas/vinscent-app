@@ -77,7 +77,10 @@ class _FakeAccountDeletionExecutor implements AccountDeletionExecutor {
   final userIds = <String>[];
 
   @override
-  Future<AccountDeletionOutcome> execute({required String userId}) async {
+  Future<AccountDeletionOutcome> execute({
+    required String userId,
+    String? appleAuthorizationCode,
+  }) async {
     userIds.add(userId);
     return AccountDeletionOutcome(
       receipt: const AccountDeletionReceipt(deletedCoupleCount: 1),
