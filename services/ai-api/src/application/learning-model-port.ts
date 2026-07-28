@@ -38,6 +38,7 @@ export type LearningModelErrorCode =
   | 'model_request_failed'
   | 'model_timeout'
   | 'model_network_error'
+  | 'model_content_blocked'
   | 'model_invalid_output';
 
 export class LearningModelError extends Error {

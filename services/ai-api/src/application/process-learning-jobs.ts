@@ -170,7 +170,9 @@ function classifyFailure(
   if (error instanceof LearningModelError) {
     return {
       errorCode: error.code,
-      safetyStatus: 'error',
+      safetyStatus: error.code === 'model_content_blocked'
+        ? 'flagged'
+        : 'error',
       retryable: error.retryable,
       providerHttpStatus: error.providerHttpStatus,
       providerErrorStatus: error.providerErrorStatus,

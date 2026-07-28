@@ -527,6 +527,7 @@ test('Gemini model translates provider failures into the model error contract', 
 test('Gemini model translates safety blocks into a provider-neutral error', async () => {
   const client = new GeminiStructuredGenerationClient({
     apiKey: 'test-api-key',
+    now: () => 1_000,
     fetcher: async () => new Response(
       JSON.stringify({
         promptFeedback: {

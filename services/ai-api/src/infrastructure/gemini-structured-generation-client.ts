@@ -9,6 +9,33 @@ const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
 const maximumProviderErrorDetailLength = 500;
 const outputValidationDetailPattern = /^[a-z][a-z0-9_.]{0,159}$/;
+const defaultSafetySettings = [
+  {
+    category: 'HARM_CATEGORY_HARASSMENT',
+    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+  },
+  {
+    category: 'HARM_CATEGORY_HATE_SPEECH',
+    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+  },
+  {
+    category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+  },
+  {
+    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+  },
+] as const;
+const safetyFinishReasons = new Set([
+  'SAFETY',
+  'BLOCKLIST',
+  'PROHIBITED_CONTENT',
+  'SPII',
+  'IMAGE_SAFETY',
+  'IMAGE_PROHIBITED_CONTENT',
+  'ESCALATION',
+]);
 
 export interface StructuredGenerationRequest {
   prompt: string;
@@ -87,6 +114,23 @@ export class GeminiOutputError extends Error {
   }
 }
 
+export class GeminiSafetyError extends Error {
+  readonly code = 'gemini_content_blocked';
+  readonly retryable = false;
+  readonly blockSource: 'prompt' | 'candidate';
+  readonly usage: LearningModelUsage;
+
+  constructor(params: {
+    blockSource: 'prompt' | 'candidate';
+    usage: LearningModelUsage;
+  }) {
+    super('gemini_content_blocked');
+    this.name = 'GeminiSafetyError';
+    this.blockSource = params.blockSource;
+    this.usage = params.usage;
+  }
+}
+
 export class GeminiStructuredGenerationClient
   implements StructuredGenerationClient {
   readonly #apiKey: string;
@@ -142,6 +186,7 @@ export class GeminiStructuredGenerationClient
               parts: [{ text: request.prompt }],
             },
           ],
+          safetySettings: defaultSafetySettings,
           generationConfig: {
             responseMimeType: 'application/json',
             responseJsonSchema: request.schema,
@@ -162,6 +207,13 @@ export class GeminiStructuredGenerationClient
         );
       }
 
+      const rawUsage = readUsage(payload);
+      const usage = {
+        inputTokenCount: rawUsage.inputTokenCount,
+        outputTokenCount: rawUsage.outputTokenCount,
+        latencyMs,
+      };
+      throwForSafetyBlock(payload, usage);
       const outputText = readOutputText(payload, latencyMs);
       let value: unknown;
       try {
@@ -170,17 +222,16 @@ export class GeminiStructuredGenerationClient
         throw new GeminiOutputError(error, latencyMs);
       }
 
-      const usage = readUsage(payload);
       return {
         value,
-        usage: {
-          inputTokenCount: usage.inputTokenCount,
-          outputTokenCount: usage.outputTokenCount,
-          latencyMs,
-        },
+        usage,
       };
     } catch (error) {
-      if (error instanceof GeminiProviderError || error instanceof GeminiOutputError) {
+      if (
+        error instanceof GeminiProviderError
+        || error instanceof GeminiOutputError
+        || error instanceof GeminiSafetyError
+      ) {
         throw error;
       }
 
@@ -258,6 +309,41 @@ function readOutputText(payload: unknown, latencyMs: number): string {
     throw new GeminiOutputError(undefined, latencyMs);
   }
   return text;
+}
+
+function throwForSafetyBlock(
+  payload: unknown,
+  usage: LearningModelUsage,
+): void {
+  const record = asRecord(payload);
+  const promptFeedback = asRecord(record?.promptFeedback);
+  const blockReason = promptFeedback?.blockReason;
+  if (
+    typeof blockReason === 'string'
+    && blockReason.length > 0
+    && blockReason !== 'BLOCK_REASON_UNSPECIFIED'
+  ) {
+    throw new GeminiSafetyError({
+      blockSource: 'prompt',
+      usage,
+    });
+  }
+
+  const candidates = Array.isArray(record?.candidates)
+    ? record.candidates
+    : [];
+  if (
+    candidates.some((candidate) => {
+      const finishReason = asRecord(candidate)?.finishReason;
+      return typeof finishReason === 'string'
+        && safetyFinishReasons.has(finishReason);
+    })
+  ) {
+    throw new GeminiSafetyError({
+      blockSource: 'candidate',
+      usage,
+    });
+  }
 }
 
 function readUsage(payload: unknown): {

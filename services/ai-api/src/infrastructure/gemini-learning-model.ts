@@ -26,6 +26,7 @@ import type {
 import {
   GeminiOutputError,
   GeminiProviderError,
+  GeminiSafetyError,
   type StructuredGenerationRequest,
   type StructuredGenerationClient,
   type StructuredGenerationResult,
@@ -876,6 +877,15 @@ function translateGeminiError(error: unknown): unknown {
         outputTokenCount: null,
         latencyMs: error.latencyMs,
       },
+      cause: error,
+    });
+  }
+  if (error instanceof GeminiSafetyError) {
+    return new LearningModelError({
+      code: 'model_content_blocked',
+      retryable: false,
+      diagnosticDetail: `${error.blockSource}_blocked`,
+      usage: error.usage,
       cause: error,
     });
   }
