@@ -67,12 +67,9 @@ void main() {
       'recording',
       'widgets',
     ]);
-    expect(
-      result.failures.map((failure) => failure.operation),
-      [
-        AccountLocalDataCleanupOperation.proactiveSuggestion,
-        AccountLocalDataCleanupOperation.homeFeedbackImpression,
-      ],
-    );
+    expect(result.failures.map((failure) => failure.operation), [
+      AccountLocalDataCleanupOperation.proactiveSuggestion,
+      AccountLocalDataCleanupOperation.homeFeedbackImpression,
+    ]);
   });
 }
