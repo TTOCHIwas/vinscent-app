@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/questions/daily_question.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_current_location_service.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
@@ -295,6 +296,10 @@ void main() {
       final questionAction = find.byKey(_questionActionKey);
       final characterControl = find.byKey(CharacterRecordingControl.controlKey);
       expect(questionBubble, findsOneWidget);
+      expect(
+        find.byKey(const Key('ai-generated-content-indicator')),
+        findsNothing,
+      );
       expect(questionAction, findsOneWidget);
       expect(find.byKey(_questionForegroundKey), findsOneWidget);
       expect(
@@ -351,6 +356,43 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('marks an AI-generated daily question on home', (tester) async {
+    final aiQuestion = sampleDailyQuestion(
+      assignedDate: _today,
+      questionSource: QuestionSource.ai,
+    );
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      recordingOverview: _emptyRecordingOverview,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
+          ),
+        ],
+        question: StoryLoopQuestionSummary(
+          question: aiQuestion,
+          myAnswerExists: false,
+          partnerAnswerExists: false,
+          answerCount: 0,
+        ),
+      ),
+    );
+
+    expect(findTextIgnoringWordJoiners(aiQuestion.questionText), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     '\uc9c8\ubb38 \uc0dd\uc131 \uc804 \ub0b4 \uce74\ub4dc\ub294 \uc218\uc815 \ud654\uba74\uc744 \uc5f0\ub2e4',
@@ -518,6 +560,10 @@ void main() {
     );
     expect(find.text(_aiFeedbackText), findsOneWidget);
     expect(find.byKey(_questionBubbleKey), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text(_aiFeedbackText));
     await tester.pumpAndSettle();
@@ -541,6 +587,10 @@ void main() {
     await tester.pump();
 
     expect(findTextIgnoringWordJoiners(_aiProcessingPrompt), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsNothing,
+    );
     expect(
       impressionStore.lastShownByUser[_profile.id],
       '${_dailyQuestion.dailyQuestionId}:processing',
@@ -674,6 +724,10 @@ void main() {
 
     expect(findTextIgnoringWordJoiners(suggestion.text), findsOneWidget);
     expect(find.byType(Dismissible), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsOneWidget,
+    );
 
     await tester.pump(const Duration(minutes: 10));
 

@@ -58,13 +58,14 @@ class FakeStoryLoopReadRepository implements StoryLoopReadRepository {
 DailyQuestion sampleDailyQuestion({
   DateTime? assignedDate,
   DailyQuestionStatus status = DailyQuestionStatus.pending,
+  QuestionSource questionSource = QuestionSource.curated,
 }) {
   return DailyQuestion(
     dailyQuestionId: 'daily-question-id',
     coupleId: 'couple-id',
     questionId: 'question-id',
     questionText: '오늘 질문',
-    questionSource: QuestionSource.curated,
+    questionSource: questionSource,
     questionCategory: 'daily',
     questionMood: 'warm',
     assignedDate: assignedDate ?? DateTime(2026, 7, 6),
