@@ -28,6 +28,7 @@ import '../features/questions/presentation/question_route_context.dart';
 import '../features/recordings/presentation/recording_library_screen.dart';
 import '../features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
 import '../features/settings/presentation/account_settings_screen.dart';
+import '../features/settings/presentation/blocked_users_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -301,6 +302,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'account',
                 name: 'accountSettings',
                 builder: (context, state) => const AccountSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'blocked-users',
+                name: 'blockedUsers',
+                builder: (context, state) => const BlockedUsersScreen(),
               ),
             ],
           ),

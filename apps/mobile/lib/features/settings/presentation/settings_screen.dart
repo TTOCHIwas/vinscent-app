@@ -57,6 +57,20 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           SettingsGroup(
+            key: const Key('settings-group-safety'),
+            label: '안전',
+            dividerIndent: 58,
+            children: [
+              SettingsNavigationRow(
+                key: const Key('settings-row-blocked-users'),
+                icon: AppIcons.user,
+                title: '차단한 사용자',
+                onTap: () => context.push('/settings/blocked-users'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SettingsGroup(
             key: const Key('settings-group-account'),
             label: '계정',
             dividerIndent: 58,

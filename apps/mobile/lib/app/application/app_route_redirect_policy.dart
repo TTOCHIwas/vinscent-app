@@ -21,6 +21,7 @@ class AppRouteRedirectPolicy {
     final isCoupleAnniversaryRoute = path == '/couple/anniversary';
     final isCoupleCharacterRoute = path == '/couple/character';
     final isCoupleSetupWaitingRoute = path == '/couple/setup/waiting';
+    final isBlockedUsersRoute = path == '/settings/blocked-users';
     final isCoupleRoute =
         isCoupleEntryRoute ||
         isCoupleWaitingRoute ||
@@ -44,7 +45,9 @@ class AppRouteRedirectPolicy {
             error: (_, _) => isBootRoute ? null : '/boot',
             data: (couple) {
               if (couple == null) {
-                return isCoupleEntryRoute ? null : '/couple';
+                return (isCoupleEntryRoute || isBlockedUsersRoute)
+                    ? null
+                    : '/couple';
               }
 
               return switch (couple.accessMode) {
