@@ -131,7 +131,7 @@ class _PreviewModeOption extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: isSelected
                       ? BoxDecoration(
-                          color: AppColors.settingsIconBackground,
+                          color: AppColors.brandAccent,
                           borderRadius: BorderRadius.circular(15),
                         )
                       : null,
@@ -139,6 +139,9 @@ class _PreviewModeOption extends StatelessWidget {
                     _labelFor(mode),
                     maxLines: 1,
                     style: AppTextStyles.homeCharacterLabel.copyWith(
+                      color: isSelected
+                          ? AppColors.onBrandAction
+                          : AppColors.textPrimary,
                       fontWeight: isSelected
                           ? FontWeight.w600
                           : FontWeight.w400,

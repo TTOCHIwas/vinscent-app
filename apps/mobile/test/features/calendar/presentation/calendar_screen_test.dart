@@ -681,6 +681,17 @@ void main() {
       find.byKey(const ValueKey('calendar-cell-preview-selected-all')),
       findsNothing,
     );
+    final selectedMode = find.byKey(
+      const ValueKey('calendar-cell-preview-selected-cards_only'),
+    );
+    final selectedContainer = tester.widget<Container>(selectedMode);
+    final selectedDecoration = selectedContainer.decoration! as BoxDecoration;
+    final selectedLabel = tester.widget<Text>(
+      find.descendant(of: selectedMode, matching: find.text('카드만')),
+    );
+
+    expect(selectedDecoration.color, AppColors.brandAccent);
+    expect(selectedLabel.style?.color, AppColors.onBrandAction);
   });
 
   testWidgets(
