@@ -68,10 +68,7 @@ void main() {
         events.add('remote');
         return const AccountDeletionReceipt(deletedCoupleCount: 0);
       }),
-      localDataCleanup: _localCleanup(
-        events: events,
-        failFeedback: true,
-      ),
+      localDataCleanup: _localCleanup(events: events, failFeedback: true),
       clearSession: () async {
         events.add('session');
       },
@@ -87,22 +84,25 @@ void main() {
     expect(events.last, 'session');
   });
 
-  test('session finalization failure does not reverse remote deletion', () async {
-    final service = AccountDeletionService(
-      repository: _FakeAccountDeletionRepository(
-        () async => const AccountDeletionReceipt(deletedCoupleCount: 1),
-      ),
-      localDataCleanup: _localCleanup(events: <String>[]),
-      clearSession: () async {
-        throw StateError('session failed');
-      },
-    );
+  test(
+    'session finalization failure does not reverse remote deletion',
+    () async {
+      final service = AccountDeletionService(
+        repository: _FakeAccountDeletionRepository(
+          () async => const AccountDeletionReceipt(deletedCoupleCount: 1),
+        ),
+        localDataCleanup: _localCleanup(events: <String>[]),
+        clearSession: () async {
+          throw StateError('session failed');
+        },
+      );
 
-    final outcome = await service.execute(userId: 'user-a');
+      final outcome = await service.execute(userId: 'user-a');
 
-    expect(outcome.receipt.deletedCoupleCount, 1);
-    expect(outcome.sessionFinalizationError, isA<StateError>());
-  });
+      expect(outcome.receipt.deletedCoupleCount, 1);
+      expect(outcome.sessionFinalizationError, isA<StateError>());
+    },
+  );
 }
 
 AccountLocalDataCleanup _localCleanup({
