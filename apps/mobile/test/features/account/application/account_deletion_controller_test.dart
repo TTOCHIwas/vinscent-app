@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/account/application/account_deletion_authorizer.dart';
 import 'package:vinscent/features/account/application/account_deletion_controller.dart';
 import 'package:vinscent/features/account/application/account_deletion_providers.dart';
 import 'package:vinscent/features/account/application/account_deletion_service.dart';
@@ -78,15 +79,63 @@ void main() {
     expect(state.phase, AccountDeletionPhase.failed);
     expect(state.failureReason, AccountDeletionFailureReason.requestTimeout);
   });
+
+  test('passes deletion reauthentication to the executor', () async {
+    final executor = _FakeAccountDeletionExecutor();
+    final container = _container(
+      userId: 'user-a',
+      executor: executor,
+      authorizer: _FakeAccountDeletionAuthorizer(
+        authorizationCode: 'authorization-code',
+      ),
+    );
+    addTearDown(container.dispose);
+
+    final succeeded = await container
+        .read(accountDeletionControllerProvider.notifier)
+        .deleteAccount();
+
+    expect(succeeded, isTrue);
+    expect(executor.authorizationCodes, ['authorization-code']);
+  });
+
+  test('does not execute deletion when reauthentication is cancelled', () async {
+    final executor = _FakeAccountDeletionExecutor();
+    final container = _container(
+      userId: 'user-a',
+      executor: executor,
+      authorizer: _FakeAccountDeletionAuthorizer(
+        error: const AccountDeletionException(
+          AccountDeletionFailureReason.reauthenticationCancelled,
+        ),
+      ),
+    );
+    addTearDown(container.dispose);
+
+    final succeeded = await container
+        .read(accountDeletionControllerProvider.notifier)
+        .deleteAccount();
+
+    expect(succeeded, isFalse);
+    expect(executor.userIds, isEmpty);
+    expect(
+      container.read(accountDeletionControllerProvider).failureReason,
+      AccountDeletionFailureReason.reauthenticationCancelled,
+    );
+  });
 }
 
 ProviderContainer _container({
   required String? userId,
   required AccountDeletionExecutor executor,
+  AccountDeletionAuthorizationProvider? authorizer,
 }) {
   return ProviderContainer(
     overrides: [
       accountCurrentUserIdProvider.overrideWithValue(userId),
+      accountDeletionAuthorizerProvider.overrideWithValue(
+        authorizer ?? _FakeAccountDeletionAuthorizer(),
+      ),
       accountDeletionExecutorProvider.overrideWithValue(executor),
     ],
   );
@@ -105,6 +154,7 @@ class _FakeAccountDeletionExecutor implements AccountDeletionExecutor {
   final Completer<AccountDeletionOutcome>? barrier;
   final Object? error;
   final userIds = <String>[];
+  final authorizationCodes = <String?>[];
 
   @override
   Future<AccountDeletionOutcome> execute({
@@ -112,9 +162,29 @@ class _FakeAccountDeletionExecutor implements AccountDeletionExecutor {
     String? appleAuthorizationCode,
   }) async {
     userIds.add(userId);
+    authorizationCodes.add(appleAuthorizationCode);
     if (error case final error?) {
       throw error;
     }
     return barrier?.future ?? _outcome();
+  }
+}
+
+class _FakeAccountDeletionAuthorizer
+    implements AccountDeletionAuthorizationProvider {
+  const _FakeAccountDeletionAuthorizer({
+    this.authorizationCode,
+    this.error,
+  });
+
+  final String? authorizationCode;
+  final Object? error;
+
+  @override
+  Future<String?> authorize() async {
+    if (error case final error?) {
+      throw error;
+    }
+    return authorizationCode;
   }
 }
