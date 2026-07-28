@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/presentation/safety_report_sheet.dart';
 import 'package:vinscent/features/story_loops/application/story_card_download_service.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_detail_overlay.dart';
 
@@ -20,8 +22,38 @@ void main() {
 
     expect(download, findsOneWidget);
     expect(close, findsOneWidget);
+    expect(
+      find.byKey(const Key('story-card-detail-report')),
+      findsNothing,
+    );
     expect(tester.getCenter(download).dy, tester.getCenter(close).dy);
     expect(tester.getCenter(download).dx, lessThan(tester.getCenter(close).dx));
+  });
+
+  testWidgets('opens the safety report sheet for a partner card', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: _OverlayLauncher(canReport: true)),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('story-card-detail-report')));
+    await tester.pumpAndSettle();
+
+    final sheet = tester.widget<SafetyReportSheet>(
+      find.byType(SafetyReportSheet),
+    );
+    expect(
+      sheet.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.storyCard,
+        id: 'card-1',
+      ),
+    );
   });
 
   testWidgets('downloads the selected card without closing the overlay', (
@@ -53,7 +85,9 @@ void main() {
 }
 
 class _OverlayLauncher extends StatelessWidget {
-  const _OverlayLauncher();
+  const _OverlayLauncher({this.canReport = false});
+
+  final bool canReport;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +98,7 @@ class _OverlayLauncher extends StatelessWidget {
             context: context,
             cardId: 'card-1',
             previewUrl: null,
+            canReport: canReport,
           ),
           child: const Text('open'),
         ),
