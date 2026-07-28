@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   type AccountDeletionGateway,
+  type AppleAuthorizationRevoker,
   AccountDeletionService,
 } from '../../functions/delete-account/account_deletion_service.ts';
 
@@ -72,4 +73,98 @@ test('rejects an empty account user id', async () => {
     () => new AccountDeletionService(gateway).deleteAccount('  '),
     /account_user_required/,
   );
+});
+
+test('revokes Apple authorization before deleting any account data', async () => {
+  const calls: string[] = [];
+  const gateway: AccountDeletionGateway = {
+    async deleteSharedData(userId) {
+      calls.push(`shared:${userId}`);
+      return 1;
+    },
+    async deleteAuthUser(userId) {
+      calls.push(`auth:${userId}`);
+    },
+  };
+  const revoker: AppleAuthorizationRevoker = {
+    async revokeAuthorizationCode(request) {
+      calls.push(
+        `apple:${request.expectedSubject}:${request.authorizationCode}`,
+      );
+    },
+  };
+
+  await new AccountDeletionService(gateway, revoker).deleteAccount(
+    'user-1',
+    {
+      appleSubject: ' apple-user-1 ',
+      appleAuthorizationCode: ' authorization-code ',
+    },
+  );
+
+  assert.deepEqual(calls, [
+    'apple:apple-user-1:authorization-code',
+    'shared:user-1',
+    'auth:user-1',
+  ]);
+});
+
+test('requires fresh Apple authorization before deleting account data', async () => {
+  const calls: string[] = [];
+  const gateway: AccountDeletionGateway = {
+    async deleteSharedData() {
+      calls.push('shared');
+      return 0;
+    },
+    async deleteAuthUser() {
+      calls.push('auth');
+    },
+  };
+  const revoker: AppleAuthorizationRevoker = {
+    async revokeAuthorizationCode() {
+      calls.push('apple');
+    },
+  };
+
+  await assert.rejects(
+    () =>
+      new AccountDeletionService(gateway, revoker).deleteAccount(
+        'user-1',
+        { appleSubject: 'apple-user-1' },
+      ),
+    /apple_reauthentication_required/,
+  );
+  assert.deepEqual(calls, []);
+});
+
+test('preserves account data when Apple token revocation fails', async () => {
+  const calls: string[] = [];
+  const gateway: AccountDeletionGateway = {
+    async deleteSharedData() {
+      calls.push('shared');
+      return 0;
+    },
+    async deleteAuthUser() {
+      calls.push('auth');
+    },
+  };
+  const revoker: AppleAuthorizationRevoker = {
+    async revokeAuthorizationCode() {
+      calls.push('apple');
+      throw new Error('apple_token_revocation_failed');
+    },
+  };
+
+  await assert.rejects(
+    () =>
+      new AccountDeletionService(gateway, revoker).deleteAccount(
+        'user-1',
+        {
+          appleSubject: 'apple-user-1',
+          appleAuthorizationCode: 'authorization-code',
+        },
+      ),
+    /apple_token_revocation_failed/,
+  );
+  assert.deepEqual(calls, ['apple']);
 });
