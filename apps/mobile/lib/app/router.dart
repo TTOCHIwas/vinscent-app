@@ -27,6 +27,7 @@ import '../features/questions/presentation/today_question_answer_screen.dart';
 import '../features/questions/presentation/question_route_context.dart';
 import '../features/recordings/presentation/recording_library_screen.dart';
 import '../features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
+import '../features/settings/presentation/account_settings_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -295,6 +296,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'couple',
                 name: 'coupleSettings',
                 builder: (context, state) => const CoupleSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'account',
+                name: 'accountSettings',
+                builder: (context, state) => const AccountSettingsScreen(),
               ),
             ],
           ),

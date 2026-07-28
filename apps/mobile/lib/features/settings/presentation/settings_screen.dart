@@ -55,6 +55,20 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          SettingsGroup(
+            key: const Key('settings-group-account'),
+            label: '계정',
+            dividerIndent: 58,
+            children: [
+              SettingsNavigationRow(
+                key: const Key('settings-row-account'),
+                icon: AppIcons.user,
+                title: '계정 관리',
+                onTap: () => context.push('/settings/account'),
+              ),
+            ],
+          ),
         ],
       ),
     );
