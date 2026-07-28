@@ -5,6 +5,8 @@ import '../../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../safety/data/safety_report.dart';
+import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../data/ai_direct_question_history.dart';
 import 'ai_character_speech_row.dart';
 import 'ai_direct_question_follow_up_view.dart';
@@ -195,7 +197,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
     return switch (entry.status) {
       AiDirectQuestionStatus.queued ||
       AiDirectQuestionStatus.processing => _pendingAnswer(),
-      AiDirectQuestionStatus.completed => _completedAnswer(),
+      AiDirectQuestionStatus.completed => _completedAnswer(context),
       AiDirectQuestionStatus.failed => _failedAnswer(),
     };
   }
@@ -249,8 +251,17 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
     );
   }
 
-  Widget _completedAnswer() {
+  Widget _completedAnswer(BuildContext context) {
     final followUp = entry.followUp;
+    void onGeneratedIndicatorPressed() {
+      showSafetyReportSheet(
+        context: context,
+        target: SafetyReportTarget(
+          type: SafetyReportTargetType.aiDirectAnswer,
+          id: entry.id,
+        ),
+      );
+    }
     if (followUp != null &&
         followUp.status != AiDirectQuestionFollowUpStatus.dismissed) {
       return AiDirectQuestionFollowUpView(
@@ -261,6 +272,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         primaryCharacterSize: primaryCharacterSize,
         onApprove: () => onApproveFollowUp(entry.id),
         onDismiss: () => onDismissFollowUp(entry.id),
+        onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
       );
     }
 
@@ -273,6 +285,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         speechText: entry.answerText!,
         semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
         showGeneratedIndicator: true,
+        onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
       );
     }
 
@@ -284,6 +297,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
       speechText: entry.answerText!,
       semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
       showGeneratedIndicator: true,
+      onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
     );
   }
 }
