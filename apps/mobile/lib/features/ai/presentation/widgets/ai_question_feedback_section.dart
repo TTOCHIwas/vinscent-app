@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
+import '../../../safety/data/safety_report.dart';
+import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../application/ai_question_feedback_provider.dart';
 import '../../data/ai_learning_dashboard.dart';
 import 'ai_character_speech_row.dart';
+import 'ai_generated_content_indicator.dart';
 
 enum AiQuestionFeedbackPresentation { labeledText, characterSpeech }
 
@@ -29,7 +32,11 @@ class AiQuestionFeedbackSection extends ConsumerWidget {
       error: (error, stackTrace) => const SizedBox.shrink(),
       data: (state) => switch (state) {
         AiQuestionFeedbackPublished(feedback: final feedback) =>
-          _PublishedFeedback(feedback: feedback, presentation: presentation),
+          _PublishedFeedback(
+            dailyQuestionId: dailyQuestionId,
+            feedback: feedback,
+            presentation: presentation,
+          ),
         AiQuestionFeedbackProcessing() =>
           presentation == AiQuestionFeedbackPresentation.characterSpeech
               ? const _FeedbackStatus(message: '둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!')
@@ -46,10 +53,12 @@ class AiQuestionFeedbackSection extends ConsumerWidget {
 
 class _PublishedFeedback extends StatelessWidget {
   const _PublishedFeedback({
+    required this.dailyQuestionId,
     required this.feedback,
     required this.presentation,
   });
 
+  final String dailyQuestionId;
   final AiQuestionFeedback feedback;
   final AiQuestionFeedbackPresentation presentation;
 
@@ -59,18 +68,26 @@ class _PublishedFeedback extends StatelessWidget {
       key: const Key('ai-question-feedback'),
       child: switch (presentation) {
         AiQuestionFeedbackPresentation.labeledText => _LabeledFeedback(
+          dailyQuestionId: dailyQuestionId,
           feedback: feedback,
         ),
         AiQuestionFeedbackPresentation.characterSpeech =>
-          _CharacterSpeechFeedback(feedback: feedback),
+          _CharacterSpeechFeedback(
+            dailyQuestionId: dailyQuestionId,
+            feedback: feedback,
+          ),
       },
     );
   }
 }
 
 class _LabeledFeedback extends StatelessWidget {
-  const _LabeledFeedback({required this.feedback});
+  const _LabeledFeedback({
+    required this.dailyQuestionId,
+    required this.feedback,
+  });
 
+  final String dailyQuestionId;
   final AiQuestionFeedback feedback;
 
   @override
@@ -82,11 +99,22 @@ class _LabeledFeedback extends StatelessWidget {
         children: [
           const Divider(height: 1, color: AppColors.settingsDivider),
           const SizedBox(height: 20),
-          Text(
-            'AI의 한마디',
-            style: AppTextStyles.homeCharacterLabel.copyWith(
-              color: AppColors.textMuted,
-            ),
+          Row(
+            children: [
+              Text(
+                'AI의 한마디',
+                style: AppTextStyles.homeCharacterLabel.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(width: 4),
+              AiGeneratedContentIndicator(
+                onPressed: () => _showFeedbackReport(
+                  context,
+                  dailyQuestionId: dailyQuestionId,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           WordBoundaryText(
@@ -100,8 +128,12 @@ class _LabeledFeedback extends StatelessWidget {
 }
 
 class _CharacterSpeechFeedback extends StatelessWidget {
-  const _CharacterSpeechFeedback({required this.feedback});
+  const _CharacterSpeechFeedback({
+    required this.dailyQuestionId,
+    required this.feedback,
+  });
 
+  final String dailyQuestionId;
   final AiQuestionFeedback feedback;
 
   @override
@@ -115,9 +147,24 @@ class _CharacterSpeechFeedback extends StatelessWidget {
         semanticLabel: '캐릭터의 한마디: ${feedback.feedbackText}',
         maxLines: 4,
         showGeneratedIndicator: true,
+        onGeneratedIndicatorPressed: () =>
+            _showFeedbackReport(context, dailyQuestionId: dailyQuestionId),
       ),
     );
   }
+}
+
+void _showFeedbackReport(
+  BuildContext context, {
+  required String dailyQuestionId,
+}) {
+  showSafetyReportSheet(
+    context: context,
+    target: SafetyReportTarget(
+      type: SafetyReportTargetType.aiFeedback,
+      id: dailyQuestionId,
+    ),
+  );
 }
 
 class _FeedbackStatus extends StatelessWidget {
