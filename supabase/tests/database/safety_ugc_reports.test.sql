@@ -121,14 +121,16 @@ insert into public.daily_questions (
   couple_id,
   question_id,
   assigned_date,
-  status
+  status,
+  story_loop_id
 )
 values (
   '68000000-0000-0000-0000-000000000001',
   '28000000-0000-0000-0000-000000000001',
   '58000000-0000-0000-0000-000000000001',
   current_date - 2,
-  'completed'
+  'completed',
+  '38000000-0000-0000-0000-000000000001'
 );
 
 insert into public.daily_question_answers (
