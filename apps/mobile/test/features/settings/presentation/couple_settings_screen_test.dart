@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/presentation/widgets/app_confirmation_sheet.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/data/couple_repository.dart';
@@ -11,6 +12,7 @@ import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
+import 'package:vinscent/features/safety/application/user_block_service.dart';
 import 'package:vinscent/features/settings/presentation/couple_settings_screen.dart';
 
 import '../../../support/couple_fixtures.dart';
@@ -38,7 +40,7 @@ void main() {
     expect(find.widgetWithText(TextButton, '다시 시도'), findsOneWidget);
   });
 
-  testWidgets('연결 해제 확인 버튼은 위험 동작 색상으로 표시한다', (tester) async {
+  testWidgets('연결 해제는 공통 위험 동작 하단 시트로 확인한다', (tester) async {
     await _pumpCoupleSettings(tester, couple: activeCouple());
 
     await tester.tap(
@@ -46,14 +48,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final confirmButton = tester.widget<TextButton>(
-      find.widgetWithText(TextButton, '연결 해제'),
-    );
-    final foregroundColor = confirmButton.style?.foregroundColor?.resolve({});
-
+    expect(find.byType(AppConfirmationSheet), findsOneWidget);
     expect(
-      foregroundColor,
-      Theme.of(tester.element(find.byType(AlertDialog))).colorScheme.error,
+      find.text(
+        '연결을 해제해도 답변과 캐릭터 기록은 30일 동안 보관돼요. '
+        '보관 기간 안에는 기존 초대 코드 흐름으로 다시 연결할 수 있어요.',
+      ),
+      findsOneWidget,
     );
   });
 
@@ -86,7 +87,7 @@ void main() {
     final action = find.byKey(const Key('couple-settings-disconnect-action'));
     await tester.tap(action);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '연결 해제'));
+    await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
     await tester.pump();
 
     expect(
@@ -130,6 +131,32 @@ void main() {
     );
   });
 
+  testWidgets(
+    'blocks the current partner after explaining the safety boundary',
+    (tester) async {
+      final userBlockService = _FakeUserBlockService();
+      await _pumpCoupleSettings(
+        tester,
+        couple: activeCouple(),
+        userBlockService: userBlockService,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('couple-settings-block-partner-action')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppConfirmationSheet), findsOneWidget);
+      expect(find.textContaining('차단을 해제해도 자동으로 다시 연결되지 않아요'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(userBlockService.blockCallCount, 1);
+      expect(find.text('couple'), findsOneWidget);
+    },
+  );
+
   testWidgets('does not report a partner from archived settings', (
     tester,
   ) async {
@@ -148,6 +175,7 @@ Future<void> _pumpCoupleSettings(
   Object? buildError,
   CoupleRepository? repository,
   SafetyReportRepository? safetyReportRepository,
+  UserBlockService? userBlockService,
 }) async {
   final router = GoRouter(
     initialLocation: '/settings/couple',
@@ -181,6 +209,8 @@ Future<void> _pumpCoupleSettings(
           safetyReportRepositoryProvider.overrideWithValue(
             safetyReportRepository,
           ),
+        if (userBlockService != null)
+          userBlockServiceProvider.overrideWithValue(userBlockService),
         coupleControllerProvider.overrideWithBuild((ref, notifier) async {
           if (buildError case final error?) {
             throw error;
@@ -201,6 +231,22 @@ class _FakeSafetyReportRepository implements SafetyReportRepository {
   Future<void> submit(SafetyReportRequest request) async {
     requests.add(request);
   }
+}
+
+class _FakeUserBlockService implements UserBlockService {
+  int blockCallCount = 0;
+
+  @override
+  Future<void> blockCurrentPartner() async {
+    blockCallCount += 1;
+  }
+
+  @override
+  Future<void> createReconnectInvite(String coupleId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> unblockUser(String userId) => throw UnimplementedError();
 }
 
 class _PendingCoupleRepository implements CoupleRepository {
