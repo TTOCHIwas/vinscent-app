@@ -113,6 +113,12 @@ class _FakeImpressionStore implements HomeFeedbackImpressionStore {
   final List<String> markedQuestionIds = [];
 
   @override
+  Future<void> clearForUser(String userId) async {
+    shownQuestionIds.clear();
+    markedQuestionIds.clear();
+  }
+
+  @override
   Future<bool> hasShown({
     required String userId,
     required String dailyQuestionId,

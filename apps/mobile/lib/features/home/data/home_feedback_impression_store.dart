@@ -16,17 +16,25 @@ abstract interface class HomeFeedbackImpressionStore {
     required String userId,
     required String dailyQuestionId,
   });
+
+  Future<void> clearForUser(String userId);
 }
 
 class SharedPreferencesHomeFeedbackImpressionStore
     implements HomeFeedbackImpressionStore {
   SharedPreferencesHomeFeedbackImpressionStore({
-    SharedPreferencesAsync? preferences,
-  }) : _preferences = preferences ?? SharedPreferencesAsync();
+    HomeFeedbackImpressionPreferences? preferences,
+  }) : _preferences =
+           preferences ?? SharedPreferencesHomeFeedbackImpressionPreferences();
 
   static const _keyPrefix = 'vinscent.home_feedback.last_shown';
 
-  final SharedPreferencesAsync _preferences;
+  final HomeFeedbackImpressionPreferences _preferences;
+
+  @override
+  Future<void> clearForUser(String userId) {
+    return _preferences.remove(_keyFor(userId));
+  }
 
   @override
   Future<bool> hasShown({
@@ -45,4 +53,32 @@ class SharedPreferencesHomeFeedbackImpressionStore
   }
 
   String _keyFor(String userId) => '$_keyPrefix.$userId';
+}
+
+abstract interface class HomeFeedbackImpressionPreferences {
+  Future<String?> getString(String key);
+
+  Future<void> setString(String key, String value);
+
+  Future<void> remove(String key);
+}
+
+class SharedPreferencesHomeFeedbackImpressionPreferences
+    implements HomeFeedbackImpressionPreferences {
+  SharedPreferencesHomeFeedbackImpressionPreferences({
+    SharedPreferencesAsync? preferences,
+  }) : _preferences = preferences ?? SharedPreferencesAsync();
+
+  final SharedPreferencesAsync _preferences;
+
+  @override
+  Future<String?> getString(String key) => _preferences.getString(key);
+
+  @override
+  Future<void> setString(String key, String value) {
+    return _preferences.setString(key, value);
+  }
+
+  @override
+  Future<void> remove(String key) => _preferences.remove(key);
 }

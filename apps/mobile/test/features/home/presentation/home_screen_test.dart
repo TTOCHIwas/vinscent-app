@@ -1389,6 +1389,11 @@ class _FakeHomeFeedbackImpressionStore implements HomeFeedbackImpressionStore {
   final Map<String, String> lastShownByUser;
 
   @override
+  Future<void> clearForUser(String userId) async {
+    lastShownByUser.remove(userId);
+  }
+
+  @override
   Future<bool> hasShown({
     required String userId,
     required String dailyQuestionId,
