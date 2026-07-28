@@ -148,6 +148,7 @@ void main() {
       await tester.tap(
         find.byKey(const Key('safety-report-reason-inappropriate')),
       );
+      await tester.pump();
       await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
       await tester.tap(find.byKey(const Key('safety-report-submit')));
       await tester.pumpAndSettle();
@@ -215,6 +216,7 @@ void main() {
       expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
       expect(find.text('partner answer'), findsNothing);
       expect(find.byType(TextField), findsNothing);
+      expect(find.byKey(const Key('partner-answer-report')), findsNothing);
     });
 
     testWidgets('shows both answers when completed', (tester) async {

@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../safety/data/safety_report.dart';
+import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../data/daily_question_answer_state.dart';
 
 enum QuestionAnswerDisplayStyle { boxed, plain }
+
+const _partnerAnswerReportTooltip =
+    '\uc0c1\ub300\ubc29 \ub2f5\ubcc0 \uc2e0\uace0';
 
 class QuestionAnswerOverview extends StatelessWidget {
   const QuestionAnswerOverview({
@@ -25,6 +30,9 @@ class QuestionAnswerOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final partnerAnswerId = answerState?.canRevealPartnerAnswer == true
+        ? answerState?.partnerAnswerId
+        : null;
     final myAnswer = MyQuestionAnswerSection(
       answerState: answerState,
       displayStyle: displayStyle,
@@ -35,6 +43,15 @@ class QuestionAnswerOverview extends StatelessWidget {
       answerState: answerState,
       hiddenMessage: partnerHiddenMessage,
       displayStyle: displayStyle,
+      onReportPressed: partnerAnswerId == null
+          ? null
+          : () => showSafetyReportSheet(
+              context: context,
+              target: SafetyReportTarget(
+                type: SafetyReportTargetType.questionAnswer,
+                id: partnerAnswerId,
+              ),
+            ),
     );
 
     return Column(
@@ -111,6 +128,7 @@ class PartnerQuestionAnswerSection extends StatelessWidget {
     this.hiddenMessage = todayHiddenMessage,
     this.waitingMessage = '상대방은 아직 답변하지 않았어요',
     this.displayStyle = QuestionAnswerDisplayStyle.boxed,
+    this.onReportPressed,
   });
 
   static const todayHiddenMessage = '내 답변을 저장하면 상대방 답변을 확인할 수 있어요';
@@ -121,6 +139,7 @@ class PartnerQuestionAnswerSection extends StatelessWidget {
   final String hiddenMessage;
   final String waitingMessage;
   final QuestionAnswerDisplayStyle displayStyle;
+  final VoidCallback? onReportPressed;
 
   bool get _showsPartnerAnswer {
     final state = answerState;
@@ -148,6 +167,7 @@ class PartnerQuestionAnswerSection extends StatelessWidget {
       body: _body,
       isMuted: !_showsPartnerAnswer,
       displayStyle: displayStyle,
+      onReportPressed: _showsPartnerAnswer ? onReportPressed : null,
     );
   }
 }
@@ -159,12 +179,14 @@ class QuestionAnswerDisplaySection extends StatelessWidget {
     required this.body,
     required this.isMuted,
     this.displayStyle = QuestionAnswerDisplayStyle.boxed,
+    this.onReportPressed,
   });
 
   final String title;
   final String body;
   final bool isMuted;
   final QuestionAnswerDisplayStyle displayStyle;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -173,11 +195,13 @@ class QuestionAnswerDisplaySection extends StatelessWidget {
         title: title,
         body: body,
         isMuted: isMuted,
+        onReportPressed: onReportPressed,
       ),
       QuestionAnswerDisplayStyle.plain => _PlainAnswerDisplaySection(
         title: title,
         body: body,
         isMuted: isMuted,
+        onReportPressed: onReportPressed,
       ),
     };
   }
@@ -188,18 +212,24 @@ class _BoxedAnswerDisplaySection extends StatelessWidget {
     required this.title,
     required this.body,
     required this.isMuted,
+    required this.onReportPressed,
   });
 
   final String title;
   final String body;
   final bool isMuted;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTextStyles.homeBodyMedium),
+        _AnswerSectionTitle(
+          title: title,
+          style: AppTextStyles.homeBodyMedium,
+          onReportPressed: onReportPressed,
+        ),
         const SizedBox(height: 10),
         Container(
           width: double.infinity,
@@ -220,11 +250,13 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
     required this.title,
     required this.body,
     required this.isMuted,
+    required this.onReportPressed,
   });
 
   final String title;
   final String body;
   final bool isMuted;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -233,12 +265,13 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
+          _AnswerSectionTitle(
+            title: title,
             style: AppTextStyles.homeCharacterLabel.copyWith(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w500,
             ),
+            onReportPressed: onReportPressed,
           ),
           const SizedBox(height: 8),
           WordBoundaryText(
@@ -249,6 +282,39 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnswerSectionTitle extends StatelessWidget {
+  const _AnswerSectionTitle({
+    required this.title,
+    required this.style,
+    required this.onReportPressed,
+  });
+
+  final String title;
+  final TextStyle style;
+  final VoidCallback? onReportPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final onReportPressed = this.onReportPressed;
+    return Row(
+      children: [
+        Expanded(child: Text(title, style: style)),
+        if (onReportPressed != null)
+          IconButton(
+            key: const Key('partner-answer-report'),
+            onPressed: onReportPressed,
+            tooltip: _partnerAnswerReportTooltip,
+            style: IconButton.styleFrom(
+              fixedSize: const Size.square(40),
+              foregroundColor: AppColors.textMuted,
+            ),
+            icon: const Icon(Icons.flag_outlined, size: 20),
+          ),
+      ],
     );
   }
 }
