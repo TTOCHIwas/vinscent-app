@@ -22,6 +22,8 @@ import '../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../recordings/application/couple_recording_overview_controller.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart';
+import '../../safety/data/safety_report.dart';
+import '../../safety/presentation/safety_report_sheet.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import '../../story_loops/data/story_loop_card_preview.dart';
 import '../../story_loops/data/story_loop_question_summary.dart';
@@ -402,17 +404,31 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                     guide?.message ??
                     visibleSuggestionText;
                 final bool questionIsAiGenerated;
+                final SafetyReportTarget? questionReportTarget;
                 if (characterGuideText != null) {
                   questionIsAiGenerated = false;
+                  questionReportTarget = null;
                 } else if (visibleFeedbackText != null) {
                   questionIsAiGenerated =
                       visibleAiMessage?.isGenerated ?? false;
+                  questionReportTarget = visibleAiMessage?.reportTarget;
                 } else if (presentation.questionText != null) {
                   questionIsAiGenerated = presentation.questionIsAiGenerated;
+                  questionReportTarget = presentation.questionReportTarget;
                 } else if (guide != null) {
                   questionIsAiGenerated = false;
+                  questionReportTarget = null;
                 } else {
                   questionIsAiGenerated = visibleSuggestionText != null;
+                  questionReportTarget =
+                      visibleSuggestionText == null ||
+                          proactiveSuggestion == null
+                      ? null
+                      : SafetyReportTarget(
+                          type: SafetyReportTargetType.aiProactiveSuggestion,
+                          id: proactiveSuggestion.id,
+                          contentSnapshot: visibleSuggestionText,
+                        );
                 }
                 final questionOpacity = visibleFeedbackText != null
                     ? feedbackOpacity
@@ -436,6 +452,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                   partnerCard: presentation.partnerCard,
                   questionText: questionText,
                   questionIsAiGenerated: questionIsAiGenerated,
+                  questionReportTarget: questionReportTarget,
                   questionOpacity: questionOpacity,
                   cardsAreCompleted: presentation.cardsAreCompleted,
                   canAddCard: presentation.canAddCard,
@@ -487,6 +504,7 @@ class _HomeAiMessage {
     required this.text,
     required this.duration,
     required this.isGenerated,
+    required this.reportTarget,
   });
 
   factory _HomeAiMessage.processing(String dailyQuestionId) {
@@ -495,6 +513,7 @@ class _HomeAiMessage {
       text: _homeFeedbackProcessingPrompt,
       duration: _homeFeedbackProcessingDuration,
       isGenerated: false,
+      reportTarget: null,
     );
   }
 
@@ -529,6 +548,10 @@ class _HomeAiMessage {
       text: normalizedText,
       duration: TransientHomeFeedbackPresenter.displayDuration,
       isGenerated: true,
+      reportTarget: SafetyReportTarget(
+        type: SafetyReportTargetType.aiFeedback,
+        id: dailyQuestionId,
+      ),
     );
   }
 
@@ -536,6 +559,7 @@ class _HomeAiMessage {
   final String text;
   final Duration duration;
   final bool isGenerated;
+  final SafetyReportTarget? reportTarget;
 }
 
 class _HomeStoryLoopContent extends StatelessWidget {
@@ -544,6 +568,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.partnerCard,
     required this.questionText,
     required this.questionIsAiGenerated,
+    required this.questionReportTarget,
     required this.questionOpacity,
     required this.cardsAreCompleted,
     required this.canAddCard,
@@ -558,6 +583,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
   final bool questionIsAiGenerated;
+  final SafetyReportTarget? questionReportTarget;
   final double questionOpacity;
   final bool cardsAreCompleted;
   final bool canAddCard;
@@ -626,6 +652,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
         _HomeQuestionAction(
           questionText: questionText,
           isAiGenerated: questionIsAiGenerated,
+          reportTarget: questionReportTarget,
           opacity: questionOpacity,
           onTap: onQuestionTap,
           dismissibleKey: questionDismissibleKey,
@@ -725,6 +752,7 @@ class _HomeQuestionAction extends StatelessWidget {
   const _HomeQuestionAction({
     required this.questionText,
     required this.isAiGenerated,
+    required this.reportTarget,
     required this.opacity,
     required this.onTap,
     required this.dismissibleKey,
@@ -733,6 +761,7 @@ class _HomeQuestionAction extends StatelessWidget {
 
   final String questionText;
   final bool isAiGenerated;
+  final SafetyReportTarget? reportTarget;
   final double opacity;
   final VoidCallback? onTap;
   final Key? dismissibleKey;
@@ -748,6 +777,7 @@ class _HomeQuestionAction extends StatelessWidget {
       child: _HomeQuestionBubble(
         questionText: questionText,
         isAiGenerated: isAiGenerated,
+        reportTarget: reportTarget,
         onTap: onTap,
         actionKey: const Key('home-question-action'),
         bubbleKey: const Key('home-question-speech-bubble'),
@@ -765,6 +795,7 @@ class _HomeQuestionAction extends StatelessWidget {
           child: _HomeQuestionBubble(
             questionText: questionText,
             isAiGenerated: isAiGenerated,
+            reportTarget: reportTarget,
           ),
         ),
       ),
@@ -790,6 +821,7 @@ class _HomeQuestionBubble extends StatelessWidget {
   const _HomeQuestionBubble({
     required this.questionText,
     this.isAiGenerated = false,
+    this.reportTarget,
     this.onTap,
     this.actionKey,
     this.bubbleKey,
@@ -797,6 +829,7 @@ class _HomeQuestionBubble extends StatelessWidget {
 
   final String questionText;
   final bool isAiGenerated;
+  final SafetyReportTarget? reportTarget;
   final VoidCallback? onTap;
   final Key? actionKey;
   final Key? bubbleKey;
@@ -823,10 +856,17 @@ class _HomeQuestionBubble extends StatelessWidget {
               tailSize: const Size(16, 8),
             ),
             if (isAiGenerated)
-              const Positioned(
+              Positioned(
                 right: 5,
                 bottom: 3,
-                child: AiGeneratedContentIndicator(),
+                child: AiGeneratedContentIndicator(
+                  onPressed: reportTarget == null
+                      ? null
+                      : () => showSafetyReportSheet(
+                          context: context,
+                          target: reportTarget!,
+                        ),
+                ),
               ),
           ],
         ),
@@ -962,6 +1002,7 @@ class _HomeStoryLoopPresentation {
     required this.partnerCard,
     required this.questionText,
     required this.questionIsAiGenerated,
+    required this.questionReportTarget,
     required this.cardsAreCompleted,
     required this.canAddCard,
     required this.questionTargetLocation,
@@ -972,6 +1013,7 @@ class _HomeStoryLoopPresentation {
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
   final bool questionIsAiGenerated;
+  final SafetyReportTarget? questionReportTarget;
   final bool cardsAreCompleted;
   final bool canAddCard;
   final String? questionTargetLocation;
@@ -1018,6 +1060,16 @@ class _HomeStoryLoopPresentation {
           question != null &&
           !question.myAnswerExists &&
           question.question.questionSource == QuestionSource.ai,
+      questionReportTarget:
+          questionText != null &&
+              question != null &&
+              !question.myAnswerExists &&
+              question.question.questionSource == QuestionSource.ai
+          ? SafetyReportTarget(
+              type: SafetyReportTargetType.aiQuestion,
+              id: question.question.dailyQuestionId,
+            )
+          : null,
       cardsAreCompleted:
           myCard != null &&
           partnerCard != null &&
