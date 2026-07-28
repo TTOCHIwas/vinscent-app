@@ -50,6 +50,26 @@ void main() {
     expect(refreshed?.userBId, 'partner-id');
   });
 
+  test(
+    'clears the couple when a realtime signal refreshes to no row',
+    () async {
+      final repository = _FakeCoupleRepository()
+        ..currentCouple = activeCouple();
+      final changeSource = _FakeCoupleChangeSource();
+      final container = _createContainer(repository, changeSource);
+      addTearDown(container.dispose);
+      addTearDown(changeSource.close);
+
+      expect(await container.read(coupleControllerProvider.future), isNotNull);
+
+      repository.currentCouple = null;
+      changeSource.emit();
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+      expect(container.read(coupleControllerProvider).requireValue, isNull);
+    },
+  );
+
   test('treats an already deleted archive as a completed deletion', () async {
     final repository = _FakeCoupleRepository()
       ..currentCouple = archivedReadOnlyCouple()
