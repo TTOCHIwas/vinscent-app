@@ -19,6 +19,8 @@ import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/data/couple_repository.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 
 import '../../../support/couple_fixtures.dart';
 
@@ -67,6 +69,54 @@ void main() {
     await tester.pump();
 
     expect(_saveButton(tester).onPressed, isNotNull);
+  });
+
+  testWidgets('reports a partner-updated character', (tester) async {
+    final repository = _FakeCoupleCharacterRepository(
+      currentCharacter: _partnerCharacter,
+      drawingDataJson: _drawingDataJson,
+    );
+    final safetyRepository = _FakeSafetyReportRepository();
+
+    await _pumpCharacterEditor(
+      tester,
+      repository,
+      safetyReportRepository: safetyRepository,
+    );
+
+    final reportButton = find.byKey(const ValueKey('character-editor-report'));
+    expect(reportButton, findsOneWidget);
+
+    await tester.tap(reportButton);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('safety-report-reason-inappropriate')),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      SafetyReportTarget(
+        type: SafetyReportTargetType.character,
+        id: _activeCouple.id,
+      ),
+    );
+  });
+
+  testWidgets('does not report a current-user-updated character', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository(
+      currentCharacter: _character,
+      drawingDataJson: _drawingDataJson,
+    );
+
+    await _pumpCharacterEditor(tester, repository);
+
+    expect(find.byKey(const ValueKey('character-editor-report')), findsNothing);
   });
 
   testWidgets(
@@ -417,8 +467,9 @@ void main() {
 
 Future<void> _pumpCharacterEditor(
   WidgetTester tester,
-  CoupleCharacterRepository repository,
-) async {
+  CoupleCharacterRepository repository, {
+  SafetyReportRepository? safetyReportRepository,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -426,6 +477,13 @@ Future<void> _pumpCharacterEditor(
           (ref, notifier) async => _activeCouple,
         ),
         coupleCharacterRepositoryProvider.overrideWithValue(repository),
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _profile,
+        ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp.router(
         routerConfig: GoRouter(
@@ -528,6 +586,15 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   }
 }
 
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final requests = <SafetyReportRequest>[];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
+  }
+}
+
 class _FakeCoupleRepository implements CoupleRepository {
   bool didUseDefaultCharacter = false;
 
@@ -587,6 +654,17 @@ final _character = CoupleCharacter(
     _activeCouple.id,
   ),
   updatedBy: 'user-id',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+final _partnerCharacter = CoupleCharacter(
+  coupleId: _activeCouple.id,
+  imagePath: CoupleCharacterStoragePaths.imagePathFor(_activeCouple.id),
+  drawingDataPath: CoupleCharacterStoragePaths.drawingDataPathFor(
+    _activeCouple.id,
+  ),
+  updatedBy: 'partner-id',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
