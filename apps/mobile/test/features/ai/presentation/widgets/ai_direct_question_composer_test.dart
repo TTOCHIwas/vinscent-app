@@ -11,6 +11,8 @@ import 'package:vinscent/features/ai/presentation/ai_direct_question_composer_co
 import 'package:vinscent/features/ai/presentation/widgets/ai_direct_question_composer.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_direct_question_keyboard_accessory.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 
 void main() {
   testWidgets('shows only the current exchange when a question exists', (
@@ -46,6 +48,64 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('ai-direct-history-open')), findsNothing);
+  });
+
+  testWidgets('opens the report flow from a generated direct answer', (
+    tester,
+  ) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    await _pump(
+      tester,
+      _FakeDirectQuestionRepository(
+        history: _history(questions: [_completedQuestion]),
+      ),
+      safetyReportRepository: safetyRepository,
+    );
+
+    await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.aiDirectAnswer,
+        id: 'completed-question',
+      ),
+    );
+  });
+
+  testWidgets('opens the report flow from a generated follow-up', (
+    tester,
+  ) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    await _pump(
+      tester,
+      _FakeDirectQuestionRepository(
+        history: _history(questions: [_questionWithPendingFollowUp]),
+      ),
+      safetyReportRepository: safetyRepository,
+    );
+
+    await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.aiDirectAnswer,
+        id: 'completed-question',
+      ),
+    );
   });
 
   testWidgets('shows vertically separated follow-up decision actions', (
@@ -457,6 +517,7 @@ Finder _wordBoundaryText(String text) {
 Future<void> _pump(
   WidgetTester tester,
   AiDirectQuestionRepository repository, {
+  SafetyReportRepository? safetyReportRepository,
   double textScaleFactor = 1,
   bool settle = true,
 }) async {
@@ -468,6 +529,10 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         aiDirectQuestionRepositoryProvider.overrideWithValue(repository),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp(
         builder: (context, child) => MediaQuery(
@@ -574,5 +639,14 @@ class _FakeDirectQuestionRepository implements AiDirectQuestionRepository {
       remainingCount: history.remainingCount - 1,
       questions: history.questions,
     );
+  }
+}
+
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final List<SafetyReportRequest> requests = [];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
   }
 }
