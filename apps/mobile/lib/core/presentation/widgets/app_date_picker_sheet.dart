@@ -77,6 +77,7 @@ class _AppDatePickerSheetState extends State<AppDatePickerSheet> {
       child: SafeArea(
         top: false,
         child: Padding(
+          key: const Key('app-date-picker-sheet'),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -158,8 +159,9 @@ class _AppDatePickerSheetState extends State<AppDatePickerSheet> {
   }
 
   List<int> _daysFor(int year, int month) {
-    final firstDay =
-        year == _minDate.year && month == _minDate.month ? _minDate.day : 1;
+    final firstDay = year == _minDate.year && month == _minDate.month
+        ? _minDate.day
+        : 1;
     final monthLastDay = DateTime(year, month + 1, 0).day;
     final lastDay = year == _maxDate.year && month == _maxDate.month
         ? math.min(monthLastDay, _maxDate.day)

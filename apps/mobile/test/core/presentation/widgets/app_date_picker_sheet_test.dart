@@ -31,6 +31,7 @@ void main() {
 
     await tester.tap(find.text('열기'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('app-date-picker-sheet')), findsOneWidget);
     await tester.tap(find.text('완료'));
     await tester.pumpAndSettle();
 
