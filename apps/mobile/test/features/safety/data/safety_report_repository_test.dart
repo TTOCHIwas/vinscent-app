@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:postgrest/postgrest.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_failure.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
