@@ -28,6 +28,16 @@ void main() {
     );
     expect(find.byKey(const Key('ai-direct-guide-character')), findsNothing);
     expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+    expect(
+      tester
+          .widget<CoupleCharacterAvatar>(
+            find.byKey(
+              const Key('ai-direct-answer-character-completed-question'),
+            ),
+          )
+          .size,
+      216,
+    );
     expect(_wordBoundaryText('우리 둘은 쉬는 날에 뭘 하면 잘 맞을까?'), findsOneWidget);
     expect(_wordBoundaryText('가볍게 걸으며 이야기하는 시간이 잘 어울려'), findsOneWidget);
     expect(find.text('최근 답변'), findsNothing);
@@ -47,6 +57,16 @@ void main() {
     );
     final dismiss = find.byKey(
       const Key('ai-direct-follow-up-dismiss-completed-question'),
+    );
+    expect(
+      tester
+          .widget<CoupleCharacterAvatar>(
+            find.byKey(
+              const Key('ai-direct-answer-character-completed-question'),
+            ),
+          )
+          .size,
+      216,
     );
     await tester.ensureVisible(dismiss);
     await tester.pumpAndSettle();
@@ -79,6 +99,37 @@ void main() {
     expect(_wordBoundaryText('우리 둘에 관해 궁금한 걸 물어봐'), findsOneWidget);
     expect(find.byKey(const Key('ai-direct-guide-character')), findsOneWidget);
     expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+  });
+
+  testWidgets('sizes the primary character from the available height', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await _pump(tester, _FakeDirectQuestionRepository(history: _history()));
+
+    final character = find.byKey(const Key('ai-direct-guide-character'));
+    final input = find.descendant(
+      of: find.byKey(const Key('ai-direct-question-input')),
+      matching: find.byType(TextField),
+    );
+
+    expect(tester.widget<CoupleCharacterAvatar>(character).size, 220);
+
+    await tester.tap(input);
+    await tester.pump();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+
+    expect(tester.widget<CoupleCharacterAvatar>(character).size, 132);
+
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pump();
+
+    expect(tester.widget<CoupleCharacterAvatar>(character).size, 220);
   });
 
   testWidgets('uses the exhausted state in the fixed input', (tester) async {
@@ -351,6 +402,16 @@ void main() {
       expect(
         find.byKey(const Key('ai-direct-answer-thinking-dots')),
         findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<CoupleCharacterAvatar>(
+              find.byKey(
+                const Key('ai-direct-answer-character-pending-question'),
+              ),
+            )
+            .size,
+        216,
       );
     },
   );

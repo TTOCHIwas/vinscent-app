@@ -17,6 +17,7 @@ class AiDirectQuestionFollowUpView extends StatefulWidget {
     required this.onApprove,
     required this.onDismiss,
     this.usePrimaryLayout = false,
+    this.primaryCharacterSize = 156,
   });
 
   final String questionId;
@@ -25,6 +26,7 @@ class AiDirectQuestionFollowUpView extends StatefulWidget {
   final Future<void> Function() onApprove;
   final Future<void> Function() onDismiss;
   final bool usePrimaryLayout;
+  final double primaryCharacterSize;
 
   @override
   State<AiDirectQuestionFollowUpView> createState() =>
@@ -88,7 +90,7 @@ class _AiDirectQuestionFollowUpViewState
         key: Key('ai-direct-answer-completed-${widget.questionId}'),
         characterKey: Key('ai-direct-answer-character-${widget.questionId}'),
         bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
-        characterSize: 156,
+        characterSize: widget.primaryCharacterSize,
         semanticLabel: semanticLabel,
         child: content,
       );

@@ -18,6 +18,7 @@ class AiDirectQuestionExchange extends StatelessWidget {
     required this.onDismissFollowUp,
     this.isLatest = false,
     this.usePrimaryAnswerLayout = false,
+    this.primaryCharacterSize = 156,
   });
 
   final AiDirectQuestionEntry entry;
@@ -26,6 +27,7 @@ class AiDirectQuestionExchange extends StatelessWidget {
   final Future<void> Function(String questionId) onDismissFollowUp;
   final bool isLatest;
   final bool usePrimaryAnswerLayout;
+  final double primaryCharacterSize;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +43,7 @@ class AiDirectQuestionExchange extends StatelessWidget {
           entry: entry,
           isLatest: isLatest,
           usePrimaryLayout: usePrimaryAnswerLayout,
+          primaryCharacterSize: primaryCharacterSize,
           onApproveFollowUp: onApproveFollowUp,
           onDismissFollowUp: onDismissFollowUp,
         ),
@@ -177,6 +180,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
     required this.onDismissFollowUp,
     this.isLatest = false,
     this.usePrimaryLayout = false,
+    this.primaryCharacterSize = 156,
   });
 
   final AiDirectQuestionEntry entry;
@@ -184,6 +188,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
   final Future<void> Function(String questionId) onDismissFollowUp;
   final bool isLatest;
   final bool usePrimaryLayout;
+  final double primaryCharacterSize;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +212,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
         thinkingDotsKey: thinkingDotsKey,
-        characterSize: 156,
+        characterSize: primaryCharacterSize,
         message: '답을 생각하는 중',
       );
     }
@@ -228,7 +233,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         key: Key('ai-direct-answer-failed-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
-        characterSize: 156,
+        characterSize: primaryCharacterSize,
         speechText: '이번에는 답을 만들지 못했어',
         textAlign: TextAlign.center,
       );
@@ -253,6 +258,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         answerText: entry.answerText!,
         followUp: followUp,
         usePrimaryLayout: usePrimaryLayout,
+        primaryCharacterSize: primaryCharacterSize,
         onApprove: () => onApproveFollowUp(entry.id),
         onDismiss: () => onDismissFollowUp(entry.id),
       );
@@ -263,7 +269,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         key: Key('ai-direct-answer-completed-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
-        characterSize: 156,
+        characterSize: primaryCharacterSize,
         speechText: entry.answerText!,
         semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
       );

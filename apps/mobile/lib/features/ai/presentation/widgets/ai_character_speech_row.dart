@@ -145,7 +145,16 @@ class AiCharacterSpeechColumn extends StatelessWidget {
         children: [
           Semantics(label: label, excludeSemantics: true, child: bubble),
           const SizedBox(height: 10),
-          CoupleCharacterAvatar(key: characterKey, size: characterSize),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            child: CoupleCharacterAvatar(
+              key: characterKey,
+              size: characterSize,
+            ),
+          ),
         ],
       ),
     );

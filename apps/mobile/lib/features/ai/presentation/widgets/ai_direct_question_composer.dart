@@ -100,6 +100,10 @@ class _DirectQuestionComposerContent extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final primaryCharacterSize = _primaryCharacterSizeFor(
+          constraints.maxHeight,
+        );
+
         return TextFieldTapRegion(
           child: RefreshIndicator(
             color: AppColors.brandAccent,
@@ -127,7 +131,11 @@ class _DirectQuestionComposerContent extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                           child: latestQuestion == null
-                              ? const Center(child: _DirectQuestionGuide())
+                              ? Center(
+                                  child: _DirectQuestionGuide(
+                                    characterSize: primaryCharacterSize,
+                                  ),
+                                )
                               : Align(
                                   alignment: Alignment.topCenter,
                                   child: AiDirectQuestionExchange(
@@ -137,6 +145,7 @@ class _DirectQuestionComposerContent extends StatelessWidget {
                                     ),
                                     isLatest: true,
                                     usePrimaryAnswerLayout: true,
+                                    primaryCharacterSize: primaryCharacterSize,
                                     onApproveFollowUp: onApproveFollowUp,
                                     onDismissFollowUp: onDismissFollowUp,
                                   ),
@@ -180,17 +189,23 @@ class _DirectQuestionComposerContent extends StatelessWidget {
       },
     );
   }
+
+  double _primaryCharacterSizeFor(double availableHeight) {
+    return (availableHeight * 0.36).clamp(132.0, 220.0).toDouble();
+  }
 }
 
 class _DirectQuestionGuide extends StatelessWidget {
-  const _DirectQuestionGuide();
+  const _DirectQuestionGuide({required this.characterSize});
+
+  final double characterSize;
 
   @override
   Widget build(BuildContext context) {
-    return const AiCharacterSpeechColumn(
-      characterKey: Key('ai-direct-guide-character'),
-      bubbleKey: Key('ai-direct-guide-prompt'),
-      characterSize: 156,
+    return AiCharacterSpeechColumn(
+      characterKey: const Key('ai-direct-guide-character'),
+      bubbleKey: const Key('ai-direct-guide-prompt'),
+      characterSize: characterSize,
       speechText: '우리 둘에 관해 궁금한 걸 물어봐',
       textAlign: TextAlign.center,
     );
