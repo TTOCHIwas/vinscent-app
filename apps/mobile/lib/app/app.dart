@@ -24,6 +24,7 @@ import '../features/notifications/application/push_notification_route.dart';
 import '../features/notifications/data/push_token_repository.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/recordings/application/couple_recording_overview_controller.dart';
+import '../features/safety/application/user_safety_realtime_controller.dart';
 import '../features/story_loops/application/story_loop_realtime_controller.dart';
 import '../features/story_loops/application/today_story_loop_summary_provider.dart';
 import 'application/app_foreground_session_controller.dart';
@@ -210,6 +211,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     ref.watch(pushTokenControllerProvider);
+    ref.watch(userSafetyRealtimeControllerProvider);
     ref.watch(storyLoopRealtimeControllerProvider);
     ref.watch(coupleCalendarEventRealtimeControllerProvider);
     if (_supportsHomeWidgets) {

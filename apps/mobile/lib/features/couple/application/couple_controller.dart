@@ -57,6 +57,8 @@ class CoupleController extends AsyncNotifier<Couple?> {
     }
   }
 
+  Future<void> refreshSilently() => _performRealtimeRefresh();
+
   Future<Couple> createInvite() async {
     final couple = await ref.read(coupleRepositoryProvider).createInvite();
     _setCouple(couple);
