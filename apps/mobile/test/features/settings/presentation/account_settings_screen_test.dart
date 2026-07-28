@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 import 'package:vinscent/features/account/application/account_deletion_providers.dart';
 import 'package:vinscent/features/account/application/account_deletion_service.dart';
 import 'package:vinscent/features/account/application/account_local_data_cleanup.dart';
@@ -15,17 +16,18 @@ void main() {
     expect(find.text('계정 삭제'), findsOneWidget);
   });
 
-  testWidgets('계정 삭제 전에 공유 데이터 범위와 복구 불가를 알린다', (
-    tester,
-  ) async {
+  testWidgets('계정 삭제 전에 공유 데이터 범위와 복구 불가를 알린다', (tester) async {
     await _pumpAccountSettings(tester);
 
     await tester.tap(find.byKey(const Key('account-settings-delete-action')));
     await tester.pumpAndSettle();
 
     expect(find.text('계정을 삭제할까요?'), findsOneWidget);
-    expect(find.textContaining('카드, 녹음, 답변, 캐릭터, 일정, AI 데이터'), findsOneWidget);
-    expect(find.textContaining('복구할 수 없어요'), findsOneWidget);
+    final message = tester
+        .widgetList<WordBoundaryText>(find.byType(WordBoundaryText))
+        .singleWhere((widget) => widget.text.contains('AI 데이터'));
+    expect(message.text, contains('카드, 녹음, 답변, 캐릭터, 일정, AI 데이터'));
+    expect(message.text, contains('복구할 수 없어요'));
   });
 
   testWidgets('삭제 확인 시 현재 사용자 계정을 한 번만 삭제한다', (tester) async {
@@ -65,9 +67,7 @@ Future<void> _pumpAccountSettings(
           executor ?? _FakeAccountDeletionExecutor(),
         ),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: AccountSettingsScreen()),
-      ),
+      child: const MaterialApp(home: Scaffold(body: AccountSettingsScreen())),
     ),
   );
   await tester.pumpAndSettle();
