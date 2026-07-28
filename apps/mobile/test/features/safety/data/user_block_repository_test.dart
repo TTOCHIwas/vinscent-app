@@ -63,17 +63,14 @@ void main() {
       await repository.createReconnectInvite('couple-id');
 
       expect(wasUnblocked, isTrue);
-      expect(calls, [
-        (function: 'block_current_partner', params: null),
-        (
-          function: 'unblock_user',
-          params: {'target_user_id': 'blocked-user-id'},
-        ),
-        (
-          function: 'create_couple_archive_reconnect_invite',
-          params: {'target_couple_id': 'couple-id'},
-        ),
+      expect(calls.map((call) => call.function), [
+        'block_current_partner',
+        'unblock_user',
+        'create_couple_archive_reconnect_invite',
       ]);
+      expect(calls[0].params, isNull);
+      expect(calls[1].params, {'target_user_id': 'blocked-user-id'});
+      expect(calls[2].params, {'target_couple_id': 'couple-id'});
     },
   );
 
