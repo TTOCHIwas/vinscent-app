@@ -326,6 +326,7 @@ class _NotificationPermissionGroup extends StatelessWidget {
                   : () => onAction(status),
               isActionLoading: isActionRunning,
               showCompleted: status == NotificationPermissionStatus.enabled,
+              completedColor: AppColors.brandAccent,
             );
           },
         ),

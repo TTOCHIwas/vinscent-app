@@ -136,6 +136,8 @@ class SettingsToggleRow extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 60),
       child: SwitchListTile.adaptive(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        activeThumbColor: AppColors.onBrandAction,
+        activeTrackColor: AppColors.brandAccent,
         title: Text(title, style: AppTextStyles.homeBody),
         subtitle: switch (subtitle) {
           final subtitle? => Padding(
@@ -166,6 +168,7 @@ class SettingsStatusRow extends StatelessWidget {
     this.onActionPressed,
     this.isActionLoading = false,
     this.showCompleted = false,
+    this.completedColor = AppColors.textMuted,
   });
 
   final String icon;
@@ -175,6 +178,7 @@ class SettingsStatusRow extends StatelessWidget {
   final VoidCallback? onActionPressed;
   final bool isActionLoading;
   final bool showCompleted;
+  final Color completedColor;
 
   @override
   Widget build(BuildContext context) {
@@ -229,12 +233,12 @@ class SettingsStatusRow extends StatelessWidget {
                 child: Text(actionLabel),
               )
             else if (showCompleted)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Icon(
                   Icons.check_circle_outline_rounded,
                   size: 22,
-                  color: AppColors.textMuted,
+                  color: completedColor,
                 ),
               ),
           ],
