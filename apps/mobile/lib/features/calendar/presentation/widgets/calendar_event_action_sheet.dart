@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-enum CalendarEventAction { edit, delete }
+enum CalendarEventAction { edit, report, delete }
 
 Future<CalendarEventAction?> showCalendarEventActionSheet({
   required BuildContext context,
   required String eventId,
+  bool showReport = false,
 }) {
   return showModalBottomSheet<CalendarEventAction>(
     context: context,
@@ -17,14 +18,20 @@ Future<CalendarEventAction?> showCalendarEventActionSheet({
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     clipBehavior: Clip.antiAlias,
-    builder: (context) => CalendarEventActionSheet(eventId: eventId),
+    builder: (context) =>
+        CalendarEventActionSheet(eventId: eventId, showReport: showReport),
   );
 }
 
 class CalendarEventActionSheet extends StatelessWidget {
-  const CalendarEventActionSheet({super.key, required this.eventId});
+  const CalendarEventActionSheet({
+    super.key,
+    required this.eventId,
+    this.showReport = false,
+  });
 
   final String eventId;
+  final bool showReport;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +52,16 @@ class CalendarEventActionSheet extends StatelessWidget {
               onPressed: () =>
                   Navigator.of(context).pop(CalendarEventAction.edit),
             ),
+            if (showReport) ...[
+              const SizedBox(height: 4),
+              _ActionRow(
+                actionKey: ValueKey('calendar-event-action-report-$eventId'),
+                icon: Icons.flag_outlined,
+                label: '신고',
+                onPressed: () =>
+                    Navigator.of(context).pop(CalendarEventAction.report),
+              ),
+            ],
             const SizedBox(height: 4),
             _ActionRow(
               actionKey: ValueKey('calendar-event-action-delete-$eventId'),

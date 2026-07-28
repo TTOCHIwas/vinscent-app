@@ -15,12 +15,16 @@ class CalendarEventDetailList extends StatelessWidget {
     required this.canEdit,
     required this.onEdit,
     required this.onDelete,
+    this.currentUserId,
+    this.onReport,
   });
 
   final List<CoupleCalendarEvent> events;
   final bool canEdit;
   final ValueChanged<CoupleCalendarEvent> onEdit;
   final ValueChanged<CoupleCalendarEvent> onDelete;
+  final String? currentUserId;
+  final ValueChanged<CoupleCalendarEvent>? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +51,12 @@ class CalendarEventDetailList extends StatelessWidget {
               showCalendarEventDetailSheet(context: context, event: event),
           onEdit: () => onEdit(event),
           onDelete: () => onDelete(event),
+          onReport:
+              currentUserId != null &&
+                  event.updatedByUserId != currentUserId &&
+                  onReport != null
+              ? () => onReport!(event)
+              : null,
         ),
     ];
 
@@ -69,6 +79,7 @@ class _EventRow extends StatelessWidget {
     required this.onOpen,
     required this.onEdit,
     required this.onDelete,
+    required this.onReport,
   });
 
   final CoupleCalendarEvent event;
@@ -76,6 +87,7 @@ class _EventRow extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +122,7 @@ class _EventRow extends StatelessWidget {
                   style: AppTextStyles.homeBodyMedium,
                 ),
               ),
-              if (canEdit) ...[
+              if (canEdit || onReport != null) ...[
                 const SizedBox(width: 8),
                 IconButton(
                   key: ValueKey('calendar-event-menu-${event.id}'),
@@ -130,6 +142,7 @@ class _EventRow extends StatelessWidget {
     final action = await showCalendarEventActionSheet(
       context: context,
       eventId: event.id,
+      showReport: onReport != null,
     );
     if (!context.mounted || action == null) {
       return;
@@ -138,6 +151,8 @@ class _EventRow extends StatelessWidget {
     switch (action) {
       case CalendarEventAction.edit:
         onEdit();
+      case CalendarEventAction.report:
+        onReport?.call();
       case CalendarEventAction.delete:
         onDelete();
     }

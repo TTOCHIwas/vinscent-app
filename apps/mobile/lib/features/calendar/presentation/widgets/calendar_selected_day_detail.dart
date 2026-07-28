@@ -10,6 +10,8 @@ import '../../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/application/profile_controller.dart';
+import '../../../safety/data/safety_report.dart';
+import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../../story_loops/application/story_loop_detail_provider.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../application/couple_calendar_event_realtime_controller.dart';
@@ -45,6 +47,12 @@ class _CalendarSelectedDayDetailState
   @override
   Widget build(BuildContext context) {
     final selectedDate = calendarDateOnly(widget.selectedDate);
+    final currentUserId = ref.watch(
+      profileControllerProvider.select(
+        (state) =>
+            state.maybeWhen(data: (profile) => profile?.id, orElse: () => null),
+      ),
+    );
     final calendarEvents = ref.watch(
       coupleCalendarEventDateProvider(selectedDate),
     );
@@ -79,6 +87,8 @@ class _CalendarSelectedDayDetailState
                     canEdit: widget.canEdit,
                     onEdit: _editEvent,
                     onDelete: _confirmDeleteEvent,
+                    currentUserId: currentUserId,
+                    onReport: currentUserId == null ? null : _reportEvent,
                   ),
           ),
         if (hasScheduleSection && hasStorySection) const SizedBox(height: 36),
@@ -100,6 +110,16 @@ class _CalendarSelectedDayDetailState
 
   void _editEvent(CoupleCalendarEvent event) {
     context.push('/calendar/event/${event.id}');
+  }
+
+  Future<void> _reportEvent(CoupleCalendarEvent event) {
+    return showSafetyReportSheet(
+      context: context,
+      target: SafetyReportTarget(
+        type: SafetyReportTargetType.calendarEvent,
+        id: event.id,
+      ),
+    );
   }
 
   Future<void> _confirmDeleteEvent(CoupleCalendarEvent event) async {
