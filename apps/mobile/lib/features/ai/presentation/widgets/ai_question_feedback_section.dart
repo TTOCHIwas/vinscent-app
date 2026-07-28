@@ -114,6 +114,7 @@ class _CharacterSpeechFeedback extends StatelessWidget {
         speechText: feedback.feedbackText,
         semanticLabel: '캐릭터의 한마디: ${feedback.feedbackText}',
         maxLines: 4,
+        showGeneratedIndicator: true,
       ),
     );
   }
