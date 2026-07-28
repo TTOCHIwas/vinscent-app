@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/assets/app_icons.dart';
+import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -10,6 +11,7 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../safety/data/safety_report.dart';
+import '../../safety/application/user_block_service.dart';
 import '../../safety/presentation/safety_report_sheet.dart';
 import 'widgets/settings_group.dart';
 import 'widgets/settings_page_layout.dart';
@@ -73,6 +75,7 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
           return _ActiveCoupleSettingsContent(
             isProcessing: _isProcessing,
             onDisconnectPressed: _disconnectCouple,
+            onBlockPartnerPressed: _blockPartner,
             onReportPartnerPressed: partnerUserId == null
                 ? null
                 : () => _reportPartner(partnerUserId),
@@ -135,6 +138,47 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
     );
   }
 
+  Future<void> _blockPartner() async {
+    final shouldProceed = await _confirmAction(
+      title: '상대방을 차단할까요?',
+      content:
+          '차단하면 커플 연결이 즉시 해제되고 두 사람의 공유 기록은 30일 동안 '
+          '서로에게 보이지 않아요. 차단을 해제해도 자동으로 다시 연결되지 않아요.',
+      confirmLabel: '차단',
+    );
+
+    if (!mounted || !shouldProceed) {
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      await ref.read(userBlockServiceProvider).blockCurrentPartner();
+      if (!mounted) {
+        return;
+      }
+
+      context.go('/couple');
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('상대방을 차단하지 못했어요.')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
   Future<void> _deleteArchiveNow() async {
     final shouldProceed = await _confirmAction(
       title: '보관 데이터를 지금 삭제할까요?',
@@ -194,30 +238,12 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
     required String content,
     required String confirmLabel,
   }) async {
-    final result = await showDialog<bool>(
+    return showAppConfirmationSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(content),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-              ),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(confirmLabel),
-            ),
-          ],
-        );
-      },
+      title: title,
+      message: content,
+      confirmLabel: confirmLabel,
     );
-
-    return result == true;
   }
 }
 
@@ -225,11 +251,13 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
   const _ActiveCoupleSettingsContent({
     required this.isProcessing,
     required this.onDisconnectPressed,
+    required this.onBlockPartnerPressed,
     required this.onReportPartnerPressed,
   });
 
   final bool isProcessing;
   final VoidCallback onDisconnectPressed;
+  final VoidCallback onBlockPartnerPressed;
   final VoidCallback? onReportPartnerPressed;
 
   @override
@@ -249,21 +277,28 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if (onReportPartnerPressed != null) ...[
-          SettingsGroup(
-            label: '안전',
-            children: [
+        SettingsGroup(
+          label: '안전',
+          children: [
+            if (onReportPartnerPressed case final onReportPartnerPressed?)
               SettingsActionRow(
                 key: const Key('couple-settings-report-partner-action'),
                 title: '상대방 신고',
                 subtitle: '문제가 있는 행동을 비공개로 알려주세요',
                 enabled: !isProcessing,
-                onTap: onReportPartnerPressed!,
+                onTap: onReportPartnerPressed,
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-        ],
+            SettingsActionRow(
+              key: const Key('couple-settings-block-partner-action'),
+              title: '상대방 차단',
+              subtitle: '연결을 끊고 공유 기록을 서로에게 숨겨요',
+              isDestructive: true,
+              enabled: !isProcessing,
+              onTap: onBlockPartnerPressed,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
         SettingsGroup(
           label: '연결 관리',
           children: [

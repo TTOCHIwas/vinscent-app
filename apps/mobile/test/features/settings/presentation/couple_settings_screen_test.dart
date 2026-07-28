@@ -50,7 +50,7 @@ void main() {
 
     expect(find.byType(AppConfirmationSheet), findsOneWidget);
     expect(
-      find.text(
+      find.bySemanticsLabel(
         '연결을 해제해도 답변과 캐릭터 기록은 30일 동안 보관돼요. '
         '보관 기간 안에는 기존 초대 코드 흐름으로 다시 연결할 수 있어요.',
       ),
@@ -147,7 +147,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AppConfirmationSheet), findsOneWidget);
-      expect(find.textContaining('차단을 해제해도 자동으로 다시 연결되지 않아요'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          '차단하면 커플 연결이 즉시 해제되고 두 사람의 공유 기록은 30일 동안 '
+          '서로에게 보이지 않아요. 차단을 해제해도 자동으로 다시 연결되지 않아요.',
+        ),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
       await tester.pumpAndSettle();
