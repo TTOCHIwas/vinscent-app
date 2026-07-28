@@ -19,6 +19,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple_failure.dart';
 import '../../profile/application/profile_controller.dart';
+import '../../safety/data/safety_report.dart';
+import '../../safety/presentation/safety_report_sheet.dart';
 import '../application/couple_character_controller.dart';
 import '../data/couple_character_failure.dart';
 
@@ -296,6 +298,16 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
     }
   }
 
+  Future<void> _reportCharacter(String coupleId) {
+    return showSafetyReportSheet(
+      context: context,
+      target: SafetyReportTarget(
+        type: SafetyReportTargetType.character,
+        id: coupleId,
+      ),
+    );
+  }
+
   Future<Uint8List> _renderPng(AppDrawingData drawingData) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -398,13 +410,25 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isInitialSetup) {
-      ref.watch(profileControllerProvider);
-    }
+    final profileId = ref
+        .watch(profileControllerProvider)
+        .maybeWhen(data: (profile) => profile?.id, orElse: () => null);
     final couple = ref
         .watch(coupleControllerProvider)
         .maybeWhen(data: (couple) => couple, orElse: () => null);
+    final character = ref
+        .watch(coupleCharacterControllerProvider)
+        .maybeWhen(data: (character) => character, orElse: () => null);
     final isArchivedReadOnly = couple?.isArchivedReadOnly ?? false;
+    final reportTargetId =
+        !widget.isInitialSetup &&
+            couple?.canEditSharedData == true &&
+            profileId != null &&
+            character != null &&
+            character.updatedBy != null &&
+            character.updatedBy != profileId
+        ? character.coupleId
+        : null;
 
     return PopScope(
       canPop: false,
@@ -428,6 +452,9 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                 onBackPressed: _requestClose,
                 onSkipPressed: _useDefaultCharacter,
                 onSavePressed: _save,
+                onReportPressed: reportTargetId != null
+                    ? () => _reportCharacter(reportTargetId)
+                    : null,
               ),
               Expanded(
                 child: SafeArea(
@@ -579,6 +606,7 @@ class _CharacterEditorHeader extends StatelessWidget {
     required this.onBackPressed,
     required this.onSkipPressed,
     required this.onSavePressed,
+    this.onReportPressed,
   });
 
   final bool canSave;
@@ -588,6 +616,7 @@ class _CharacterEditorHeader extends StatelessWidget {
   final VoidCallback onBackPressed;
   final VoidCallback onSkipPressed;
   final VoidCallback onSavePressed;
+  final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -604,17 +633,29 @@ class _CharacterEditorHeader extends StatelessWidget {
             )
           : null,
       action: SizedBox(
-        width: 72,
-        child: IconButton(
-          key: const ValueKey('character-editor-save'),
-          tooltip: '저장',
-          onPressed: canSave ? onSavePressed : null,
-          icon: isSaving
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.check_rounded),
+        width: onReportPressed == null ? 72 : 96,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (onReportPressed case final onReportPressed?)
+              IconButton(
+                key: const ValueKey('character-editor-report'),
+                tooltip: '캐릭터 신고',
+                onPressed: onReportPressed,
+                icon: const Icon(Icons.flag_outlined),
+              ),
+            IconButton(
+              key: const ValueKey('character-editor-save'),
+              tooltip: '저장',
+              onPressed: canSave ? onSavePressed : null,
+              icon: isSaving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_rounded),
+            ),
+          ],
         ),
       ),
     );
