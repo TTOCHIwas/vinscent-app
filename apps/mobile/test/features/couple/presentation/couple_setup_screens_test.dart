@@ -125,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AppConfirmationSheet), findsOneWidget);
-    expect(find.text('차단 해제만으로는 다시 연결되지 않아'), findsOneWidget);
+    expect(find.textContaining('차단 해제만으로는 다시 연결되지 않아'), findsOneWidget);
 
     await tester.tap(find.text('재연결 초대 만들기'));
     await tester.pumpAndSettle();
@@ -133,20 +133,10 @@ void main() {
     expect(service.reconnectedCoupleId, 'archived-couple-id');
   });
 
-  testWidgets('opens blocked user management only when a block exists', (
+  testWidgets('keeps blocked user management available from couple entry', (
     tester,
   ) async {
-    await _pumpCoupleEntry(
-      tester,
-      service: _FakeUserBlockService(),
-      blockedUsers: [
-        BlockedUser(
-          userId: 'blocked-user-id',
-          displayName: '또치',
-          blockedAt: DateTime(2026, 7, 28),
-        ),
-      ],
-    );
+    await _pumpCoupleEntry(tester, service: _FakeUserBlockService());
 
     await tester.tap(
       find.byKey(const Key('couple-entry-blocked-users-action')),
@@ -222,7 +212,6 @@ final _pendingCouple = Couple(
 Future<void> _pumpCoupleEntry(
   WidgetTester tester, {
   required _FakeUserBlockService service,
-  List<BlockedUser> blockedUsers = const [],
   List<ReconnectableCoupleArchive> reconnectableArchives = const [],
 }) async {
   final router = GoRouter(
@@ -243,7 +232,6 @@ Future<void> _pumpCoupleEntry(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        blockedUsersProvider.overrideWith((ref) async => blockedUsers),
         reconnectableCoupleArchivesProvider.overrideWith(
           (ref) async => reconnectableArchives,
         ),
