@@ -8,7 +8,7 @@ void main() {
   test('parses a successful account deletion receipt', () async {
     final repository = SupabaseAccountDeletionRepository(
       isConfigured: true,
-      invoke: () async => {'status': 'deleted', 'deletedCoupleCount': 2},
+      invoke: (_) async => {'status': 'deleted', 'deletedCoupleCount': 2},
     );
 
     await expectLater(
@@ -17,10 +17,27 @@ void main() {
     );
   });
 
+  test('passes a fresh Apple authorization code to the function', () async {
+    String? receivedCode;
+    final repository = SupabaseAccountDeletionRepository(
+      isConfigured: true,
+      invoke: (authorizationCode) async {
+        receivedCode = authorizationCode;
+        return {'status': 'deleted', 'deletedCoupleCount': 1};
+      },
+    );
+
+    await repository.deleteAccount(
+      appleAuthorizationCode: 'authorization-code',
+    );
+
+    expect(receivedCode, 'authorization-code');
+  });
+
   test('rejects an invalid account deletion response', () async {
     final repository = SupabaseAccountDeletionRepository(
       isConfigured: true,
-      invoke: () async => {'status': 'deleted', 'deletedCoupleCount': '2'},
+      invoke: (_) async => {'status': 'deleted', 'deletedCoupleCount': '2'},
     );
 
     await expectLater(
@@ -38,7 +55,7 @@ void main() {
   test('maps an unauthorized function response to session expired', () async {
     final repository = SupabaseAccountDeletionRepository(
       isConfigured: true,
-      invoke: () async => throw const FunctionException(status: 401),
+      invoke: (_) async => throw const FunctionException(status: 401),
     );
 
     await expectLater(
@@ -53,11 +70,29 @@ void main() {
     );
   });
 
+  test('maps an Apple reauthentication requirement', () async {
+    final repository = SupabaseAccountDeletionRepository(
+      isConfigured: true,
+      invoke: (_) async => throw const FunctionException(status: 409),
+    );
+
+    await expectLater(
+      repository.deleteAccount(),
+      throwsA(
+        isA<AccountDeletionException>().having(
+          (error) => error.reason,
+          'reason',
+          AccountDeletionFailureReason.reauthenticationRequired,
+        ),
+      ),
+    );
+  });
+
   test('maps a request timeout', () async {
     final pending = Completer<Object?>();
     final repository = SupabaseAccountDeletionRepository(
       isConfigured: true,
-      invoke: () => pending.future,
+      invoke: (_) => pending.future,
       timeout: const Duration(milliseconds: 1),
     );
 
@@ -76,7 +111,7 @@ void main() {
   test('rejects deletion when Supabase is not configured', () async {
     final repository = SupabaseAccountDeletionRepository(
       isConfigured: false,
-      invoke: () async => const {},
+      invoke: (_) async => const {},
     );
 
     await expectLater(
