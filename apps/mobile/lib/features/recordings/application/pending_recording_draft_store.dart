@@ -72,6 +72,8 @@ class PendingRecordingDraft {
 abstract interface class PendingRecordingDraftStore {
   Future<String> createFilePath(String recordingId);
 
+  Future<void> clear();
+
   Future<void> persist(PendingRecordingDraft draft);
 
   Future<PendingRecordingDraft?> load();
@@ -130,6 +132,21 @@ class SharedPreferencesPendingRecordingDraftStore
 
   final PendingRecordingDraftMetadataStore _metadataStore;
   final RecordingSupportDirectoryLoader _supportDirectoryLoader;
+
+  @override
+  Future<void> clear() async {
+    try {
+      final supportDirectory = await _supportDirectoryLoader();
+      final draftDirectory = Directory(
+        '${supportDirectory.path}${Platform.pathSeparator}$_directoryName',
+      );
+      if (await draftDirectory.exists()) {
+        await draftDirectory.delete(recursive: true);
+      }
+    } finally {
+      await _metadataStore.clear();
+    }
+  }
 
   @override
   Future<String> createFilePath(String recordingId) async {

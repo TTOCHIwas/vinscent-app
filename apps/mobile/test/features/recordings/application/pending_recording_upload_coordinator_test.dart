@@ -160,6 +160,11 @@ class _MemoryPendingRecordingDraftStore implements PendingRecordingDraftStore {
   final removedDrafts = <PendingRecordingDraft>[];
 
   @override
+  Future<void> clear() async {
+    draft = null;
+  }
+
+  @override
   Future<String> createFilePath(String recordingId) async {
     return 'memory://$recordingId.m4a';
   }
