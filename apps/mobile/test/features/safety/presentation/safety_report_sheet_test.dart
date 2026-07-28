@@ -65,13 +65,12 @@ void main() {
       isEmpty,
     );
 
-    await tester.tap(
-      find.byKey(const Key('safety-report-reason-unsafeAi')),
-    );
+    await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
     await tester.enterText(
       find.byKey(const Key('safety-report-details')),
       '이 답변은 위험할 수 있어요',
     );
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
     await tester.tap(find.byKey(const Key('safety-report-submit')));
     await tester.pumpAndSettle();
 
@@ -132,9 +131,9 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(
-      find.byKey(const Key('safety-report-reason-harassment')),
-    );
+    await tester.tap(find.byKey(const Key('safety-report-reason-harassment')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
     await tester.tap(find.byKey(const Key('safety-report-submit')));
     await tester.pump();
 
@@ -177,6 +176,8 @@ void main() {
     await tester.tap(
       find.byKey(const Key('safety-report-reason-inappropriate')),
     );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
     await tester.tap(find.byKey(const Key('safety-report-submit')));
     await tester.tap(find.byKey(const Key('safety-report-submit')));
     await tester.pump();

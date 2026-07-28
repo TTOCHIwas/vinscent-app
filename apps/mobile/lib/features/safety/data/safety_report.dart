@@ -39,6 +39,17 @@ class SafetyReportTarget {
   final SafetyReportTargetType type;
   final String id;
   final String? contentSnapshot;
+
+  @override
+  bool operator ==(Object other) {
+    return other is SafetyReportTarget &&
+        other.type == type &&
+        other.id == id &&
+        other.contentSnapshot == contentSnapshot;
+  }
+
+  @override
+  int get hashCode => Object.hash(type, id, contentSnapshot);
 }
 
 class SafetyReportRequest {
@@ -51,4 +62,15 @@ class SafetyReportRequest {
   final SafetyReportTarget target;
   final SafetyReportReason reason;
   final String? details;
+
+  @override
+  bool operator ==(Object other) {
+    return other is SafetyReportRequest &&
+        other.target == target &&
+        other.reason == reason &&
+        other.details == details;
+  }
+
+  @override
+  int get hashCode => Object.hash(target, reason, details);
 }
