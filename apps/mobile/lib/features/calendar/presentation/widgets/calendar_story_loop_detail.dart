@@ -9,6 +9,8 @@ import '../../../questions/data/daily_question_answer_state.dart';
 import '../../../questions/presentation/question_route_context.dart';
 import '../../../questions/presentation/widgets/question_answer_sections.dart';
 import '../../../questions/presentation/widgets/question_detail_title.dart';
+import '../../../safety/data/safety_report.dart';
+import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
 import '../../../story_loops/data/story_loop_status.dart';
@@ -98,6 +100,16 @@ class _LoadedDetailSection extends StatelessWidget {
               textAlign: TextAlign.start,
               showGeneratedIndicator:
                   question.question.questionSource == QuestionSource.ai,
+              onGeneratedIndicatorPressed:
+                  question.question.questionSource == QuestionSource.ai
+                  ? () => showSafetyReportSheet(
+                      context: context,
+                      target: SafetyReportTarget(
+                        type: SafetyReportTargetType.aiQuestion,
+                        id: question.question.dailyQuestionId,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(height: 20),
             QuestionAnswerOverview(

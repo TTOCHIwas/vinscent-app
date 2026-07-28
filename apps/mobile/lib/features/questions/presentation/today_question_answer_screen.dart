@@ -11,6 +11,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../ai/presentation/widgets/ai_question_feedback_section.dart';
 import '../../profile/application/profile_controller.dart';
+import '../../safety/data/safety_report.dart';
+import '../../safety/presentation/safety_report_sheet.dart';
 import '../../story_loops/application/story_loop_detail_navigation_provider.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../../story_loops/data/story_loop_card_detail.dart';
@@ -383,6 +385,16 @@ class _QuestionDetailContent extends StatelessWidget {
                 questionText: question.questionText,
                 showGeneratedIndicator:
                     question.questionSource == QuestionSource.ai,
+                onGeneratedIndicatorPressed:
+                    question.questionSource == QuestionSource.ai
+                    ? () => showSafetyReportSheet(
+                        context: context,
+                        target: SafetyReportTarget(
+                          type: SafetyReportTargetType.aiQuestion,
+                          id: question.dailyQuestionId,
+                        ),
+                      )
+                    : null,
               ),
             )
           else
