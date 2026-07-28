@@ -134,6 +134,34 @@ void main() {
       expect(find.text('저장'), findsNothing);
     });
 
+    testWidgets('reports a revealed partner answer', (tester) async {
+      final safetyRepository = _FakeSafetyReportRepository();
+
+      await _pumpRouter(
+        tester,
+        repository: _FakeDailyQuestionAnswerRepository(_completedAnswerState),
+        safetyReportRepository: safetyRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('partner-answer-report')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('safety-report-reason-inappropriate')),
+      );
+      await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+      await tester.tap(find.byKey(const Key('safety-report-submit')));
+      await tester.pumpAndSettle();
+
+      expect(safetyRepository.requests, hasLength(1));
+      expect(
+        safetyRepository.requests.single.target,
+        const SafetyReportTarget(
+          type: SafetyReportTargetType.questionAnswer,
+          id: 'partner-answer-id',
+        ),
+      );
+    });
+
     testWidgets('opens both cards in the shared detail overlay', (
       tester,
     ) async {
