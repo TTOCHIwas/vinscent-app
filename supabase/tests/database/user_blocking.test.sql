@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(31);
+select plan(34);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -61,6 +61,10 @@ values (
 select ok(
   to_regclass('public.user_blocks') is not null,
   'directed user blocks are stored independently from a couple archive'
+);
+select ok(
+  to_regclass('public.user_safety_states') is not null,
+  'each user has a bounded realtime safety revision signal'
 );
 select has_column(
   'public',
@@ -152,6 +156,18 @@ select is(
   ),
   0::bigint,
   'blocking never leaves a reconnect invitation active'
+);
+select is(
+  (
+    select count(*)
+    from public.user_safety_states
+    where user_id in (
+      '19000000-0000-0000-0000-000000000001',
+      '19000000-0000-0000-0000-000000000002'
+    )
+  ),
+  2::bigint,
+  'blocking signals both affected app sessions'
 );
 
 set local role authenticated;
@@ -268,6 +284,18 @@ select is(
   (select count(*) from public.user_blocks),
   0::bigint,
   'unblocking removes only the safety deny relation'
+);
+select is(
+  (
+    select min(revision)
+    from public.user_safety_states
+    where user_id in (
+      '19000000-0000-0000-0000-000000000001',
+      '19000000-0000-0000-0000-000000000002'
+    )
+  ),
+  2::bigint,
+  'unblocking silently refreshes both affected app sessions'
 );
 
 set local role authenticated;
