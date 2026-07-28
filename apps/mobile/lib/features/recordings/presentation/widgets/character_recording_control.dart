@@ -30,9 +30,7 @@ class CharacterRecordingControl extends StatefulWidget {
   static const progressKey = ValueKey<String>(
     'character-recording-control-progress',
   );
-  static const playbackProgressKey = ValueKey<String>(
-    'character-recording-control-playback-progress',
-  );
+  static const playbackProgressKey = progressKey;
   static const pulseKey = ValueKey<String>('character-recording-control-pulse');
   static const recordingDotKey = ValueKey<String>(
     'character-recording-control-recording-dot',
@@ -109,7 +107,7 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
       (_canStartRecording || _isPreparing || _isRecording) &&
       widget.onRecordEnd != null;
 
-  bool get _showTopProgress =>
+  bool get _showCaptureProgress =>
       widget.isLoading || _isPreparing || _isRecording || _isUploading;
 
   bool get _canPress => _canTap || _canStartRecording;
@@ -195,14 +193,14 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
     final progressValue = _isRecording
         ? widget.recordingProgress.clamp(0.0, 1.0)
         : null;
-    final indicatorInset = math.min(16.0, widget.size / 4);
-    final playbackProgressWidth = math.min(48.0, widget.size);
+    final progressWidth = math.min(48.0, widget.size);
     final showPlaybackProgress =
         _showPlaybackProgress &&
         widget.isPlaybackBusy &&
         !widget.isPlaying &&
         !_isCaptureBusy &&
         !widget.isLoading;
+    final showProgress = _showCaptureProgress || showPlaybackProgress;
 
     return RepaintBoundary(
       child: Semantics(
@@ -241,27 +239,17 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    if (_showTopProgress)
+                    widget.child,
+                    if (showProgress)
                       Positioned(
-                        top: 0,
-                        left: indicatorInset,
-                        right: indicatorInset,
+                        left: (widget.size - progressWidth) / 2,
+                        bottom: 4,
+                        width: progressWidth,
                         child: IgnorePointer(
-                          child: _CharacterRecordingProgress(
+                          child: _CharacterActivityProgress(
                             value: progressValue,
                             color: progressColor,
-                            showRecordingDot: _isPreparing || _isRecording,
                           ),
-                        ),
-                      ),
-                    widget.child,
-                    if (showPlaybackProgress)
-                      Positioned(
-                        left: (widget.size - playbackProgressWidth) / 2,
-                        bottom: 4,
-                        width: playbackProgressWidth,
-                        child: const IgnorePointer(
-                          child: _CharacterPlaybackProgress(),
                         ),
                       ),
                   ],
@@ -294,66 +282,22 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
   }
 }
 
-class _CharacterPlaybackProgress extends StatelessWidget {
-  const _CharacterPlaybackProgress();
+class _CharacterActivityProgress extends StatelessWidget {
+  const _CharacterActivityProgress({required this.value, required this.color});
+
+  final double? value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(2),
-      child: const LinearProgressIndicator(
-        key: CharacterRecordingControl.playbackProgressKey,
+      child: LinearProgressIndicator(
+        key: CharacterRecordingControl.progressKey,
+        value: value,
         minHeight: 3,
-        color: AppColors.actionPrimary,
+        color: color,
         backgroundColor: AppColors.actionDisabled,
-      ),
-    );
-  }
-}
-
-class _CharacterRecordingProgress extends StatelessWidget {
-  const _CharacterRecordingProgress({
-    required this.value,
-    required this.color,
-    required this.showRecordingDot,
-  });
-
-  final double? value;
-  final Color color;
-  final bool showRecordingDot;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 8,
-      child: Row(
-        children: [
-          if (showRecordingDot) ...[
-            const SizedBox.square(
-              key: CharacterRecordingControl.recordingDotKey,
-              dimension: 8,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.recordingActive,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                key: CharacterRecordingControl.progressKey,
-                value: value,
-                minHeight: 4,
-                color: color,
-                backgroundColor: AppColors.actionDisabled,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

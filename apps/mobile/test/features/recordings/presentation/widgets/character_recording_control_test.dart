@@ -115,7 +115,7 @@ void main() {
     final after = _pulseScale(tester);
 
     expect(after, greaterThan(before));
-    expect(find.byKey(_playbackProgressKey), findsNothing);
+    expect(find.byKey(CharacterRecordingControl.progressKey), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -128,19 +128,19 @@ void main() {
     );
 
     expect(find.byKey(_characterKey), findsOneWidget);
-    expect(find.byKey(_playbackProgressKey), findsNothing);
     expect(find.byKey(CharacterRecordingControl.progressKey), findsNothing);
     expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 149));
-    expect(find.byKey(_playbackProgressKey), findsNothing);
+    expect(find.byKey(CharacterRecordingControl.progressKey), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 2));
-    expect(find.byKey(_playbackProgressKey), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.byKey(_playbackProgressKey)).dy,
-      greaterThanOrEqualTo(tester.getBottomLeft(find.byKey(_characterKey)).dy),
+    final progress = tester.widget<LinearProgressIndicator>(
+      find.byKey(CharacterRecordingControl.progressKey),
     );
+    expect(progress.value, isNull);
+    expect(progress.color, AppColors.actionPrimary);
+    _expectUnifiedProgressBelowCharacter(tester);
   });
 
   testWidgets('새 녹음을 확인하는 맥박 효과는 제한된 횟수 뒤 종료된다', (tester) async {
@@ -195,7 +195,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('녹음 준비 중에는 빨간 점과 부정형 상단 진행 효과를 표시한다', (tester) async {
+  testWidgets('녹음 준비 중에는 캐릭터 아래에 빨간 부정형 진행 효과를 표시한다', (tester) async {
     await _pumpControl(tester, capturePhase: RecordingCapturePhase.preparing);
 
     final progress = tester.widget<LinearProgressIndicator>(
@@ -204,14 +204,12 @@ void main() {
 
     expect(progress.value, isNull);
     expect(progress.color, AppColors.recordingActive);
-    expect(
-      find.byKey(CharacterRecordingControl.recordingDotKey),
-      findsOneWidget,
-    );
+    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    _expectUnifiedProgressBelowCharacter(tester);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
-  testWidgets('녹음 중에는 캐릭터 상단에 빨간 점과 가로 진행률을 표시한다', (tester) async {
+  testWidgets('녹음 중에는 캐릭터 아래의 같은 바에 빨간 진행률을 표시한다', (tester) async {
     await _pumpControl(
       tester,
       capturePhase: RecordingCapturePhase.recording,
@@ -224,10 +222,8 @@ void main() {
 
     expect(progress.value, 0.5);
     expect(progress.color, AppColors.recordingActive);
-    expect(
-      find.byKey(CharacterRecordingControl.recordingDotKey),
-      findsOneWidget,
-    );
+    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    _expectUnifiedProgressBelowCharacter(tester);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byKey(_characterKey), findsOneWidget);
     expect(find.byType(Icon), findsNothing);
@@ -269,7 +265,9 @@ void main() {
       find.byKey(CharacterRecordingControl.progressKey),
     );
     expect(progress.value, isNull);
+    expect(progress.color, AppColors.actionPrimary);
     expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    _expectUnifiedProgressBelowCharacter(tester);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
     await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
@@ -283,9 +281,6 @@ void main() {
 }
 
 const _characterKey = ValueKey<String>('test-character');
-const _playbackProgressKey = ValueKey<String>(
-  'character-recording-control-playback-progress',
-);
 
 Future<void> _pumpControl(
   WidgetTester tester, {
@@ -333,6 +328,17 @@ double _pulseScale(WidgetTester tester) {
       .widget<ScaleTransition>(find.byKey(CharacterRecordingControl.pulseKey))
       .scale
       .value;
+}
+
+void _expectUnifiedProgressBelowCharacter(WidgetTester tester) {
+  final progress = find.byKey(CharacterRecordingControl.progressKey);
+
+  expect(progress, findsOneWidget);
+  expect(tester.getSize(progress).width, 48);
+  expect(
+    tester.getTopLeft(progress).dy,
+    greaterThanOrEqualTo(tester.getBottomLeft(find.byKey(_characterKey)).dy),
+  );
 }
 
 int _circularBorderCount(WidgetTester tester) {
