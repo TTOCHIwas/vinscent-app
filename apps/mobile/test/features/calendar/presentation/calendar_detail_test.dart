@@ -216,6 +216,86 @@ void main() {
     );
   });
 
+  testWidgets('reports a partner-updated calendar event', (tester) async {
+    final safetyRepository = FakeSafetyReportRepository();
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      initialDate: DateTime(2026, 5, 5),
+      calendarEvents: [
+        calendarEvent(
+          id: 'partner-event',
+          title: 'Partner event',
+          date: DateTime(2026, 5, 5),
+          createdByUserId: 'user-a',
+          updatedByUserId: 'user-a',
+        ),
+      ],
+      safetyReportRepository: safetyRepository,
+    );
+
+    final partnerEventMenu = find.byKey(
+      const Key('calendar-event-menu-partner-event'),
+    );
+    await tester.ensureVisible(partnerEventMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(partnerEventMenu);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-event-action-report-partner-event')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('calendar-event-action-report-partner-event')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('safety-report-reason-inappropriate')),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.calendarEvent,
+        id: 'partner-event',
+      ),
+    );
+  });
+
+  testWidgets('does not report a current-user-updated calendar event', (
+    tester,
+  ) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      initialDate: DateTime(2026, 5, 5),
+      calendarEvents: [
+        calendarEvent(
+          id: 'my-event',
+          title: 'My event',
+          date: DateTime(2026, 5, 5),
+        ),
+      ],
+    );
+
+    final myEventMenu = find.byKey(const Key('calendar-event-menu-my-event'));
+    await tester.ensureVisible(myEventMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(myEventMenu);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-event-action-report-my-event')),
+      findsNothing,
+    );
+  });
+
   testWidgets('keeps styled detail within a narrow enlarged-text viewport', (
     tester,
   ) async {

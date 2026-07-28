@@ -243,6 +243,8 @@ CoupleCalendarEvent calendarEvent({
   required String title,
   required DateTime date,
   CoupleCalendarEventArtwork? artwork,
+  String createdByUserId = 'user-b',
+  String updatedByUserId = 'user-b',
 }) {
   return CoupleCalendarEvent(
     id: id,
@@ -253,8 +255,8 @@ CoupleCalendarEvent calendarEvent({
     repeatRule: CoupleCalendarEventRepeatRule.none,
     memo: null,
     revision: 1,
-    createdByUserId: 'user-id',
-    updatedByUserId: 'user-id',
+    createdByUserId: createdByUserId,
+    updatedByUserId: updatedByUserId,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
     reminder: const CoupleCalendarEventReminder.disabled(),
