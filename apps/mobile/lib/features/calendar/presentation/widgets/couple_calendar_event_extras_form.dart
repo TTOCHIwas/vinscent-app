@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/drawing/app_drawing_controller.dart';
 import '../../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
-import 'couple_calendar_event_basic_form.dart';
+import '../../../../core/theme/app_colors.dart';
+import 'calendar_event_form_style.dart';
 
 enum CalendarEventExtrasMode { drawing, memo }
 
@@ -56,6 +57,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
             ],
             selected: {mode},
             showSelectedIcon: false,
+            style: CalendarEventFormStyle.segmentedButton,
             onSelectionChanged: _isEnabled
                 ? (selection) => onModeChanged(selection.single)
                 : null,
@@ -78,7 +80,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
                   maxLines: null,
                   maxLength: _memoMaxLength,
                   textAlignVertical: TextAlignVertical.top,
-                  decoration: calendarEventInputDecoration(
+                  decoration: CalendarEventFormStyle.inputDecoration(
                     '함께 기억할 내용을 남겨도 좋아요',
                   ),
                 ),
@@ -114,7 +116,7 @@ class _DrawingEditor extends StatelessWidget {
                 child: SizedBox.square(
                   dimension: canvasSize,
                   child: ColoredBox(
-                    color: const Color(0xFFF3F3F3),
+                    color: AppColors.formSurface,
                     child: AppDrawingCanvas(
                       key: const Key('calendar-event-drawing-canvas'),
                       strokes: controller.visibleStrokes,

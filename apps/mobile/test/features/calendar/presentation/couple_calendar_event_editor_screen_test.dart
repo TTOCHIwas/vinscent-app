@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
 import 'package:vinscent/features/calendar/presentation/couple_calendar_event_editor_screen.dart';
+import 'package:vinscent/features/calendar/presentation/widgets/couple_calendar_event_extras_form.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 
 import '../../../support/couple_fixtures.dart';
@@ -57,6 +59,51 @@ void main() {
       find.byKey(const Key('calendar-event-drawing-canvas')),
       findsNothing,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('calendar-event-basic-step')),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Material && widget.color == AppColors.formSurface,
+        ),
+      ),
+      findsNothing,
+    );
+
+    final titleField = tester.widget<TextField>(
+      find.byKey(const Key('calendar-event-title-field')),
+    );
+    final titleFocusedBorder =
+        titleField.decoration?.focusedBorder as UnderlineInputBorder;
+    final repeatControl = tester
+        .widget<SegmentedButton<CoupleCalendarEventRepeatRule>>(
+          find.byType(SegmentedButton<CoupleCalendarEventRepeatRule>),
+        );
+    final selectedState = {WidgetState.selected};
+    final reminderToggle = tester.widget<SwitchListTile>(
+      find.byKey(const Key('calendar-event-reminder-toggle')),
+    );
+
+    expect(titleField.decoration?.filled, isFalse);
+    expect(
+      titleFocusedBorder.borderSide,
+      const BorderSide(color: AppColors.settingsDivider),
+    );
+    expect(titleField.decoration?.counterText, isEmpty);
+    expect(
+      repeatControl.style?.backgroundColor?.resolve(selectedState),
+      AppColors.brandAccent,
+    );
+    expect(
+      repeatControl.style?.foregroundColor?.resolve(selectedState),
+      AppColors.onBrandAction,
+    );
+    expect(
+      repeatControl.style?.side?.resolve(selectedState)?.color,
+      AppColors.brandAccent,
+    );
+    expect(reminderToggle.activeTrackColor, AppColors.brandAccent);
+    expect(reminderToggle.activeThumbColor, AppColors.onBrandAction);
 
     await tester.enterText(
       find.byKey(const Key('calendar-event-title-field')),
@@ -64,7 +111,14 @@ void main() {
     );
     await tester.pump();
     final nextButton = find.byKey(const Key('calendar-event-next'));
-    expect(tester.widget<TextButton>(nextButton).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(nextButton).onPressed, isNotNull);
+    expect(
+      find.descendant(
+        of: nextButton,
+        matching: find.byIcon(Icons.chevron_right_rounded),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(nextButton);
     await tester.pumpAndSettle();
 
@@ -74,6 +128,22 @@ void main() {
     expect(
       find.byKey(const Key('calendar-event-drawing-canvas')),
       findsOneWidget,
+    );
+    final extrasControl = tester
+        .widget<SegmentedButton<CalendarEventExtrasMode>>(
+          find.byType(SegmentedButton<CalendarEventExtrasMode>),
+        );
+    expect(
+      extrasControl.style?.backgroundColor?.resolve(selectedState),
+      AppColors.brandAccent,
+    );
+    expect(
+      extrasControl.style?.foregroundColor?.resolve(selectedState),
+      AppColors.onBrandAction,
+    );
+    expect(
+      extrasControl.style?.side?.resolve(selectedState)?.color,
+      AppColors.brandAccent,
     );
 
     final saveButton = find.byKey(const Key('calendar-event-save'));
@@ -92,6 +162,49 @@ void main() {
     expect(repository.lastRequest?.eventDate, DateTime(2026, 8, 2));
     expect(repository.lastPreviewBytes, isNull);
     expect(find.text('calendar'), findsOneWidget);
+  });
+
+  testWidgets('opens date and reminder choices in app bottom sheets', (
+    tester,
+  ) async {
+    final repository = _FakeCalendarEventRepository();
+    final router = _eventEditorRouter();
+
+    await tester.pumpWidget(
+      _eventEditorApp(router: router, repository: repository),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('calendar-event-date')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-event-date-picker-sheet')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('완료'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('calendar-event-reminder-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('calendar-event-reminder-offset')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendar-event-reminder-offset-sheet')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('calendar-event-reminder-offset-3')));
+    await tester.pumpAndSettle();
+    expect(find.text('3일 전'), findsOneWidget);
+
+    final reminderTime = find.byKey(const Key('calendar-event-reminder-time'));
+    await tester.ensureVisible(reminderTime);
+    await tester.pumpAndSettle();
+    await tester.tap(reminderTime);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('app-time-picker-sheet')), findsOneWidget);
   });
 
   testWidgets('preserves basic and optional values when returning a step', (

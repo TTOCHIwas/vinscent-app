@@ -8,14 +8,18 @@ import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
+import '../../../core/presentation/widgets/app_page_header.dart';
+import '../../../core/presentation/widgets/app_page_layout.dart';
+import '../../../core/presentation/widgets/app_time_picker_sheet.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
-import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/couple_calendar_event_editor_service.dart';
 import '../application/couple_calendar_event_realtime_controller.dart';
 import '../data/couple_calendar_event.dart';
 import '../data/couple_calendar_event_failure.dart';
 import '../data/couple_calendar_event_repository.dart';
+import 'widgets/calendar_event_date_picker_sheet.dart';
+import 'widgets/calendar_event_reminder_offset_sheet.dart';
 import 'widgets/couple_calendar_event_basic_form.dart';
 import 'widgets/couple_calendar_event_extras_form.dart';
 
@@ -236,20 +240,20 @@ class _CoupleCalendarEventEditorScreenState
           _showBasicStep();
         }
       },
-      child: SettingsPageLayout(
-        title: _step == _CalendarEventEditorStep.basic
-            ? widget.isCreating
-                  ? '일정 추가'
-                  : '일정 수정'
-            : '꾸미기',
-        onBackPressed: _handleBackPressed,
-        action: SizedBox(
-          width: 64,
-          child: _step == _CalendarEventEditorStep.basic
-              ? TextButton(
+      child: AppPageLayout(
+        header: AppPageHeader(
+          title: _step == _CalendarEventEditorStep.basic
+              ? widget.isCreating
+                    ? '일정 추가'
+                    : '일정 수정'
+              : '꾸미기',
+          onBackPressed: _handleBackPressed,
+          action: _step == _CalendarEventEditorStep.basic
+              ? IconButton(
                   key: const Key('calendar-event-next'),
+                  tooltip: '다음',
                   onPressed: _canSave && canEdit ? _showExtrasStep : null,
-                  child: const Text('다음'),
+                  icon: const Icon(Icons.chevron_right_rounded),
                 )
               : IconButton(
                   key: const Key('calendar-event-save'),
@@ -267,55 +271,65 @@ class _CoupleCalendarEventEditorScreenState
             ? const Center(child: AppLoadingIndicator(strokeWidth: 2))
             : _loadFailed
             ? _LoadFailure(onRetry: _loadEvent)
-            : _step == _CalendarEventEditorStep.basic
-            ? CoupleCalendarEventBasicForm(
-                titleController: _titleController,
-                selectedDate: _selectedDate,
-                repeatRule: _repeatRule,
-                reminder: _reminder,
-                canEdit: canEdit,
-                isSaving: _isSaving,
-                isReminderUnavailable: isReminderUnavailable,
-                onDatePressed: () => _pickDate(relationshipStartDate, today),
-                onRepeatRuleChanged: (value) {
-                  setState(() {
-                    _repeatRule = value;
-                  });
+            : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final offsetAnimation = Tween<Offset>(
+                    begin: const Offset(0.025, 0),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: offsetAnimation,
+                      child: child,
+                    ),
+                  );
                 },
-                onReminderEnabledChanged: (value) {
-                  setState(() {
-                    _reminder = CoupleCalendarEventReminder(
-                      isEnabled: value,
-                      offsetDays: _reminder.offsetDays,
-                      hour: _reminder.hour,
-                      minute: _reminder.minute,
-                    );
-                  });
-                },
-                onReminderOffsetChanged: (value) {
-                  setState(() {
-                    _reminder = CoupleCalendarEventReminder(
-                      isEnabled: true,
-                      offsetDays: value,
-                      hour: _reminder.hour,
-                      minute: _reminder.minute,
-                    );
-                  });
-                },
-                onReminderTimePressed: _pickReminderTime,
-              )
-            : CoupleCalendarEventExtrasForm(
-                memoController: _memoController,
-                drawingController: _drawingController,
-                mode: _extrasMode,
-                canEdit: canEdit,
-                isSaving: _isSaving,
-                onModeChanged: (mode) {
-                  setState(() {
-                    _extrasMode = mode;
-                  });
-                },
-                onClearDrawing: _confirmClearDrawing,
+                child: _step == _CalendarEventEditorStep.basic
+                    ? CoupleCalendarEventBasicForm(
+                        titleController: _titleController,
+                        selectedDate: _selectedDate,
+                        repeatRule: _repeatRule,
+                        reminder: _reminder,
+                        canEdit: canEdit,
+                        isSaving: _isSaving,
+                        isReminderUnavailable: isReminderUnavailable,
+                        onDatePressed: () =>
+                            _pickDate(relationshipStartDate, today),
+                        onRepeatRuleChanged: (value) {
+                          setState(() {
+                            _repeatRule = value;
+                          });
+                        },
+                        onReminderEnabledChanged: (value) {
+                          setState(() {
+                            _reminder = CoupleCalendarEventReminder(
+                              isEnabled: value,
+                              offsetDays: _reminder.offsetDays,
+                              hour: _reminder.hour,
+                              minute: _reminder.minute,
+                            );
+                          });
+                        },
+                        onReminderOffsetPressed: _pickReminderOffset,
+                        onReminderTimePressed: _pickReminderTime,
+                      )
+                    : CoupleCalendarEventExtrasForm(
+                        memoController: _memoController,
+                        drawingController: _drawingController,
+                        mode: _extrasMode,
+                        canEdit: canEdit,
+                        isSaving: _isSaving,
+                        onModeChanged: (mode) {
+                          setState(() {
+                            _extrasMode = mode;
+                          });
+                        },
+                        onClearDrawing: _confirmClearDrawing,
+                      ),
               ),
       ),
     );
@@ -347,13 +361,13 @@ class _CoupleCalendarEventEditorScreenState
   }
 
   Future<void> _pickDate(DateTime relationshipStartDate, DateTime today) async {
-    final selected = await showDatePicker(
+    final selected = await showCalendarEventDatePickerSheet(
       context: context,
       initialDate: _selectedDate.isBefore(relationshipStartDate)
           ? relationshipStartDate
           : _selectedDate,
-      firstDate: relationshipStartDate,
-      lastDate: appCalendarLastSupportedDate,
+      minDate: relationshipStartDate,
+      maxDate: appCalendarLastSupportedDate,
     );
     if (selected != null && mounted) {
       setState(() {
@@ -365,9 +379,27 @@ class _CoupleCalendarEventEditorScreenState
     }
   }
 
-  Future<void> _pickReminderTime() async {
-    final selected = await showTimePicker(
+  Future<void> _pickReminderOffset() async {
+    final selected = await showCalendarEventReminderOffsetSheet(
       context: context,
+      selectedOffsetDays: _reminder.offsetDays,
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _reminder = CoupleCalendarEventReminder(
+          isEnabled: true,
+          offsetDays: selected,
+          hour: _reminder.hour,
+          minute: _reminder.minute,
+        );
+      });
+    }
+  }
+
+  Future<void> _pickReminderTime() async {
+    final selected = await showAppTimePickerSheet(
+      context: context,
+      title: '알림 시간',
       initialTime: TimeOfDay(hour: _reminder.hour, minute: _reminder.minute),
     );
     if (selected != null && mounted) {

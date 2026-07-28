@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/couple_calendar_event.dart';
+import 'calendar_event_form_style.dart';
+import 'calendar_event_reminder_offset_sheet.dart';
 
 class CoupleCalendarEventBasicForm extends StatelessWidget {
   const CoupleCalendarEventBasicForm({
@@ -17,7 +19,7 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
     required this.onDatePressed,
     required this.onRepeatRuleChanged,
     required this.onReminderEnabledChanged,
-    required this.onReminderOffsetChanged,
+    required this.onReminderOffsetPressed,
     required this.onReminderTimePressed,
   });
 
@@ -33,7 +35,7 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
   final VoidCallback onDatePressed;
   final ValueChanged<CoupleCalendarEventRepeatRule> onRepeatRuleChanged;
   final ValueChanged<bool> onReminderEnabledChanged;
-  final ValueChanged<int> onReminderOffsetChanged;
+  final VoidCallback onReminderOffsetPressed;
   final VoidCallback onReminderTimePressed;
 
   bool get _isEnabled => canEdit && !isSaving;
@@ -55,86 +57,118 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
           controller: titleController,
           enabled: _isEnabled,
           maxLength: _titleMaxLength,
+          style: AppTextStyles.homeBody,
           textInputAction: TextInputAction.next,
-          decoration: calendarEventInputDecoration('일정 제목'),
+          decoration: CalendarEventFormStyle.titleInputDecoration('일정 제목'),
         ),
         const SizedBox(height: 24),
-        const _SectionLabel(label: '날짜'),
-        _SelectionRow(
-          key: const Key('calendar-event-date'),
-          icon: Icons.calendar_today_outlined,
-          label: _formatDate(selectedDate),
-          enabled: _isEnabled,
-          onTap: onDatePressed,
-        ),
-        const SizedBox(height: 24),
-        const _SectionLabel(label: '반복'),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<CoupleCalendarEventRepeatRule>(
-            segments: const [
-              ButtonSegment(
-                value: CoupleCalendarEventRepeatRule.none,
-                label: Text('반복 안 함'),
+        const _SectionLabel(label: '일정'),
+        _FormGroup(
+          children: [
+            _SelectionRow(
+              key: const Key('calendar-event-date'),
+              icon: Icons.calendar_today_outlined,
+              title: '날짜',
+              value: _formatDate(selectedDate),
+              enabled: _isEnabled,
+              onTap: onDatePressed,
+            ),
+            const _FormDivider(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '반복',
+                    style: AppTextStyles.homeCharacterLabel.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SegmentedButton<CoupleCalendarEventRepeatRule>(
+                    key: const Key('calendar-event-repeat-control'),
+                    segments: const [
+                      ButtonSegment(
+                        value: CoupleCalendarEventRepeatRule.none,
+                        label: Text('반복 안 함'),
+                      ),
+                      ButtonSegment(
+                        value: CoupleCalendarEventRepeatRule.yearly,
+                        label: Text('매년 반복'),
+                      ),
+                    ],
+                    selected: {repeatRule},
+                    showSelectedIcon: false,
+                    style: CalendarEventFormStyle.segmentedButton,
+                    onSelectionChanged: _isEnabled
+                        ? (value) => onRepeatRuleChanged(value.single)
+                        : null,
+                  ),
+                ],
               ),
-              ButtonSegment(
-                value: CoupleCalendarEventRepeatRule.yearly,
-                label: Text('매년 반복'),
-              ),
-            ],
-            selected: {repeatRule},
-            showSelectedIcon: false,
-            onSelectionChanged: _isEnabled
-                ? (value) => onRepeatRuleChanged(value.single)
-                : null,
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
         const _SectionLabel(label: '알림'),
-        SwitchListTile(
-          key: const Key('calendar-event-reminder-toggle'),
-          contentPadding: EdgeInsets.zero,
-          title: const Text('이 일정 알림 받기'),
-          subtitle: isReminderUnavailable
-              ? const Text('지난 일회성 일정에는 알림을 설정할 수 없어요')
-              : null,
-          value: effectiveReminder.isEnabled,
-          onChanged: _isEnabled && !isReminderUnavailable
-              ? onReminderEnabledChanged
-              : null,
+        _FormGroup(
+          children: [
+            SwitchListTile(
+              key: const Key('calendar-event-reminder-toggle'),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text('이 일정 알림 받기', style: AppTextStyles.homeBodyMedium),
+              subtitle: isReminderUnavailable
+                  ? Text(
+                      '지난 일회성 일정에는 설정할 수 없어요',
+                      style: AppTextStyles.homeCharacterLabel.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    )
+                  : null,
+              activeThumbColor: AppColors.onBrandAction,
+              activeTrackColor: AppColors.brandAccent,
+              value: effectiveReminder.isEnabled,
+              onChanged: _isEnabled && !isReminderUnavailable
+                  ? onReminderEnabledChanged
+                  : null,
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: effectiveReminder.isEnabled
+                  ? Column(
+                      children: [
+                        const _FormDivider(),
+                        _SelectionRow(
+                          key: const Key('calendar-event-reminder-offset'),
+                          icon: Icons.notifications_active_outlined,
+                          title: '알림 날짜',
+                          value: calendarEventReminderOffsetLabel(
+                            effectiveReminder.offsetDays,
+                          ),
+                          enabled: _isEnabled,
+                          onTap: onReminderOffsetPressed,
+                        ),
+                        const _FormDivider(),
+                        _SelectionRow(
+                          key: const Key('calendar-event-reminder-time'),
+                          icon: Icons.schedule_outlined,
+                          title: '알림 시간',
+                          value: TimeOfDay(
+                            hour: effectiveReminder.hour,
+                            minute: effectiveReminder.minute,
+                          ).format(context),
+                          enabled: _isEnabled,
+                          onTap: onReminderTimePressed,
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
         ),
-        if (effectiveReminder.isEnabled) ...[
-          const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            key: const Key('calendar-event-reminder-offset'),
-            initialValue: effectiveReminder.offsetDays,
-            decoration: calendarEventInputDecoration('알림 시점'),
-            items: const [
-              DropdownMenuItem(value: 0, child: Text('당일')),
-              DropdownMenuItem(value: 1, child: Text('1일 전')),
-              DropdownMenuItem(value: 3, child: Text('3일 전')),
-              DropdownMenuItem(value: 7, child: Text('7일 전')),
-            ],
-            onChanged: _isEnabled
-                ? (value) {
-                    if (value != null) {
-                      onReminderOffsetChanged(value);
-                    }
-                  }
-                : null,
-          ),
-          const SizedBox(height: 12),
-          _SelectionRow(
-            key: const Key('calendar-event-reminder-time'),
-            icon: Icons.schedule_outlined,
-            label: TimeOfDay(
-              hour: effectiveReminder.hour,
-              minute: effectiveReminder.minute,
-            ).format(context),
-            enabled: _isEnabled,
-            onTap: onReminderTimePressed,
-          ),
-        ],
       ],
     );
   }
@@ -158,32 +192,48 @@ class _SelectionRow extends StatelessWidget {
   const _SelectionRow({
     super.key,
     required this.icon,
-    required this.label,
+    required this.title,
+    required this.value,
     required this.enabled,
     required this.onTap,
   });
 
   final IconData icon;
-  final String label;
+  final String title;
+  final String value;
   final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF4F4F4),
-      borderRadius: BorderRadius.circular(6),
+      color: Colors.transparent,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(6),
+        splashColor: AppColors.settingsPressed,
+        highlightColor: AppColors.settingsPressed,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Icon(icon, size: 20, color: AppColors.textMuted),
-              const SizedBox(width: 12),
-              Text(label, style: AppTextStyles.homeBody),
-              const Spacer(),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.homeCharacterLabel.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(value, style: AppTextStyles.homeBodyMedium),
+                  ],
+                ),
+              ),
               const Icon(
                 Icons.chevron_right,
                 size: 20,
@@ -197,24 +247,27 @@ class _SelectionRow extends StatelessWidget {
   }
 }
 
-InputDecoration calendarEventInputDecoration(String hintText) {
-  return InputDecoration(
-    hintText: hintText,
-    filled: true,
-    fillColor: const Color(0xFFF4F4F4),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: BorderSide.none,
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: BorderSide.none,
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: AppColors.textPrimary),
-    ),
-  );
+class _FormGroup extends StatelessWidget {
+  const _FormGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: children);
+  }
+}
+
+class _FormDivider extends StatelessWidget {
+  const _FormDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(left: 50),
+      child: Divider(height: 1, thickness: 1, color: AppColors.settingsDivider),
+    );
+  }
 }
 
 String _formatDate(DateTime date) {
