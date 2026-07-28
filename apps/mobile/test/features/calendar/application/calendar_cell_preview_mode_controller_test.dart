@@ -65,6 +65,11 @@ class _MemoryStore implements CalendarCellPreviewPreferenceStore {
   bool failWrites = false;
 
   @override
+  Future<void> clearForUser(String userId) async {
+    values.remove(userId);
+  }
+
+  @override
   Future<CalendarCellPreviewMode> read({required String userId}) async {
     return values[userId] ?? CalendarCellPreviewMode.all;
   }

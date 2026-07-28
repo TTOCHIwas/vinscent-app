@@ -43,6 +43,29 @@ void main() {
       CalendarCellPreviewMode.all,
     );
   });
+
+  test('clears only the targeted user preview mode', () async {
+    final preferences = _MemoryPreferences();
+    final store = SharedPreferencesCalendarCellPreviewPreferenceStore(
+      preferences: preferences,
+    );
+    await store.write(
+      userId: 'user-a',
+      mode: CalendarCellPreviewMode.cardsOnly,
+    );
+    await store.write(
+      userId: 'user-b',
+      mode: CalendarCellPreviewMode.eventsOnly,
+    );
+
+    await store.clearForUser('user-a');
+
+    expect(await store.read(userId: 'user-a'), CalendarCellPreviewMode.all);
+    expect(
+      await store.read(userId: 'user-b'),
+      CalendarCellPreviewMode.eventsOnly,
+    );
+  });
 }
 
 class _MemoryPreferences implements CalendarCellPreviewPreferences {
@@ -50,6 +73,11 @@ class _MemoryPreferences implements CalendarCellPreviewPreferences {
 
   @override
   Future<String?> getString(String key) async => values[key];
+
+  @override
+  Future<void> remove(String key) async {
+    values.remove(key);
+  }
 
   @override
   Future<void> setString(String key, String value) async {

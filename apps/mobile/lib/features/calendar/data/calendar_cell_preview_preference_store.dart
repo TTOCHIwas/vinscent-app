@@ -15,6 +15,8 @@ abstract interface class CalendarCellPreviewPreferenceStore {
     required String userId,
     required CalendarCellPreviewMode mode,
   });
+
+  Future<void> clearForUser(String userId);
 }
 
 class SharedPreferencesCalendarCellPreviewPreferenceStore
@@ -42,6 +44,11 @@ class SharedPreferencesCalendarCellPreviewPreferenceStore
     return _preferences.setString(_keyFor(userId), mode.storageValue);
   }
 
+  @override
+  Future<void> clearForUser(String userId) {
+    return _preferences.remove(_keyFor(userId));
+  }
+
   String _keyFor(String userId) => '$_keyPrefix.$userId';
 }
 
@@ -49,6 +56,8 @@ abstract interface class CalendarCellPreviewPreferences {
   Future<String?> getString(String key);
 
   Future<void> setString(String key, String value);
+
+  Future<void> remove(String key);
 }
 
 class SharedPreferencesCalendarCellPreviewPreferences
@@ -66,4 +75,7 @@ class SharedPreferencesCalendarCellPreviewPreferences
   Future<void> setString(String key, String value) {
     return _preferences.setString(key, value);
   }
+
+  @override
+  Future<void> remove(String key) => _preferences.remove(key);
 }
