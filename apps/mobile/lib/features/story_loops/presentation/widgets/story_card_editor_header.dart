@@ -37,7 +37,6 @@ class StoryCardEditorHeader extends StatelessWidget {
                 child: AppBackButton(
                   onPressed: onBackPressed,
                   color: Colors.white,
-                  iconSize: 30,
                 ),
               ),
               const Text('오늘의 스토리', style: AppTextStyles.storyEditorTitle),

@@ -505,7 +505,7 @@ class _ArtworkEditorHeader extends StatelessWidget {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: AppBackButton(onPressed: onBackPressed, iconSize: 32),
+              child: AppBackButton(onPressed: onBackPressed),
             ),
             Text(title, style: AppTextStyles.shellTitle),
             Align(

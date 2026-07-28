@@ -253,8 +253,15 @@ void main() {
 
     expect(find.byType(AppPageHeader), findsOneWidget);
     expect(
-      tester.widget<AppBackButton>(find.byType(AppBackButton)).iconSize,
-      28,
+      tester
+          .widget<IconButton>(
+            find.descendant(
+              of: find.byType(AppBackButton),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .iconSize,
+      24,
     );
   });
 
