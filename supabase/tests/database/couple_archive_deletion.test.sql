@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(7);
+select plan(8);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -76,6 +76,23 @@ values
     '20000000-0000-0000-0000-000000000099/recordings/untouched.m4a'
   );
 
+insert into public.questions (
+  id,
+  source,
+  question_key,
+  question_text,
+  is_active,
+  personalized_for_couple_id
+)
+values (
+  '40000000-0000-0000-0000-000000000011',
+  'ai',
+  'archive_deletion_test_question',
+  'This couple-scoped question must be deleted.',
+  false,
+  '20000000-0000-0000-0000-000000000011'
+);
+
 select set_config(
   'request.jwt.claim.sub',
   '10000000-0000-0000-0000-000000000011',
@@ -98,6 +115,16 @@ select is(
   ),
   0::bigint,
   'the archive is removed after the first request'
+);
+
+select is(
+  (
+    select count(*)
+    from public.questions
+    where id = '40000000-0000-0000-0000-000000000011'
+  ),
+  0::bigint,
+  'couple-scoped AI question text is deleted with the archive'
 );
 
 select is(
