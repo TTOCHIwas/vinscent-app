@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_character_speech_row.dart';
+import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 
 void main() {
   testWidgets('does not label static character speech as AI-generated', (
     tester,
   ) async {
-    await tester.pumpWidget(
+    await _pump(
+      tester,
       const MaterialApp(
-        home: Scaffold(
-          body: AiCharacterSpeechRow(speechText: '답을 생각하는 중'),
-        ),
+        home: Scaffold(body: AiCharacterSpeechRow(speechText: '답을 생각하는 중')),
       ),
     );
 
@@ -23,7 +24,8 @@ void main() {
   testWidgets('labels generated character speech only when requested', (
     tester,
   ) async {
-    await tester.pumpWidget(
+    await _pump(
+      tester,
       const MaterialApp(
         home: Scaffold(
           body: AiCharacterSpeechRow(
@@ -41,7 +43,8 @@ void main() {
   });
 
   testWidgets('labels generated custom speech content', (tester) async {
-    await tester.pumpWidget(
+    await _pump(
+      tester,
       const MaterialApp(
         home: Scaffold(
           body: AiCharacterSpeechColumn.custom(
@@ -58,4 +61,17 @@ void main() {
       findsOneWidget,
     );
   });
+}
+
+Future<void> _pump(WidgetTester tester, Widget child) {
+  return tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        coupleCharacterControllerProvider.overrideWithBuild(
+          (ref, notifier) async => null,
+        ),
+      ],
+      child: child,
+    ),
+  );
 }

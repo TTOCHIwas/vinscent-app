@@ -6,6 +6,7 @@ import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../characters/presentation/widgets/couple_character_avatar.dart';
+import 'ai_generated_content_indicator.dart';
 
 class AiCharacterSpeechRow extends StatelessWidget {
   const AiCharacterSpeechRow({
@@ -18,6 +19,8 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.maxLines,
     this.semanticLabel,
     this.textAlign = TextAlign.start,
+    this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   }) : _content = null;
 
   const AiCharacterSpeechRow.custom({
@@ -28,6 +31,8 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.bubbleKey,
     this.characterSize = 96,
     this.maximumContentWidth = 360,
+    this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   }) : speechText = null,
        maxLines = null,
        textAlign = TextAlign.start,
@@ -42,20 +47,22 @@ class AiCharacterSpeechRow extends StatelessWidget {
   final int? maxLines;
   final Widget? _content;
   final TextAlign textAlign;
+  final bool showGeneratedIndicator;
+  final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
+    final contentPadding = showGeneratedIndicator
+        ? const EdgeInsets.fromLTRB(16, 12, 38, 18)
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
     final bubble = _content == null
         ? CharacterSpeechBubble(
             key: bubbleKey,
             speechText: speechText!,
             maxWidth: double.infinity,
             maxLines: maxLines,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+            contentPadding: contentPadding,
             tailSize: const Size(10, 18),
             tailPosition: SpeechBubbleTailPosition.left,
             textStyle: AppTextStyles.homeQuestionBubble,
@@ -65,19 +72,22 @@ class AiCharacterSpeechRow extends StatelessWidget {
             key: bubbleKey,
             semanticLabel: label,
             maxWidth: double.infinity,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+            contentPadding: contentPadding,
             tailSize: const Size(10, 18),
             tailPosition: SpeechBubbleTailPosition.left,
             child: _content,
           );
+    final presentedBubble = _GeneratedSpeechMarkerOverlay(
+      showIndicator: showGeneratedIndicator,
+      onIndicatorPressed: onGeneratedIndicatorPressed,
+      tailPosition: SpeechBubbleTailPosition.left,
+      child: Semantics(label: label, excludeSemantics: true, child: bubble),
+    );
 
     return CharacterSpeechRow(
       maximumContentWidth: maximumContentWidth,
       character: CoupleCharacterAvatar(key: characterKey, size: characterSize),
-      bubble: Semantics(label: label, excludeSemantics: true, child: bubble),
+      bubble: presentedBubble,
     );
   }
 }
@@ -93,6 +103,8 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.maxLines,
     this.semanticLabel,
     this.textAlign = TextAlign.start,
+    this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   }) : _content = null;
 
   const AiCharacterSpeechColumn.custom({
@@ -103,6 +115,8 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.bubbleKey,
     this.characterSize = 132,
     this.maximumBubbleWidth = 300,
+    this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   }) : speechText = null,
        maxLines = null,
        textAlign = TextAlign.start,
@@ -117,16 +131,22 @@ class AiCharacterSpeechColumn extends StatelessWidget {
   final int? maxLines;
   final Widget? _content;
   final TextAlign textAlign;
+  final bool showGeneratedIndicator;
+  final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
+    final contentPadding = showGeneratedIndicator
+        ? const EdgeInsets.fromLTRB(18, 12, 40, 18)
+        : const EdgeInsets.symmetric(horizontal: 18, vertical: 12);
     final bubble = _content == null
         ? CharacterSpeechBubble(
             key: bubbleKey,
             speechText: speechText!,
             maxWidth: maximumBubbleWidth,
             maxLines: maxLines,
+            contentPadding: contentPadding,
             tailPosition: SpeechBubbleTailPosition.bottom,
             textStyle: AppTextStyles.homeQuestionBubble,
             textAlign: textAlign,
@@ -135,15 +155,22 @@ class AiCharacterSpeechColumn extends StatelessWidget {
             key: bubbleKey,
             semanticLabel: label,
             maxWidth: maximumBubbleWidth,
+            contentPadding: contentPadding,
             tailPosition: SpeechBubbleTailPosition.bottom,
             child: _content,
           );
+    final presentedBubble = _GeneratedSpeechMarkerOverlay(
+      showIndicator: showGeneratedIndicator,
+      onIndicatorPressed: onGeneratedIndicatorPressed,
+      tailPosition: SpeechBubbleTailPosition.bottom,
+      child: Semantics(label: label, excludeSemantics: true, child: bubble),
+    );
 
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Semantics(label: label, excludeSemantics: true, child: bubble),
+          presentedBubble,
           const SizedBox(height: 10),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
@@ -157,6 +184,39 @@ class AiCharacterSpeechColumn extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _GeneratedSpeechMarkerOverlay extends StatelessWidget {
+  const _GeneratedSpeechMarkerOverlay({
+    required this.showIndicator,
+    required this.onIndicatorPressed,
+    required this.tailPosition,
+    required this.child,
+  });
+
+  final bool showIndicator;
+  final VoidCallback? onIndicatorPressed;
+  final SpeechBubbleTailPosition tailPosition;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showIndicator) {
+      return child;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        Positioned(
+          right: 5,
+          bottom: tailPosition == SpeechBubbleTailPosition.bottom ? 11 : 3,
+          child: AiGeneratedContentIndicator(onPressed: onIndicatorPressed),
+        ),
+      ],
     );
   }
 }
