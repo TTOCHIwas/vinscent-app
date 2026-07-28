@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/presentation/widgets/app_page_layout.dart';
 import 'settings_page_header.dart';
 
 class SettingsPageLayout extends StatelessWidget {
@@ -19,26 +19,13 @@ class SettingsPageLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppColors.background,
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            SettingsPageHeader(
-              title: title,
-              onBackPressed: onBackPressed,
-              action: action,
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: child,
-              ),
-            ),
-          ],
-        ),
+    return AppPageLayout(
+      header: SettingsPageHeader(
+        title: title,
+        onBackPressed: onBackPressed,
+        action: action,
       ),
+      child: child,
     );
   }
 }
