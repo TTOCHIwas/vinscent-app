@@ -41,6 +41,7 @@ class AppleAuthClient {
         nonce: hashedNonce,
       );
       final idToken = credential.identityToken;
+      final authorizationCode = credential.authorizationCode.trim();
 
       if (idToken == null || idToken.isEmpty) {
         throw const SocialAuthFailure(
@@ -48,10 +49,17 @@ class AppleAuthClient {
           message: 'Apple identity token is missing.',
         );
       }
+      if (authorizationCode.isEmpty) {
+        throw const SocialAuthFailure(
+          SocialAuthFailureReason.providerFailed,
+          message: 'Apple authorization code is missing.',
+        );
+      }
 
       return AppleLoginTokens(
         idToken: idToken,
         rawNonce: rawNonce,
+        authorizationCode: authorizationCode,
         email: credential.email,
         givenName: credential.givenName,
         familyName: credential.familyName,
@@ -115,6 +123,7 @@ class AppleLoginTokens {
   const AppleLoginTokens({
     required this.idToken,
     required this.rawNonce,
+    required this.authorizationCode,
     this.email,
     this.givenName,
     this.familyName,
@@ -122,6 +131,7 @@ class AppleLoginTokens {
 
   final String idToken;
   final String rawNonce;
+  final String authorizationCode;
   final String? email;
   final String? givenName;
   final String? familyName;
