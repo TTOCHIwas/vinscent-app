@@ -15,6 +15,8 @@ import 'package:vinscent/features/recordings/application/recording_slot_placemen
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/data/couple_recording_repository.dart';
 import 'package:vinscent/features/recordings/presentation/recording_library_screen.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 
 import '../../../support/couple_fixtures.dart';
 
@@ -103,6 +105,114 @@ void main() {
 
     expect(find.text('artwork'), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('reports the partner current recording', (tester) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    final overview = CoupleRecordingOverview(
+      slotLimit: 0,
+      currentRecording: _currentRecording(senderUserId: 'partner-id'),
+      savedSlots: const [],
+    );
+    await _pumpLibrary(
+      tester,
+      overview: overview,
+      safetyReportRepository: safetyRepository,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('recording-library-current-report')),
+    );
+    await tester.pumpAndSettle();
+    await _submitReport(tester);
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.recording,
+        id: 'current-recording',
+      ),
+    );
+  });
+
+  testWidgets('reports a slot last edited by the partner', (tester) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    final overview = CoupleRecordingOverview(
+      slotLimit: 1,
+      currentRecording: null,
+      savedSlots: [
+        _slot(
+          senderUserId: 'partner-id',
+          updatedByUserId: 'partner-id',
+        ),
+      ],
+    );
+    await _pumpLibrary(
+      tester,
+      overview: overview,
+      safetyReportRepository: safetyRepository,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('recording-library-slot-menu-slot-1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey('recording-library-slot-action-report-slot-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _submitReport(tester);
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.recording,
+        id: 'slot-1',
+      ),
+    );
+  });
+
+  testWidgets('reports partner audio when I last edited its slot', (
+    tester,
+  ) async {
+    final safetyRepository = _FakeSafetyReportRepository();
+    final overview = CoupleRecordingOverview(
+      slotLimit: 1,
+      currentRecording: null,
+      savedSlots: [
+        _slot(
+          senderUserId: 'partner-id',
+          updatedByUserId: _profile.id,
+        ),
+      ],
+    );
+    await _pumpLibrary(
+      tester,
+      overview: overview,
+      safetyReportRepository: safetyRepository,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('recording-library-slot-menu-slot-1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey('recording-library-slot-action-report-slot-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _submitReport(tester);
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.recording,
+        id: 'recording-1',
+      ),
+    );
   });
 
   testWidgets('slot title save uses the shared check action', (tester) async {
@@ -279,6 +389,7 @@ Future<_LibraryHarness> _pumpLibrary(
   WidgetTester tester, {
   required CoupleRecordingOverview overview,
   Couple? couple,
+  SafetyReportRepository? safetyReportRepository,
 }) async {
   final repository = _FakeRecordingRepository(overview);
   final playbackController = _FakePlaybackController();
@@ -318,6 +429,10 @@ Future<_LibraryHarness> _pumpLibrary(
         recordingPlaybackControllerProvider(
           RecordingPlaybackSurface.library,
         ).overrideWith(() => playbackController),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -335,6 +450,16 @@ Future<_LibraryHarness> _pumpLibrary(
   );
 }
 
+Future<void> _submitReport(WidgetTester tester) async {
+  await tester.tap(
+    find.byKey(const Key('safety-report-reason-inappropriate')),
+  );
+  await tester.pump();
+  await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+  await tester.tap(find.byKey(const Key('safety-report-submit')));
+  await tester.pumpAndSettle();
+}
+
 class _LibraryHarness {
   const _LibraryHarness({
     required this.router,
@@ -345,6 +470,15 @@ class _LibraryHarness {
   final GoRouter router;
   final ProviderContainer container;
   final _FakePlaybackController playbackController;
+}
+
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final requests = <SafetyReportRequest>[];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
+  }
 }
 
 class _FakePlaybackController extends RecordingPlaybackController {
@@ -433,19 +567,22 @@ class _FakeRecordingRepository implements CoupleRecordingRepository {
   }) async {}
 }
 
-CoupleRecordingSlot _slot() {
+CoupleRecordingSlot _slot({
+  String senderUserId = 'user-id',
+  String? updatedByUserId = 'user-id',
+}) {
   final timestamp = DateTime.utc(2026, 7, 18);
   return CoupleRecordingSlot(
     slotId: 'slot-1',
     slotIndex: 1,
     title: '첫 녹음',
     recordingId: 'recording-1',
-    senderUserId: 'user-id',
+    senderUserId: senderUserId,
     durationMs: 1000,
     recordedAt: timestamp,
     slotRevision: 1,
     createdByUserId: 'user-id',
-    updatedByUserId: 'user-id',
+    updatedByUserId: updatedByUserId,
     createdAt: timestamp,
     updatedAt: timestamp,
     audioUrl: 'https://example.com/audio.m4a',
@@ -458,11 +595,11 @@ CoupleRecordingSlot _slot() {
   );
 }
 
-CurrentCoupleRecording _currentRecording() {
+CurrentCoupleRecording _currentRecording({String senderUserId = 'user-id'}) {
   final timestamp = DateTime.utc(2026, 7, 18);
   return CurrentCoupleRecording(
     recordingId: 'current-recording',
-    senderUserId: 'user-id',
+    senderUserId: senderUserId,
     durationMs: 2000,
     recordedAt: timestamp,
     revision: 1,
