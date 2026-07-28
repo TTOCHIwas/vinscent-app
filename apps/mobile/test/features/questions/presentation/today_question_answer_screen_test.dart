@@ -240,6 +240,10 @@ void main() {
         findsOneWidget,
       );
       expect(
+        find.byKey(const Key('ai-generated-content-indicator')),
+        findsOneWidget,
+      );
+      expect(
         findTextIgnoringWordJoiners('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'),
         findsOneWidget,
       );
@@ -270,6 +274,10 @@ void main() {
       expect(
         findTextIgnoringWordJoiners('둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!'),
         findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ai-generated-content-indicator')),
+        findsNothing,
       );
       expect(find.byKey(const Key('ai-question-feedback')), findsNothing);
     });
