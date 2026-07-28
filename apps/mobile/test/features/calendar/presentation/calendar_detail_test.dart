@@ -6,6 +6,7 @@ import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_c
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_sections.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_detail_title.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
@@ -121,6 +122,42 @@ void main() {
     );
     expect(findTextIgnoringWordJoiners('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
+  });
+
+  testWidgets('reports an AI-generated question from calendar detail', (
+    tester,
+  ) async {
+    final safetyRepository = FakeSafetyReportRepository();
+    final repository = FakeStoryLoopReadRepository(
+      details: {DateTime(2026, 5, 5): aiCompletedDetail},
+    );
+    await pumpCalendar(
+      tester,
+      repository: repository,
+      safetyReportRepository: safetyRepository,
+    );
+
+    await tester.tap(find.text('5').first);
+    await tester.pumpAndSettle();
+    await scrollCalendarUp(tester);
+    await scrollCalendarUp(tester);
+    final indicator = find.byKey(const Key('ai-generated-content-indicator'));
+    await tester.ensureVisible(indicator);
+    await tester.tap(indicator);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+    await tester.tap(find.byKey(const Key('safety-report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      safetyRepository.requests.single.target,
+      const SafetyReportTarget(
+        type: SafetyReportTargetType.aiQuestion,
+        id: 'ai-daily-question-id',
+      ),
+    );
   });
 
   testWidgets('opens a selected history card in the shared detail overlay', (

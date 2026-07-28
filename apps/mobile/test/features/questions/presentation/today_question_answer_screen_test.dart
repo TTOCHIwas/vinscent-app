@@ -212,6 +212,56 @@ void main() {
       expect(find.byType(TextField), findsNothing);
     });
 
+    testWidgets('reports an AI-generated question title', (tester) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+      final safetyRepository = _FakeSafetyReportRepository();
+      final aiQuestion = DailyQuestion(
+        dailyQuestionId: 'ai-daily-question-id',
+        coupleId: 'couple-id',
+        questionId: 'ai-question-id',
+        questionText: 'AI가 만든 오늘 질문',
+        questionSource: QuestionSource.ai,
+        questionCategory: 'daily',
+        questionMood: 'warm',
+        assignedDate: DateTime(2026, 5, 31),
+        status: DailyQuestionStatus.completed,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        safetyReportRepository: safetyRepository,
+        storyLoopDetails: {
+          DateTime(2026, 5, 31): _storyLoopDetailFor(
+            date: DateTime(2026, 5, 31),
+            question: aiQuestion,
+            answerState: _completedAnswerState,
+            canAnswerQuestion: false,
+          ),
+        },
+      );
+
+      final indicator = find.byKey(const Key('ai-generated-content-indicator'));
+      await tester.ensureVisible(indicator);
+      await tester.tap(indicator);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+      await tester.tap(find.byKey(const Key('safety-report-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        safetyRepository.requests.single.target,
+        const SafetyReportTarget(
+          type: SafetyReportTargetType.aiQuestion,
+          id: 'ai-daily-question-id',
+        ),
+      );
+    });
+
     testWidgets('shows published AI feedback after both answers', (
       tester,
     ) async {

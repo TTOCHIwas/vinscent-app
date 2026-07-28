@@ -21,6 +21,8 @@ import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
@@ -72,6 +74,7 @@ Future<GoRouter> pumpCalendar(
   List<CalendarEventDateRange>? calendarEventRequests,
   CalendarCellPreviewMode previewMode = CalendarCellPreviewMode.all,
   Future<CalendarCellPreviewMode>? previewModeResult,
+  SafetyReportRepository? safetyReportRepository,
   double textScaleFactor = 1,
 }) async {
   final calendarEventRepository = _FakeCalendarEventRepository(
@@ -153,6 +156,10 @@ Future<GoRouter> pumpCalendar(
         coupleMemberBirthdayProvider.overrideWith(
           (ref) async => memberBirthdays,
         ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -349,6 +356,45 @@ final completedDetail = sampleStoryLoopDetail(
     ),
   ),
 );
+
+final aiCompletedDetail = sampleStoryLoopDetail(
+  coupleDate: DateTime(2026, 5, 5),
+  loopStatus: StoryLoopStatus.completed,
+  canEditStory: false,
+  canAnswerQuestion: false,
+  question: StoryLoopQuestionDetail(
+    question: DailyQuestion(
+      dailyQuestionId: 'ai-daily-question-id',
+      coupleId: 'couple-id',
+      questionId: 'ai-question-id',
+      questionText: 'AI가 만든 지난 질문',
+      questionSource: QuestionSource.ai,
+      questionCategory: 'daily',
+      questionMood: 'warm',
+      assignedDate: DateTime(2026, 5, 5),
+      status: DailyQuestionStatus.completed,
+    ),
+    answerState: const DailyQuestionAnswerState(
+      dailyQuestionId: 'ai-daily-question-id',
+      status: DailyQuestionStatus.completed,
+      myAnswerId: 'my-answer-id',
+      myAnswerText: 'my answer',
+      partnerAnswerExists: true,
+      partnerAnswerId: 'partner-answer-id',
+      partnerAnswerText: 'partner answer',
+      answerCount: 2,
+    ),
+  ),
+);
+
+class FakeSafetyReportRepository implements SafetyReportRepository {
+  final List<SafetyReportRequest> requests = [];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
+  }
+}
 
 final cardOnlyDetail = StoryLoopDetail(
   coupleId: 'couple-id',
