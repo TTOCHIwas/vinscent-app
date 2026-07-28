@@ -26,6 +26,65 @@ test('authenticates a valid access token', async () => {
   assert.deepEqual(identity, { userId: 'user-1' });
 });
 
+test('includes the verified Apple subject in the authenticated identity', async () => {
+  const client = createClient({
+    async getUser() {
+      return {
+        data: {
+          user: {
+            id: 'user-1',
+            identities: [
+              {
+                provider: 'apple',
+                id: 'apple-identity-id',
+                identity_data: { sub: ' apple-user-1 ' },
+              },
+            ],
+          },
+        },
+        error: null,
+      };
+    },
+  });
+
+  const identity = await new SupabaseAccountDeletionAuthenticator(
+    client,
+  ).authenticate('access-token');
+
+  assert.deepEqual(identity, {
+    userId: 'user-1',
+    appleSubject: 'apple-user-1',
+  });
+});
+
+test('does not expose identity data from other providers as an Apple subject', async () => {
+  const client = createClient({
+    async getUser() {
+      return {
+        data: {
+          user: {
+            id: 'user-1',
+            identities: [
+              {
+                provider: 'kakao',
+                id: 'kakao-identity-id',
+                identity_data: { sub: 'kakao-user-1' },
+              },
+            ],
+          },
+        },
+        error: null,
+      };
+    },
+  });
+
+  const identity = await new SupabaseAccountDeletionAuthenticator(
+    client,
+  ).authenticate('access-token');
+
+  assert.deepEqual(identity, { userId: 'user-1' });
+});
+
 test('rejects an invalid Supabase session', async () => {
   const client = createClient({
     async getUser() {
