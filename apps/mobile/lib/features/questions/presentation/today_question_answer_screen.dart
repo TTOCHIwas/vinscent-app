@@ -379,7 +379,11 @@ class _QuestionDetailContent extends StatelessWidget {
           if (showQuestionAsTitle)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: QuestionDetailTitle(questionText: question.questionText),
+              child: QuestionDetailTitle(
+                questionText: question.questionText,
+                showGeneratedIndicator:
+                    question.questionSource == QuestionSource.ai,
+              ),
             )
           else
             QuestionAnswerPromptRow(questionText: question.questionText),

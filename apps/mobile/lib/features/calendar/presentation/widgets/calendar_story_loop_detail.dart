@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../ai/presentation/widgets/ai_question_feedback_section.dart';
+import '../../../questions/data/daily_question.dart';
 import '../../../questions/data/daily_question_answer_state.dart';
 import '../../../questions/presentation/question_route_context.dart';
 import '../../../questions/presentation/widgets/question_answer_sections.dart';
@@ -95,6 +96,8 @@ class _LoadedDetailSection extends StatelessWidget {
             QuestionDetailTitle(
               questionText: question.question.questionText,
               textAlign: TextAlign.start,
+              showGeneratedIndicator:
+                  question.question.questionSource == QuestionSource.ai,
             ),
             const SizedBox(height: 20),
             QuestionAnswerOverview(
