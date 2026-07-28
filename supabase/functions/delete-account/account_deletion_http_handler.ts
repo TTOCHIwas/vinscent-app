@@ -6,6 +6,7 @@ import type {
 
 export type AccountIdentity = {
   userId: string;
+  appleSubject?: string;
 };
 
 export interface AccountDeletionAuthenticator {

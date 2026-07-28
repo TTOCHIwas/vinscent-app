@@ -3,9 +3,18 @@ import type { AccountDeletionGateway } from './account_deletion_service.ts';
 
 type SupabaseError = unknown;
 
+type SupabaseIdentity = {
+  provider?: unknown;
+  id?: unknown;
+  identity_data?: unknown;
+};
+
 type SupabaseUserResult = {
   data: {
-    user: { id: string } | null;
+    user: {
+      id: string;
+      identities?: SupabaseIdentity[] | null;
+    } | null;
   };
   error: SupabaseError;
 };
@@ -47,7 +56,12 @@ export class SupabaseAccountDeletionAuthenticator
     }
 
     const userId = data.user.id.trim();
-    return userId ? { userId } : null;
+    if (!userId) {
+      return null;
+    }
+
+    const appleSubject = appleSubjectFrom(data.user.identities);
+    return appleSubject ? { userId, appleSubject } : { userId };
   }
 }
 
@@ -86,4 +100,31 @@ export class SupabaseAccountDeletionGateway
       throw new Error('auth_user_deletion_failed', { cause: error });
     }
   }
+}
+
+function appleSubjectFrom(
+  identities: SupabaseIdentity[] | null | undefined,
+): string | null {
+  const appleIdentity = identities?.find(
+    (identity) => identity.provider === 'apple',
+  );
+  if (!appleIdentity) {
+    return null;
+  }
+
+  const identityData = appleIdentity.identity_data;
+  if (
+    identityData !== null &&
+    typeof identityData === 'object' &&
+    !Array.isArray(identityData)
+  ) {
+    const subject = (identityData as Record<string, unknown>).sub;
+    if (typeof subject === 'string' && subject.trim()) {
+      return subject.trim();
+    }
+  }
+
+  return typeof appleIdentity.id === 'string' && appleIdentity.id.trim()
+    ? appleIdentity.id.trim()
+    : null;
 }

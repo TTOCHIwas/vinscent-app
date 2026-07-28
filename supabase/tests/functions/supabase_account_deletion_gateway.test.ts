@@ -183,7 +183,16 @@ function createClient(
     getUser?: (
       accessToken: string,
     ) => Promise<{
-      data: { user: { id: string } | null };
+      data: {
+        user: {
+          id: string;
+          identities?: Array<{
+            provider?: unknown;
+            id?: unknown;
+            identity_data?: unknown;
+          }> | null;
+        } | null;
+      };
       error: unknown;
     }>;
     rpc?: (
