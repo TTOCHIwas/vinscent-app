@@ -387,7 +387,10 @@ void main() {
       ),
     );
 
-    expect(findTextIgnoringWordJoiners(aiQuestion.questionText), findsOneWidget);
+    expect(
+      findTextIgnoringWordJoiners(aiQuestion.questionText),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('ai-generated-content-indicator')),
       findsOneWidget,

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
+import '../../../core/questions/daily_question.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../app/application/app_foreground_session_controller.dart';
@@ -12,6 +13,7 @@ import '../../ai/application/ai_learning_controller.dart';
 import '../../ai/application/ai_proactive_suggestion_controller.dart';
 import '../../ai/application/ai_question_feedback_provider.dart';
 import '../../ai/data/ai_learning_dashboard.dart';
+import '../../ai/presentation/widgets/ai_generated_content_indicator.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
@@ -399,6 +401,19 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                     presentation.questionText ??
                     guide?.message ??
                     visibleSuggestionText;
+                final bool questionIsAiGenerated;
+                if (characterGuideText != null) {
+                  questionIsAiGenerated = false;
+                } else if (visibleFeedbackText != null) {
+                  questionIsAiGenerated =
+                      visibleAiMessage?.isGenerated ?? false;
+                } else if (presentation.questionText != null) {
+                  questionIsAiGenerated = presentation.questionIsAiGenerated;
+                } else if (guide != null) {
+                  questionIsAiGenerated = false;
+                } else {
+                  questionIsAiGenerated = visibleSuggestionText != null;
+                }
                 final questionOpacity = visibleFeedbackText != null
                     ? feedbackOpacity
                     : guide != null
@@ -420,6 +435,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                   myCard: presentation.myCard,
                   partnerCard: presentation.partnerCard,
                   questionText: questionText,
+                  questionIsAiGenerated: questionIsAiGenerated,
                   questionOpacity: questionOpacity,
                   cardsAreCompleted: presentation.cardsAreCompleted,
                   canAddCard: presentation.canAddCard,
@@ -470,6 +486,7 @@ class _HomeAiMessage {
     required this.impressionId,
     required this.text,
     required this.duration,
+    required this.isGenerated,
   });
 
   factory _HomeAiMessage.processing(String dailyQuestionId) {
@@ -477,6 +494,7 @@ class _HomeAiMessage {
       impressionId: '$dailyQuestionId:processing',
       text: _homeFeedbackProcessingPrompt,
       duration: _homeFeedbackProcessingDuration,
+      isGenerated: false,
     );
   }
 
@@ -510,12 +528,14 @@ class _HomeAiMessage {
       impressionId: dailyQuestionId,
       text: normalizedText,
       duration: TransientHomeFeedbackPresenter.displayDuration,
+      isGenerated: true,
     );
   }
 
   final String impressionId;
   final String text;
   final Duration duration;
+  final bool isGenerated;
 }
 
 class _HomeStoryLoopContent extends StatelessWidget {
@@ -523,6 +543,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.myCard,
     required this.partnerCard,
     required this.questionText,
+    required this.questionIsAiGenerated,
     required this.questionOpacity,
     required this.cardsAreCompleted,
     required this.canAddCard,
@@ -536,6 +557,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
+  final bool questionIsAiGenerated;
   final double questionOpacity;
   final bool cardsAreCompleted;
   final bool canAddCard;
@@ -603,6 +625,7 @@ class _HomeStoryLoopContent extends StatelessWidget {
         if (hasStoryEntry) const SizedBox(height: _entryGap),
         _HomeQuestionAction(
           questionText: questionText,
+          isAiGenerated: questionIsAiGenerated,
           opacity: questionOpacity,
           onTap: onQuestionTap,
           dismissibleKey: questionDismissibleKey,
@@ -701,6 +724,7 @@ class _HomeStoryAddButton extends StatelessWidget {
 class _HomeQuestionAction extends StatelessWidget {
   const _HomeQuestionAction({
     required this.questionText,
+    required this.isAiGenerated,
     required this.opacity,
     required this.onTap,
     required this.dismissibleKey,
@@ -708,6 +732,7 @@ class _HomeQuestionAction extends StatelessWidget {
   });
 
   final String questionText;
+  final bool isAiGenerated;
   final double opacity;
   final VoidCallback? onTap;
   final Key? dismissibleKey;
@@ -722,6 +747,7 @@ class _HomeQuestionAction extends StatelessWidget {
       curve: Curves.easeOut,
       child: _HomeQuestionBubble(
         questionText: questionText,
+        isAiGenerated: isAiGenerated,
         onTap: onTap,
         actionKey: const Key('home-question-action'),
         bubbleKey: const Key('home-question-speech-bubble'),
@@ -732,11 +758,14 @@ class _HomeQuestionAction extends StatelessWidget {
 
     return _HomeForegroundPortal(
       portalKey: const Key('home-question-foreground'),
-      layoutKey: questionText,
+      layoutKey: (questionText, isAiGenerated),
       placeholder: IgnorePointer(
         child: Opacity(
           opacity: 0,
-          child: _HomeQuestionBubble(questionText: questionText),
+          child: _HomeQuestionBubble(
+            questionText: questionText,
+            isAiGenerated: isAiGenerated,
+          ),
         ),
       ),
       child: dismissibleKey == null || onDismissed == null
@@ -760,12 +789,14 @@ class _HomeQuestionAction extends StatelessWidget {
 class _HomeQuestionBubble extends StatelessWidget {
   const _HomeQuestionBubble({
     required this.questionText,
+    this.isAiGenerated = false,
     this.onTap,
     this.actionKey,
     this.bubbleKey,
   });
 
   final String questionText;
+  final bool isAiGenerated;
   final VoidCallback? onTap;
   final Key? actionKey;
   final Key? bubbleKey;
@@ -778,16 +809,26 @@ class _HomeQuestionBubble extends StatelessWidget {
         key: actionKey,
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: CharacterSpeechBubble(
-          key: bubbleKey,
-          speechText: questionText,
-          maxWidth: 320,
-          textStyle: AppTextStyles.homeQuestionBubble,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 9,
-          ),
-          tailSize: const Size(16, 8),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            CharacterSpeechBubble(
+              key: bubbleKey,
+              speechText: questionText,
+              maxWidth: 320,
+              textStyle: AppTextStyles.homeQuestionBubble,
+              contentPadding: isAiGenerated
+                  ? const EdgeInsets.fromLTRB(16, 9, 38, 16)
+                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              tailSize: const Size(16, 8),
+            ),
+            if (isAiGenerated)
+              const Positioned(
+                right: 5,
+                bottom: 3,
+                child: AiGeneratedContentIndicator(),
+              ),
+          ],
         ),
       ),
     );
@@ -920,6 +961,7 @@ class _HomeStoryLoopPresentation {
     required this.myCard,
     required this.partnerCard,
     required this.questionText,
+    required this.questionIsAiGenerated,
     required this.cardsAreCompleted,
     required this.canAddCard,
     required this.questionTargetLocation,
@@ -929,6 +971,7 @@ class _HomeStoryLoopPresentation {
   final StoryLoopCardPreview? myCard;
   final StoryLoopCardPreview? partnerCard;
   final String? questionText;
+  final bool questionIsAiGenerated;
   final bool cardsAreCompleted;
   final bool canAddCard;
   final String? questionTargetLocation;
@@ -959,16 +1002,22 @@ class _HomeStoryLoopPresentation {
         summary.canEditStory &&
         myCard == null;
 
+    final questionText = switch ((summary.loopStatus, question)) {
+      (_, final question?) when question.myAnswerExists => null,
+      (_, final question?) => question.question.questionText,
+      (StoryLoopStatus.questionPreparing, null) => _homeQuestionPreparingPrompt,
+      _ => null,
+    };
+
     return _HomeStoryLoopPresentation(
       myCard: myCard,
       partnerCard: partnerCard,
-      questionText: switch ((summary.loopStatus, question)) {
-        (_, final question?) when question.myAnswerExists => null,
-        (_, final question?) => question.question.questionText,
-        (StoryLoopStatus.questionPreparing, null) =>
-          _homeQuestionPreparingPrompt,
-        _ => null,
-      },
+      questionText: questionText,
+      questionIsAiGenerated:
+          questionText != null &&
+          question != null &&
+          !question.myAnswerExists &&
+          question.question.questionSource == QuestionSource.ai,
       cardsAreCompleted:
           myCard != null &&
           partnerCard != null &&

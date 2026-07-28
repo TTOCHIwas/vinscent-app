@@ -48,7 +48,9 @@ class FakeStoryLoopReadRepository implements StoryLoopReadRepository {
   }
 
   @override
-  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(DateTime month) async {
+  Future<List<StoryLoopMonthSummaryDay>> fetchMonthSummary(
+    DateTime month,
+  ) async {
     final normalizedMonth = DateTime(month.year, month.month);
     requestedMonths.add(normalizedMonth);
     return _monthSummaries[normalizedMonth] ?? const [];
