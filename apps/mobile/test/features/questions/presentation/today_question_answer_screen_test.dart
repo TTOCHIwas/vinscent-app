@@ -15,6 +15,8 @@ import 'package:vinscent/features/questions/data/daily_question_answer_repositor
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/question_route_context.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
+import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 import 'package:vinscent/features/questions/presentation/widgets/character_speech_prompt.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
@@ -246,6 +248,46 @@ void main() {
       expect(
         findTextIgnoringWordJoiners('서로 다른 방식으로 배려하는 모습이 닮아 있어요.'),
         findsOneWidget,
+      );
+    });
+
+    testWidgets('opens the report flow from published AI feedback', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+      final safetyRepository = _FakeSafetyReportRepository();
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        safetyReportRepository: safetyRepository,
+        aiFeedbacks: {
+          'daily-question-id': AiQuestionFeedback(
+            dailyQuestionId: 'daily-question-id',
+            feedbackText: '서로 다른 방식으로 배려하는 모습이 닮아 있어요.',
+            publishedAt: DateTime.utc(2026, 5, 31, 12),
+          ),
+        },
+      );
+
+      final indicator = find.byKey(const Key('ai-generated-content-indicator'));
+      await tester.ensureVisible(indicator);
+      await tester.tap(indicator);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+      await tester.tap(find.byKey(const Key('safety-report-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        safetyRepository.requests.single.target,
+        const SafetyReportTarget(
+          type: SafetyReportTargetType.aiFeedback,
+          id: 'daily-question-id',
+        ),
       );
     });
 
@@ -1054,6 +1096,7 @@ Future<GoRouter> _pumpRouter(
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   Set<String> processingAiFeedbackIds = const {},
   Set<String> delayedAiFeedbackIds = const {},
+  SafetyReportRepository? safetyReportRepository,
   bool settle = true,
 }) async {
   tester.view.viewInsets = FakeViewPadding(bottom: viewInsetsBottom);
@@ -1139,6 +1182,10 @@ Future<GoRouter> _pumpRouter(
         storyLoopReadRepositoryProvider.overrideWithValue(
           resolvedStoryLoopRepository,
         ),
+        if (safetyReportRepository != null)
+          safetyReportRepositoryProvider.overrideWithValue(
+            safetyReportRepository,
+          ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -1200,6 +1247,15 @@ class _FailingOnceStoryLoopReadRepository implements StoryLoopReadRepository {
   @override
   Future<TodayStoryLoopSummary?> fetchTodaySummary() {
     return delegate.fetchTodaySummary();
+  }
+}
+
+class _FakeSafetyReportRepository implements SafetyReportRepository {
+  final List<SafetyReportRequest> requests = [];
+
+  @override
+  Future<void> submit(SafetyReportRequest request) async {
+    requests.add(request);
   }
 }
 
