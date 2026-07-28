@@ -41,6 +41,10 @@ void main() {
     expect(_wordBoundaryText('우리 둘은 쉬는 날에 뭘 하면 잘 맞을까?'), findsOneWidget);
     expect(_wordBoundaryText('가볍게 걸으며 이야기하는 시간이 잘 어울려'), findsOneWidget);
     expect(find.text('최근 답변'), findsNothing);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('ai-direct-history-open')), findsNothing);
   });
 
@@ -77,6 +81,10 @@ void main() {
     );
     expect(approve, findsOneWidget);
     expect(dismiss, findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-generated-content-indicator')),
+      findsOneWidget,
+    );
     expect(
       tester.getRect(approve).bottom,
       lessThan(tester.getRect(dismiss).top),
@@ -412,6 +420,10 @@ void main() {
             )
             .size,
         216,
+      );
+      expect(
+        find.byKey(const Key('ai-generated-content-indicator')),
+        findsNothing,
       );
     },
   );
