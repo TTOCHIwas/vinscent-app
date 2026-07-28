@@ -59,4 +59,28 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('forwards generated indicator presses', (tester) async {
+    var pressed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: QuestionDetailTitle(
+            questionText: 'AI가 만든 질문',
+            showGeneratedIndicator: true,
+            onGeneratedIndicatorPressed: () {
+              pressed = true;
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const Key('ai-generated-content-indicator')),
+    );
+
+    expect(pressed, isTrue);
+  });
 }
