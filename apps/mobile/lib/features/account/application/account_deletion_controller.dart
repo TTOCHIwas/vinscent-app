@@ -43,9 +43,15 @@ class AccountDeletionController extends Notifier<AccountDeletionState> {
 
     state = const AccountDeletionState(phase: AccountDeletionPhase.deleting);
     try {
+      final appleAuthorizationCode = await ref
+          .read(accountDeletionAuthorizerProvider)
+          .authorize();
       final outcome = await ref
           .read(accountDeletionExecutorProvider)
-          .execute(userId: userId);
+          .execute(
+            userId: userId,
+            appleAuthorizationCode: appleAuthorizationCode,
+          );
       if (kDebugMode &&
           (!outcome.localCleanup.isComplete ||
               outcome.sessionFinalizationError != null)) {

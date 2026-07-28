@@ -7,7 +7,10 @@ import '../../calendar/data/calendar_cell_preview_preference_store.dart';
 import '../../home/data/home_feedback_impression_store.dart';
 import '../../home_widgets/application/home_widget_sync_service.dart';
 import '../../recordings/application/pending_recording_draft_store.dart';
+import '../../auth/data/apple_auth_client.dart';
+import '../../auth/data/social_auth_failure.dart';
 import '../data/account_deletion_repository.dart';
+import 'account_deletion_authorizer.dart';
 import 'account_deletion_service.dart';
 import 'account_local_data_cleanup.dart';
 
@@ -39,6 +42,25 @@ final accountLocalDataCleanupProvider = Provider<AccountLocalDataCleanup>((
   );
 });
 
+final accountDeletionAuthorizerProvider =
+    Provider<AccountDeletionAuthorizationProvider>((ref) {
+      final appleAuthClient = ref.watch(appleAuthClientProvider);
+      return AccountDeletionAuthorizer(
+        requiresAppleAuthorization: _currentAccountUsesApple,
+        requestAppleAuthorizationCode: () async {
+          try {
+            return (await appleAuthClient.signIn()).authorizationCode;
+          } on SocialAuthFailure catch (error) {
+            throw AccountDeletionException(
+              error.reason == SocialAuthFailureReason.cancelled
+                  ? AccountDeletionFailureReason.reauthenticationCancelled
+                  : AccountDeletionFailureReason.reauthenticationFailed,
+            );
+          }
+        },
+      );
+    });
+
 final accountDeletionExecutorProvider = Provider<AccountDeletionExecutor>((
   ref,
 ) {
@@ -53,3 +75,25 @@ final accountDeletionExecutorProvider = Provider<AccountDeletionExecutor>((
     },
   );
 });
+
+bool _currentAccountUsesApple() {
+  if (!AppConfig.isSupabaseConfigured) {
+    return false;
+  }
+
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) {
+    return false;
+  }
+  if (user.identities?.any((identity) => identity.provider == 'apple') ??
+      false) {
+    return true;
+  }
+
+  final provider = user.appMetadata['provider'];
+  if (provider == 'apple') {
+    return true;
+  }
+  final providers = user.appMetadata['providers'];
+  return providers is Iterable && providers.contains('apple');
+}
