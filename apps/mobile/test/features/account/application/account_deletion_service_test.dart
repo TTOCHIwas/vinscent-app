@@ -61,6 +61,30 @@ void main() {
     expect(events, ['remote']);
   });
 
+  test('passes Apple authorization only to remote account deletion', () async {
+    final events = <String>[];
+    final repository = _FakeAccountDeletionRepository(() async {
+      events.add('remote');
+      return const AccountDeletionReceipt(deletedCoupleCount: 1);
+    });
+    final service = AccountDeletionService(
+      repository: repository,
+      localDataCleanup: _localCleanup(events: events),
+      clearSession: () async {
+        events.add('session');
+      },
+    );
+
+    await service.execute(
+      userId: 'user-a',
+      appleAuthorizationCode: 'authorization-code',
+    );
+
+    expect(repository.receivedAuthorizationCodes, ['authorization-code']);
+    expect(events.first, 'remote');
+    expect(events.last, 'session');
+  });
+
   test('local cleanup failures do not block session finalization', () async {
     final events = <String>[];
     final service = AccountDeletionService(
@@ -132,12 +156,16 @@ AccountLocalDataCleanup _localCleanup({
 }
 
 class _FakeAccountDeletionRepository implements AccountDeletionRepository {
-  const _FakeAccountDeletionRepository(this.onDelete);
+  _FakeAccountDeletionRepository(this.onDelete);
 
   final Future<AccountDeletionReceipt> Function() onDelete;
+  final receivedAuthorizationCodes = <String?>[];
 
   @override
   Future<AccountDeletionReceipt> deleteAccount({
     String? appleAuthorizationCode,
-  }) => onDelete();
+  }) {
+    receivedAuthorizationCodes.add(appleAuthorizationCode);
+    return onDelete();
+  }
 }
