@@ -3,7 +3,28 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(7);
+select plan(8);
+
+create temporary table observed_couple_deletion_signals (
+  couple_id uuid not null
+);
+
+create or replace function pg_temp.capture_couple_deletion_signal()
+returns trigger
+language plpgsql
+as $$
+begin
+  insert into observed_couple_deletion_signals (couple_id)
+  values (new.id);
+  return new;
+end;
+$$;
+
+create trigger capture_couple_deletion_signal
+  after update of updated_at on public.couples
+  for each row
+  when (old.updated_at is distinct from new.updated_at)
+  execute function pg_temp.capture_couple_deletion_signal();
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -118,6 +139,19 @@ select is(
 );
 
 reset role;
+
+select is(
+  (
+    select count(*)
+    from observed_couple_deletion_signals
+    where couple_id in (
+      '20000000-0000-0000-0000-000000000021',
+      '20000000-0000-0000-0000-000000000022'
+    )
+  ),
+  2::bigint,
+  'each deleted couple emits an update signal for filtered realtime clients'
+);
 
 select is(
   (
