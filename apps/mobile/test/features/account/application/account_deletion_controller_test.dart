@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/account/application/account_deletion_controller.dart';
+import 'package:vinscent/features/account/application/account_deletion_providers.dart';
 import 'package:vinscent/features/account/application/account_deletion_service.dart';
 import 'package:vinscent/features/account/application/account_local_data_cleanup.dart';
 import 'package:vinscent/features/account/data/account_deletion_repository.dart';

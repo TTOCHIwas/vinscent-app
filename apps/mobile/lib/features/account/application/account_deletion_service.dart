@@ -3,6 +3,10 @@ import 'account_local_data_cleanup.dart';
 
 typedef AccountSessionFinalizer = Future<void> Function();
 
+abstract interface class AccountDeletionExecutor {
+  Future<AccountDeletionOutcome> execute({required String userId});
+}
+
 class AccountDeletionOutcome {
   const AccountDeletionOutcome({
     required this.receipt,
@@ -17,7 +21,7 @@ class AccountDeletionOutcome {
   final StackTrace? sessionFinalizationStackTrace;
 }
 
-class AccountDeletionService {
+class AccountDeletionService implements AccountDeletionExecutor {
   const AccountDeletionService({
     required AccountDeletionRepository repository,
     required AccountLocalDataCleanup localDataCleanup,
@@ -30,6 +34,7 @@ class AccountDeletionService {
   final AccountLocalDataCleanup _localDataCleanup;
   final AccountSessionFinalizer _clearSession;
 
+  @override
   Future<AccountDeletionOutcome> execute({required String userId}) async {
     final receipt = await _repository.deleteAccount();
     final localCleanup = await _localDataCleanup.execute(userId);
