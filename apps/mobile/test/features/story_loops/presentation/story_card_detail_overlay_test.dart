@@ -22,10 +22,7 @@ void main() {
 
     expect(download, findsOneWidget);
     expect(close, findsOneWidget);
-    expect(
-      find.byKey(const Key('story-card-detail-report')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('story-card-detail-report')), findsNothing);
     expect(tester.getCenter(download).dy, tester.getCenter(close).dy);
     expect(tester.getCenter(download).dx, lessThan(tester.getCenter(close).dx));
   });

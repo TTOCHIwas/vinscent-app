@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../safety/data/safety_report.dart';
+import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../application/story_card_download_service.dart';
 import '../../data/story_card_download_failure.dart';
 import '../../data/story_card_scene.dart';
@@ -11,6 +13,7 @@ import 'story_card_preview_surface.dart';
 
 const _closeTooltip = '\uce74\ub4dc \uc0c1\uc138 \ub2eb\uae30';
 const _downloadTooltip = '\uce74\ub4dc \ub2e4\uc6b4\ub85c\ub4dc';
+const _reportTooltip = '\uce74\ub4dc \uc2e0\uace0';
 const _cardSemanticsLabel = '\uc2a4\ud1a0\ub9ac \uce74\ub4dc \uc0c1\uc138';
 const _downloadSuccessMessage =
     '\uce74\ub4dc\ub97c \uac24\ub7ec\ub9ac\uc5d0 \uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4.';
@@ -19,6 +22,7 @@ Future<void> showStoryCardDetailOverlay({
   required BuildContext context,
   required String cardId,
   required String? previewUrl,
+  bool canReport = false,
 }) {
   final barrierLabel = MaterialLocalizations.of(
     context,
@@ -32,7 +36,11 @@ Future<void> showStoryCardDetailOverlay({
     barrierColor: const Color(0xB3000000),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (context, animation, secondaryAnimation) {
-      return _StoryCardDetailOverlay(cardId: cardId, previewUrl: previewUrl);
+      return _StoryCardDetailOverlay(
+        cardId: cardId,
+        previewUrl: previewUrl,
+        canReport: canReport,
+      );
     },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curvedAnimation = CurvedAnimation(
@@ -55,6 +63,7 @@ class _StoryCardDetailOverlay extends ConsumerStatefulWidget {
   const _StoryCardDetailOverlay({
     required this.cardId,
     required this.previewUrl,
+    required this.canReport,
   });
 
   static const _horizontalMargin = 16.0;
@@ -63,6 +72,7 @@ class _StoryCardDetailOverlay extends ConsumerStatefulWidget {
 
   final String cardId;
   final String? previewUrl;
+  final bool canReport;
 
   @override
   ConsumerState<_StoryCardDetailOverlay> createState() =>
@@ -138,6 +148,26 @@ class _StoryCardDetailOverlayState
                         : const Icon(Icons.download_rounded, size: 25),
                   ),
                 ),
+                if (widget.canReport)
+                  Positioned(
+                    top: 0,
+                    right:
+                        (_StoryCardDetailOverlay._closeButtonExtent * 2) + 16,
+                    child: IconButton(
+                      key: const Key('story-card-detail-report'),
+                      onPressed: _report,
+                      tooltip: _reportTooltip,
+                      style: IconButton.styleFrom(
+                        fixedSize: const Size.square(
+                          _StoryCardDetailOverlay._closeButtonExtent,
+                        ),
+                        backgroundColor: const Color(0x99000000),
+                        foregroundColor: AppColors.textInverse,
+                        shape: const CircleBorder(),
+                      ),
+                      icon: const Icon(Icons.flag_outlined, size: 24),
+                    ),
+                  ),
                 Positioned(
                   top: 0,
                   right: 0,
@@ -160,6 +190,16 @@ class _StoryCardDetailOverlayState
             );
           },
         ),
+      ),
+    );
+  }
+
+  Future<void> _report() {
+    return showSafetyReportSheet(
+      context: context,
+      target: SafetyReportTarget(
+        type: SafetyReportTargetType.storyCard,
+        id: widget.cardId,
       ),
     );
   }

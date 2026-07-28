@@ -473,6 +473,9 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                       context: context,
                       cardId: card.id,
                       previewUrl: card.previewUrl,
+                      canReport:
+                          currentUserId != null &&
+                          card.authorUserId != currentUserId,
                     );
                   },
                 );

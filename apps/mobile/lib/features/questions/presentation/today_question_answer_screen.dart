@@ -629,22 +629,29 @@ class _QuestionAnswerCards extends StatelessWidget {
           : (context, cardWidth) => _QuestionAnswerStoryCard(
               card: cardPair.myCard!,
               width: cardWidth,
+              canReport: false,
             ),
       rightCardBuilder: cardPair.partnerCard == null
           ? null
           : (context, cardWidth) => _QuestionAnswerStoryCard(
               card: cardPair.partnerCard!,
               width: cardWidth,
+              canReport: cardPair.canReportPartnerCard,
             ),
     );
   }
 }
 
 class _QuestionAnswerStoryCard extends StatelessWidget {
-  const _QuestionAnswerStoryCard({required this.card, required this.width});
+  const _QuestionAnswerStoryCard({
+    required this.card,
+    required this.width,
+    required this.canReport,
+  });
 
   final StoryLoopCardDetail card;
   final double width;
+  final bool canReport;
 
   @override
   Widget build(BuildContext context) {
@@ -656,6 +663,7 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
         context: context,
         cardId: card.id,
         previewUrl: card.previewUrl,
+        canReport: canReport,
       ),
       semanticsLabel: '스토리 카드',
     );
@@ -663,7 +671,11 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
 }
 
 class _QuestionAnswerCardPair {
-  const _QuestionAnswerCardPair({this.myCard, this.partnerCard});
+  const _QuestionAnswerCardPair({
+    this.myCard,
+    this.partnerCard,
+    this.canReportPartnerCard = false,
+  });
 
   factory _QuestionAnswerCardPair.fromCards(
     List<StoryLoopCardDetail> cards, {
@@ -688,11 +700,16 @@ class _QuestionAnswerCardPair {
       }
     }
 
-    return _QuestionAnswerCardPair(myCard: myCard, partnerCard: partnerCard);
+    return _QuestionAnswerCardPair(
+      myCard: myCard,
+      partnerCard: partnerCard,
+      canReportPartnerCard: partnerCard != null,
+    );
   }
 
   final StoryLoopCardDetail? myCard;
   final StoryLoopCardDetail? partnerCard;
+  final bool canReportPartnerCard;
 
   bool get hasCard => myCard != null || partnerCard != null;
 }
