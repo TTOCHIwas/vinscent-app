@@ -74,6 +74,13 @@ void main() {
     expect(source, contains(r'git -C "$repository_root" rev-parse HEAD'));
     expect(source, contains(r"printf 'xcode_version=%s\n'"));
     expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
+    expect(
+      source,
+      contains(r'mktemp -d "$evidence_parent/.ios-build-${build_number}.'),
+    );
+    expect(source, contains(r'ipa_output="$staged_evidence/'));
+    expect(source, contains(r'mv "$staged_evidence" "$evidence_directory"'));
+    expect(source, isNot(contains(r'mkdir -p "$evidence_directory"')));
     expect(source, isNot(contains('altool')));
     expect(source, isNot(contains('transporter')));
     expect(source, isNot(contains('app-store-connect')));

@@ -70,6 +70,7 @@ build_number="$1"
 flutter_binary="${FLUTTER_BIN:-flutter}"
 dart_binary="${DART_BIN:-dart}"
 evidence_directory="$mobile_directory/build/release-evidence/ios-build-${build_number}"
+evidence_parent="$(dirname "$evidence_directory")"
 
 cd "$mobile_directory"
 
@@ -221,17 +222,21 @@ if [[ "$(wc -l < "$privacy_manifest_list")" -lt 2 ]]; then
   exit 1
 fi
 
-mkdir -p "$evidence_directory"
+mkdir -p "$evidence_parent"
+staged_evidence="$(
+  mktemp -d "$evidence_parent/.ios-build-${build_number}.XXXXXX"
+)"
+trap 'rm -rf "$temporary_evidence" "$staged_evidence"' EXIT
 
-ipa_output="$evidence_directory/danjjan-ios-build-${build_number}.ipa"
-archive_output="$evidence_directory/danjjan-ios-build-${build_number}.xcarchive.zip"
+ipa_output="$staged_evidence/danjjan-ios-build-${build_number}.ipa"
+archive_output="$staged_evidence/danjjan-ios-build-${build_number}.xcarchive.zip"
 cp "$ipa_path" "$ipa_output"
 ditto -c -k --sequesterRsrc --keepParent \
   "$archive_path" \
   "$archive_output"
-cp "$runner_entitlements" "$evidence_directory/"
-cp "$widget_entitlements" "$evidence_directory/"
-cp "$privacy_manifest_list" "$evidence_directory/"
+cp "$runner_entitlements" "$staged_evidence/"
+cp "$widget_entitlements" "$staged_evidence/"
+cp "$privacy_manifest_list" "$staged_evidence/"
 
 commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
 created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -247,10 +252,10 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf 'push_environment=%s\n' "$push_environment"
   printf 'app_group=%s\n' "$runner_app_group"
   printf 'created_at=%s\n' "$created_at"
-} > "$evidence_directory/metadata.txt"
+} > "$staged_evidence/metadata.txt"
 
 (
-  cd "$evidence_directory"
+  cd "$staged_evidence"
   shasum -a 256 \
     "$(basename "$ipa_output")" \
     "$(basename "$archive_output")" \
@@ -260,7 +265,8 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     > SHA256SUMS
 )
 
-trap - EXIT
 rm -rf "$temporary_evidence"
+mv "$staged_evidence" "$evidence_directory"
+trap - EXIT
 
 echo "iOS release candidate created at ${evidence_directory}"
