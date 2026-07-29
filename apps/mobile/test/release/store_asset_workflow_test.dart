@@ -22,6 +22,7 @@ void main() {
     expect(source, contains(r'^[0-9]+\.[0-9]+\.[0-9]+$'));
     expect(source, contains(r'^[1-9][0-9]*$'));
     expect(source, contains('flutter pub get'));
+    expect(source, contains('dart run tool/verify_store_listing_copy.dart'));
     expect(source, contains('dart run tool/verify_store_assets.dart'));
     expect(source, contains('--app-version "\$APP_VERSION"'));
     expect(source, contains('--build-number "\$BUILD_NUMBER"'));

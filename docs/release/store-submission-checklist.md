@@ -103,6 +103,7 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] 앱 이름 `단짠` 확인, 30자 이하
 - [ ] 짧은 설명 작성, 80자 이하
 - [ ] 전체 설명 작성, 4,000자 이하
+- [ ] `tool/verify_store_listing_copy.dart`로 Play·App Store 문구 제한 통과
 - [ ] 지원 이메일 등록
 - [ ] 정책 웹사이트 URL과 `${POLICY_BASE_URL}/support` 지원 URL 등록
 - [ ] 앱 아이콘과 feature graphic 제작
