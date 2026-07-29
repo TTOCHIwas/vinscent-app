@@ -212,6 +212,47 @@
       ]
     },
     {
+      "name": "SAFETY_MODERATION_WEBHOOK_BEARER_TOKEN",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Optional bearer credential sent to the external safety moderation receiver.",
+      "functions": [
+        "process-safety-moderation-alerts"
+      ]
+    },
+    {
+      "name": "SAFETY_MODERATION_WEBHOOK_URL",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "HTTPS receiver endpoint for minimal safety moderation alert envelopes.",
+      "functions": [
+        "process-safety-moderation-alerts"
+      ]
+    },
+    {
+      "name": "SAFETY_MODERATION_WORKER_MAX_BATCH_SIZE",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Maximum number of safety moderation alerts processed per worker call.",
+      "functions": [
+        "process-safety-moderation-alerts"
+      ]
+    },
+    {
+      "name": "SAFETY_MODERATION_WORKER_SECRET",
+      "availability": "fallback",
+      "fallbackTo": "SCHEDULE_WEBHOOK_SECRET",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Dedicated shared secret for scheduled safety moderation worker calls.",
+      "functions": [
+        "process-safety-moderation-alerts"
+      ]
+    },
+    {
       "name": "SCHEDULE_WEBHOOK_SECRET",
       "availability": "required",
       "provisioning": "supabase_secret",
@@ -220,6 +261,7 @@
       "functions": [
         "dispatch-scheduled-notifications",
         "process-ai-learning-jobs",
+        "process-safety-moderation-alerts",
         "purge-disconnected-couple-archives"
       ]
     },
@@ -254,6 +296,7 @@
         "dispatch-scheduled-notifications",
         "generate-ai-proactive-suggestion",
         "process-ai-learning-jobs",
+        "process-safety-moderation-alerts",
         "process-storage-cleanup",
         "purge-disconnected-couple-archives",
         "send-answer-complete-notification",
@@ -274,6 +317,7 @@
         "dispatch-scheduled-notifications",
         "generate-ai-proactive-suggestion",
         "process-ai-learning-jobs",
+        "process-safety-moderation-alerts",
         "process-storage-cleanup",
         "purge-disconnected-couple-archives",
         "send-answer-complete-notification",

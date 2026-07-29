@@ -385,6 +385,9 @@ deno_version = 2
 [functions.process-ai-learning-jobs]
 verify_jwt = false
 
+[functions.process-safety-moderation-alerts]
+verify_jwt = false
+
 [functions.delete-account]
 verify_jwt = false
 

@@ -133,6 +133,14 @@ with expected_schedules (
       ]::text[]
     ),
     (
+      'process-safety-moderation-alerts',
+      '* * * * *',
+      array[
+        'x-safety-moderation-worker-secret',
+        'x-schedule-webhook-secret'
+      ]::text[]
+    ),
+    (
       'purge-disconnected-couple-archives',
       null::text,
       array[

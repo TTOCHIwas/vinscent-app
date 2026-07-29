@@ -14,6 +14,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] AI·알림 진단 로그와 신고 기록 보관기간 확정
 - [ ] UGC 게시 전 필터 공급자와 텍스트·이미지·오디오 검사 범위 확정
 - [ ] 신고 운영 채널, 담당자, 검토 목표 시간 확정
+- [ ] 모더레이션 알림 워커 배포·Cron 연결 후 실제 신고 수신과 재시도 검증
 - [ ] `/privacy`, `/terms`, `/safety`, `/account-deletion` 공개 배포
 - [ ] 앱 설정에서 개인정보처리방침과 이용약관 URL 연결
 - [ ] 공개 정책, `play-data-safety.md`, App Store App Privacy 답변 일치
