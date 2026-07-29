@@ -15,7 +15,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] 신고 운영 채널, 담당자, 검토 목표 시간 확정
 - [ ] `/privacy`, `/terms`, `/safety`, `/account-deletion` 공개 배포
 - [ ] 앱 설정에서 개인정보처리방침과 이용약관 URL 연결
-- [ ] 공개 정책, Play Data safety, App Store App Privacy 답변 일치
+- [ ] 공개 정책, `play-data-safety.md`, App Store App Privacy 답변 일치
 - [ ] CI의 Flutter, iOS, Node, Edge, Database 작업이 원격에서 통과
 - [ ] `docs/release/mobile-performance-baseline.md`의 실기기 검증 통과
 - [ ] `docs/release/mobile-release-qa.md`의 출시 후보 QA 통과
@@ -46,7 +46,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] App access에 두 테스트 계정과 커플 연결 절차 제공
 - [ ] 대상 연령과 콘텐츠 등급 설문 완료
 - [ ] 개인정보처리방침 URL 등록
-- [ ] Data safety에 `privacy-data-map.md`의 앱·SDK 데이터 반영
+- [ ] Data safety에 `play-data-safety.md`의 검토 완료 답변 반영
 - [ ] 계정 삭제 질문에 앱 내부 경로와 외부 삭제 URL 등록
 - [ ] AI 생성 콘텐츠, UGC 신고·차단·운영 검토 흐름을 review note에 설명
 - [ ] coarse location의 일회성 날씨 추천 목적을 정확히 선언
@@ -87,7 +87,8 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 ### Artifact
 
 - [ ] Android upload key를 암호화된 별도 보관소에 백업
-- [ ] GitHub `android-release` Environment와 7개 빌드 secret 등록
+- [ ] GitHub `android-release` Environment에 7개 빌드 secret과
+  `DANJJAN_POLICY_BASE_URL` 공개 변수 등록
 - [ ] Play App Signing 활성화
 - [ ] `versionCode`가 이전 업로드보다 큼
 - [ ] `Android release candidate` workflow로 서명된 Release AAB 생성
