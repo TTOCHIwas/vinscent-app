@@ -143,6 +143,7 @@ jobs:
           source_manifest="build/app/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml"
           release_dir="build/release-evidence"
           release_name="danjjan-android-build-${BUILD_NUMBER}"
+          app_version="$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)"
 
           test -s "$source_aab"
           test -s "$source_mapping"
@@ -154,20 +155,65 @@ jobs:
           grep -q "BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map" \
             "$RUNNER_TEMP/danjjan-aab-contents.txt"
 
+          manifest_package="$(
+            sed -n \
+              's/.*package="\([^"]*\)".*/\1/p' \
+              "$source_manifest" |
+              head -n 1
+          )"
+          version_code="$(
+            sed -n \
+              's/.*android:versionCode="\([0-9][0-9]*\)".*/\1/p' \
+              "$source_manifest" |
+              head -n 1
+          )"
+          version_name="$(
+            sed -n \
+              's/.*android:versionName="\([^"]*\)".*/\1/p' \
+              "$source_manifest" |
+              head -n 1
+          )"
+          min_sdk="$(
+            sed -n \
+              's/.*android:minSdkVersion="\([0-9][0-9]*\)".*/\1/p' \
+              "$source_manifest" |
+              head -n 1
+          )"
           target_sdk="$(
             sed -n \
               's/.*android:targetSdkVersion="\([0-9][0-9]*\)".*/\1/p' \
               "$source_manifest" |
               head -n 1
           )"
+
+          if [[ "$manifest_package" != "com.vinscent.vinscent" ]]; then
+            echo "Release package must be com.vinscent.vinscent; found '${manifest_package:-missing}'." >&2
+            exit 1
+          fi
+          if [[ "$version_code" != "$BUILD_NUMBER" ]]; then
+            echo "Release versionCode must be $BUILD_NUMBER; found '${version_code:-missing}'." >&2
+            exit 1
+          fi
+          if [[ "$version_name" != "$app_version" ]]; then
+            echo "Release versionName must be $app_version; found '${version_name:-missing}'." >&2
+            exit 1
+          fi
+          if [[ "$min_sdk" != "24" ]]; then
+            echo "Release minimum SDK must remain 24; found '${min_sdk:-missing}'." >&2
+            exit 1
+          fi
           if [[ ! "$target_sdk" =~ ^[0-9]+$ ]] || (( target_sdk < 36 )); then
             echo "Release target SDK must be at least 36; found '${target_sdk:-missing}'." >&2
             exit 1
           fi
 
           mkdir -p "$release_dir"
+          dart run tool/verify_android_release_bundle.dart \
+            "$source_aab" \
+            "$release_dir/${release_name}-16kb-page-support.json"
           cp "$source_aab" "$release_dir/${release_name}.aab"
           cp "$source_mapping" "$release_dir/${release_name}-mapping.txt"
+          cp "$source_manifest" "$release_dir/${release_name}-AndroidManifest.xml"
           cp "$RUNNER_TEMP/danjjan-aab-contents.txt" \
             "$release_dir/${release_name}-aab-contents.txt"
           (
@@ -175,17 +221,23 @@ jobs:
             sha256sum "${release_name}.aab" > "${release_name}.aab.sha256"
             sha256sum "${release_name}-mapping.txt" \
               > "${release_name}-mapping.txt.sha256"
+            sha256sum "${release_name}-AndroidManifest.xml" \
+              > "${release_name}-AndroidManifest.xml.sha256"
+            sha256sum "${release_name}-16kb-page-support.json" \
+              > "${release_name}-16kb-page-support.json.sha256"
             sha256sum "${release_name}-aab-contents.txt" \
               > "${release_name}-aab-contents.txt.sha256"
           )
 
-          app_version="$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)"
           {
             printf 'commit_sha=%s\n' "$GITHUB_SHA"
             printf 'run_id=%s\n' "$GITHUB_RUN_ID"
+            printf 'package_name=%s\n' "$manifest_package"
             printf 'app_version=%s\n' "$app_version"
             printf 'build_number=%s\n' "$BUILD_NUMBER"
+            printf 'min_sdk=%s\n' "$min_sdk"
             printf 'target_sdk=%s\n' "$target_sdk"
+            printf 'page_alignment=16KB\n'
             printf 'native_debug_symbols=embedded\n'
             printf 'proguard_mapping=embedded_and_exported\n'
             printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

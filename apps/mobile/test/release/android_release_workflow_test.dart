@@ -50,7 +50,15 @@ void main() {
     expect(source, contains('app-release.aab'));
     expect(source, contains('mapping/release/mapping.txt'));
     expect(source, contains('merged_manifests/release'));
+    expect(source, contains(r'"$manifest_package" != "com.vinscent.vinscent"'));
+    expect(source, contains(r'"$version_code" != "$BUILD_NUMBER"'));
+    expect(source, contains(r'"$version_name" != "$app_version"'));
+    expect(source, contains(r'"$min_sdk" != "24"'));
     expect(source, contains(r'(( target_sdk < 36 ))'));
+    expect(source, contains('verify_android_release_bundle.dart'));
+    expect(source, contains('16kb-page-support.json'));
+    expect(source, contains('page_alignment=16KB'));
+    expect(source, contains('AndroidManifest.xml.sha256'));
     expect(source, contains('target_sdk=%s'));
     expect(
       source,
