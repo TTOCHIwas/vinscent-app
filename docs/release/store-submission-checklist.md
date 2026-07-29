@@ -122,6 +122,10 @@ capability와 archive 검증은
 ### App information과 privacy
 
 - [ ] 이름, subtitle, 기본 언어, category, age rating 입력
+- [ ] 2026 연령 등급의 UGC·Messaging and Chat·Social Media 질문을
+  실제 1:1 공유 범위에 맞게 답변
+- [ ] DSA trader 여부를 자체 판단해 선언하고, EU에 trader로 배포하면
+  공개 주소·전화번호·이메일 검증
 - [ ] Support URL과 Privacy Policy URL 입력
 - [ ] App Privacy에 앱과 모든 제3자 SDK의 수집·사용 데이터 입력
 - [ ] 콘텐츠 권리와 암호화 수출 규정 질문 답변
@@ -184,6 +188,8 @@ App Privacy 세부 답변은
 
 - Google Play 앱 생성과 listing:
   https://support.google.com/googleplay/android-developer/answer/9859152
+- Google Play target API 요구사항:
+  https://support.google.com/googleplay/android-developer/answer/11926878
 - 새 개인 계정 테스트 요구사항:
   https://support.google.com/googleplay/android-developer/answer/14151465
 - Google Play Data safety:
@@ -194,6 +200,10 @@ App Privacy 세부 답변은
   https://support.google.com/googleplay/android-developer/answer/13392821
 - App Store Connect 필수 속성:
   https://developer.apple.com/help/app-store-connect/reference/app-information/required-localizable-and-editable-properties/
+- App Store 연령 등급:
+  https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions/
+- EU DSA trader 정보:
+  https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/
 - App Store app privacy:
   https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/
 - App Store build upload:
