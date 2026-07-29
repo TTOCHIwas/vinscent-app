@@ -13,15 +13,22 @@
 npm install
 npm run dev
 npm run build
+npm run build:release
 npm test
 npm run lint
 ```
+
+`build:release`는 `policy-release-state.json`의 운영 결정이 모두 해결되고
+정책 페이지에서 초안 표시가 제거된 경우에만 공개용 빌드를 만든다. 현재
+초안 상태에서는 실패하는 것이 정상이다. 일반 `build`는 공개 전 문서의
+렌더링과 테스트를 위해 계속 사용할 수 있다.
 
 ## 문서 경로
 
 - `/`: 정책 및 지원 문서 진입점
 - `/privacy`: 개인정보처리방침
 - `/terms`: 서비스 이용약관
+- `/safety`: 안전 이용 약속
 - `/account-deletion`: 계정 삭제 안내
 
 공개 문서는 `docs/release/privacy-data-map.md`와 실제 서비스 동작을

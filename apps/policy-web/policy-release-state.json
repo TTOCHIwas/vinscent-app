@@ -1,0 +1,17 @@
+{
+  "status": "draft",
+  "unresolvedDecisions": [
+    "legal_operator_name",
+    "public_contact_email",
+    "effective_date",
+    "minimum_age",
+    "gemini_billing",
+    "weather_provider",
+    "diagnostic_retention",
+    "safety_report_retention",
+    "moderation_channel",
+    "moderation_sla_and_owner",
+    "external_deletion_verification",
+    "external_deletion_sla_and_confirmation"
+  ]
+}
