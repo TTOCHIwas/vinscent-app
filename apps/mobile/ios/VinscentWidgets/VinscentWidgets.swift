@@ -130,18 +130,18 @@ private struct VinscentCharacterWidgetView: View {
           animatedCharacter
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Play recording")
+        .accessibilityLabel("녹음 재생")
       } else if canRecordFromWidget {
         Button(intent: ToggleVinscentWidgetRecordingIntent()) {
           animatedCharacter
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Start recording")
+        .accessibilityLabel("녹음 시작")
       } else {
         Link(destination: VinscentWidgetConstants.recordURL) {
           animatedCharacter
         }
-        .accessibilityLabel("Open microphone permission")
+        .accessibilityLabel("마이크 권한 설정 열기")
       }
     }
   }
@@ -185,7 +185,7 @@ private struct VinscentCharacterWidgetView: View {
           .controlSize(.small)
           .tint(VinscentWidgetPalette.onBrandAction)
       }
-      .accessibilityLabel("Saving recording")
+      .accessibilityLabel("녹음 저장 중")
     case .recording:
       Button(intent: ToggleVinscentWidgetRecordingIntent()) {
         recordingButtonSurface {
@@ -198,19 +198,19 @@ private struct VinscentCharacterWidgetView: View {
         }
       }
       .buttonStyle(.plain)
-      .accessibilityLabel("Stop recording")
+      .accessibilityLabel("녹음 종료")
     case .idle:
       if canRecordFromWidget {
         Button(intent: ToggleVinscentWidgetRecordingIntent()) {
           idleRecordingButton
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Start recording")
+        .accessibilityLabel("녹음 시작")
       } else {
         Link(destination: VinscentWidgetConstants.recordURL) {
           idleRecordingButton
         }
-        .accessibilityLabel("Open microphone permission")
+        .accessibilityLabel("마이크 권한 설정 열기")
       }
     }
   }
@@ -377,7 +377,7 @@ private struct VinscentCardWidgetView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
     }
-    .accessibilityLabel("Open latest card")
+    .accessibilityLabel("최신 카드 열기")
   }
 
   @ViewBuilder
@@ -412,7 +412,7 @@ private struct VinscentRecordingLiveActivity: Widget {
           Image(systemName: "stop.fill")
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Stop recording")
+        .accessibilityLabel("녹음 종료")
       }
       .padding()
       .activityBackgroundTint(.black)

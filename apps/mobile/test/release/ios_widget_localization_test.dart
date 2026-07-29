@@ -12,12 +12,20 @@ void main() {
     expect(source, contains('.configurationDisplayName("단짠 카드")'));
     expect(source, contains('name: "카드 기울기"'));
     expect(source, contains('@Parameter(title: "기울기"'));
+    expect(source, contains('.accessibilityLabel("녹음 재생")'));
+    expect(source, contains('.accessibilityLabel("녹음 시작")'));
+    expect(source, contains('.accessibilityLabel("녹음 종료")'));
+    expect(source, contains('.accessibilityLabel("마이크 권한 설정 열기")'));
+    expect(source, contains('.accessibilityLabel("최신 카드 열기")'));
     expect(
       source,
       isNot(contains('Play or record your shared couple message.')),
     );
     expect(source, isNot(contains("Show your partner's latest card.")));
     expect(source, isNot(contains('Card appearance')));
+    expect(source, isNot(contains('.accessibilityLabel("Play recording")')));
+    expect(source, isNot(contains('.accessibilityLabel("Start recording")')));
+    expect(source, isNot(contains('.accessibilityLabel("Stop recording")')));
   });
 
   test('iOS widget audio intents use the Korean product language', () {
