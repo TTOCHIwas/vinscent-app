@@ -186,22 +186,28 @@ scripts/build_ios_release_candidate.sh 1
 
 - IPA와 SHA-256
 - dSYM을 포함한 `.xcarchive.zip`과 SHA-256
+- Runner·위젯의 최종 서명 entitlement와 SHA-256
+- archive에 포함된 privacy manifest 경로 목록과 SHA-256
 - commit SHA, 앱 version, build number, Xcode·iOS SDK version, 생성 시각
+- Runner·위젯 bundle ID, production push 환경과 App Group
 
-빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 스크립트는
-App Store Connect에 업로드하지 않으므로 Organizer 또는 Transporter에서
-검증 후 사람이 업로드한다.
+스크립트는 archive의 코드 서명, IPA 압축 무결성, Runner·위젯 bundle ID,
+version·build number, app·widget privacy manifest, production push,
+Sign in with Apple과 App Group을 검사한다. 위젯에 push 또는 Sign in with
+Apple entitlement가 들어가면 실패한다.
+
+빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 검증 중
+실패한 임시 자료는 제거하며, 모든 검사를 통과한 경우에만 최종 증빙
+디렉터리를 만든다. 스크립트는 App Store Connect에 업로드하지 않으므로
+Organizer 또는 Transporter에서 검증 후 사람이 업로드한다.
 
 Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한다.
 
-1. Runner와 위젯의 bundle identifier와 Development Team이 올바르다.
-2. Runner의 서명 entitlement에 `aps-environment=production`,
-   `com.apple.developer.applesignin`, App Group이 있다.
-3. 위젯의 서명 entitlement에는 App Group만 있고 Runner 전용 entitlement는
-   없다.
-4. 실제 iPhone에서 Apple 로그인, 종료 상태 푸시 수신, 위젯 표시·녹음·재생을
+1. archive validation에 추가 서명·privacy 경고가 없다.
+2. Development Team과 배포 프로비저닝 프로파일이 올바르다.
+3. 실제 iPhone에서 Apple 로그인, 종료 상태 푸시 수신, 위젯 표시·녹음·재생을
    검증한다.
-5. 개인정보 manifest와 App Privacy Report 검증은
+4. 개인정보 manifest와 App Privacy Report 검증은
    `docs/release/ios-privacy-declaration.md`를 따른다.
 
 저장소에는 `DEVELOPMENT_TEAM`을 하드코딩하지 않는다. 팀 선택과 App ID
