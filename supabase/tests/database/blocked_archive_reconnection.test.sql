@@ -32,6 +32,28 @@ values
     now()
   );
 
+insert into public.user_policy_acceptances (
+  user_id,
+  policy_type,
+  policy_version
+)
+values
+  (
+    '19100000-0000-0000-0000-000000000001',
+    'ugc_safety_policy',
+    'ugc-safety-v1'
+  ),
+  (
+    '19100000-0000-0000-0000-000000000002',
+    'ugc_safety_policy',
+    'ugc-safety-v1'
+  ),
+  (
+    '19100000-0000-0000-0000-000000000003',
+    'ugc_safety_policy',
+    'ugc-safety-v1'
+  );
+
 insert into public.profiles (id, display_name, birth_date)
 values
   (

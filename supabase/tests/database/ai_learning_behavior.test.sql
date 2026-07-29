@@ -31,6 +31,23 @@ values
     now()
   );
 
+insert into public.user_policy_acceptances (
+  user_id,
+  policy_type,
+  policy_version
+)
+values
+  (
+    '10000000-0000-0000-0000-000000000001',
+    'ugc_safety_policy',
+    'ugc-safety-v1'
+  ),
+  (
+    '10000000-0000-0000-0000-000000000002',
+    'ugc_safety_policy',
+    'ugc-safety-v1'
+  );
+
 insert into public.couples (
   id,
   invite_code,
