@@ -292,6 +292,38 @@ void main() {
       );
     });
 
+    testWidgets('reports an AI-generated question prompt before answering', (
+      tester,
+    ) async {
+      final safetyRepository = _FakeSafetyReportRepository();
+      final targetDate = DateTime(2026, 5, 31);
+
+      await _pumpRouter(
+        tester,
+        repository: _FakeDailyQuestionAnswerRepository(_emptyAnswerState),
+        safetyReportRepository: safetyRepository,
+        storyLoopDetails: {
+          targetDate: _storyLoopDetailFor(
+            date: targetDate,
+            question: _aiDailyQuestion,
+            answerState: _emptyAnswerState,
+            canAnswerQuestion: true,
+          ),
+        },
+      );
+
+      expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
+      await _submitUnsafeAiReport(tester);
+
+      expect(
+        safetyRepository.requests.single.target,
+        const SafetyReportTarget(
+          type: SafetyReportTargetType.aiQuestion,
+          id: 'ai-daily-question-id',
+        ),
+      );
+    });
+
     testWidgets('shows published AI feedback after both answers', (
       tester,
     ) async {
@@ -764,6 +796,39 @@ void main() {
   });
 
   group('TodayQuestionAnswerEditScreen', () {
+    testWidgets('reports an AI-generated question prompt while answering', (
+      tester,
+    ) async {
+      final safetyRepository = _FakeSafetyReportRepository();
+      final targetDate = DateTime(2026, 5, 31);
+
+      await _pumpRouter(
+        tester,
+        repository: _FakeDailyQuestionAnswerRepository(_emptyAnswerState),
+        safetyReportRepository: safetyRepository,
+        initialLocation: '/home/question/edit',
+        storyLoopDetails: {
+          targetDate: _storyLoopDetailFor(
+            date: targetDate,
+            question: _aiDailyQuestion,
+            answerState: _emptyAnswerState,
+            canAnswerQuestion: true,
+          ),
+        },
+      );
+
+      expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
+      await _submitUnsafeAiReport(tester);
+
+      expect(
+        safetyRepository.requests.single.target,
+        const SafetyReportTarget(
+          type: SafetyReportTargetType.aiQuestion,
+          id: 'ai-daily-question-id',
+        ),
+      );
+    });
+
     testWidgets(
       'shows home-sized cards above the horizontal question prompt without page scrolling',
       (tester) async {
@@ -1159,6 +1224,18 @@ void main() {
   });
 }
 
+Future<void> _submitUnsafeAiReport(WidgetTester tester) async {
+  final indicator = find.byKey(const Key('ai-generated-content-indicator'));
+  await tester.ensureVisible(indicator);
+  await tester.tap(indicator);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
+  await tester.pump();
+  await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
+  await tester.tap(find.byKey(const Key('safety-report-submit')));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openAnswerKeyboard(WidgetTester tester) async {
   await tester.tap(find.byType(TextField));
   tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -1422,6 +1499,18 @@ final _dailyQuestion = DailyQuestion(
   questionId: 'question-id',
   questionText: 'today question',
   questionSource: QuestionSource.curated,
+  questionCategory: 'daily',
+  questionMood: 'warm',
+  assignedDate: DateTime(2026, 5, 31),
+  status: DailyQuestionStatus.pending,
+);
+
+final _aiDailyQuestion = DailyQuestion(
+  dailyQuestionId: 'ai-daily-question-id',
+  coupleId: 'couple-id',
+  questionId: 'ai-question-id',
+  questionText: 'AI가 만든 오늘 질문',
+  questionSource: QuestionSource.ai,
   questionCategory: 'daily',
   questionMood: 'warm',
   assignedDate: DateTime(2026, 5, 31),

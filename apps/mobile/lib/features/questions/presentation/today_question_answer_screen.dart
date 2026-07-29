@@ -383,22 +383,22 @@ class _QuestionDetailContent extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: QuestionDetailTitle(
                 questionText: question.questionText,
-                showGeneratedIndicator:
-                    question.questionSource == QuestionSource.ai,
-                onGeneratedIndicatorPressed:
-                    question.questionSource == QuestionSource.ai
-                    ? () => showSafetyReportSheet(
-                        context: context,
-                        target: SafetyReportTarget(
-                          type: SafetyReportTargetType.aiQuestion,
-                          id: question.dailyQuestionId,
-                        ),
-                      )
-                    : null,
+                showGeneratedIndicator: _isAiGeneratedQuestion(question),
+                onGeneratedIndicatorPressed: _buildAiQuestionReportAction(
+                  context,
+                  question,
+                ),
               ),
             )
           else
-            QuestionAnswerPromptRow(questionText: question.questionText),
+            QuestionAnswerPromptRow(
+              questionText: question.questionText,
+              showGeneratedIndicator: _isAiGeneratedQuestion(question),
+              onGeneratedIndicatorPressed: _buildAiQuestionReportAction(
+                context,
+                question,
+              ),
+            ),
           SizedBox(height: showQuestionAsTitle ? 28 : 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -507,6 +507,13 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
                 QuestionAnswerPromptRow(
                   questionText: widget.question.questionText,
                   compact: compactLayout,
+                  showGeneratedIndicator: _isAiGeneratedQuestion(
+                    widget.question,
+                  ),
+                  onGeneratedIndicatorPressed: _buildAiQuestionReportAction(
+                    context,
+                    widget.question,
+                  ),
                 ),
                 SizedBox(height: compactLayout ? 8 : 16),
                 Expanded(
@@ -614,6 +621,27 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
       _submitErrorMessage = submitErrorMessage;
     });
   }
+}
+
+bool _isAiGeneratedQuestion(DailyQuestion question) {
+  return question.questionSource == QuestionSource.ai;
+}
+
+VoidCallback? _buildAiQuestionReportAction(
+  BuildContext context,
+  DailyQuestion question,
+) {
+  if (!_isAiGeneratedQuestion(question)) {
+    return null;
+  }
+
+  return () => showSafetyReportSheet(
+    context: context,
+    target: SafetyReportTarget(
+      type: SafetyReportTargetType.aiQuestion,
+      id: question.dailyQuestionId,
+    ),
+  );
 }
 
 class _QuestionAnswerCards extends StatelessWidget {
