@@ -17,6 +17,11 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] 앱 설정에서 개인정보처리방침과 이용약관 URL 연결
 - [ ] 공개 정책, `play-data-safety.md`, App Store App Privacy 답변 일치
 - [ ] CI의 Flutter, iOS, Node, Edge, Database 작업이 원격에서 통과
+- [ ] 출시 commit의 모든 Edge Function을 운영 Supabase에 배포
+- [ ] 운영 Edge secrets가 런타임 환경 매니페스트와 이름 기준으로 일치
+- [ ] 모든 웹훅·스케줄러 비밀값을 출시 전 교체하고 호출 헤더와 재대조
+- [ ] `audit_edge_runtime_resources.sql`의 Webhook 결과가 모두 `ready`
+- [ ] archive purge 주기를 확정하고 모든 Cron 결과가 `ready`
 - [ ] `docs/release/mobile-performance-baseline.md`의 실기기 검증 통과
 - [ ] `docs/release/mobile-release-qa.md`의 출시 후보 QA 통과
 
