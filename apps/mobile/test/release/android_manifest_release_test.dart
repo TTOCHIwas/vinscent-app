@@ -35,6 +35,25 @@ void main() {
     }
   });
 
+  test('legacy gallery access keeps write-only storage permission', () {
+    final xml = manifest.readAsStringSync();
+
+    expect(
+      xml,
+      contains(
+        'android:name="android.permission.WRITE_EXTERNAL_STORAGE"\n'
+        '        android:maxSdkVersion="29"',
+      ),
+    );
+    expect(
+      xml,
+      contains(
+        'android:name="android.permission.READ_EXTERNAL_STORAGE"\n'
+        '        tools:node="remove"',
+      ),
+    );
+  });
+
   test('local sessions and drafts are excluded from device backup', () {
     final xml = manifest.readAsStringSync();
 
