@@ -113,6 +113,13 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () =>
                     _openPolicyDocument(context, policyDocumentLinks.terms),
               ),
+              SettingsNavigationRow(
+                key: const Key('settings-row-support'),
+                iconData: LucideIcons.lifeBuoy,
+                title: '고객지원',
+                onTap: () =>
+                    _openPolicyDocument(context, policyDocumentLinks.support),
+              ),
             ],
           ),
         ],
@@ -122,18 +129,18 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _openPolicyDocument(BuildContext context, Uri? uri) async {
     if (uri == null) {
-      _showMessage(context, '정책 페이지를 준비하고 있어요');
+      _showMessage(context, '페이지를 준비하고 있어요');
       return;
     }
 
     try {
       final launched = await policyDocumentLauncher.launch(uri);
       if (!launched && context.mounted) {
-        _showMessage(context, '정책 페이지를 열지 못했어요');
+        _showMessage(context, '페이지를 열지 못했어요');
       }
     } catch (_) {
       if (context.mounted) {
-        _showMessage(context, '정책 페이지를 열지 못했어요');
+        _showMessage(context, '페이지를 열지 못했어요');
       }
     }
   }

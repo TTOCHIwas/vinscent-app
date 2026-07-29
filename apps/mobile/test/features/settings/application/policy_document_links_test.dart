@@ -16,6 +16,10 @@ void main() {
         links.terms,
         Uri.parse('https://policy.danjjan.example/support/terms'),
       );
+      expect(
+        links.support,
+        Uri.parse('https://policy.danjjan.example/support/support'),
+      );
     });
 
     test('후행 슬래시를 중복하지 않는다', () {
@@ -42,6 +46,7 @@ void main() {
 
         expect(links.privacy, isNull, reason: baseUrl);
         expect(links.terms, isNull, reason: baseUrl);
+        expect(links.support, isNull, reason: baseUrl);
       }
     });
   });

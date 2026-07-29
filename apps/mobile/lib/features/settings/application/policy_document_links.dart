@@ -11,6 +11,7 @@ class PolicyDocumentLinks {
 
   Uri? get privacy => _resolve('privacy');
   Uri? get terms => _resolve('terms');
+  Uri? get support => _resolve('support');
 
   Uri? _resolve(String documentPath) {
     final baseUri = Uri.tryParse(baseUrl.trim());

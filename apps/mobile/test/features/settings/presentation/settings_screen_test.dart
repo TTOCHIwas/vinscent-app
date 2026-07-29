@@ -158,6 +158,13 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: policyGroup,
+        matching: find.byKey(const Key('settings-row-support')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('개인정보처리방침을 검증된 외부 주소로 연다', (tester) async {
@@ -202,7 +209,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(launcher.launchedUris, isEmpty);
-    expect(find.text('정책 페이지를 준비하고 있어요'), findsOneWidget);
+    expect(find.text('페이지를 준비하고 있어요'), findsOneWidget);
+  });
+
+  testWidgets('고객지원 페이지를 검증된 외부 주소로 연다', (tester) async {
+    _useTallViewport(tester);
+    final launcher = _FakePolicyDocumentLauncher();
+    await _pumpSettings(
+      tester,
+      policyDocumentLinks: const PolicyDocumentLinks(
+        baseUrl: 'https://policy.danjjan.example',
+      ),
+      policyDocumentLauncher: launcher,
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-support')),
+      100,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.byKey(const Key('settings-row-support')));
+    await tester.pumpAndSettle();
+
+    expect(launcher.launchedUris, [
+      Uri.parse('https://policy.danjjan.example/support'),
+    ]);
   });
 }
 
