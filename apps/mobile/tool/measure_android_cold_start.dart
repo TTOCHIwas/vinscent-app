@@ -38,6 +38,11 @@ Future<void> main(List<String> arguments) async {
     final appVersion = _readAppVersion(
       File('${mobileDirectory.path}${Platform.pathSeparator}pubspec.yaml'),
     );
+    final installedPackage = parseInstalledPackageMetadata(packageDump);
+    validateInstalledReleasePackage(
+      installedPackage,
+      expectedAppVersion: appVersion,
+    );
 
     stdout.writeln('Discarding one cold-start warm-up run...');
     final warmUp = await adb.measureColdStart(deviceId);
@@ -68,7 +73,7 @@ Future<void> main(List<String> arguments) async {
           await adb.property(deviceId, 'ro.build.version.sdk'),
         ),
       },
-      'installedPackage': parseInstalledPackageMetadata(packageDump),
+      'installedPackage': installedPackage,
       'measurement': <String, Object?>{
         'method': 'adb shell am start -W after am force-stop',
         'discardedWarmUp': warmUp.toJson(),
@@ -365,6 +370,41 @@ Map<String, Object?> parseInstalledPackageMetadata(String packageDump) {
       multiLine: true,
     ).hasMatch(packageDump),
   };
+}
+
+void validateInstalledReleasePackage(
+  Map<String, Object?> metadata, {
+  required String? expectedAppVersion,
+}) {
+  if (expectedAppVersion == null || expectedAppVersion.trim().isEmpty) {
+    throw StateError('Unable to read the expected app version.');
+  }
+
+  final installedVersionName = metadata['versionName'];
+  final expectedVersionName = expectedAppVersion.split('+').first;
+  if (installedVersionName != expectedVersionName) {
+    throw StateError(
+      'Installed version does not match the current source version.',
+    );
+  }
+
+  final versionCode = metadata['versionCode'];
+  if (versionCode is! int || versionCode <= 0) {
+    throw StateError('Installed package has no valid version code.');
+  }
+
+  final targetSdk = metadata['targetSdk'];
+  if (targetSdk is! int || targetSdk < 36) {
+    throw StateError(
+      'Installed release candidate must target SDK 36 or later.',
+    );
+  }
+
+  if (metadata['debuggable'] != false) {
+    throw StateError(
+      'Cold-start release evidence requires a non-debuggable build.',
+    );
+  }
 }
 
 Map<String, int> summarizeMeasurements(Iterable<int> measurements) {

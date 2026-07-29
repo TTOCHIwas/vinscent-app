@@ -57,6 +57,44 @@ Package [com.vinscent.vinscent] (123):
     expect(metadata['debuggable'], isFalse);
   });
 
+  test('accepts only the current non-debuggable release candidate', () {
+    final validMetadata = <String, Object?>{
+      'versionName': '1.0.0',
+      'versionCode': 42,
+      'targetSdk': 36,
+      'debuggable': false,
+    };
+
+    expect(
+      () => validateInstalledReleasePackage(
+        validMetadata,
+        expectedAppVersion: '1.0.0+1',
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => validateInstalledReleasePackage({
+        ...validMetadata,
+        'debuggable': true,
+      }, expectedAppVersion: '1.0.0+1'),
+      throwsStateError,
+    );
+    expect(
+      () => validateInstalledReleasePackage({
+        ...validMetadata,
+        'targetSdk': 35,
+      }, expectedAppVersion: '1.0.0+1'),
+      throwsStateError,
+    );
+    expect(
+      () => validateInstalledReleasePackage(
+        validMetadata,
+        expectedAppVersion: '1.0.1+1',
+      ),
+      throwsStateError,
+    );
+  });
+
   test('summarizes ten measurements with nearest-rank percentiles', () {
     final summary = summarizeMeasurements([
       1000,
