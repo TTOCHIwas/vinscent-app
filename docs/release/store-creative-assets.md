@@ -37,6 +37,27 @@ commit과 런타임 설정으로 빌드한 앱에서 생성한다.
 형식으로 남긴다. 예:
 `android-phone-01-home-1.0.0-a1b2c3d.png`.
 
+제출 원본은 다음 경로에 보관한다.
+
+| 자산 | 경로 |
+|---|---|
+| Play feature graphic | `store-assets/google-play/feature-graphic.png` 또는 `.jpg` |
+| Play 휴대전화 | `store-assets/google-play/phone/` |
+| Play 태블릿 | `store-assets/google-play/tablet/` |
+| App Store iPhone 6.9형 | `store-assets/app-store/iphone-6.9/` |
+| App Store iPad 13형 | `store-assets/app-store/ipad-13/` |
+
+각 스크린샷 파일의 `platform-device-class`는 차례로
+`android-phone`, `android-tablet`, `ios-iphone-6.9`,
+`ios-ipad-13`을 사용한다. 제출 직전에는 다음 유한 명령으로 장수, 파일명,
+해상도, 형식과 알파 채널을 검증한다. 자산이 아직 준비되지 않은 동안에는
+누락된 그룹을 실패로 보고하는 것이 정상이다.
+
+```powershell
+cd apps/mobile
+..\..\.toolchains\flutter\bin\dart.bat run tool/verify_store_assets.dart
+```
+
 ## 3. Google Play
 
 ### 앱 아이콘
@@ -120,6 +141,7 @@ UI와 기능이 같은 경우 App Store Connect가 고해상도 이미지를 작
 - [ ] 디버그 배너, overflow, 오류·로딩 상태 없음
 - [ ] 스토어 설명의 기능과 각 화면이 일치
 - [ ] Play 이미지별 대체 텍스트 작성
+- [ ] `verify_store_assets.dart` 통과
 
 ## 6. 공식 자료
 
