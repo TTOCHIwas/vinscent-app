@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../profile/application/profile_controller.dart';
+import '../../safety/application/ugc_safety_policy_controller.dart';
 
 class BootScreen extends ConsumerWidget {
   const BootScreen({super.key});
@@ -13,8 +14,10 @@ class BootScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileControllerProvider);
+    final ugcSafetyPolicy = ref.watch(ugcSafetyPolicyControllerProvider);
     final couple = ref.watch(coupleControllerProvider);
-    final hasError = profile.hasError || couple.hasError;
+    final hasError =
+        profile.hasError || ugcSafetyPolicy.hasError || couple.hasError;
 
     return Scaffold(
       body: SafeArea(
@@ -40,6 +43,7 @@ class BootScreen extends ConsumerWidget {
                         onPressed: () {
                           ref.invalidate(authControllerProvider);
                           ref.invalidate(profileControllerProvider);
+                          ref.invalidate(ugcSafetyPolicyControllerProvider);
                           ref.invalidate(coupleControllerProvider);
                         },
                         child: const Text('다시 시도'),

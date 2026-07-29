@@ -6,8 +6,10 @@ import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/safety/application/ugc_safety_policy_controller.dart';
 
 import '../support/couple_fixtures.dart';
+import '../support/safety_fixtures.dart';
 
 final _testAuthStatusProvider =
     NotifierProvider<_TestAuthStatusController, AuthStatus>(
@@ -23,6 +25,9 @@ void main() {
         ),
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
+        ),
+        ugcSafetyPolicyControllerProvider.overrideWithBuild(
+          (ref, notifier) async => acceptedUgcSafetyPolicyStatus(),
         ),
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => activeCouple(),

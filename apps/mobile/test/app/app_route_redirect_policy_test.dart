@@ -4,8 +4,10 @@ import 'package:vinscent/app/application/app_route_redirect_policy.dart';
 import 'package:vinscent/features/auth/application/auth_status.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/safety/data/ugc_safety_policy_status.dart';
 
 import '../support/couple_fixtures.dart';
+import '../support/safety_fixtures.dart';
 
 void main() {
   group('AppRouteRedirectPolicy', () {
@@ -49,6 +51,28 @@ void main() {
       expect(_resolve(couple: AsyncData(pendingCouple())), '/couple/waiting');
     });
 
+    test('requires the current UGC safety policy after onboarding', () {
+      expect(
+        _resolve(ugcSafetyPolicy: AsyncData(pendingUgcSafetyPolicyStatus())),
+        '/safety-policy',
+      );
+      expect(
+        _resolve(
+          path: '/safety-policy',
+          ugcSafetyPolicy: AsyncData(pendingUgcSafetyPolicyStatus()),
+        ),
+        isNull,
+      );
+      expect(
+        _resolve(
+          path: '/settings/account',
+          ugcSafetyPolicy: AsyncData(pendingUgcSafetyPolicyStatus()),
+        ),
+        isNull,
+      );
+      expect(_resolve(ugcSafetyPolicy: const AsyncLoading()), '/boot');
+    });
+
     test('routes each member to the correct initial setup step', () {
       final ownerWithoutDate = activeCoupleWithoutDate(
         userAId: 'partner-id',
@@ -83,6 +107,7 @@ void main() {
 
       expect(_resolve(couple: couple, path: '/calendar'), isNull);
       expect(_resolve(couple: couple, path: '/couple/waiting'), '/home');
+      expect(_resolve(couple: couple, path: '/safety-policy'), '/home');
       expect(_resolve(couple: couple, path: '/'), '/home');
     });
 
@@ -100,12 +125,15 @@ String? _resolve({
   String path = '/home',
   AuthStatus authStatus = AuthStatus.authenticated,
   AsyncValue<UserProfile?>? profile,
+  AsyncValue<UgcSafetyPolicyStatus?>? ugcSafetyPolicy,
   AsyncValue<Couple?> couple = const AsyncData(null),
 }) {
   return AppRouteRedirectPolicy.resolve(
     path: path,
     authStatus: authStatus,
     profile: profile ?? AsyncData(_profile),
+    ugcSafetyPolicy:
+        ugcSafetyPolicy ?? AsyncData(acceptedUgcSafetyPolicyStatus()),
     couple: couple,
   );
 }

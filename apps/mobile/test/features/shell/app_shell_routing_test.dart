@@ -22,6 +22,7 @@ import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/safety/application/ugc_safety_policy_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
@@ -43,6 +44,7 @@ import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 
 import '../../support/couple_fixtures.dart';
 import '../../support/question_answer_fixtures.dart';
+import '../../support/safety_fixtures.dart';
 import '../../support/story_loop_fixtures.dart';
 
 void main() {
@@ -963,6 +965,9 @@ Future<void> _pumpApp(
         ),
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
+        ),
+        ugcSafetyPolicyControllerProvider.overrideWithBuild(
+          (ref, notifier) async => acceptedUgcSafetyPolicyStatus(),
         ),
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => _activeCouple,

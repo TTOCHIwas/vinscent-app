@@ -32,6 +32,8 @@ import '../features/settings/presentation/blocked_users_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/safety/application/ugc_safety_policy_controller.dart';
+import '../features/safety/presentation/ugc_safety_policy_screen.dart';
 import '../features/shell/presentation/app_shell.dart';
 import '../features/shell/presentation/home_tab_frame.dart';
 import '../features/shell/presentation/widgets/shell_root_back_scope.dart';
@@ -43,6 +45,7 @@ final appRouterRefreshNotifierProvider = Provider<AppRouterRefreshNotifier>((
   final notifier = AppRouterRefreshNotifier();
   ref.listen(authControllerProvider, (_, _) => notifier.refresh());
   ref.listen(profileControllerProvider, (_, _) => notifier.refresh());
+  ref.listen(ugcSafetyPolicyControllerProvider, (_, _) => notifier.refresh());
   ref.listen(coupleControllerProvider, (_, _) => notifier.refresh());
   ref.onDispose(notifier.dispose);
   return notifier;
@@ -59,6 +62,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       path: state.uri.path,
       authStatus: ref.read(authControllerProvider),
       profile: ref.read(profileControllerProvider),
+      ugcSafetyPolicy: ref.read(ugcSafetyPolicyControllerProvider),
       couple: ref.read(coupleControllerProvider),
     ),
     routes: [
@@ -77,6 +81,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         name: 'onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/safety-policy',
+        name: 'ugcSafetyPolicy',
+        builder: (context, state) => const UgcSafetyPolicyScreen(),
       ),
       GoRoute(
         path: '/couple',

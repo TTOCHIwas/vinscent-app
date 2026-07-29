@@ -18,10 +18,24 @@ import 'package:vinscent/features/characters/presentation/character_editor_scree
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/safety/application/ugc_safety_policy_controller.dart';
+import 'package:vinscent/features/safety/data/ugc_safety_policy_status.dart';
+import 'package:vinscent/features/safety/presentation/ugc_safety_policy_screen.dart';
 
 import '../../support/couple_fixtures.dart';
+import '../../support/safety_fixtures.dart';
 
 void main() {
+  testWidgets('requires the safety policy before couple entry', (tester) async {
+    await _pumpApp(
+      tester,
+      couple: null,
+      ugcSafetyPolicy: pendingUgcSafetyPolicyStatus(),
+    );
+
+    expect(find.byType(UgcSafetyPolicyScreen), findsOneWidget);
+  });
+
   testWidgets('sends profiled users without a couple to couple entry', (
     tester,
   ) async {
@@ -93,6 +107,9 @@ void main() {
           profileControllerProvider.overrideWithBuild(
             (ref, notifier) async => _profile,
           ),
+          ugcSafetyPolicyControllerProvider.overrideWithBuild(
+            (ref, notifier) async => acceptedUgcSafetyPolicyStatus(),
+          ),
           coupleRepositoryProvider.overrideWithValue(repository),
           coupleCharacterControllerProvider.overrideWithBuild(
             (ref, notifier) async => null,
@@ -134,7 +151,11 @@ void main() {
   });
 }
 
-Future<void> _pumpApp(WidgetTester tester, {required Couple? couple}) async {
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  required Couple? couple,
+  UgcSafetyPolicyStatus? ugcSafetyPolicy,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -143,6 +164,10 @@ Future<void> _pumpApp(WidgetTester tester, {required Couple? couple}) async {
         ),
         profileControllerProvider.overrideWithBuild(
           (ref, notifier) async => _profile,
+        ),
+        ugcSafetyPolicyControllerProvider.overrideWithBuild(
+          (ref, notifier) async =>
+              ugcSafetyPolicy ?? acceptedUgcSafetyPolicyStatus(),
         ),
         coupleControllerProvider.overrideWithBuild(
           (ref, notifier) async => couple,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/application/auth_status.dart';
 import '../../features/couple/data/couple.dart';
 import '../../features/profile/data/user_profile.dart';
+import '../../features/safety/data/ugc_safety_policy_status.dart';
 
 class AppRouteRedirectPolicy {
   const AppRouteRedirectPolicy._();
@@ -11,6 +12,7 @@ class AppRouteRedirectPolicy {
     required String path,
     required AuthStatus authStatus,
     required AsyncValue<UserProfile?> profile,
+    required AsyncValue<UgcSafetyPolicyStatus?> ugcSafetyPolicy,
     required AsyncValue<Couple?> couple,
   }) {
     final isBootRoute = path == '/boot';
@@ -22,6 +24,8 @@ class AppRouteRedirectPolicy {
     final isCoupleCharacterRoute = path == '/couple/character';
     final isCoupleSetupWaitingRoute = path == '/couple/setup/waiting';
     final isBlockedUsersRoute = path == '/settings/blocked-users';
+    final isAccountSettingsRoute = path == '/settings/account';
+    final isUgcSafetyPolicyRoute = path == '/safety-policy';
     final isCoupleRoute =
         isCoupleEntryRoute ||
         isCoupleWaitingRoute ||
@@ -40,42 +44,59 @@ class AppRouteRedirectPolicy {
             return isOnboardingRoute ? null : '/onboarding';
           }
 
-          return couple.when(
+          return ugcSafetyPolicy.when(
             loading: () => isBootRoute ? null : '/boot',
             error: (_, _) => isBootRoute ? null : '/boot',
-            data: (couple) {
-              if (couple == null) {
-                return (isCoupleEntryRoute || isBlockedUsersRoute)
+            data: (policyStatus) {
+              if (policyStatus == null) {
+                return isBootRoute ? null : '/boot';
+              }
+              if (!policyStatus.isAccepted) {
+                return (isUgcSafetyPolicyRoute || isAccountSettingsRoute)
                     ? null
-                    : '/couple';
+                    : '/safety-policy';
               }
 
-              return switch (couple.accessMode) {
-                CoupleAccessMode.pending =>
-                  isCoupleWaitingRoute ? null : '/couple/waiting',
-                CoupleAccessMode.active => _resolveActiveCouple(
-                  path: path,
-                  profile: profile,
-                  couple: couple,
-                  isBootRoute: isBootRoute,
-                  isLoginRoute: isLoginRoute,
-                  isOnboardingRoute: isOnboardingRoute,
-                  isCoupleRoute: isCoupleRoute,
-                  isCoupleAnniversaryRoute: isCoupleAnniversaryRoute,
-                  isCoupleCharacterRoute: isCoupleCharacterRoute,
-                  isCoupleSetupWaitingRoute: isCoupleSetupWaitingRoute,
-                ),
-                CoupleAccessMode.archivedReadOnly =>
-                  (isBootRoute ||
-                          isLoginRoute ||
-                          isOnboardingRoute ||
-                          isCoupleRoute ||
-                          path == '/' ||
-                          path == '/home/story' ||
-                          path == '/home/question/edit')
-                      ? '/home'
-                      : null,
-              };
+              return couple.when(
+                loading: () => isBootRoute ? null : '/boot',
+                error: (_, _) => isBootRoute ? null : '/boot',
+                data: (couple) {
+                  if (couple == null) {
+                    return (isCoupleEntryRoute || isBlockedUsersRoute)
+                        ? null
+                        : '/couple';
+                  }
+
+                  return switch (couple.accessMode) {
+                    CoupleAccessMode.pending =>
+                      isCoupleWaitingRoute ? null : '/couple/waiting',
+                    CoupleAccessMode.active => _resolveActiveCouple(
+                      path: path,
+                      profile: profile,
+                      couple: couple,
+                      isBootRoute: isBootRoute,
+                      isLoginRoute: isLoginRoute,
+                      isOnboardingRoute: isOnboardingRoute,
+                      isUgcSafetyPolicyRoute: isUgcSafetyPolicyRoute,
+                      isCoupleRoute: isCoupleRoute,
+                      isCoupleAnniversaryRoute: isCoupleAnniversaryRoute,
+                      isCoupleCharacterRoute: isCoupleCharacterRoute,
+                      isCoupleSetupWaitingRoute: isCoupleSetupWaitingRoute,
+                    ),
+                    CoupleAccessMode.archivedReadOnly =>
+                      (isBootRoute ||
+                              isLoginRoute ||
+                              isOnboardingRoute ||
+                              isUgcSafetyPolicyRoute ||
+                              isCoupleRoute ||
+                              path == '/' ||
+                              path == '/home/story' ||
+                              path == '/home/question/edit')
+                          ? '/home'
+                          : null,
+                  };
+                },
+              );
             },
           );
         },
@@ -90,6 +111,7 @@ class AppRouteRedirectPolicy {
     required bool isBootRoute,
     required bool isLoginRoute,
     required bool isOnboardingRoute,
+    required bool isUgcSafetyPolicyRoute,
     required bool isCoupleRoute,
     required bool isCoupleAnniversaryRoute,
     required bool isCoupleCharacterRoute,
@@ -112,6 +134,7 @@ class AppRouteRedirectPolicy {
     return (isBootRoute ||
             isLoginRoute ||
             isOnboardingRoute ||
+            isUgcSafetyPolicyRoute ||
             isCoupleRoute ||
             path == '/')
         ? '/home'
