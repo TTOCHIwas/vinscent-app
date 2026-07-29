@@ -167,6 +167,13 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       ref
           .read(coupleCalendarEventRealtimeControllerProvider.notifier)
           .refreshReadModels();
+      if (_supportsPushNotifications) {
+        unawaited(
+          ref
+              .read(pushTokenControllerProvider.notifier)
+              .reconcileCurrentDeviceToken(),
+        );
+      }
       _scheduleWidgetSync();
     }
   }

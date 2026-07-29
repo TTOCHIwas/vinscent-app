@@ -9,7 +9,11 @@ void main() {
     final permissionRepository = _FakeNotificationPermissionRepository(
       status: NotificationPermissionStatus.denied,
     );
-    final container = _container(permissionRepository: permissionRepository);
+    final pushTokenRepository = _FakePushTokenRepository();
+    final container = _container(
+      permissionRepository: permissionRepository,
+      pushTokenRepository: pushTokenRepository,
+    );
     addTearDown(container.dispose);
 
     final status = await container.read(
@@ -18,9 +22,10 @@ void main() {
 
     expect(status, NotificationPermissionStatus.denied);
     expect(permissionRepository.fetchCount, 1);
+    expect(pushTokenRepository.reconcileCurrentDeviceTokenCount, 0);
   });
 
-  test('알림 권한을 허용하면 현재 기기 토큰을 등록한다', () async {
+  test('알림 권한을 허용하면 현재 기기 토큰 상태를 동기화한다', () async {
     final permissionRepository = _FakeNotificationPermissionRepository(
       status: NotificationPermissionStatus.notDetermined,
       requestedStatus: NotificationPermissionStatus.enabled,
@@ -42,7 +47,31 @@ void main() {
       NotificationPermissionStatus.enabled,
     );
     expect(permissionRepository.requestCount, 1);
-    expect(pushTokenRepository.registerCurrentDeviceTokenCount, 1);
+    expect(pushTokenRepository.reconcileCurrentDeviceTokenCount, 1);
+  });
+
+  test('알림 권한이 거부되어도 현재 기기 토큰 상태를 동기화한다', () async {
+    final permissionRepository = _FakeNotificationPermissionRepository(
+      status: NotificationPermissionStatus.notDetermined,
+      requestedStatus: NotificationPermissionStatus.denied,
+    );
+    final pushTokenRepository = _FakePushTokenRepository();
+    final container = _container(
+      permissionRepository: permissionRepository,
+      pushTokenRepository: pushTokenRepository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(notificationPermissionControllerProvider.future);
+    await container
+        .read(notificationPermissionControllerProvider.notifier)
+        .requestPermission();
+
+    expect(
+      container.read(notificationPermissionControllerProvider).value,
+      NotificationPermissionStatus.denied,
+    );
+    expect(pushTokenRepository.reconcileCurrentDeviceTokenCount, 1);
   });
 
   test('권한이 거부된 상태에서는 기기 알림 설정을 연다', () async {
@@ -111,6 +140,7 @@ class _FakeNotificationPermissionRepository
 
 class _FakePushTokenRepository implements PushTokenRepository {
   int registerCurrentDeviceTokenCount = 0;
+  int reconcileCurrentDeviceTokenCount = 0;
 
   @override
   Stream<Map<String, dynamic>> get notificationOpens => const Stream.empty();
@@ -130,6 +160,11 @@ class _FakePushTokenRepository implements PushTokenRepository {
   @override
   Future<void> registerCurrentDeviceToken() async {
     registerCurrentDeviceTokenCount++;
+  }
+
+  @override
+  Future<void> reconcileCurrentDeviceToken() async {
+    reconcileCurrentDeviceTokenCount++;
   }
 
   @override

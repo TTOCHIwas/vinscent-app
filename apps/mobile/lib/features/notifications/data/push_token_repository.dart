@@ -22,6 +22,8 @@ abstract interface class PushTokenRepository {
 
   Future<void> registerCurrentDeviceToken();
 
+  Future<void> reconcileCurrentDeviceToken();
+
   Future<void> deactivateCurrentDeviceToken();
 
   Stream<String> get tokenRefreshes;
@@ -162,28 +164,31 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       'FCM notification permission result: ${settings.authorizationStatus}',
     );
 
-    if (!_authorizationPolicy.canRegister(settings.authorizationStatus)) {
-      _debugPushLog(
-        'Current device token registration skipped: '
-        'authorization=${settings.authorizationStatus}',
-      );
-      return;
-    }
-
-    _debugPushLog('FCM token request started');
-    final token = await _messaging.getToken();
-    if (token == null || token.isEmpty) {
-      _debugPushLog(
-        'Current device token registration skipped: FCM token is empty',
-      );
-      return;
-    }
-
-    _debugPushLog(
-      'FCM token received: prefix=${_tokenPrefix(token)}, '
-      'length=${token.length}',
+    await _applyAuthorizationStatus(
+      settings.authorizationStatus,
+      source: 'permission request',
     );
-    await _registerToken(token);
+  }
+
+  @override
+  Future<void> reconcileCurrentDeviceToken() async {
+    _debugPushLog('Current device token reconciliation requested');
+    _ensureSupabaseConfigured();
+
+    if (!_isPushPlatformSupported) {
+      _debugPushLog(
+        'Current device token reconciliation failed: unsupported platform',
+      );
+      throw const PushTokenRepositoryException(
+        PushTokenFailureReason.unsupportedPlatform,
+      );
+    }
+
+    final settings = await _messaging.getNotificationSettings();
+    await _applyAuthorizationStatus(
+      settings.authorizationStatus,
+      source: 'settings refresh',
+    );
   }
 
   @override
@@ -202,24 +207,7 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       return;
     }
 
-    try {
-      _debugPushLog(
-        'deactivate_user_push_token RPC started: '
-        'prefix=${_tokenPrefix(token)}, length=${token.length}',
-      );
-      await Supabase.instance.client
-          .rpc('deactivate_user_push_token', params: {'push_token': token})
-          .timeout(AppConfig.supabaseRpcTimeout);
-      _debugPushLog('deactivate_user_push_token RPC completed');
-    } on TimeoutException {
-      _debugPushLog('deactivate_user_push_token RPC failed: timeout');
-      throw const PushTokenRepositoryException(
-        PushTokenFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      _debugPushLog('deactivate_user_push_token RPC failed: ${error.message}');
-      throw _mapPostgrestError(error);
-    }
+    await _deactivateToken(token);
   }
 
   @override
@@ -236,15 +224,41 @@ class FirebasePushTokenRepository implements PushTokenRepository {
     }
 
     final settings = await _messaging.getNotificationSettings();
-    if (!_authorizationPolicy.canRegister(settings.authorizationStatus)) {
+    await _applyAuthorizationStatus(
+      settings.authorizationStatus,
+      token: token,
+      source: 'token refresh',
+    );
+  }
+
+  Future<void> _applyAuthorizationStatus(
+    AuthorizationStatus status, {
+    required String source,
+    String? token,
+  }) async {
+    final action = _authorizationPolicy.actionFor(status);
+    _debugPushLog(
+      'Push token authorization resolved: '
+      'source=$source, authorization=$status, action=$action',
+    );
+
+    if (action == PushTokenAuthorizationAction.none) {
+      return;
+    }
+
+    final resolvedToken = token ?? await _messaging.getToken();
+    if (resolvedToken == null || resolvedToken.isEmpty) {
       _debugPushLog(
-        'Refreshed token registration skipped: '
-        'authorization=${settings.authorizationStatus}',
+        'Push token action skipped: FCM token is empty, action=$action',
       );
       return;
     }
 
-    await _registerToken(token);
+    if (action == PushTokenAuthorizationAction.register) {
+      await _registerToken(resolvedToken);
+      return;
+    }
+    await _deactivateToken(resolvedToken);
   }
 
   Future<void> _registerToken(String token) async {
@@ -279,6 +293,27 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       );
     } on PostgrestException catch (error) {
       _debugPushLog('upsert_user_push_token RPC failed: ${error.message}');
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  Future<void> _deactivateToken(String token) async {
+    try {
+      _debugPushLog(
+        'deactivate_user_push_token RPC started: '
+        'prefix=${_tokenPrefix(token)}, length=${token.length}',
+      );
+      await Supabase.instance.client
+          .rpc('deactivate_user_push_token', params: {'push_token': token})
+          .timeout(AppConfig.supabaseRpcTimeout);
+      _debugPushLog('deactivate_user_push_token RPC completed');
+    } on TimeoutException {
+      _debugPushLog('deactivate_user_push_token RPC failed: timeout');
+      throw const PushTokenRepositoryException(
+        PushTokenFailureReason.requestTimeout,
+      );
+    } on PostgrestException catch (error) {
+      _debugPushLog('deactivate_user_push_token RPC failed: ${error.message}');
       throw _mapPostgrestError(error);
     }
   }

@@ -39,5 +39,8 @@ class _FakePushTokenRepository implements PushTokenRepository {
   Future<void> registerCurrentDeviceToken() async {}
 
   @override
+  Future<void> reconcileCurrentDeviceToken() async {}
+
+  @override
   Future<void> registerRefreshedTokenIfAuthorized(String token) async {}
 }

@@ -68,6 +68,20 @@ class PushTokenController extends AsyncNotifier<void> {
     _debugPushLog('Token refresh listener attached');
   }
 
+  Future<void> reconcileCurrentDeviceToken() async {
+    if (ref.read(authControllerProvider) != AuthStatus.authenticated) {
+      _debugPushLog('Token reconciliation skipped: user is not authenticated');
+      return;
+    }
+
+    try {
+      await ref.read(pushTokenRepositoryProvider).reconcileCurrentDeviceToken();
+      _debugPushLog('Current device token reconciliation completed');
+    } catch (error) {
+      _debugPushLog('Current device token reconciliation failed: $error');
+    }
+  }
+
   String _tokenPrefix(String token) {
     if (token.length <= 12) {
       return token;

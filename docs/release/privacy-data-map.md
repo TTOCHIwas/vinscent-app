@@ -34,7 +34,7 @@
 | Kakao | 카카오 로그인 요청과 OAuth/OIDC 토큰 | 카카오 계정 로그인 | 앱은 사용자 프로필 API를 별도로 조회하지 않고 토큰을 Supabase 세션 교환에 사용 |
 | Apple | Apple 로그인 요청, 인증 코드, ID 토큰 | Apple 계정 로그인과 계정 삭제 시 권한 철회 | nonce 검증 흐름, 삭제 시 재인증 및 Apple 토큰 철회 |
 | Google Gemini API | 질문, 답변, 확인된 기억, 최근 질문 문맥 | 기억 후보·피드백·질문·직접 답변·선제 추천 생성 | 이름과 실제 사용자 ID를 `partner_a`, `partner_b`로 치환, 구조화 출력 검증, 민감 주제 차단 |
-| Firebase Installations·Cloud Messaging | 앱 시작 시 생성되는 Firebase 설치 식별자와 SDK가 처리하는 앱·OS·기기 환경 정보, 알림 허용 후 등록하는 FCM·APNs 토큰, 알림 제목·본문·라우팅 데이터 | Android·iOS 앱 설치 식별과 푸시 전달 | 앱 서버의 알림 토큰 등록은 알림 권한 상태를 확인하고, 무효 토큰은 비활성화하며 전송 결과를 기록 |
+| Firebase Installations·Cloud Messaging | 앱 시작 시 생성되는 Firebase 설치 식별자와 SDK가 처리하는 앱·OS·기기 환경 정보, 알림 허용 후 등록하는 FCM·APNs 토큰, 알림 제목·본문·라우팅 데이터 | Android·iOS 앱 설치 식별과 푸시 전달 | 앱 서버의 알림 토큰 등록은 알림 권한 상태를 확인하고, 권한 철회 또는 토큰 무효화 시 해당 기기 토큰을 비활성화하며 전송 결과를 기록 |
 | Open-Meteo | 소수 둘째 자리로 반올림한 위도·경도 | 현재 날씨와 일몰 맥락 조회 | 저정밀 위치, 짧은 타임아웃, 실패 시 위치 없는 추천으로 전환 |
 
 현재 의존성에는 광고 SDK와 사용자 행동 분석 SDK가 없다.

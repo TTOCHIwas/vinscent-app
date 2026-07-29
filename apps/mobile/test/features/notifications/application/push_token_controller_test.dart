@@ -92,6 +92,66 @@ void main() {
       'registerCurrentDeviceToken',
     ]);
   });
+
+  test('reconciles the current device token after authentication', () async {
+    final repository = _FakePushTokenRepository();
+    addTearDown(repository.dispose);
+    final container = _container(
+      authStatus: AuthStatus.authenticated,
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(pushTokenControllerProvider.future);
+    repository.calls.clear();
+
+    await container
+        .read(pushTokenControllerProvider.notifier)
+        .reconcileCurrentDeviceToken();
+
+    expect(repository.calls, ['reconcileCurrentDeviceToken']);
+  });
+
+  test('contains token reconciliation failures after authentication', () async {
+    final repository = _FakePushTokenRepository(
+      reconcileCurrentDeviceTokenError: Exception('reconciliation failed'),
+    );
+    addTearDown(repository.dispose);
+    final container = _container(
+      authStatus: AuthStatus.authenticated,
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(pushTokenControllerProvider.future);
+    repository.calls.clear();
+
+    await container
+        .read(pushTokenControllerProvider.notifier)
+        .reconcileCurrentDeviceToken();
+
+    expect(repository.calls, ['reconcileCurrentDeviceToken']);
+  });
+
+  test(
+    'does not reconcile the current device token before authentication',
+    () async {
+      final repository = _FakePushTokenRepository();
+      addTearDown(repository.dispose);
+      final container = _container(
+        authStatus: AuthStatus.unauthenticated,
+        repository: repository,
+      );
+      addTearDown(container.dispose);
+
+      await container.read(pushTokenControllerProvider.future);
+      await container
+          .read(pushTokenControllerProvider.notifier)
+          .reconcileCurrentDeviceToken();
+
+      expect(repository.calls, isEmpty);
+    },
+  );
 }
 
 ProviderContainer _container({
@@ -110,10 +170,12 @@ class _FakePushTokenRepository implements PushTokenRepository {
   _FakePushTokenRepository({
     this.configureForegroundNotificationsError,
     this.registerCurrentDeviceTokenError,
+    this.reconcileCurrentDeviceTokenError,
   });
 
   final Object? configureForegroundNotificationsError;
   final Object? registerCurrentDeviceTokenError;
+  final Object? reconcileCurrentDeviceTokenError;
   final calls = <String>[];
   final registeredTokens = <String>[];
   final _tokenRefreshController = StreamController<String>.broadcast();
@@ -143,6 +205,15 @@ class _FakePushTokenRepository implements PushTokenRepository {
   Future<void> registerCurrentDeviceToken() async {
     calls.add('registerCurrentDeviceToken');
     final error = registerCurrentDeviceTokenError;
+    if (error != null) {
+      throw error;
+    }
+  }
+
+  @override
+  Future<void> reconcileCurrentDeviceToken() async {
+    calls.add('reconcileCurrentDeviceToken');
+    final error = reconcileCurrentDeviceTokenError;
     if (error != null) {
       throw error;
     }

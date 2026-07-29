@@ -172,6 +172,7 @@ XML namespace의 `http://schemas.android.com`은 네트워크 전송 endpoint가
 - [ ] AI·알림 진단 및 신고 기록 보관기간 확정
 - [ ] 릴리스 환경의 모든 사용자 데이터 endpoint가 HTTPS인지 확인
 - [ ] 알림 권한 거절 시 단짠 서버에 FCM 토큰이 등록되지 않는지 Android 실기기에서 확인
+- [ ] 등록 후 알림 권한을 철회하면 현재 기기의 FCM 토큰만 비활성화되고 다른 기기 토큰은 유지되는지 Android 실기기에서 확인
 - [ ] 계정 삭제 후 Database, Auth, Storage 정리 큐와 기기 캐시 제거 확인
 - [ ] Play Console 작성 후 답변 CSV와 Store listing preview를 출시 증빙에 보관
 - [ ] 공개 개인정보처리방침, 이 문서, App Store App Privacy 답변 상호 대조

@@ -6,12 +6,27 @@ void main() {
   const policy = PushTokenAuthorizationPolicy();
 
   test('allows token registration for authorized notification access', () {
-    expect(policy.canRegister(AuthorizationStatus.authorized), isTrue);
-    expect(policy.canRegister(AuthorizationStatus.provisional), isTrue);
+    expect(
+      policy.actionFor(AuthorizationStatus.authorized),
+      PushTokenAuthorizationAction.register,
+    );
+    expect(
+      policy.actionFor(AuthorizationStatus.provisional),
+      PushTokenAuthorizationAction.register,
+    );
   });
 
-  test('blocks token registration without notification access', () {
-    expect(policy.canRegister(AuthorizationStatus.denied), isFalse);
-    expect(policy.canRegister(AuthorizationStatus.notDetermined), isFalse);
+  test('deactivates tokens after notification access is denied', () {
+    expect(
+      policy.actionFor(AuthorizationStatus.denied),
+      PushTokenAuthorizationAction.deactivate,
+    );
+  });
+
+  test('waits before the first notification permission decision', () {
+    expect(
+      policy.actionFor(AuthorizationStatus.notDetermined),
+      PushTokenAuthorizationAction.none,
+    );
   });
 }

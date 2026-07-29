@@ -23,9 +23,6 @@ class NotificationPermissionController
           .read(notificationPermissionRepositoryProvider)
           .fetchStatus();
       state = AsyncValue.data(status);
-      if (status.canReceiveNotifications) {
-        await _registerCurrentDeviceToken();
-      }
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
@@ -36,22 +33,20 @@ class NotificationPermissionController
         .read(notificationPermissionRepositoryProvider)
         .requestPermission();
     state = AsyncValue.data(status);
-    if (status.canReceiveNotifications) {
-      await _registerCurrentDeviceToken();
-    }
+    await _reconcileCurrentDeviceToken();
   }
 
   Future<void> openSettings() {
     return ref.read(notificationPermissionRepositoryProvider).openSettings();
   }
 
-  Future<void> _registerCurrentDeviceToken() async {
+  Future<void> _reconcileCurrentDeviceToken() async {
     try {
-      await ref.read(pushTokenRepositoryProvider).registerCurrentDeviceToken();
+      await ref.read(pushTokenRepositoryProvider).reconcileCurrentDeviceToken();
     } catch (error) {
       if (kDebugMode) {
         debugPrint(
-          '[push] Token registration after permission update failed: $error',
+          '[push] Token reconciliation after permission update failed: $error',
         );
       }
     }
