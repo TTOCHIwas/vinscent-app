@@ -22,7 +22,7 @@
 | 위치 및 날씨 | 사용 시점의 저정밀 현재 위도·경도, 날씨 결과 | 개인화 완료 사용자의 일회성 선제 추천 | 요청 중 메모리, Open-Meteo 요청 |
 | 알림 | FCM 토큰, 플랫폼, 활성 상태, 알림 선호, 발송·성공·실패 기록 | 푸시 알림 발송, 사용자 설정 적용, 재시도와 장애 분석 | Supabase Database, Firebase Cloud Messaging |
 | 안전 이용 동의 | 정책 종류, 정책 버전, 동의 시각 | 공유 콘텐츠 작성 전 현재 안전 이용 약속 동의 확인, 정책 변경 시 재동의 | Supabase Database |
-| 신고·차단·검토 | 신고자·대상 사용자, 신고 대상, 사유, 선택적 상세 설명, 제한된 콘텐츠 스냅샷, 처리 상태, 차단 관계, 모더레이션 알림 시도·상태·오류 | UGC·AI 안전 신고 검토, 운영 알림 재시도, 동일 사용자 재연결 제한 | Supabase Database |
+| 신고·차단·검토 | 신고자·대상 사용자, 신고 대상, 사유, 선택적 상세 설명, 처리 상태, 검토자·검토 시각·결정 이력, 제한된 콘텐츠 스냅샷, 차단 관계, 모더레이션 알림 시도·상태·오류 | UGC·AI 안전 신고 검토와 감사, 운영 알림 재시도, 동일 사용자 재연결 제한 | Supabase Database |
 | 기기 로컬 데이터 | 인증 세션, 선제 추천 캐시, 캘린더 표시 설정, 한마디 노출 상태, 미완료 녹음, 위젯 표시 데이터 | 로그인 유지, 성능, 복구, 개인 설정, 위젯 | 보안 저장소, SharedPreferences, 앱 전용 파일, OS 위젯 저장소 |
 
 ## 2. 외부 처리자와 전송 범위
@@ -125,3 +125,4 @@
 - `supabase/migrations/20260729008000_add_ugc_safety_policy_acceptance.sql`
 - `supabase/migrations/20260729009000_enforce_ugc_safety_policy_write_boundary.sql`
 - `supabase/migrations/20260729010000_add_safety_moderation_alert_outbox.sql`
+- `supabase/migrations/20260729011000_add_safety_report_review_boundary.sql`
