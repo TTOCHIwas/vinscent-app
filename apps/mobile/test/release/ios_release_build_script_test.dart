@@ -48,6 +48,7 @@ void main() {
     expect(source, contains(r'"$flutter_binary" test --no-pub'));
     expect(source, contains(r'"$flutter_binary" build ipa'));
     expect(source, contains('--release'));
+    expect(source, contains('--export-method app-store'));
     expect(source, contains(r'--build-number "$build_number"'));
     expect(source, contains('--dart-define="SUPABASE_URL='));
     expect(source, contains('--dart-define="SUPABASE_ANON_KEY='));
@@ -68,12 +69,26 @@ void main() {
     expect(source, contains('production'));
     expect(source, contains('group.com.vinscent.vinscent'));
     expect(source, contains('com.apple.developer.applesignin:0'));
+    expect(source, contains('com.apple.developer.team-identifier'));
+    expect(source, contains('Widget Team ID'));
+    expect(
+      source,
+      contains(r'"$runner_application_identifier" != *".${runner_bundle_id}"'),
+    );
+    expect(
+      source,
+      contains(r'"$widget_application_identifier" != *".${widget_bundle_id}"'),
+    );
     expect(source, contains('privacy-manifests.txt'));
     expect(source, contains('ditto -c -k'));
     expect(source, contains('shasum -a 256'));
     expect(source, contains(r'git -C "$repository_root" rev-parse HEAD'));
     expect(source, contains(r"printf 'xcode_version=%s\n'"));
     expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
+    expect(source, contains(r"printf 'export_method=app-store\n'"));
+    expect(source, contains(r"printf 'team_id=%s\n'"));
+    expect(source, contains('runner_application_identifier=%s'));
+    expect(source, contains('widget_application_identifier=%s'));
     expect(
       source,
       contains(r'mktemp -d "$evidence_parent/.ios-build-${build_number}.'),

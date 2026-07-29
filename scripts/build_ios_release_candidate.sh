@@ -91,6 +91,7 @@ fi
 "$flutter_binary" test --no-pub
 "$flutter_binary" build ipa \
   --release \
+  --export-method app-store \
   --build-number "$build_number" \
   --dart-define="SUPABASE_URL=$DANJJAN_SUPABASE_URL" \
   --dart-define="SUPABASE_ANON_KEY=$DANJJAN_SUPABASE_ANON_KEY" \
@@ -190,6 +191,22 @@ sign_in_with_apple="$(
     "$runner_entitlements" \
     "com.apple.developer.applesignin:0"
 )"
+runner_team_id="$(
+  read_plist_value \
+    "$runner_entitlements" \
+    "com.apple.developer.team-identifier"
+)"
+widget_team_id="$(
+  read_plist_value \
+    "$widget_entitlements" \
+    "com.apple.developer.team-identifier"
+)"
+runner_application_identifier="$(
+  read_plist_value "$runner_entitlements" application-identifier
+)"
+widget_application_identifier="$(
+  read_plist_value "$widget_entitlements" application-identifier
+)"
 
 require_equal "Push environment" "$push_environment" "production"
 require_equal \
@@ -201,6 +218,21 @@ require_equal \
   "$widget_app_group" \
   "group.com.vinscent.vinscent"
 require_equal "Sign in with Apple" "$sign_in_with_apple" "Default"
+require_equal "Widget Team ID" "$widget_team_id" "$runner_team_id"
+
+if [[ "$runner_application_identifier" != *".${runner_bundle_id}" ]]; then
+  echo \
+    "Runner application identifier must end with '.${runner_bundle_id}'; found '${runner_application_identifier:-missing}'." \
+    >&2
+  exit 1
+fi
+
+if [[ "$widget_application_identifier" != *".${widget_bundle_id}" ]]; then
+  echo \
+    "Widget application identifier must end with '.${widget_bundle_id}'; found '${widget_application_identifier:-missing}'." \
+    >&2
+  exit 1
+fi
 
 if read_plist_value "$widget_entitlements" aps-environment >/dev/null 2>&1; then
   echo "Widget must not declare the push notification entitlement." >&2
@@ -247,8 +279,14 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf 'build_number=%s\n' "$build_number"
   printf 'xcode_version=%s\n' "$xcode_version"
   printf 'iphoneos_sdk_version=%s\n' "$iphoneos_sdk_version"
+  printf 'export_method=app-store\n'
   printf 'runner_bundle_id=%s\n' "$runner_bundle_id"
   printf 'widget_bundle_id=%s\n' "$widget_bundle_id"
+  printf 'team_id=%s\n' "$runner_team_id"
+  printf 'runner_application_identifier=%s\n' \
+    "$runner_application_identifier"
+  printf 'widget_application_identifier=%s\n' \
+    "$widget_application_identifier"
   printf 'push_environment=%s\n' "$push_environment"
   printf 'app_group=%s\n' "$runner_app_group"
   printf 'created_at=%s\n' "$created_at"
