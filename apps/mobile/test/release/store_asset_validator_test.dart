@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 
+import '../../tool/store_asset_alt_text_validator.dart';
 import '../../tool/store_asset_validator.dart';
 
 void main() {
@@ -20,7 +21,7 @@ void main() {
     ).validate(appVersion: '1.0.0');
 
     expect(report.errors, isEmpty);
-    expect(report.validatedFileCount, 30);
+    expect(report.validatedFileCount, 31);
   });
 
   test('reports missing asset groups without duplicate scene errors', () async {
@@ -29,7 +30,7 @@ void main() {
       rasterReader: _fixtureRaster,
     ).validate(appVersion: '1.0.0');
 
-    expect(report.errors, hasLength(6));
+    expect(report.errors, hasLength(7));
     expect(report.errors.where((error) => error.contains('[scene]')), isEmpty);
     expect(report.errors.join('\n'), contains('feature-graphic.png [missing]'));
     expect(report.errors.join('\n'), contains('google-play/phone [count]'));
@@ -54,6 +55,31 @@ void main() {
     expect(report.errors.join('\n'), contains('[alpha]'));
   });
 
+  test('rejects incomplete or overlong Play alt text', () async {
+    final manifest = _file(root, StoreAssetAltTextValidator.manifestPath);
+    await manifest.create(recursive: true);
+    final overlongText = List.filled(141, '가').join();
+    await manifest.writeAsString('''
+{
+  "featureGraphic": "$overlongText",
+  "phone": {},
+  "tablet": {
+    "home": "홈",
+    "calendar": "캘린더",
+    "ai": "AI",
+    "settings": "설정",
+    "unknown": "잘못된 키"
+  }
+}
+''');
+
+    final errors = const StoreAssetAltTextValidator().validate(manifest);
+
+    expect(errors.join('\n'), contains('[length]'));
+    expect(errors.join('\n'), contains('phone.home'));
+    expect(errors.join('\n'), contains('tablet.unknown'));
+  });
+
   test('reads PNG dimensions and alpha-channel information', () async {
     final opaque = File('${root.path}/opaque.png')
       ..writeAsBytesSync(
@@ -76,6 +102,7 @@ void main() {
 Future<void> _createCompleteLayout(Directory root) async {
   await _touch(root, 'store-assets/google-play/app-icon-512.png');
   await _touch(root, 'store-assets/google-play/feature-graphic.png');
+  await _writeAltTextManifest(root);
   await _createGroup(root, 'google-play/phone', 'android-phone', _scenes);
   await _createGroup(root, 'google-play/tablet', 'android-tablet', const [
     'home',
@@ -85,6 +112,32 @@ Future<void> _createCompleteLayout(Directory root) async {
   ]);
   await _createGroup(root, 'app-store/iphone-6.9', 'ios-iphone-6.9', _scenes);
   await _createGroup(root, 'app-store/ipad-13', 'ios-ipad-13', _scenes);
+}
+
+Future<void> _writeAltTextManifest(Directory root) async {
+  final file = _file(root, StoreAssetAltTextValidator.manifestPath);
+  await file.create(recursive: true);
+  await file.writeAsString('''
+{
+  "featureGraphic": "기능 그래픽",
+  "phone": {
+    "home": "홈",
+    "card-editor": "카드 편집",
+    "question-answer": "질문과 답변",
+    "calendar": "캘린더",
+    "recording-library": "녹음 보관함",
+    "ai": "AI",
+    "widgets": "위젯",
+    "settings": "설정"
+  },
+  "tablet": {
+    "home": "태블릿 홈",
+    "calendar": "태블릿 캘린더",
+    "ai": "태블릿 AI",
+    "settings": "태블릿 설정"
+  }
+}
+''');
 }
 
 Future<void> _createGroup(
@@ -104,13 +157,15 @@ Future<void> _createGroup(
 }
 
 Future<void> _touch(Directory root, String relativePath) async {
-  final file = File(
-    '${root.path}${Platform.pathSeparator}'
-    '${relativePath.replaceAll('/', Platform.pathSeparator)}',
-  );
+  final file = _file(root, relativePath);
   await file.create(recursive: true);
   await file.writeAsBytes(const [0]);
 }
+
+File _file(Directory root, String relativePath) => File(
+  '${root.path}${Platform.pathSeparator}'
+  '${relativePath.replaceAll('/', Platform.pathSeparator)}',
+);
 
 Future<RasterInfo> _fixtureRaster(File file) async {
   final path = file.path.replaceAll(Platform.pathSeparator, '/');

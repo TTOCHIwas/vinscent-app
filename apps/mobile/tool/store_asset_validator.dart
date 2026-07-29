@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:image/image.dart' as image;
 
+import 'store_asset_alt_text_validator.dart';
+
 typedef RasterReader = Future<RasterInfo> Function(File file);
 
 final class RasterInfo {
@@ -61,6 +63,11 @@ final class StoreAssetValidator {
       _playFeatureRule,
       errors,
     );
+    final altTextFile = _file(StoreAssetAltTextValidator.manifestPath);
+    if (altTextFile.existsSync()) {
+      count += 1;
+    }
+    errors.addAll(const StoreAssetAltTextValidator().validate(altTextFile));
     for (final group in _groups) {
       count += await _validateGroup(group, version, errors);
     }
