@@ -57,6 +57,15 @@ void main() {
     expect(source, contains('shopt -s nullglob'));
     expect(source, contains(r'${#archive_candidates[@]} -ne 1'));
     expect(source, contains(r'${#ipa_candidates[@]} -ne 1'));
+    expect(source, contains('archive_app_bundle='));
+    expect(
+      source,
+      contains('codesign --verify --deep --strict "\$archive_app_bundle"'),
+    );
+    expect(source, contains('unzip -q "\$ipa_path"'));
+    expect(source, contains(r'Payload/*.app'));
+    expect(source, contains(r'${#exported_app_candidates[@]} -ne 1'));
+    expect(source, contains(r'app_bundle="${exported_app_candidates[0]}"'));
     expect(source, contains('codesign --verify --deep --strict'));
     expect(source, contains('CFBundleIdentifier'));
     expect(source, contains('CFBundleShortVersionString'));

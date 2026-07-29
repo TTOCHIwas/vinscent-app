@@ -114,14 +114,35 @@ fi
 
 archive_path="${archive_candidates[0]}"
 ipa_path="${ipa_candidates[0]}"
-app_bundle="$archive_path/Products/Applications/Runner.app"
-widget_bundle="$app_bundle/PlugIns/VinscentWidgets.appex"
+archive_app_bundle="$archive_path/Products/Applications/Runner.app"
+archive_widget_bundle="$archive_app_bundle/PlugIns/VinscentWidgets.appex"
 
-test -d "$app_bundle"
+test -d "$archive_app_bundle"
+test -d "$archive_widget_bundle"
+test -s "$archive_app_bundle/PrivacyInfo.xcprivacy"
+test -s "$archive_widget_bundle/PrivacyInfo.xcprivacy"
+unzip -t "$ipa_path" >/dev/null
+codesign --verify --deep --strict "$archive_app_bundle"
+
+temporary_evidence="$(mktemp -d)"
+trap 'rm -rf "$temporary_evidence"' EXIT
+ipa_extract_directory="$temporary_evidence/ipa"
+mkdir -p "$ipa_extract_directory"
+unzip -q "$ipa_path" -d "$ipa_extract_directory"
+
+exported_app_candidates=("$ipa_extract_directory"/Payload/*.app)
+if [[ ${#exported_app_candidates[@]} -ne 1 ]]; then
+  echo \
+    "Expected one exported app in the IPA, found ${#exported_app_candidates[@]}." \
+    >&2
+  exit 1
+fi
+
+app_bundle="${exported_app_candidates[0]}"
+widget_bundle="$app_bundle/PlugIns/VinscentWidgets.appex"
 test -d "$widget_bundle"
 test -s "$app_bundle/PrivacyInfo.xcprivacy"
 test -s "$widget_bundle/PrivacyInfo.xcprivacy"
-unzip -t "$ipa_path" >/dev/null
 codesign --verify --deep --strict "$app_bundle"
 
 read_plist_value() {
@@ -145,21 +166,21 @@ runner_bundle_id="$(read_plist_value "$app_bundle/Info.plist" CFBundleIdentifier
 widget_bundle_id="$(
   read_plist_value "$widget_bundle/Info.plist" CFBundleIdentifier
 )"
-archive_version="$(
+exported_version="$(
   read_plist_value "$app_bundle/Info.plist" CFBundleShortVersionString
 )"
-archive_build_number="$(read_plist_value "$app_bundle/Info.plist" CFBundleVersion)"
+exported_build_number="$(
+  read_plist_value "$app_bundle/Info.plist" CFBundleVersion
+)"
 
 require_equal "Runner bundle ID" "$runner_bundle_id" "com.vinscent.vinscent"
 require_equal \
   "Widget bundle ID" \
   "$widget_bundle_id" \
   "com.vinscent.vinscent.widgets"
-require_equal "Archive version" "$archive_version" "$app_version"
-require_equal "Archive build number" "$archive_build_number" "$build_number"
+require_equal "Exported version" "$exported_version" "$app_version"
+require_equal "Exported build number" "$exported_build_number" "$build_number"
 
-temporary_evidence="$(mktemp -d)"
-trap 'rm -rf "$temporary_evidence"' EXIT
 runner_entitlements="$temporary_evidence/Runner-entitlements.plist"
 widget_entitlements="$temporary_evidence/VinscentWidgets-entitlements.plist"
 privacy_manifest_list="$temporary_evidence/privacy-manifests.txt"

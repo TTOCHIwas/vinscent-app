@@ -208,17 +208,18 @@ scripts/build_ios_release_candidate.sh 1
 
 - IPA와 SHA-256
 - dSYM을 포함한 `.xcarchive.zip`과 SHA-256
-- Runner·위젯의 최종 서명 entitlement와 SHA-256
-- archive에 포함된 privacy manifest 경로 목록과 SHA-256
+- 최종 IPA의 Runner·위젯 서명 entitlement와 SHA-256
+- 최종 IPA에 포함된 privacy manifest 경로 목록과 SHA-256
 - commit SHA, 앱 version, build number, Xcode·iOS SDK version, 생성 시각
 - App Store export 방식
 - Runner·위젯 bundle ID와 application identifier
 - 두 target에 공통으로 적용된 Team ID
 - production push 환경과 App Group
 
-스크립트는 archive의 코드 서명, IPA 압축 무결성, Runner·위젯 bundle ID,
-version·build number, app·widget privacy manifest, production push,
-Sign in with Apple과 App Group을 검사한다. Runner와 위젯의 Team ID가
+스크립트는 archive의 코드 서명과 IPA 압축 무결성을 먼저 검사한다. 이어서
+IPA의 `Payload`에 앱이 하나만 있는지 확인하고, 최종 export된 Runner·위젯의
+코드 서명, bundle ID, version·build number, privacy manifest, production
+push, Sign in with Apple과 App Group을 검사한다. Runner와 위젯의 Team ID가
 다르거나 application identifier가 각 bundle ID와 일치하지 않거나, 위젯에
 push 또는 Sign in with Apple entitlement가 들어가면 실패한다.
 
