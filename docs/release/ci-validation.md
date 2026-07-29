@@ -16,7 +16,7 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 
 | 체크 | 검증 범위 |
 |---|---|
-| `Flutter` | 의존성 복원, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
+| `Flutter` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
 | `iOS native build` | `main` 반영 또는 수동 실행 시 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
 | `Node services` | AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
 | `Edge functions` | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
@@ -33,6 +33,7 @@ Windows에서는 저장소에 포함된 Flutter 래퍼를 사용한다.
 
 ```powershell
 cd apps/mobile
+..\..\.toolchains\flutter\bin\dart.bat format --output=none --set-exit-if-changed lib test
 .\flutterw.cmd pub get
 .\flutterw.cmd analyze --no-pub
 .\flutterw.cmd test --no-pub

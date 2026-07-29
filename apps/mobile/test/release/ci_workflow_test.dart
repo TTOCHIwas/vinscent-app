@@ -47,6 +47,7 @@ const _requiredJobs = <String>[
 ];
 
 const _requiredCommands = <String>[
+  'dart format --output=none --set-exit-if-changed lib test',
   'flutter analyze --no-pub',
   'flutter test --no-pub',
   'flutter build apk --debug --no-pub',
