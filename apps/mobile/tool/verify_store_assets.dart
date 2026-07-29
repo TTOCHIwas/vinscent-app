@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'mobile_tool_paths.dart';
 import 'store_asset_validator.dart';
 
 Future<void> main() async {
+  final paths = MobileToolPaths.fromScript(Platform.script);
   final report = await StoreAssetValidator(
-    repositoryRoot: Directory('../..'),
+    repositoryRoot: paths.repositoryRoot,
   ).validate();
 
   if (!report.isReady) {

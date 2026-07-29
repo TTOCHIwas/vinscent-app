@@ -2,15 +2,18 @@ import 'dart:io';
 
 import 'package:image/image.dart' as image;
 
-const _sourcePath =
+import 'mobile_tool_paths.dart';
+
+const _sourceRelativePath =
     'ios/Runner/Assets.xcassets/AppIcon.appiconset/'
     'Icon-App-1024x1024@1x.png';
-const _outputPath = '../../store-assets/google-play/app-icon-512.png';
+const _outputRelativePath = 'store-assets/google-play/app-icon-512.png';
 const _sourceSize = 1024;
 const _outputSize = 512;
 
 void main() {
-  final source = File(_sourcePath);
+  final paths = MobileToolPaths.fromScript(Platform.script);
+  final source = paths.mobileFile(_sourceRelativePath);
   if (!source.existsSync()) {
     stderr.writeln('Missing source app icon: ${source.path}');
     exitCode = 1;
@@ -33,7 +36,7 @@ void main() {
     interpolation: image.Interpolation.cubic,
   );
   final rgba = resized.convert(numChannels: 4, alpha: 255);
-  final output = File(_outputPath);
+  final output = paths.repositoryFile(_outputRelativePath);
 
   output.parent.createSync(recursive: true);
   output.writeAsBytesSync(image.encodePng(rgba, level: 9), flush: true);
