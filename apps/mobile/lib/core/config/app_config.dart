@@ -6,6 +6,7 @@ class AppConfig {
   static const kakaoNativeAppKey = String.fromEnvironment(
     'KAKAO_NATIVE_APP_KEY',
   );
+  static const policyBaseUrl = String.fromEnvironment('POLICY_BASE_URL');
   static const supabaseRpcTimeout = Duration(seconds: 15);
 
   static bool get isSupabaseConfigured =>

@@ -62,12 +62,17 @@ class SettingsGroup extends StatelessWidget {
 class SettingsNavigationRow extends StatelessWidget {
   const SettingsNavigationRow({
     super.key,
-    required this.icon,
     required this.title,
     required this.onTap,
-  });
+    this.icon,
+    this.iconData,
+  }) : assert(
+         (icon == null) != (iconData == null),
+         'Provide exactly one icon source.',
+       );
 
-  final String icon;
+  final String? icon;
+  final IconData? iconData;
   final String title;
   final VoidCallback onTap;
 
@@ -93,11 +98,7 @@ class SettingsNavigationRow extends StatelessWidget {
                     color: AppColors.settingsIconBackground,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: AppSvgIcon(
-                    icon,
-                    size: 18,
-                    color: AppColors.textPrimary,
-                  ),
+                  child: _buildIcon(),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(title, style: AppTextStyles.homeBody)),
@@ -112,6 +113,22 @@ class SettingsNavigationRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildIcon() {
+    final assetPath = icon;
+    if (assetPath != null) {
+      return AppSvgIcon(
+        assetPath,
+        size: 18,
+        color: AppColors.textPrimary,
+      );
+    }
+    return Icon(
+      iconData,
+      size: 18,
+      color: AppColors.textPrimary,
     );
   }
 }

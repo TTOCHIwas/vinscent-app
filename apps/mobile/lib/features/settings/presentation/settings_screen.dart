@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/assets/app_icons.dart';
+import '../application/policy_document_links.dart';
+import '../data/policy_document_launcher.dart';
 import 'widgets/settings_group.dart';
 import 'widgets/settings_page_layout.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({
+    super.key,
+    this.policyDocumentLinks = PolicyDocumentLinks.configured,
+    this.policyDocumentLauncher =
+        const UrlLauncherPolicyDocumentLauncher(),
+  });
+
+  final PolicyDocumentLinks policyDocumentLinks;
+  final PolicyDocumentLauncher policyDocumentLauncher;
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +94,58 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          SettingsGroup(
+            key: const Key('settings-group-policy'),
+            label: '서비스 정보',
+            dividerIndent: 58,
+            children: [
+              SettingsNavigationRow(
+                key: const Key('settings-row-privacy'),
+                iconData: LucideIcons.shieldCheck,
+                title: '개인정보처리방침',
+                onTap: () => _openPolicyDocument(
+                  context,
+                  policyDocumentLinks.privacy,
+                ),
+              ),
+              SettingsNavigationRow(
+                key: const Key('settings-row-terms'),
+                iconData: LucideIcons.fileText,
+                title: '서비스 이용약관',
+                onTap: () => _openPolicyDocument(
+                  context,
+                  policyDocumentLinks.terms,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _openPolicyDocument(BuildContext context, Uri? uri) async {
+    if (uri == null) {
+      _showMessage(context, '정책 페이지를 준비하고 있어요');
+      return;
+    }
+
+    try {
+      final launched = await policyDocumentLauncher.launch(uri);
+      if (!launched && context.mounted) {
+        _showMessage(context, '정책 페이지를 열지 못했어요');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showMessage(context, '정책 페이지를 열지 못했어요');
+      }
+    }
+  }
+
+  void _showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
 import 'package:vinscent/core/presentation/widgets/app_page_header.dart';
+import 'package:vinscent/features/settings/application/policy_document_links.dart';
+import 'package:vinscent/features/settings/data/policy_document_launcher.dart';
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
 import 'package:vinscent/features/shell/presentation/app_shell.dart';
@@ -100,6 +102,7 @@ void main() {
   });
 
   testWidgets('설정 항목은 섹션별 그룹 목록으로 이어서 보여준다', (tester) async {
+    _useTallViewport(tester);
     await _pumpSettings(tester);
 
     final notificationGroup = find.byKey(
@@ -107,10 +110,12 @@ void main() {
     );
     final coupleGroup = find.byKey(const Key('settings-group-couple'));
     final accountGroup = find.byKey(const Key('settings-group-account'));
+    final policyGroup = find.byKey(const Key('settings-group-policy'));
 
     expect(notificationGroup, findsOneWidget);
     expect(coupleGroup, findsOneWidget);
     expect(accountGroup, findsOneWidget);
+    expect(policyGroup, findsOneWidget);
     expect(
       find.descendant(
         of: notificationGroup,
@@ -139,19 +144,84 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: policyGroup,
+        matching: find.byKey(const Key('settings-row-privacy')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: policyGroup,
+        matching: find.byKey(const Key('settings-row-terms')),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('개인정보처리방침을 검증된 외부 주소로 연다', (tester) async {
+    _useTallViewport(tester);
+    final launcher = _FakePolicyDocumentLauncher();
+    await _pumpSettings(
+      tester,
+      policyDocumentLinks: const PolicyDocumentLinks(
+        baseUrl: 'https://policy.danjjan.example',
+      ),
+      policyDocumentLauncher: launcher,
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-privacy')),
+      100,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.byKey(const Key('settings-row-privacy')));
+    await tester.pumpAndSettle();
+
+    expect(launcher.launchedUris, [
+      Uri.parse('https://policy.danjjan.example/privacy'),
+    ]);
+  });
+
+  testWidgets('정책 주소가 없으면 준비 중 안내를 보여준다', (tester) async {
+    _useTallViewport(tester);
+    final launcher = _FakePolicyDocumentLauncher();
+    await _pumpSettings(
+      tester,
+      policyDocumentLinks: const PolicyDocumentLinks(baseUrl: ''),
+      policyDocumentLauncher: launcher,
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-terms')),
+      100,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.byKey(const Key('settings-row-terms')));
+    await tester.pumpAndSettle();
+
+    expect(launcher.launchedUris, isEmpty);
+    expect(find.text('정책 페이지를 준비하고 있어요'), findsOneWidget);
   });
 }
 
 Future<void> _pumpSettings(
   WidgetTester tester, {
   double textScaleFactor = 1,
+  PolicyDocumentLinks policyDocumentLinks = PolicyDocumentLinks.configured,
+  PolicyDocumentLauncher policyDocumentLauncher =
+      const UrlLauncherPolicyDocumentLauncher(),
 }) async {
   final router = GoRouter(
     initialLocation: '/settings',
     routes: [
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        builder: (context, state) => SettingsScreen(
+          policyDocumentLinks: policyDocumentLinks,
+          policyDocumentLauncher: policyDocumentLauncher,
+        ),
       ),
       GoRoute(
         path: '/settings/character',
@@ -177,10 +247,27 @@ Future<void> _pumpSettings(
           data: MediaQuery.of(
             context,
           ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
-          child: child!,
+          child: Scaffold(body: child!),
         );
       },
     ),
   );
   await tester.pumpAndSettle();
+}
+
+void _useTallViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 1000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+class _FakePolicyDocumentLauncher implements PolicyDocumentLauncher {
+  final launchedUris = <Uri>[];
+
+  @override
+  Future<bool> launch(Uri uri) async {
+    launchedUris.add(uri);
+    return true;
+  }
 }
