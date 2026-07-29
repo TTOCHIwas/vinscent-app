@@ -48,9 +48,10 @@ export default function PrivacyPage() {
           <div>
             <dt>알림과 안전</dt>
             <dd>
-              기기 알림 토큰과 설정, 발송 결과, 안전 이용 약속 동의, 신고
-              대상·사유·선택적 설명·처리 기록, 차단 관계를 알림 전달과 신고
-              검토, 재연결 제한에 사용합니다.
+              Firebase 설치 식별자, 기기 알림 토큰과 앱·OS·기기 환경 정보,
+              알림 설정과 발송 결과, 안전 이용 약속 동의, 신고
+              대상·사유·선택적 설명·처리 기록, 차단 관계를 알림 전달과
+              신고 검토, 재연결 제한에 사용합니다.
             </dd>
           </div>
           <div>
@@ -121,10 +122,11 @@ export default function PrivacyPage() {
             </dd>
           </div>
           <div>
-            <dt>Firebase Cloud Messaging</dt>
+            <dt>Firebase Installations·Cloud Messaging</dt>
             <dd>
-              기기 토큰, 알림 문구와 앱 이동 정보를 받아 Android와 iOS
-              알림을 전달합니다.
+              앱 설치 식별자와 앱·OS·기기 환경 정보를 처리하고, 알림을
+              허용한 기기의 토큰, 알림 문구와 앱 이동 정보를 받아
+              Android와 iOS 알림을 전달합니다.
             </dd>
           </div>
           <div>

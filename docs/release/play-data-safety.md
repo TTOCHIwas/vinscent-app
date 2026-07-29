@@ -71,7 +71,7 @@ Open-Meteo 등 외부 처리자의 계약상 역할을 5절에서 확인한 뒤 
 | Other actions | 안전 이용 동의, 신고·차단과 검토 상태 | 예 | 아니요 | 해당 기능 이용 시 수집 | App functionality, Fraud prevention/security |
 | Other user-generated content | 카드 글·편집 데이터, 질문 답변, AI 직접 질문, 일정 메모, 신고 상세 설명 | 예 | 아니요 | 선택 | App functionality, Personalization, Fraud prevention/security |
 | Diagnostics | AI 작업·푸시 발송의 상태, 지연, 토큰 수, 오류 코드 | 예 | 아니요 | 해당 기능 이용 시 자동 | App functionality, Analytics |
-| Device or other IDs | FCM 기기 토큰과 플랫폼 | 예 | 아니요 | 알림 이용 여부에 따라 선택 | App functionality |
+| Device or other IDs | 앱 시작 시 자동 생성되는 Firebase 설치 식별자, 알림 허용 후 등록되는 FCM 기기 토큰과 플랫폼 | 예 | 아니요 | 설치 식별자는 필수, FCM 토큰 등록은 알림 이용 여부에 따라 선택 | App functionality |
 
 ### 직접 AI 질문 분류
 
@@ -89,9 +89,11 @@ Play Console의 실제 문구나 심사 안내가 AI 질의를 `In-app search hi
 - 사용자 ID는 로그인과 모든 커플 기능에 필요하므로 필수다.
 - 사진, 녹음, 일정, 자유 입력 콘텐츠와 AI는 사용자가 기능을 선택할 때만
   전송되므로 선택 수집 후보로 둔다.
-- FCM 토큰은 알림 권한과 설정 흐름을 기준으로 선택 수집 후보로 둔다.
-  릴리스 빌드에서 권한 거절 상태에서도 토큰을 서버에 등록하는지 실제
-  기기로 다시 확인한다.
+- Firebase 설치 식별자는 앱 시작 시 Firebase가 초기화되면서 자동
+  생성되므로 `Device or other IDs` 데이터 유형은 필수 수집으로 답한다.
+- 단짠 서버에 FCM 토큰을 등록하는 흐름은 알림 권한과 설정 상태에 따라
+  선택적으로 실행된다. 이 차이는 데이터 유형의 필수·선택 답변을
+  Firebase 설치 식별자 기준으로 판단한 뒤 기능 설명에 별도로 남긴다.
 
 ## 4. 선택하지 않을 데이터 유형
 
@@ -125,7 +127,7 @@ Google Play의 `공유` 답변은 아래 확인이 모두 끝난 뒤 확정한�
 |---|---|---|---|
 | Supabase | 계정, 커플 콘텐츠, AI·알림·안전 데이터 | 서비스 제공자 후보 | 계약 주체, DPA, 처리 리전과 보관 조건 |
 | Google Gemini API | 질문·답변, 확인된 기억, 최근 문맥 | 서비스 제공자 후보 | Cloud Billing, 적용 약관, 데이터 사용·보관·학습 제외 조건 |
-| Firebase Cloud Messaging | FCM 토큰, 알림 내용과 라우팅 데이터 | 서비스 제공자 후보 | Firebase 적용 약관과 데이터 처리 조건 |
+| Firebase Installations·Cloud Messaging | Firebase 설치 식별자, SDK 앱·OS·기기 환경 정보, FCM 토큰, 알림 내용과 라우팅 데이터 | 서비스 제공자 후보 | Firebase 적용 약관과 데이터 처리·보관·삭제 조건 |
 | Open-Meteo | 소수 둘째 자리로 줄인 위도·경도 | 서비스 제공자 또는 명시적 사용자 동의 예외 검토 | 상업 이용 계약·요금제, 처리·보관 조건 |
 | Kakao·Apple | 로그인 요청, OAuth/OIDC 토큰과 인증 코드 | 사용자 시작 인증 흐름 | 각 로그인 약관과 앱 공개 설명 |
 | 연결된 상대방 | 사용자가 올린 카드·답변·녹음·일정 | 사용자가 시작하고 예상하는 전송 후보 | 작성 화면과 공개 정책의 커플 공유 설명 |
@@ -169,7 +171,7 @@ XML namespace의 `http://schemas.android.com`은 네트워크 전송 endpoint가
 - [ ] Open-Meteo 상업 이용 계약과 데이터 처리 조건 확인
 - [ ] AI·알림 진단 및 신고 기록 보관기간 확정
 - [ ] 릴리스 환경의 모든 사용자 데이터 endpoint가 HTTPS인지 확인
-- [ ] 알림 권한 거절 시 FCM 토큰 등록 여부를 Android 실기기에서 확인
+- [ ] 알림 권한 거절 시 단짠 서버에 FCM 토큰이 등록되지 않는지 Android 실기기에서 확인
 - [ ] 계정 삭제 후 Database, Auth, Storage 정리 큐와 기기 캐시 제거 확인
 - [ ] Play Console 작성 후 답변 CSV와 Store listing preview를 출시 증빙에 보관
 - [ ] 공개 개인정보처리방침, 이 문서, App Store App Privacy 답변 상호 대조

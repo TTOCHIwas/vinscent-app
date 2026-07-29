@@ -74,6 +74,8 @@ test("publishes the verified privacy processing draft without invented contacts"
   assert.match(html, /보관과 삭제/);
   assert.match(html, /이용자의 선택과 권리/);
   assert.match(html, /Google Gemini/);
+  assert.match(html, /Firebase 설치 식별자/);
+  assert.match(html, /Firebase Installations·Cloud Messaging/);
   assert.match(html, /Open-Meteo/);
   assert.doesNotMatch(html, /support@example\.com|example\.com/);
 });

@@ -50,7 +50,7 @@ API가 컨테이너 밖의 파일이나 다른 앱의 기본 설정을 읽도록
 | Other User Content | 카드 글·그림, 질문 답변, 일정 메모·그림, 캐릭터 그림, 신고 설명 | 앱 기능, 제품 개인화 |
 | Search History | 사용자가 AI에게 직접 입력한 질문 | 앱 기능, 제품 개인화 |
 | User ID | Supabase 사용자 ID와 로그인 제공자 식별자 | 인증과 앱 기능 |
-| Device ID | 푸시 알림 기기 토큰 | 알림 전달 |
+| Device ID | Firebase 설치 식별자와 푸시 알림 기기 토큰 | 앱 설치 식별과 알림 전달 |
 | Product Interaction | AI 추천·피드백 노출 상태와 사용자 결정 | 앱 기능, 제품 개인화 |
 | Other Diagnostic Data | AI 작업과 푸시 발송의 상태·지연·오류 | 안정성 및 장애 대응 |
 | Other Data Types | 생일, 커플 관계, 정책 동의, 신고·차단·검토 기록 등 위 분류로 충분히 표현되지 않는 데이터 | 앱 기능, 제품 개인화 |
