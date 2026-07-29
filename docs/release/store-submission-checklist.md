@@ -103,9 +103,14 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] Play App Signing 활성화
 - [ ] `versionCode`가 이전 업로드보다 큼
 - [ ] Release AAB의 target SDK가 Android 16(API 36) 이상임
+- [ ] Release manifest의 package, versionName, versionCode, min SDK가
+  출시 입력과 일치함
+- [ ] 16KB 검증 보고서에서 BundleConfig와 모든 native library가 통과함
+- [ ] Android 15 이상 16KB 환경에서 설치·시작·핵심 기능 smoke test 통과
 - [ ] `Android release candidate` workflow로 서명된 Release AAB 생성
 - [ ] mapping file과 native debug symbols 보관·업로드
-- [ ] workflow artifact의 AAB·mapping SHA-256과 commit SHA 보관
+- [ ] workflow artifact의 AAB·mapping·manifest·16KB 보고서 SHA-256과
+  commit SHA 보관
 - [ ] App Bundle Explorer에서 기기별 다운로드 크기 확인
 - [ ] Pre-launch report의 crash, ANR, 접근성, 보안 경고 처리
 - [ ] 내부 또는 비공개 track에서 최종 AAB 업데이트 검증

@@ -114,16 +114,35 @@ Actions의 `Android release candidate`를 실행할 때 Play Console에서 아�
 - `danjjan-android-build-<BUILD_NUMBER>.aab`
 - AAB의 SHA-256
 - ProGuard/R8 mapping 파일과 SHA-256
+- 병합된 Release manifest와 SHA-256
+- 16KB BundleConfig·ELF 정렬 검증 보고서와 SHA-256
 - commit SHA, 앱 version, build number, 생성 시각
 
-워크플로는 AAB 내부에 native debug symbol과 ProGuard mapping이 포함됐는지도
-확인한다. Play Console 업로드는 개발자 계정과 테스트 트랙이 준비된 뒤
-별도 승인 단계로 추가하며, 현재 워크플로에서는 수행하지 않는다.
+워크플로는 실제 manifest의 package, versionName, versionCode, min SDK,
+target SDK를 입력값과 저장소 계약에 대조한다. AAB 내부의 native debug
+symbol과 ProGuard mapping뿐 아니라 BundleConfig의 `PAGE_ALIGNMENT_16K`와
+모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 로컬 AAB는 다음 종료형 명령으로
+같은 검사를 실행할 수 있다.
+
+```powershell
+cd apps/mobile
+..\..\.toolchains\flutter\bin\dart.bat run `
+  tool/verify_android_release_bundle.dart `
+  build/app/outputs/bundle/release/app-release.aab `
+  build/release-evidence/android-16kb-page-support.json
+```
+
+이 정적 검사는 패키징 회귀를 차단하지만 16KB 환경에서 발생하는 런타임
+문제까지 대신하지 않는다. 내부 테스트 전에 Android 15 이상 16KB
+에뮬레이터 또는 실제 기기에서 핵심 흐름을 별도로 확인한다. Play Console
+업로드는 개발자 계정과 테스트 트랙이 준비된 뒤 별도 승인 단계로 추가하며,
+현재 워크플로에서는 수행하지 않는다.
 
 참고:
 
 - [Android 앱 서명](https://developer.android.com/studio/publish/app-signing)
 - [Android App Bundle](https://developer.android.com/guide/app-bundle)
+- [Android 16KB 페이지 크기 지원](https://developer.android.com/guide/practices/page-sizes)
 - [GitHub Actions secrets](https://docs.github.com/en/actions/concepts/security/secrets)
 - [GitHub Actions artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)
 

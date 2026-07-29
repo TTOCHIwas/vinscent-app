@@ -18,6 +18,7 @@
 | 백그라운드 | 녹음, 알림, 위젯 동기화 이후 앱 복귀가 정상이고 비정상적인 배터리·네트워크 반복 작업이 없음 |
 | 안정성 | 검증 세션 동안 crash와 ANR이 0건임 |
 | 크기 | Release App Bundle의 크기 분석 보고서를 보관하고 이전 출시 후보보다 설명되지 않은 증가가 없음 |
+| Android 16KB | BundleConfig·ELF 정렬 자동 검증을 통과하고 16KB 환경에서 설치·시작·핵심 기능이 정상임 |
 
 Android의 시작 시간 값은 Android vitals가 과도한 시작으로 분류하는
 상한선이다. 목표값을 임의로 더 낮게 고정하기보다 동일 기기에서 이전 출시
@@ -36,6 +37,7 @@ Apple 기준에 따라 단발 사용자 입력에 반응하는 동기 메인 스
 | Android | 현재 빌드의 지원 최저 API 24 기기 또는 에뮬레이터 |
 | Android | 실제 주 사용 중급 사양 휴대전화 |
 | Android | 최근 Android 버전 휴대전화 또는 태블릿 |
+| Android | Android 15 이상 16KB page size 에뮬레이터 또는 실제 기기 |
 | iOS | Runner 최저 지원 iOS 13 기기 또는 시뮬레이터 |
 | iOS | 위젯 최저 지원 iOS 18 이상 실제 iPhone |
 | iOS | 큰 글자와 넓은 화면 검증용 iPad 또는 큰 화면 시뮬레이터 |
@@ -109,6 +111,20 @@ cd apps/mobile
 .\flutterw.cmd build appbundle --release --analyze-size
 ```
 
+같은 AAB의 16KB ZIP·ELF 정렬은 다음 종료형 도구로 검증한다.
+
+```powershell
+cd apps/mobile
+..\..\.toolchains\flutter\bin\dart.bat run `
+  tool/verify_android_release_bundle.dart `
+  build/app/outputs/bundle/release/app-release.aab `
+  build/release-evidence/android-16kb-page-support.json
+```
+
+보고서 통과 후에도 Android 15 이상 16KB 환경에서 cold start, 카메라,
+녹음·재생, 이미지 처리와 위젯을 실행해 native library의 런타임 동작을
+확인한다.
+
 2026-07-29 로컬 기준점:
 
 - AAB 업로드 파일: `60,232,588` bytes
@@ -155,6 +171,8 @@ Instruments의 App Launch, Time Profiler, Allocations를 사용한다.
   https://docs.flutter.dev/perf/app-size
 - Android 앱 시작 시간:
   https://developer.android.com/topic/performance/vitals/launch-time
+- Android 16KB 페이지 크기:
+  https://developer.android.com/guide/practices/page-sizes
 - Android vitals:
   https://developer.android.com/topic/performance/vitals
 - Apple 앱 시작 시간:
