@@ -3,8 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'android_release_identity.dart';
+
 const _packageName = 'com.vinscent.vinscent';
 const _activityName = '.MainActivity';
+const _minimumSdk = 24;
+const _minimumTargetSdk = 36;
 const _minimumRunCount = 10;
 const _commandTimeout = Duration(seconds: 20);
 
@@ -20,14 +24,14 @@ Future<void> main(List<String> arguments) async {
     if (outputFile.existsSync()) {
       throw StateError('Evidence already exists: ${outputFile.path}');
     }
+    final releaseMetadataFile = File(options.releaseMetadataPath!);
+    if (!releaseMetadataFile.existsSync()) {
+      throw StateError(
+        'Release metadata does not exist: ${releaseMetadataFile.path}',
+      );
+    }
 
     final commandRunner = CommandRunner(timeout: _commandTimeout);
-    final adb = AdbClient(
-      executable: options.adbExecutable,
-      commandRunner: commandRunner,
-    );
-    final deviceId = options.deviceId ?? await adb.requireSingleDevice();
-    final packageDump = await adb.packageDump(deviceId);
     final mobileDirectory = File.fromUri(Platform.script).parent.parent;
     final commitSha = (await commandRunner.run('git', [
       '-C',
@@ -38,10 +42,30 @@ Future<void> main(List<String> arguments) async {
     final appVersion = _readAppVersion(
       File('${mobileDirectory.path}${Platform.pathSeparator}pubspec.yaml'),
     );
+    if (appVersion == null || appVersion.trim().isEmpty) {
+      throw StateError('Unable to read the expected app version.');
+    }
+    final releaseIdentity = AndroidReleaseIdentity.parse(
+      releaseMetadataFile.readAsStringSync(),
+    );
+    releaseIdentity.validateAgainstSource(
+      checkoutCommitSha: commitSha,
+      sourceAppVersion: appVersion,
+      expectedPackageName: _packageName,
+      expectedMinSdk: _minimumSdk,
+      minimumTargetSdk: _minimumTargetSdk,
+    );
+
+    final adb = AdbClient(
+      executable: options.adbExecutable,
+      commandRunner: commandRunner,
+    );
+    final deviceId = options.deviceId ?? await adb.requireSingleDevice();
+    final packageDump = await adb.packageDump(deviceId);
     final installedPackage = parseInstalledPackageMetadata(packageDump);
     validateInstalledReleasePackage(
       installedPackage,
-      expectedAppVersion: appVersion,
+      releaseIdentity: releaseIdentity,
     );
 
     stdout.writeln('Discarding one cold-start warm-up run...');
@@ -56,12 +80,13 @@ Future<void> main(List<String> arguments) async {
     await adb.forceStop(deviceId);
 
     final report = <String, Object?>{
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'recordedAtUtc': DateTime.now().toUtc().toIso8601String(),
-      'commitSha': commitSha,
-      'appVersion': appVersion,
+      'commitSha': releaseIdentity.commitSha,
+      'appVersion': releaseIdentity.appVersion,
       'packageName': _packageName,
       'activityName': _activityName,
+      'releaseCandidate': releaseIdentity.toJson(),
       'device': <String, Object?>{
         'id': deviceId,
         'model': await adb.property(deviceId, 'ro.product.model'),
@@ -107,6 +132,7 @@ Future<void> main(List<String> arguments) async {
 class AndroidColdStartOptions {
   const AndroidColdStartOptions({
     required this.outputPath,
+    required this.releaseMetadataPath,
     required this.deviceId,
     required this.runCount,
     required this.adbExecutable,
@@ -115,6 +141,7 @@ class AndroidColdStartOptions {
 
   factory AndroidColdStartOptions.parse(List<String> arguments) {
     String? outputPath;
+    String? releaseMetadataPath;
     String? deviceId;
     var runCount = _minimumRunCount;
     var adbExecutable = 'adb';
@@ -136,6 +163,8 @@ class AndroidColdStartOptions {
       switch (argument) {
         case '--output':
           outputPath = value;
+        case '--release-metadata':
+          releaseMetadataPath = value;
         case '--device':
           deviceId = value;
         case '--runs':
@@ -152,12 +181,17 @@ class AndroidColdStartOptions {
     if (!showHelp && (outputPath == null || outputPath.trim().isEmpty)) {
       throw UsageException('--output is required.');
     }
+    if (!showHelp &&
+        (releaseMetadataPath == null || releaseMetadataPath.trim().isEmpty)) {
+      throw UsageException('--release-metadata is required.');
+    }
     if (runCount < _minimumRunCount) {
       throw UsageException('--runs must be at least $_minimumRunCount.');
     }
 
     return AndroidColdStartOptions(
       outputPath: outputPath,
+      releaseMetadataPath: releaseMetadataPath,
       deviceId: deviceId,
       runCount: runCount,
       adbExecutable: adbExecutable,
@@ -167,13 +201,15 @@ class AndroidColdStartOptions {
 
   static const usage = '''
 Usage:
-  dart run tool/measure_android_cold_start.dart --output <evidence.json>
+  dart run tool/measure_android_cold_start.dart
+      --release-metadata <metadata.txt> --output <evidence.json>
       [--device <adb-device-id>] [--runs <count>] [--adb <path>]
 
 The tool discards one warm-up run, records at least 10 cold starts, and exits.
 ''';
 
   final String? outputPath;
+  final String? releaseMetadataPath;
   final String? deviceId;
   final int runCount;
   final String adbExecutable;
@@ -351,60 +387,6 @@ List<String> parseConnectedDevices(String output) {
       .where((fields) => fields.length >= 2 && fields[1] == 'device')
       .map((fields) => fields.first)
       .toList(growable: false);
-}
-
-Map<String, Object?> parseInstalledPackageMetadata(String packageDump) {
-  String? valueFor(String name) {
-    return RegExp(
-      '(?:^|\\s)${RegExp.escape(name)}=(\\S+)',
-      multiLine: true,
-    ).firstMatch(packageDump)?.group(1);
-  }
-
-  return <String, Object?>{
-    'versionName': valueFor('versionName'),
-    'versionCode': int.tryParse(valueFor('versionCode') ?? ''),
-    'targetSdk': int.tryParse(valueFor('targetSdk') ?? ''),
-    'debuggable': RegExp(
-      r'^\s*flags=\[[^\]]*\bDEBUGGABLE\b',
-      multiLine: true,
-    ).hasMatch(packageDump),
-  };
-}
-
-void validateInstalledReleasePackage(
-  Map<String, Object?> metadata, {
-  required String? expectedAppVersion,
-}) {
-  if (expectedAppVersion == null || expectedAppVersion.trim().isEmpty) {
-    throw StateError('Unable to read the expected app version.');
-  }
-
-  final installedVersionName = metadata['versionName'];
-  final expectedVersionName = expectedAppVersion.split('+').first;
-  if (installedVersionName != expectedVersionName) {
-    throw StateError(
-      'Installed version does not match the current source version.',
-    );
-  }
-
-  final versionCode = metadata['versionCode'];
-  if (versionCode is! int || versionCode <= 0) {
-    throw StateError('Installed package has no valid version code.');
-  }
-
-  final targetSdk = metadata['targetSdk'];
-  if (targetSdk is! int || targetSdk < 36) {
-    throw StateError(
-      'Installed release candidate must target SDK 36 or later.',
-    );
-  }
-
-  if (metadata['debuggable'] != false) {
-    throw StateError(
-      'Cold-start release evidence requires a non-debuggable build.',
-    );
-  }
 }
 
 Map<String, int> summarizeMeasurements(Iterable<int> measurements) {

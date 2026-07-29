@@ -62,7 +62,16 @@ void main() {
     expect(source, contains('16kb-page-support.json'));
     expect(source, contains('page_alignment=16KB'));
     expect(source, contains('AndroidManifest.xml.sha256'));
-    expect(source, contains('target_sdk=%s'));
+    for (final metadataKey in const [
+      'commit_sha',
+      'package_name',
+      'app_version',
+      'build_number',
+      'min_sdk',
+      'target_sdk',
+    ]) {
+      expect(source, contains("$metadataKey=%s"));
+    }
     expect(
       source,
       contains('BUNDLE-METADATA/com.android.tools.build.debugsymbols/'),

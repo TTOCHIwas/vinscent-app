@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../tool/android_release_identity.dart';
 import '../../tool/measure_android_cold_start.dart';
 
 void main() {
@@ -53,14 +54,24 @@ Package [com.vinscent.vinscent] (123):
 
     expect(metadata['versionName'], '1.0.0');
     expect(metadata['versionCode'], 42);
+    expect(metadata['minSdk'], 24);
     expect(metadata['targetSdk'], 36);
     expect(metadata['debuggable'], isFalse);
   });
 
   test('accepts only the current non-debuggable release candidate', () {
+    const releaseIdentity = AndroidReleaseIdentity(
+      commitSha: '0123456789abcdef0123456789abcdef01234567',
+      packageName: 'com.vinscent.vinscent',
+      appVersion: '1.0.0',
+      buildNumber: 42,
+      minSdk: 24,
+      targetSdk: 36,
+    );
     final validMetadata = <String, Object?>{
       'versionName': '1.0.0',
       'versionCode': 42,
+      'minSdk': 24,
       'targetSdk': 36,
       'debuggable': false,
     };
@@ -68,7 +79,7 @@ Package [com.vinscent.vinscent] (123):
     expect(
       () => validateInstalledReleasePackage(
         validMetadata,
-        expectedAppVersion: '1.0.0+1',
+        releaseIdentity: releaseIdentity,
       ),
       returnsNormally,
     );
@@ -76,20 +87,93 @@ Package [com.vinscent.vinscent] (123):
       () => validateInstalledReleasePackage({
         ...validMetadata,
         'debuggable': true,
-      }, expectedAppVersion: '1.0.0+1'),
+      }, releaseIdentity: releaseIdentity),
+      throwsStateError,
+    );
+    expect(
+      () => validateInstalledReleasePackage({
+        ...validMetadata,
+        'versionCode': 41,
+      }, releaseIdentity: releaseIdentity),
+      throwsStateError,
+    );
+    expect(
+      () => validateInstalledReleasePackage({
+        ...validMetadata,
+        'versionName': '1.0.1',
+      }, releaseIdentity: releaseIdentity),
+      throwsStateError,
+    );
+    expect(
+      () => validateInstalledReleasePackage({
+        ...validMetadata,
+        'minSdk': 23,
+      }, releaseIdentity: releaseIdentity),
       throwsStateError,
     );
     expect(
       () => validateInstalledReleasePackage({
         ...validMetadata,
         'targetSdk': 35,
-      }, expectedAppVersion: '1.0.0+1'),
+      }, releaseIdentity: releaseIdentity),
       throwsStateError,
     );
+  });
+
+  test('parses and validates Android release workflow metadata', () {
+    final identity = AndroidReleaseIdentity.parse('''
+commit_sha=0123456789abcdef0123456789abcdef01234567
+run_id=123
+package_name=com.vinscent.vinscent
+app_version=1.0.0
+build_number=42
+min_sdk=24
+target_sdk=36
+''');
+
+    expect(identity.buildNumber, 42);
+    expect(identity.targetSdk, 36);
     expect(
-      () => validateInstalledReleasePackage(
-        validMetadata,
-        expectedAppVersion: '1.0.1+1',
+      () => identity.validateAgainstSource(
+        checkoutCommitSha: identity.commitSha,
+        sourceAppVersion: '1.0.0+1',
+        expectedPackageName: 'com.vinscent.vinscent',
+        expectedMinSdk: 24,
+        minimumTargetSdk: 36,
+      ),
+      returnsNormally,
+    );
+  });
+
+  test('rejects stale or ambiguous release metadata', () {
+    expect(
+      () => AndroidReleaseIdentity.parse('''
+commit_sha=0123456789abcdef0123456789abcdef01234567
+package_name=com.vinscent.vinscent
+app_version=1.0.0
+build_number=42
+build_number=43
+min_sdk=24
+target_sdk=36
+'''),
+      throwsFormatException,
+    );
+
+    final identity = AndroidReleaseIdentity.parse('''
+commit_sha=0123456789abcdef0123456789abcdef01234567
+package_name=com.vinscent.vinscent
+app_version=1.0.0
+build_number=42
+min_sdk=24
+target_sdk=36
+''');
+    expect(
+      () => identity.validateAgainstSource(
+        checkoutCommitSha: '1123456789abcdef0123456789abcdef01234567',
+        sourceAppVersion: '1.0.0+1',
+        expectedPackageName: 'com.vinscent.vinscent',
+        expectedMinSdk: 24,
+        minimumTargetSdk: 36,
       ),
       throwsStateError,
     );
@@ -118,9 +202,15 @@ Package [com.vinscent.vinscent] (123):
       throwsA(isA<UsageException>()),
     );
     expect(
+      () => AndroidColdStartOptions.parse(const ['--output', 'result.json']),
+      throwsA(isA<UsageException>()),
+    );
+    expect(
       () => AndroidColdStartOptions.parse(const [
         '--output',
         'result.json',
+        '--release-metadata',
+        'metadata.txt',
         '--runs',
         '9',
       ]),
@@ -130,12 +220,15 @@ Package [com.vinscent.vinscent] (123):
     final options = AndroidColdStartOptions.parse(const [
       '--output',
       'result.json',
+      '--release-metadata',
+      'metadata.txt',
       '--runs',
       '12',
       '--device',
       'device-1',
     ]);
     expect(options.outputPath, 'result.json');
+    expect(options.releaseMetadataPath, 'metadata.txt');
     expect(options.runCount, 12);
     expect(options.deviceId, 'device-1');
   });

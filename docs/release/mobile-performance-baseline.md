@@ -80,16 +80,21 @@ cd apps/mobile
 ..\..\.toolchains\flutter\bin\dart.bat run `
   tool/measure_android_cold_start.dart `
   --device <DEVICE_ID> `
+  --release-metadata <다운로드한-릴리스-artifact>\metadata.txt `
   --output build/release-evidence/android-cold-start.json
 ```
 
 도구는 `am force-stop` 뒤 `am start -W`를 실행한다. 첫 1회는 버리고
 기본 10회를 측정한 뒤 p50·p90과 기기·OS·설치 버전·target SDK·commit SHA를
 JSON에 기록하고 종료한다. 각 `adb`·`git` 명령은 20초를 넘기면 실패하며,
-기존 증빙 파일은 덮어쓰지 않는다. 설치 앱이 현재 소스 version과 다르거나,
-debuggable이거나, target SDK 36 미만이면 측정을 시작하지 않는다. 이 결과는
-Android vitals와 실제 화면 표시 시점 측정을 보조하며, Play의 현장 지표를
-대체하지 않는다.
+기존 증빙 파일은 덮어쓰지 않는다. `--release-metadata`에는
+`Android release candidate` workflow artifact에 포함된 `metadata.txt`를
+지정한다. 도구는 해당 파일의 commit SHA·package·versionName·versionCode·
+min SDK·target SDK를 현재 checkout과 실제 설치 앱에 대조한다. 하나라도
+다르거나 설치 앱이 debuggable이면 측정을 시작하지 않는다. 따라서 같은
+versionName을 가진 오래된 설치본의 결과가 현재 릴리스 후보 증빙으로
+기록되지 않는다. 이 결과는 Android vitals와 실제 화면 표시 시점 측정을
+보조하며, Play의 현장 지표를 대체하지 않는다.
 
 시작 시간을 측정할 때 앱을 강제 종료하고 Logcat의 `Displayed` 값을
 기록한다. Android 12 이상에서는 `am start -W` 결과도 함께 보조 자료로
@@ -171,6 +176,8 @@ Instruments의 App Launch, Time Profiler, Allocations를 사용한다.
   https://docs.flutter.dev/perf/app-size
 - Android 앱 시작 시간:
   https://developer.android.com/topic/performance/vitals/launch-time
+- Android 앱 버전 식별:
+  https://developer.android.com/studio/publish/versioning
 - Android 16KB 페이지 크기:
   https://developer.android.com/guide/practices/page-sizes
 - Android vitals:
