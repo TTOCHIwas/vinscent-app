@@ -65,14 +65,16 @@ Environment에는 다음 값을 등록한다.
 
 `deploy`는 Environment 승인 뒤 다음 순서로 실행한다.
 
-1. 운영 project 연결
-2. 운영 Edge secret 이름과 필수·fallback 계약 확인
-3. 저장소에 없는 원격 Edge Function 존재 여부 확인
-4. `db push --dry-run`
-5. pending migration 전진 적용
-6. 저장소의 모든 Edge Function 배포
-7. 로컬·원격 Edge Function 목록과 `verify_jwt` 모드의 정확한 일치 확인
-8. migration·function 목록과 파일 hash 증빙 업로드
+1. checkout된 HEAD와 workflow commit의 일치 및 깨끗한 worktree 확인
+2. 운영 project 연결
+3. 운영 Edge secret 이름과 필수·fallback 계약 확인
+4. 저장소에 없는 원격 Edge Function 존재 여부 확인
+5. `db push --dry-run`
+6. pending migration 전진 적용
+7. 저장소의 모든 Edge Function 배포
+8. 로컬·원격 Edge Function 목록과 `verify_jwt` 모드의 정확한 일치 확인
+9. source commit과 worktree를 다시 확인하고 migration·function 목록과 파일
+   hash 증빙 업로드
 
 원격에만 남은 함수는 자동 삭제하지 않는다. 해당 함수의 호출자와 운영
 상태를 확인한 뒤 별도 변경으로 제거한다. `--prune`, `db reset`,

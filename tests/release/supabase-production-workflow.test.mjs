@@ -33,6 +33,44 @@ test('Supabase production release verifies the exact main commit and project', a
   assert.match(source, /vars\.SUPABASE_PROJECT_ID/);
 });
 
+test('Supabase deployment remains bound to the triggering source commit', async () => {
+  const source = await loadWorkflow();
+  const verifierCommand =
+    'run: scripts/verify_release_source.sh "$GITHUB_SHA"';
+  const verifierMatches = source
+    .split(/\r?\n/)
+    .filter((line) => line.trim() === verifierCommand);
+
+  assert.equal(verifierMatches.length, 2);
+
+  const deployJobIndex = source.indexOf('  deploy:');
+  const deploymentSourceIndex = source.indexOf(
+    '- name: Verify deployment release source',
+    deployJobIndex,
+  );
+  const migrationPreviewIndex = source.indexOf(
+    '- name: Preview pending migrations',
+    deployJobIndex,
+  );
+  const evidenceIndex = source.indexOf(
+    '- name: Capture release evidence',
+    deployJobIndex,
+  );
+  const finalSourceIndex = source.indexOf(
+    '- name: Verify final release source',
+    deployJobIndex,
+  );
+  const uploadIndex = source.indexOf(
+    '- name: Upload release evidence',
+    deployJobIndex,
+  );
+
+  assert.ok(deploymentSourceIndex > deployJobIndex);
+  assert.ok(migrationPreviewIndex > deploymentSourceIndex);
+  assert.ok(finalSourceIndex > evidenceIndex);
+  assert.ok(uploadIndex > finalSourceIndex);
+});
+
 test('Supabase production release revalidates database and Edge contracts', async () => {
   const source = await loadWorkflow();
 

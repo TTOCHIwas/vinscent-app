@@ -25,6 +25,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
   제한, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
   `SUPABASE_PROJECT_ID` 구성
 - [ ] 출시 commit으로 `Supabase production release` workflow 실행
+- [ ] 실제 배포 전과 증빙 업로드 전 source commit·worktree 검증 통과
 - [ ] Supabase 배포 artifact의 migration·function 목록과 SHA-256 보관
 - [ ] 모든 웹훅·스케줄러 비밀값을 출시 전 교체하고 호출 헤더와 재대조
 - [ ] `audit_edge_runtime_resources.sql`의 Webhook 결과가 모두 `ready`

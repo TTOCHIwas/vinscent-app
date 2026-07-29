@@ -100,6 +100,8 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Verify deployment release source
+        run: scripts/verify_release_source.sh "$GITHUB_SHA"
       - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
         with:
           version: "2.109.1"
@@ -186,6 +188,8 @@ jobs:
             printf 'project_ref=%s\n' "$SUPABASE_PROJECT_ID"
             printf 'deployed_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > "$evidence_dir/metadata.txt"
+      - name: Verify final release source
+        run: scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Upload release evidence
         id: release-artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
