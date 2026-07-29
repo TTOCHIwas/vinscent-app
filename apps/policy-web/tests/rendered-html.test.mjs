@@ -61,6 +61,47 @@ test("server-renders every policy route with shared navigation", async () => {
   }
 });
 
+test("publishes the verified privacy processing draft without invented contacts", async () => {
+  const response = await render("/privacy");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /현재 처리하는 정보/);
+  assert.match(html, /AI와 위치 정보 처리/);
+  assert.match(html, /외부 서비스로 전달되는 정보/);
+  assert.match(html, /보관과 삭제/);
+  assert.match(html, /이용자의 선택과 권리/);
+  assert.match(html, /Google Gemini/);
+  assert.match(html, /Open-Meteo/);
+  assert.doesNotMatch(html, /support@example\.com|example\.com/);
+});
+
+test("publishes the verified service terms draft", async () => {
+  const response = await render("/terms");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /계정과 커플 연결/);
+  assert.match(html, /공유 콘텐츠/);
+  assert.match(html, /AI 기능/);
+  assert.match(html, /신고와 차단/);
+  assert.match(html, /서비스 변경과 종료/);
+  assert.doesNotMatch(html, /support@example\.com|example\.com/);
+});
+
+test("documents the implemented in-app account deletion boundary", async () => {
+  const response = await render("/account-deletion");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /설정.*계정.*계정 삭제/s);
+  assert.match(html, /삭제되는 정보/);
+  assert.match(html, /카드, 녹음, 답변, 캐릭터, 일정과 AI 데이터/);
+  assert.match(html, /앱을 사용할 수 없는 경우/);
+  assert.match(html, /아직 삭제 접수 창구로 사용할 수 없습니다/);
+  assert.doesNotMatch(html, /mailto:|support@example\.com|example\.com/);
+});
+
 test("publishes the current UGC safety promise", async () => {
   const response = await render("/safety");
   assert.equal(response.status, 200);

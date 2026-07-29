@@ -285,6 +285,10 @@ a:focus-visible {
   overflow-wrap: break-word;
 }
 
+.publication-notice p + p {
+  margin-top: 8px;
+}
+
 .document-version {
   display: inline-flex;
   align-items: center;
@@ -320,7 +324,8 @@ a:focus-visible {
 }
 
 .policy-section p,
-.policy-section li {
+.policy-section li,
+.policy-definition-list dd {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.8;
@@ -332,11 +337,41 @@ a:focus-visible {
   margin: 14px 0 0;
 }
 
-.policy-section ul {
+.policy-section ul,
+.policy-section ol {
   display: grid;
   gap: 8px;
   margin: 16px 0 0;
   padding-left: 22px;
+}
+
+.policy-definition-list {
+  display: grid;
+  gap: 22px;
+  margin: 20px 0 0;
+}
+
+.policy-definition-list div {
+  display: grid;
+  gap: 6px;
+}
+
+.policy-definition-list dt {
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.6;
+}
+
+.policy-definition-list dd {
+  margin: 0;
+}
+
+.policy-section code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.92em;
 }
 
 .site-footer {
