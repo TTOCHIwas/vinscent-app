@@ -88,6 +88,16 @@ test('custom-secret webhooks bypass platform JWT only after local verification',
       `${functionName} must verify its custom secret before processing`,
     );
     assert.match(handler, /return jsonResponse\(\{ error: 'unauthorized' \}, 401\)/);
+    assert.doesNotMatch(
+      handler,
+      /\bdetail\s*:/,
+      `${functionName} must not expose internal error details`,
+    );
+    assert.doesNotMatch(
+      handler,
+      /error:\s*(?:String\(error\)|error\.message)/,
+      `${functionName} must return stable error codes`,
+    );
   }
 });
 

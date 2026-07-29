@@ -21,6 +21,27 @@ export function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+export function invalidPayloadResponse() {
+  return jsonResponse({ error: 'invalid_payload' }, 400);
+}
+
+export function internalErrorResponse(
+  errorCode: string,
+  error: unknown,
+  logError: (code: string, errorType: string) => void = console.error,
+) {
+  logError(errorCode, internalErrorType(error));
+  return jsonResponse({ error: errorCode }, 500);
+}
+
+function internalErrorType(error: unknown) {
+  if (!(error instanceof Error)) {
+    return 'UnknownError';
+  }
+
+  return /^([a-z][a-z0-9_]+)(?::|$)/.exec(error.message)?.[1] ?? error.name;
+}
+
 export function verifyWebhookSecret(
   request: Request,
   options: WebhookSecretOptions,

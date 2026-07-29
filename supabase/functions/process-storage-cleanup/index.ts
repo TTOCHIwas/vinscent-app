@@ -1,6 +1,8 @@
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
   extractWebhookRecordId,
+  internalErrorResponse,
+  invalidPayloadResponse,
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
@@ -31,11 +33,8 @@ Deno.serve(async (request) => {
   let requestId: string;
   try {
     requestId = extractWebhookRecordId(await request.json());
-  } catch (error) {
-    return jsonResponse(
-      { error: 'invalid_payload', detail: String(error) },
-      400,
-    );
+  } catch {
+    return invalidPayloadResponse();
   }
 
   try {
@@ -76,7 +75,7 @@ Deno.serve(async (request) => {
       );
       return jsonResponse({
         status: 'failed',
-        error: error.message,
+        error: 'storage_object_delete_failed',
       });
     }
 
@@ -88,10 +87,7 @@ Deno.serve(async (request) => {
       cleanupReason: claimedRequest.cleanup_reason,
     });
   } catch (error) {
-    return jsonResponse(
-      { error: 'storage_cleanup_failed', detail: String(error) },
-      500,
-    );
+    return internalErrorResponse('storage_cleanup_failed', error);
   }
 });
 

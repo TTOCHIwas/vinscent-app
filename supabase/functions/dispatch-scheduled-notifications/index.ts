@@ -1,6 +1,11 @@
 import { createFcmAccessToken } from '../_shared/fcm.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
-import { jsonResponse, verifyWebhookSecret } from '../_shared/webhook.ts';
+import {
+  internalErrorResponse,
+  invalidPayloadResponse,
+  jsonResponse,
+  verifyWebhookSecret,
+} from '../_shared/webhook.ts';
 import {
   dispatchCalendarEventReminderJobs,
   loadDueCalendarEventReminderJobs,
@@ -30,7 +35,12 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
-  const requestBody = await parseRequestBody(request);
+  let requestBody: Record<string, unknown>;
+  try {
+    requestBody = await parseRequestBody(request);
+  } catch {
+    return invalidPayloadResponse();
+  }
   const lookbackMinutes = normalizeLookbackMinutes(
     requestBody.lookback_minutes,
   );
@@ -91,12 +101,9 @@ Deno.serve(async (request) => {
       ],
     });
   } catch (error) {
-    return jsonResponse(
-      {
-        error: 'scheduled_notification_dispatch_failed',
-        detail: String(error),
-      },
-      500,
+    return internalErrorResponse(
+      'scheduled_notification_dispatch_failed',
+      error,
     );
   }
 });

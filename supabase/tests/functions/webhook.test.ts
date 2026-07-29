@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
   extractWebhookRecordId,
+  internalErrorResponse,
+  invalidPayloadResponse,
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
@@ -78,4 +80,28 @@ test('creates JSON responses and identifies object records', async () => {
   assert.equal(isRecord({}), true);
   assert.equal(isRecord([]), false);
   assert.equal(isRecord(null), false);
+});
+
+test('returns stable webhook errors without exposing internal messages', async () => {
+  const invalidPayload = invalidPayloadResponse();
+  const logs: Array<[string, string]> = [];
+  const internalFailure = internalErrorResponse(
+    'operation_failed',
+    new Error('database_query_failed:sensitive database detail'),
+    (code, errorType) => logs.push([code, errorType]),
+  );
+
+  assert.equal(invalidPayload.status, 400);
+  assert.deepEqual(await invalidPayload.json(), {
+    error: 'invalid_payload',
+  });
+  assert.equal(internalFailure.status, 500);
+  assert.deepEqual(await internalFailure.json(), {
+    error: 'operation_failed',
+  });
+  assert.deepEqual(logs, [['operation_failed', 'database_query_failed']]);
+  assert.equal(
+    JSON.stringify(logs).includes('sensitive database detail'),
+    false,
+  );
 });

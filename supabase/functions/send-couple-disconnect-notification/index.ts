@@ -2,6 +2,8 @@ import { appDisplayName } from '../_shared/app_brand.ts';
 import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
+  internalErrorResponse,
+  invalidPayloadResponse,
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
@@ -34,11 +36,8 @@ Deno.serve(async (request) => {
   try {
     const payload = await request.json();
     couple = extractCoupleRecord(payload);
-  } catch (error) {
-    return jsonResponse(
-      { error: 'invalid_payload', detail: String(error) },
-      400,
-    );
+  } catch {
+    return invalidPayloadResponse();
   }
 
   if (
@@ -73,9 +72,9 @@ Deno.serve(async (request) => {
 
     return jsonResponse(result);
   } catch (error) {
-    return jsonResponse(
-      { error: 'couple_disconnect_notification_failed', detail: String(error) },
-      500,
+    return internalErrorResponse(
+      'couple_disconnect_notification_failed',
+      error,
     );
   }
 });

@@ -3,6 +3,8 @@ import { sendPushNotification } from '../_shared/push.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
   extractWebhookRecordId,
+  internalErrorResponse,
+  invalidPayloadResponse,
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
@@ -43,11 +45,8 @@ Deno.serve(async (request) => {
   let eventId: string;
   try {
     eventId = extractWebhookRecordId(await request.json());
-  } catch (error) {
-    return jsonResponse(
-      { error: 'invalid_payload', detail: String(error) },
-      400,
-    );
+  } catch {
+    return invalidPayloadResponse();
   }
 
   try {
@@ -70,10 +69,7 @@ Deno.serve(async (request) => {
 
     return jsonResponse(result);
   } catch (error) {
-    return jsonResponse(
-      { error: 'app_notification_failed', detail: String(error) },
-      500,
-    );
+    return internalErrorResponse('app_notification_failed', error);
   }
 });
 

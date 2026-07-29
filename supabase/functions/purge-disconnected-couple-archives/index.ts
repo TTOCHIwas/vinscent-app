@@ -1,5 +1,7 @@
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
+  internalErrorResponse,
+  invalidPayloadResponse,
   isRecord,
   jsonResponse,
   verifyWebhookSecret,
@@ -23,7 +25,12 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
-  const body = await parseRequestBody(request);
+  let body: Record<string, unknown>;
+  try {
+    body = await parseRequestBody(request);
+  } catch {
+    return invalidPayloadResponse();
+  }
   const batchLimit = normalizeBatchLimit(body.batch_limit);
 
   try {
@@ -45,10 +52,7 @@ Deno.serve(async (request) => {
       deletedCount: typeof data === 'number' ? data : 0,
     });
   } catch (error) {
-    return jsonResponse(
-      { error: 'archive_purge_failed', detail: String(error) },
-      500,
-    );
+    return internalErrorResponse('archive_purge_failed', error);
   }
 });
 
