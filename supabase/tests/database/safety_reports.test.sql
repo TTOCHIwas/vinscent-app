@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(21);
+select plan(26);
 
 insert into auth.users (
   id,
@@ -317,6 +317,16 @@ select is(
   'ephemeral content is normalized before storage'
 );
 
+update public.safety_reports
+set status = 'dismissed',
+    moderation_note = 'reviewed once',
+    reviewed_at = now()
+where id = (
+  select report_id
+  from captured_safety_reports
+  where name = 'proactive'
+);
+
 set local role authenticated;
 
 select is(
@@ -348,6 +358,89 @@ select is(
   ),
   1::bigint,
   'duplicate reports do not create duplicate moderation work'
+);
+select is(
+  (
+    select status
+    from public.safety_reports
+    where id = (
+      select report_id
+      from captured_safety_reports
+      where name = 'proactive'
+    )
+  ),
+  'pending',
+  'a changed report returns a resolved moderation record to the queue'
+);
+select is(
+  (
+    select moderation_note
+    from public.safety_reports
+    where id = (
+      select report_id
+      from captured_safety_reports
+      where name = 'proactive'
+    )
+  ),
+  null::text,
+  'a changed report clears the previous moderation note'
+);
+select is(
+  (
+    select reviewed_at
+    from public.safety_reports
+    where id = (
+      select report_id
+      from captured_safety_reports
+      where name = 'proactive'
+    )
+  ),
+  null::timestamptz,
+  'a changed report clears the previous review time'
+);
+
+update public.safety_reports
+set status = 'dismissed',
+    moderation_note = 'same content reviewed',
+    reviewed_at = now()
+where id = (
+  select report_id
+  from captured_safety_reports
+  where name = 'proactive'
+);
+
+set local role authenticated;
+
+select is(
+  public.submit_safety_report(
+    'ai_proactive_suggestion',
+    'suggestion-opaque-id',
+    'other',
+    '추가 설명',
+    '오늘은 가까운 공원에서 쉬어도 좋겠어'
+  ),
+  (
+    select report_id
+    from captured_safety_reports
+    where name = 'proactive'
+  ),
+  'resubmitting identical content keeps one moderation record'
+);
+
+reset role;
+
+select is(
+  (
+    select status
+    from public.safety_reports
+    where id = (
+      select report_id
+      from captured_safety_reports
+      where name = 'proactive'
+    )
+  ),
+  'dismissed',
+  'an identical report does not reopen resolved moderation work'
 );
 
 set local role authenticated;
