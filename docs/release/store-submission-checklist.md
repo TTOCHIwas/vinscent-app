@@ -84,10 +84,12 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 ### Artifact
 
 - [ ] Android upload key를 암호화된 별도 보관소에 백업
+- [ ] GitHub `android-release` Environment와 7개 빌드 secret 등록
 - [ ] Play App Signing 활성화
 - [ ] `versionCode`가 이전 업로드보다 큼
-- [ ] 서명된 Release AAB 생성
+- [ ] `Android release candidate` workflow로 서명된 Release AAB 생성
 - [ ] mapping file과 native debug symbols 보관·업로드
+- [ ] workflow artifact의 AAB·mapping SHA-256과 commit SHA 보관
 - [ ] App Bundle Explorer에서 기기별 다운로드 크기 확인
 - [ ] Pre-launch report의 crash, ANR, 접근성, 보안 경고 처리
 - [ ] 내부 또는 비공개 track에서 최종 AAB 업데이트 검증

@@ -51,10 +51,68 @@ CI에서는 파일을 작업 공간에 복원한 다음 아래 환경변수를 �
 apps/mobile/flutterw.cmd build appbundle --release
 ```
 
+### GitHub Actions 릴리스 후보
+
+`.github/workflows/android-release.yml`은 자동 배포가 아니라 명시적으로
+실행하는 릴리스 후보 생성 작업이다. GitHub의 `android-release`
+Environment에 다음 secret을 등록한다.
+
+- `DANJJAN_UPLOAD_KEYSTORE_BASE64`
+- `DANJJAN_UPLOAD_STORE_PASSWORD`
+- `DANJJAN_UPLOAD_KEY_ALIAS`
+- `DANJJAN_UPLOAD_KEY_PASSWORD`
+- `DANJJAN_SUPABASE_URL`
+- `DANJJAN_SUPABASE_ANON_KEY`
+- `DANJJAN_KAKAO_NATIVE_APP_KEY`
+
+Supabase URL·anon key와 Kakao Native App Key는 최종 앱에 포함되는 클라이언트
+설정이지만, 워크플로 로그에 노출되지 않도록 Environment secret으로
+관리한다. service role key, Gemini API key와 같은 서버 비밀키는 모바일
+빌드에 넣지 않는다.
+
+PowerShell에서 업로드 키를 Base64로 바꿔 클립보드에 넣을 수 있다.
+
+```powershell
+$keystoreBase64 = [Convert]::ToBase64String(
+  [IO.File]::ReadAllBytes(
+    (Resolve-Path "apps/mobile/android/upload-keystore.jks")
+  )
+)
+$keystoreBase64 | Set-Clipboard
+```
+
+GitHub CLI를 사용하는 경우 Environment secret을 대화형으로 등록한다.
+
+```powershell
+$keystoreBase64 | gh secret set DANJJAN_UPLOAD_KEYSTORE_BASE64 `
+  --env android-release
+gh secret set DANJJAN_UPLOAD_STORE_PASSWORD --env android-release
+gh secret set DANJJAN_UPLOAD_KEY_ALIAS --env android-release
+gh secret set DANJJAN_UPLOAD_KEY_PASSWORD --env android-release
+gh secret set DANJJAN_SUPABASE_URL --env android-release
+gh secret set DANJJAN_SUPABASE_ANON_KEY --env android-release
+gh secret set DANJJAN_KAKAO_NATIVE_APP_KEY --env android-release
+```
+
+Actions의 `Android release candidate`를 실행할 때 Play Console에서 아직
+사용하지 않은 양의 `build_number`를 입력한다. 작업은 분석·테스트를 통과한
+후 서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로 보관한다.
+
+- `danjjan-android-build-<BUILD_NUMBER>.aab`
+- AAB의 SHA-256
+- ProGuard/R8 mapping 파일과 SHA-256
+- commit SHA, 앱 version, build number, 생성 시각
+
+워크플로는 AAB 내부에 native debug symbol과 ProGuard mapping이 포함됐는지도
+확인한다. Play Console 업로드는 개발자 계정과 테스트 트랙이 준비된 뒤
+별도 승인 단계로 추가하며, 현재 워크플로에서는 수행하지 않는다.
+
 참고:
 
 - [Android 앱 서명](https://developer.android.com/studio/publish/app-signing)
 - [Android App Bundle](https://developer.android.com/guide/app-bundle)
+- [GitHub Actions secrets](https://docs.github.com/en/actions/concepts/security/secrets)
+- [GitHub Actions artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)
 
 ## 2. iOS Runner capability
 
