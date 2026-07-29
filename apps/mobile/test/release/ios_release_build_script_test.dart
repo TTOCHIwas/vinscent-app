@@ -41,7 +41,8 @@ void main() {
     expect(
       source,
       contains(
-        r'"$dart_binary" format --output=none --set-exit-if-changed lib test',
+        r'"$dart_binary" format --output=none --set-exit-if-changed '
+        'lib test integration_test',
       ),
     );
     expect(source, contains(r'"$flutter_binary" analyze --no-pub'));

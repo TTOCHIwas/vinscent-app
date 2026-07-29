@@ -25,7 +25,10 @@ void main() {
     expect(source, contains('base64 --decode'));
     expect(
       source,
-      contains('dart format --output=none --set-exit-if-changed lib test'),
+      contains(
+        'dart format --output=none --set-exit-if-changed '
+        'lib test integration_test',
+      ),
     );
     expect(source, contains('flutter build appbundle'));
     expect(source, contains(r'--build-number "$BUILD_NUMBER"'));

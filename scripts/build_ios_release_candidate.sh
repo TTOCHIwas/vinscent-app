@@ -86,7 +86,7 @@ if [[ -e "$evidence_directory" ]]; then
 fi
 
 "$flutter_binary" pub get
-"$dart_binary" format --output=none --set-exit-if-changed lib test
+"$dart_binary" format --output=none --set-exit-if-changed lib test integration_test
 "$flutter_binary" analyze --no-pub
 "$flutter_binary" test --no-pub
 "$flutter_binary" build ipa \
