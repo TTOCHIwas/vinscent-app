@@ -15,6 +15,7 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 외부 액션은 전체 커밋 SHA로 고정한다.
 
 - [GitHub Actions 보안 사용 지침](https://docs.github.com/en/actions/reference/security/secure-use)
+- [GitHub macOS 26 runner 이미지](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md)
 - [Supabase 자동화된 데이터베이스 테스트](https://supabase.com/docs/guides/deployment/ci/testing)
 
 ## 필수 체크
@@ -22,7 +23,7 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 | 체크 | 검증 범위 |
 |---|---|
 | `Flutter` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
-| `iOS native build` | `main` 반영 또는 수동 실행 시 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
+| `iOS native build` | `main` 반영 또는 수동 실행 시 macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
 | `Node services` | 저장소 출시·비밀값 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
 | `Edge functions` | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
 | `Supabase database` | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
@@ -56,6 +57,11 @@ cd apps/mobile
 flutter pub get
 flutter build ios --simulator --debug --no-codesign --no-pub
 ```
+
+GitHub Actions에서는 `macos-26` runner를 사용해 제출 도구 체인과 같은
+Xcode 26·iOS 26 SDK 세대에서 이 검증을 수행한다. 이 작업은 시뮬레이터용
+무서명 빌드이므로 제출 가능한 IPA를 만들거나 App Store Connect에
+업로드하지 않는다.
 
 Node와 Edge 함수 검증은 종료형 명령으로 실행한다.
 

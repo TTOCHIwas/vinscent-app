@@ -201,20 +201,26 @@ scripts/build_ios_release_candidate.sh 1
 
 스크립트는 macOS와 양의 build number, Xcode 26 이상, iOS 26 SDK 이상,
 필수 값, Supabase·정책 웹의 HTTPS를 검증한다. 이후 Dart 포맷·전체
-분석·테스트를 거쳐 `flutter build ipa --release`를 실행하고 다음 증빙을
-`apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에 만든다.
+분석·테스트를 거쳐 App Store 배포 방식이 명시된
+`flutter build ipa --release --export-method app-store`를 실행하고 다음
+증빙을 `apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에
+만든다.
 
 - IPA와 SHA-256
 - dSYM을 포함한 `.xcarchive.zip`과 SHA-256
 - Runner·위젯의 최종 서명 entitlement와 SHA-256
 - archive에 포함된 privacy manifest 경로 목록과 SHA-256
 - commit SHA, 앱 version, build number, Xcode·iOS SDK version, 생성 시각
-- Runner·위젯 bundle ID, production push 환경과 App Group
+- App Store export 방식
+- Runner·위젯 bundle ID와 application identifier
+- 두 target에 공통으로 적용된 Team ID
+- production push 환경과 App Group
 
 스크립트는 archive의 코드 서명, IPA 압축 무결성, Runner·위젯 bundle ID,
 version·build number, app·widget privacy manifest, production push,
-Sign in with Apple과 App Group을 검사한다. 위젯에 push 또는 Sign in with
-Apple entitlement가 들어가면 실패한다.
+Sign in with Apple과 App Group을 검사한다. Runner와 위젯의 Team ID가
+다르거나 application identifier가 각 bundle ID와 일치하지 않거나, 위젯에
+push 또는 Sign in with Apple entitlement가 들어가면 실패한다.
 
 빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 검증 중
 실패한 임시 자료는 제거하며, 모든 검사를 통과한 경우에만 최종 증빙
@@ -232,6 +238,11 @@ Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한
 
 저장소에는 `DEVELOPMENT_TEAM`을 하드코딩하지 않는다. 팀 선택과 App ID
 capability 활성화는 Apple 계정 권한이 있는 담당자가 수행한다.
+
+일반 CI의 `iOS native build`는 Xcode 26 환경에서 무서명 시뮬레이터
+컴파일만 검증한다. Apple Distribution 인증서와 Runner·위젯의 App Store
+프로비저닝 프로파일이 준비되기 전에는 GitHub Actions에서 서명된 IPA를
+만들거나 업로드하지 않는다.
 
 참고:
 
