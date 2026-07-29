@@ -33,6 +33,16 @@ export function validateRemoteSecretInventory(manifest, remoteNames) {
 
   const errors = [];
   const configuredNames = new Set(remoteNames);
+  const documentedNames = new Set(
+    manifest.entries
+      .filter(
+        (entry) =>
+          typeof entry === 'object'
+          && entry !== null
+          && typeof entry.name === 'string',
+      )
+      .map((entry) => entry.name),
+  );
 
   for (const entry of manifest.entries) {
     if (
@@ -66,6 +76,15 @@ export function validateRemoteSecretInventory(manifest, remoteNames) {
         `missing Edge secret fallback: ${entry.name} or ${fallbackLabel}`,
       );
     }
+  }
+
+  const undocumentedNames = remoteNames.filter(
+    (name) => !documentedNames.has(name) && !name.startsWith('SUPABASE_'),
+  );
+  if (undocumentedNames.length > 0) {
+    errors.push(
+      `undocumented Edge secrets: ${undocumentedNames.sort().join(', ')}`,
+    );
   }
 
   return errors;

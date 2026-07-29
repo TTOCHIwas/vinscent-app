@@ -39,6 +39,8 @@ Environment에는 다음 값을 등록한다.
   프로젝트에 등록되어 있다.
 - 운영 secret 값은 로그에 노출하지 않고 `supabase secrets list`가 반환한
   이름만 런타임 환경 매니페스트와 대조한다.
+- Supabase가 자동 제공하는 `SUPABASE_*` 항목을 제외한 사용자 관리
+  secret은 매니페스트에 없는 오래된 이름도 남아 있지 않아야 한다.
 
 ## 3. 실행 방법
 

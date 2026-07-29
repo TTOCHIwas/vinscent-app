@@ -76,6 +76,17 @@ test('ignores optional and platform-provisioned runtime values', () => {
   assert.deepEqual(validateRemoteSecretInventory(optionalOnlyManifest, []), []);
 });
 
+test('rejects undocumented user-managed secrets but permits platform values', () => {
+  assert.deepEqual(
+    validateRemoteSecretInventory(manifest, [
+      'DIRECT_SECRET',
+      'LEGACY_PROVIDER_ENDPOINT',
+      'SUPABASE_DB_URL',
+    ]),
+    ['undocumented Edge secrets: LEGACY_PROVIDER_ENDPOINT'],
+  );
+});
+
 test('rejects malformed remote inventories without exposing values', () => {
   assert.throws(
     () => parseRemoteSecretNames('{"secrets":[{"value":"hidden"}]}'),
