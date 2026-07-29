@@ -56,7 +56,9 @@ apps/mobile/flutterw.cmd build appbundle --release
 
 `.github/workflows/android-release.yml`은 자동 배포가 아니라 명시적으로
 실행하는 릴리스 후보 생성 작업이다. GitHub의 `android-release`
-Environment에 다음 secret을 등록한다.
+Environment는 배포 branch를 `main`으로 제한하고 다음 secret을 등록한다.
+필요하다면 승인자를 지정하고 실행자가 자신의 실행을 단독 승인하지 못하게
+설정한다.
 
 - `DANJJAN_UPLOAD_KEYSTORE_BASE64`
 - `DANJJAN_UPLOAD_STORE_PASSWORD`
@@ -123,10 +125,12 @@ keytool -list -v `
   -alias upload
 ```
 
-Actions의 `Android release candidate`를 실행할 때 Play Console에서 아직
-사용하지 않은 양의 `build_number`를 입력한다. 작업은 포맷·분석·테스트를
-모두 통과한 뒤 서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로
-보관한다.
+Actions의 `Android release candidate`를 실행할 때 branch로 `main`을
+선택하고 `commit_sha_confirmation`에 빌드할 40자 소문자 commit SHA를
+입력한다. `build_number`에는 Play Console에서 아직 사용하지 않은 양의
+값을 입력한다. 선택한 branch, 확인한 commit과 workflow commit이 다르면
+서명 설정을 읽기 전에 중단한다. 작업은 포맷·분석·테스트를 모두 통과한 뒤
+서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로 보관한다.
 
 - `danjjan-android-build-<BUILD_NUMBER>.aab`
 - AAB의 SHA-256

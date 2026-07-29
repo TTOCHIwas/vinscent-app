@@ -10,10 +10,29 @@ void main() {
     final source = workflow.readAsStringSync();
 
     expect(source, contains('workflow_dispatch:'));
+    expect(source, contains('commit_sha_confirmation:'));
     expect(source, contains('build_number:'));
     expect(source, contains('environment: android-release'));
     expect(source, isNot(contains('pull_request:')));
     expect(source, isNot(matches(RegExp(r'^\s+push:', multiLine: true))));
+  });
+
+  test('release candidates require the exact main commit', () {
+    final source = workflow.readAsStringSync();
+
+    expect(source, contains(r'$GITHUB_REF" != "refs/heads/main'));
+    expect(source, contains(r'^[0-9a-f]{40}$'));
+    expect(source, contains(r'$CONFIRMED_COMMIT_SHA" != "$GITHUB_SHA'));
+    expect(source, contains('inputs.commit_sha_confirmation'));
+
+    final sourceGateIndex = source.indexOf(
+      '- name: Require an exact main commit',
+    );
+    final configurationIndex = source.indexOf(
+      '- name: Validate release configuration',
+    );
+    expect(sourceGateIndex, greaterThanOrEqualTo(0));
+    expect(configurationIndex, greaterThan(sourceGateIndex));
   });
 
   test('release builds require signing and runtime configuration', () {

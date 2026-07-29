@@ -122,6 +122,8 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] Android upload key를 암호화된 별도 보관소에 백업
 - [ ] GitHub `android-release` Environment에 7개 빌드 secret과
   `DANJJAN_POLICY_BASE_URL`, `DANJJAN_PLAY_UPLOAD_CERT_SHA256` 공개 변수 등록
+- [ ] `android-release` Environment의 배포 branch를 `main`으로 제한하고
+  필요한 승인자 지정
 - [ ] Play App Signing 활성화
 - [ ] Play Console 업로드 인증서 SHA-256 지문과
   `DANJJAN_PLAY_UPLOAD_CERT_SHA256` 값이 일치함
@@ -134,6 +136,8 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] 16KB 검증 보고서에서 BundleConfig와 모든 native library가 통과함
 - [ ] Android 15 이상 16KB 환경에서 설치·시작·핵심 기능 smoke test 통과
 - [ ] `Android release candidate` workflow로 서명된 Release AAB 생성
+- [ ] 실행 branch, `commit_sha_confirmation`, workflow commit이 모두
+  출시할 `main` commit과 일치
 - [ ] 의존성 해석 후와 artifact 업로드 전 source commit·worktree 검증 통과
 - [ ] mapping file과 native debug symbols 보관·업로드
 - [ ] workflow artifact의 AAB·mapping·manifest·16KB 보고서 SHA-256과

@@ -3,6 +3,10 @@ name: Android release candidate
 on:
   workflow_dispatch:
     inputs:
+      commit_sha_confirmation:
+        description: Full main commit SHA to build
+        required: true
+        type: string
       build_number:
         description: Unique positive Android version code
         required: true
@@ -34,6 +38,23 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Require an exact main commit
+        env:
+          CONFIRMED_COMMIT_SHA: ${{ inputs.commit_sha_confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Android release candidates must be built from main." >&2
+            exit 1
+          fi
+          if [[ ! "$CONFIRMED_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "commit_sha_confirmation must be a full lowercase commit SHA." >&2
+            exit 1
+          fi
+          if [[ "$CONFIRMED_COMMIT_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Confirmed commit does not match the workflow commit." >&2
+            exit 1
+          fi
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
