@@ -30,6 +30,11 @@ void main() {
     expect(source, contains('--dart-define=KAKAO_NATIVE_APP_KEY='));
     expect(source, contains('--dart-define=POLICY_BASE_URL='));
     expect(source, contains(r'vars.DANJJAN_POLICY_BASE_URL'));
+    expect(source, contains('validate_https_url "DANJJAN_SUPABASE_URL"'));
+    expect(source, contains('validate_https_url "DANJJAN_POLICY_BASE_URL"'));
+    expect(source, contains(r'"$value" == *"?"*'));
+    expect(source, contains(r'"$value" == *"#"*'));
+    expect(source, contains(r'"$value" == *"@"*'));
   });
 
   test('release evidence contains the bundle, mapping and checksums', () {

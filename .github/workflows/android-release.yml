@@ -80,10 +80,21 @@ jobs:
             fi
           done
 
-          if [[ "$DANJJAN_POLICY_BASE_URL" != https://* ]]; then
-            echo "Missing or invalid android-release variable: DANJJAN_POLICY_BASE_URL" >&2
-            exit 1
-          fi
+          validate_https_url() {
+            local variable_name="$1"
+            local value="$2"
+
+            if [[ "$value" != https://* ||
+                  "$value" == *"?"* ||
+                  "$value" == *"#"* ||
+                  "$value" == *"@"* ]]; then
+              echo "${variable_name} must be an HTTPS URL without user info, query, or fragment." >&2
+              exit 1
+            fi
+          }
+
+          validate_https_url "DANJJAN_SUPABASE_URL" "$DANJJAN_SUPABASE_URL"
+          validate_https_url "DANJJAN_POLICY_BASE_URL" "$DANJJAN_POLICY_BASE_URL"
       - name: Resolve Flutter dependencies
         run: flutter pub get
       - name: Analyze Flutter
