@@ -80,11 +80,14 @@ async function importPrivateKey(privateKey: string) {
     throw new Error('apple_private_key_invalid');
   }
 
-  let binaryKey: Uint8Array;
+  let binaryKey: ArrayBuffer;
   try {
-    binaryKey = Uint8Array.from(atob(keyData), (character) =>
-      character.charCodeAt(0)
-    );
+    const decodedKey = atob(keyData);
+    binaryKey = new ArrayBuffer(decodedKey.length);
+    const keyBytes = new Uint8Array(binaryKey);
+    for (let index = 0; index < decodedKey.length; index += 1) {
+      keyBytes[index] = decodedKey.charCodeAt(index);
+    }
   } catch {
     throw new Error('apple_private_key_invalid');
   }
