@@ -5,17 +5,6 @@ import test from 'node:test';
 const supabaseRoot = new URL('../../', import.meta.url);
 const configUrl = new URL('config.toml', supabaseRoot);
 
-const customSecretFunctions = [
-  'dispatch-scheduled-notifications',
-  'process-storage-cleanup',
-  'purge-disconnected-couple-archives',
-  'send-answer-complete-notification',
-  'send-app-notification',
-  'send-couple-disconnect-notification',
-  'send-recording-notification',
-  'send-story-loop-notification',
-] as const;
-
 function sectionFor(config: string, sectionName: string) {
   const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = config.match(
@@ -53,18 +42,45 @@ test('local database reset does not reference a missing seed file', async () => 
 
 test('custom-secret webhooks bypass platform JWT only after local verification', async () => {
   const config = await readFile(configUrl, 'utf8');
+  const functionDirectories = await readdir(
+    new URL('functions/', supabaseRoot),
+    { withFileTypes: true },
+  );
+  const customSecretHandlers: Array<{
+    functionName: string;
+    handler: string;
+  }> = [];
 
-  for (const functionName of customSecretFunctions) {
+  for (const directory of functionDirectories) {
+    if (!directory.isDirectory()) {
+      continue;
+    }
+    const handlerUrl = new URL(
+      `functions/${directory.name}/index.ts`,
+      supabaseRoot,
+    );
+    try {
+      await access(handlerUrl);
+    } catch {
+      continue;
+    }
+    const handler = await readFile(handlerUrl, 'utf8');
+    if (handler.includes('verifyWebhookSecret(request,')) {
+      customSecretHandlers.push({
+        functionName: directory.name,
+        handler,
+      });
+    }
+  }
+
+  assert.ok(customSecretHandlers.length > 0);
+
+  for (const { functionName, handler } of customSecretHandlers) {
     const section = sectionFor(config, `functions.${functionName}`);
     assert.match(
       section,
       /^\s*verify_jwt\s*=\s*false\s*$/m,
       `${functionName} must disable platform JWT verification`,
-    );
-
-    const handler = await readFile(
-      new URL(`functions/${functionName}/index.ts`, supabaseRoot),
-      'utf8',
     );
     assert.match(
       handler,
