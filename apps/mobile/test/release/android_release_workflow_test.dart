@@ -58,6 +58,7 @@ void main() {
     expect(source, contains(r'"$version_name" != "$app_version"'));
     expect(source, contains(r'"$min_sdk" != "24"'));
     expect(source, contains(r'(( target_sdk < 36 ))'));
+    expect(source, contains('verify_android_manifest_permissions.dart'));
     expect(source, contains('verify_android_release_bundle.dart'));
     expect(source, contains('16kb-page-support.json'));
     expect(source, contains('page_alignment=16KB'));

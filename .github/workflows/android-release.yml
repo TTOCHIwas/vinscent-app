@@ -207,6 +207,9 @@ jobs:
             exit 1
           fi
 
+          dart run tool/verify_android_manifest_permissions.dart \
+            "$source_manifest"
+
           mkdir -p "$release_dir"
           dart run tool/verify_android_release_bundle.dart \
             "$source_aab" \
