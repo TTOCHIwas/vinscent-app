@@ -64,6 +64,7 @@ repository_root="$(cd "$script_directory/.." && pwd)"
 mobile_directory="$repository_root/apps/mobile"
 build_number="$1"
 flutter_binary="${FLUTTER_BIN:-flutter}"
+dart_binary="${DART_BIN:-dart}"
 evidence_directory="$mobile_directory/build/release-evidence/ios-build-${build_number}"
 
 cd "$mobile_directory"
@@ -80,6 +81,7 @@ if [[ -e "$evidence_directory" ]]; then
 fi
 
 "$flutter_binary" pub get
+"$dart_binary" format --output=none --set-exit-if-changed lib test
 "$flutter_binary" analyze --no-pub
 "$flutter_binary" test --no-pub
 "$flutter_binary" build ipa \

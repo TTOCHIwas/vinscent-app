@@ -107,8 +107,9 @@ gh variable set DANJJAN_POLICY_BASE_URL --env android-release `
 ```
 
 Actions의 `Android release candidate`를 실행할 때 Play Console에서 아직
-사용하지 않은 양의 `build_number`를 입력한다. 작업은 분석·테스트를 통과한
-후 서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로 보관한다.
+사용하지 않은 양의 `build_number`를 입력한다. 작업은 포맷·분석·테스트를
+모두 통과한 뒤 서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로
+보관한다.
 
 - `danjjan-android-build-<BUILD_NUMBER>.aab`
 - AAB의 SHA-256
@@ -180,8 +181,8 @@ scripts/build_ios_release_candidate.sh 1
 ```
 
 스크립트는 macOS와 양의 build number, Xcode 26 이상, iOS 26 SDK 이상,
-필수 값, Supabase·정책 웹의 HTTPS를 검증한다. 이후 전체 분석·테스트와
-`flutter build ipa --release`를 실행하고 다음 증빙을
+필수 값, Supabase·정책 웹의 HTTPS를 검증한다. 이후 Dart 포맷·전체
+분석·테스트를 거쳐 `flutter build ipa --release`를 실행하고 다음 증빙을
 `apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에 만든다.
 
 - IPA와 SHA-256

@@ -35,6 +35,12 @@ void main() {
   test('iOS release script builds a verified archive without uploading it', () {
     final source = script.readAsStringSync();
 
+    expect(
+      source,
+      contains(
+        r'"$dart_binary" format --output=none --set-exit-if-changed lib test',
+      ),
+    );
     expect(source, contains(r'"$flutter_binary" analyze --no-pub'));
     expect(source, contains(r'"$flutter_binary" test --no-pub'));
     expect(source, contains(r'"$flutter_binary" build ipa'));
