@@ -15,37 +15,37 @@ void main() {
       artworkStore: artworkStore,
     );
 
-    await repository.saveEvent(
-      coupleId: 'couple-id',
-      request: _request(),
-    );
+    await repository.saveEvent(coupleId: 'couple-id', request: _request());
 
     expect(artworkStore.uploadCount, 0);
     expect(gateway.lastArtworkRevision, isNull);
     expect(artworkStore.discardedArtifactIds, isEmpty);
   });
 
-  test('discards an uploaded artwork revision when metadata save fails', () async {
-    final gateway = _FakeEventGateway()..saveError = StateError('conflict');
-    final artworkStore = _FakeArtworkStore();
-    final repository = DefaultCoupleCalendarEventRepository(
-      eventGateway: gateway,
-      artworkStore: artworkStore,
-    );
+  test(
+    'discards an uploaded artwork revision when metadata save fails',
+    () async {
+      final gateway = _FakeEventGateway()..saveError = StateError('conflict');
+      final artworkStore = _FakeArtworkStore();
+      final repository = DefaultCoupleCalendarEventRepository(
+        eventGateway: gateway,
+        artworkStore: artworkStore,
+      );
 
-    await expectLater(
-      repository.saveEvent(
-        coupleId: 'couple-id',
-        request: _request(),
-        previewBytes: Uint8List.fromList([1]),
-        drawingDataBytes: Uint8List.fromList([2]),
-      ),
-      throwsStateError,
-    );
+      await expectLater(
+        repository.saveEvent(
+          coupleId: 'couple-id',
+          request: _request(),
+          previewBytes: Uint8List.fromList([1]),
+          drawingDataBytes: Uint8List.fromList([2]),
+        ),
+        throwsStateError,
+      );
 
-    expect(artworkStore.uploadCount, 1);
-    expect(artworkStore.discardedArtifactIds, ['artifact-id']);
-  });
+      expect(artworkStore.uploadCount, 1);
+      expect(artworkStore.discardedArtifactIds, ['artifact-id']);
+    },
+  );
 }
 
 CoupleCalendarEventSaveRequest _request() {

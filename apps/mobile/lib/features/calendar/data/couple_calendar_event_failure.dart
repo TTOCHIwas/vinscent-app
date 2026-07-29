@@ -34,8 +34,7 @@ CoupleCalendarEventRepositoryException mapCalendarEventPostgrestError(
   final reason = switch (error.message) {
     'auth_required' => CoupleCalendarEventFailureReason.authRequired,
     'active_couple_required' ||
-    'readable_couple_required' =>
-      CoupleCalendarEventFailureReason.unavailable,
+    'readable_couple_required' => CoupleCalendarEventFailureReason.unavailable,
     'relationship_date_required' =>
       CoupleCalendarEventFailureReason.relationshipDateRequired,
     'invalid_calendar_event_title' =>
@@ -48,17 +47,14 @@ CoupleCalendarEventRepositoryException mapCalendarEventPostgrestError(
       CoupleCalendarEventFailureReason.invalidMemo,
     'invalid_calendar_event_artwork' =>
       CoupleCalendarEventFailureReason.invalidArtwork,
-    'invalid_calendar_event_reminder' ||
-    'invalid_calendar_reminder_window' =>
+    'invalid_calendar_event_reminder' || 'invalid_calendar_reminder_window' =>
       CoupleCalendarEventFailureReason.invalidReminder,
     'calendar_event_reminder_in_past' =>
       CoupleCalendarEventFailureReason.reminderInPast,
     'calendar_event_before_relationship_start' =>
       CoupleCalendarEventFailureReason.beforeRelationshipStart,
-    'calendar_event_conflict' =>
-      CoupleCalendarEventFailureReason.conflict,
-    'calendar_event_not_found' =>
-      CoupleCalendarEventFailureReason.notFound,
+    'calendar_event_conflict' => CoupleCalendarEventFailureReason.conflict,
+    'calendar_event_not_found' => CoupleCalendarEventFailureReason.notFound,
     'calendar_event_artwork_missing' =>
       CoupleCalendarEventFailureReason.artworkMissing,
     _ => CoupleCalendarEventFailureReason.unknown,

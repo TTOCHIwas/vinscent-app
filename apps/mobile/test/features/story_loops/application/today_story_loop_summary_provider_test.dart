@@ -26,22 +26,25 @@ void main() {
     expect(repository.todaySummaryCallCount, 0);
   });
 
-  test('returns empty state when repository returns no today summary row', () async {
-    final repository = FakeStoryLoopReadRepository(todaySummary: null);
-    final container = _container(
-      couple: activeCouple(currentDate: DateTime(2026, 7, 6)),
-      repository: repository,
-    );
-    addTearDown(container.dispose);
+  test(
+    'returns empty state when repository returns no today summary row',
+    () async {
+      final repository = FakeStoryLoopReadRepository(todaySummary: null);
+      final container = _container(
+        couple: activeCouple(currentDate: DateTime(2026, 7, 6)),
+        repository: repository,
+      );
+      addTearDown(container.dispose);
 
-    final state = await container.read(todayStoryLoopSummaryProvider.future);
+      final state = await container.read(todayStoryLoopSummaryProvider.future);
 
-    expect(state, isA<EmptyTodayStoryLoopSummaryState>());
-    final emptyState = state as EmptyTodayStoryLoopSummaryState;
-    expect(emptyState.summary.isEmpty, isTrue);
-    expect(emptyState.summary.canEditStory, isTrue);
-    expect(repository.todaySummaryCallCount, 1);
-  });
+      expect(state, isA<EmptyTodayStoryLoopSummaryState>());
+      final emptyState = state as EmptyTodayStoryLoopSummaryState;
+      expect(emptyState.summary.isEmpty, isTrue);
+      expect(emptyState.summary.canEditStory, isTrue);
+      expect(repository.todaySummaryCallCount, 1);
+    },
+  );
 
   test('returns loaded state when today summary exists', () async {
     final repository = FakeStoryLoopReadRepository(

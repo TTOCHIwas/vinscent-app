@@ -12,8 +12,7 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
     super.key,
     this.policyDocumentLinks = PolicyDocumentLinks.configured,
-    this.policyDocumentLauncher =
-        const UrlLauncherPolicyDocumentLauncher(),
+    this.policyDocumentLauncher = const UrlLauncherPolicyDocumentLauncher(),
   });
 
   final PolicyDocumentLinks policyDocumentLinks;
@@ -104,19 +103,15 @@ class SettingsScreen extends StatelessWidget {
                 key: const Key('settings-row-privacy'),
                 iconData: LucideIcons.shieldCheck,
                 title: '개인정보처리방침',
-                onTap: () => _openPolicyDocument(
-                  context,
-                  policyDocumentLinks.privacy,
-                ),
+                onTap: () =>
+                    _openPolicyDocument(context, policyDocumentLinks.privacy),
               ),
               SettingsNavigationRow(
                 key: const Key('settings-row-terms'),
                 iconData: LucideIcons.fileText,
                 title: '서비스 이용약관',
-                onTap: () => _openPolicyDocument(
-                  context,
-                  policyDocumentLinks.terms,
-                ),
+                onTap: () =>
+                    _openPolicyDocument(context, policyDocumentLinks.terms),
               ),
             ],
           ),

@@ -12,9 +12,7 @@ import '../../../support/story_loop_fixtures.dart';
 void main() {
   test('does not fetch detail before relationship start date', () async {
     final repository = FakeStoryLoopReadRepository(
-      details: {
-        DateTime(2026, 7, 6): sampleStoryLoopDetail(),
-      },
+      details: {DateTime(2026, 7, 6): sampleStoryLoopDetail()},
     );
     final container = _container(
       couple: activeCouple(
@@ -39,9 +37,7 @@ void main() {
 
   test('does not fetch future detail', () async {
     final repository = FakeStoryLoopReadRepository(
-      details: {
-        DateTime(2026, 7, 6): sampleStoryLoopDetail(),
-      },
+      details: {DateTime(2026, 7, 6): sampleStoryLoopDetail()},
     );
     final container = _container(
       couple: activeCouple(
@@ -88,9 +84,7 @@ void main() {
 
   test('returns loaded state when detail exists', () async {
     final repository = FakeStoryLoopReadRepository(
-      details: {
-        DateTime(2026, 7, 6): sampleStoryLoopDetail(),
-      },
+      details: {DateTime(2026, 7, 6): sampleStoryLoopDetail()},
     );
     final container = _container(
       couple: activeCouple(

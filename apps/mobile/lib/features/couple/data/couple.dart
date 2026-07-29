@@ -92,9 +92,7 @@ class Couple {
       archiveExpiresAt: _parseOptionalDateTime(
         json['archive_expires_at'] as String?,
       ),
-      currentDate: _parseOptionalDate(
-        json['current_couple_date'] as String?,
-      ),
+      currentDate: _parseOptionalDate(json['current_couple_date'] as String?),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -143,10 +141,7 @@ class Couple {
 
   DateTime get effectiveCurrentDate => currentDate ?? currentAppDate();
 
-  static CoupleAccessMode _parseAccessMode(
-    String? value,
-    CoupleStatus status,
-  ) {
+  static CoupleAccessMode _parseAccessMode(String? value, CoupleStatus status) {
     if (value != null) {
       return CoupleAccessMode.fromJson(value);
     }
@@ -154,8 +149,8 @@ class Couple {
     return switch (status) {
       CoupleStatus.pending => CoupleAccessMode.pending,
       CoupleStatus.active => CoupleAccessMode.active,
-      CoupleStatus.cancelled || CoupleStatus.disconnected =>
-        CoupleAccessMode.archivedReadOnly,
+      CoupleStatus.cancelled ||
+      CoupleStatus.disconnected => CoupleAccessMode.archivedReadOnly,
     };
   }
 

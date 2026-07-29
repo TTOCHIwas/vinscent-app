@@ -58,8 +58,7 @@ class _NotificationSettingsScreenState
       title: '알림 설정',
       onBackPressed: () => context.pop(),
       child: preferences.when(
-        loading: () =>
-            const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
         error: (error, stackTrace) => _SettingsLoadError(
           onRetry: () => ref
               .read(notificationPreferencesControllerProvider.notifier)
@@ -104,9 +103,9 @@ class _NotificationSettingsScreenState
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('기기 알림 설정을 열지 못했어요.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('기기 알림 설정을 열지 못했어요.')));
       }
     } finally {
       if (mounted) {

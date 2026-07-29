@@ -7,7 +7,9 @@ import '../data/story_loop_detail_navigation_state.dart';
 
 final storyLoopDetailNavigationProvider = FutureProvider.autoDispose
     .family<StoryLoopDetailNavigationState, DateTime?>((ref, targetDate) async {
-      final fallbackToday = calendarDateOnly(ref.watch(todayControllerProvider));
+      final fallbackToday = calendarDateOnly(
+        ref.watch(todayControllerProvider),
+      );
       final couple = await ref.watch(coupleControllerProvider.future);
       final currentDate = calendarDateOnly(
         couple?.effectiveCurrentDate ?? fallbackToday,

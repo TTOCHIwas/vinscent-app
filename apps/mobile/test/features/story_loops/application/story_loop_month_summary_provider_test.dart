@@ -9,25 +9,28 @@ import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 
 void main() {
-  test('does not fetch month summary when readable couple is unavailable', () async {
-    final repository = FakeStoryLoopReadRepository(
-      monthSummaries: {
-        DateTime(2026, 7): [sampleMonthSummaryDay()],
-      },
-    );
-    final container = _container(
-      couple: pendingCouple(),
-      repository: repository,
-    );
-    addTearDown(container.dispose);
+  test(
+    'does not fetch month summary when readable couple is unavailable',
+    () async {
+      final repository = FakeStoryLoopReadRepository(
+        monthSummaries: {
+          DateTime(2026, 7): [sampleMonthSummaryDay()],
+        },
+      );
+      final container = _container(
+        couple: pendingCouple(),
+        repository: repository,
+      );
+      addTearDown(container.dispose);
 
-    final result = await container.read(
-      storyLoopMonthSummaryProvider(DateTime(2026, 7, 1)).future,
-    );
+      final result = await container.read(
+        storyLoopMonthSummaryProvider(DateTime(2026, 7, 1)).future,
+      );
 
-    expect(result, isEmpty);
-    expect(repository.requestedMonths, isEmpty);
-  });
+      expect(result, isEmpty);
+      expect(repository.requestedMonths, isEmpty);
+    },
+  );
 
   test('does not fetch month summary outside relationship range', () async {
     final repository = FakeStoryLoopReadRepository(

@@ -114,7 +114,9 @@ class SupabaseCoupleRepository implements CoupleRepository {
     }
 
     try {
-      await Supabase.instance.client.rpc('delete_disconnected_couple_archive_now');
+      await Supabase.instance.client.rpc(
+        'delete_disconnected_couple_archive_now',
+      );
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }

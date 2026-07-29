@@ -17,25 +17,25 @@ void main() {
     }
   });
 
-  test('CI uses least privilege and immutable actions without deployment secrets', () {
-    final source = workflow.readAsStringSync();
-    final actionReferences = RegExp(
-      r'^\s*-\s+uses:\s+[^@\s]+@([^\s#]+)',
-      multiLine: true,
-    ).allMatches(source);
+  test(
+    'CI uses least privilege and immutable actions without deployment secrets',
+    () {
+      final source = workflow.readAsStringSync();
+      final actionReferences = RegExp(
+        r'^\s*-\s+uses:\s+[^@\s]+@([^\s#]+)',
+        multiLine: true,
+      ).allMatches(source);
 
-    expect(
-      source,
-      matches(RegExp(r'permissions:\r?\n\s+contents:\s+read')),
-    );
-    expect(actionReferences, isNotEmpty);
-    for (final reference in actionReferences) {
-      expect(reference.group(1), matches(RegExp(r'^[0-9a-f]{40}$')));
-    }
-    expect(source, isNot(contains(r'${{ secrets.')));
-    expect(source, isNot(contains('supabase db push')));
-    expect(source, isNot(contains('supabase functions deploy')));
-  });
+      expect(source, matches(RegExp(r'permissions:\r?\n\s+contents:\s+read')));
+      expect(actionReferences, isNotEmpty);
+      for (final reference in actionReferences) {
+        expect(reference.group(1), matches(RegExp(r'^[0-9a-f]{40}$')));
+      }
+      expect(source, isNot(contains(r'${{ secrets.')));
+      expect(source, isNot(contains('supabase db push')));
+      expect(source, isNot(contains('supabase functions deploy')));
+    },
+  );
 }
 
 const _requiredJobs = <String>[

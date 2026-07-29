@@ -262,6 +262,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         ),
       );
     }
+
     if (followUp != null &&
         followUp.status != AiDirectQuestionFollowUpStatus.dismissed) {
       return AiDirectQuestionFollowUpView(

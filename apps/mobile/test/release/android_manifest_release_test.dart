@@ -51,10 +51,7 @@ void main() {
     final current = dataExtractionRules.readAsStringSync();
     for (final domain in _backupDomains) {
       expect(legacy, contains('<exclude domain="$domain" path="." />'));
-      expect(
-        _occurrences(current, '<exclude domain="$domain" path="." />'),
-        2,
-      );
+      expect(_occurrences(current, '<exclude domain="$domain" path="." />'), 2);
     }
   });
 }

@@ -119,17 +119,9 @@ class SettingsNavigationRow extends StatelessWidget {
   Widget _buildIcon() {
     final assetPath = icon;
     if (assetPath != null) {
-      return AppSvgIcon(
-        assetPath,
-        size: 18,
-        color: AppColors.textPrimary,
-      );
+      return AppSvgIcon(assetPath, size: 18, color: AppColors.textPrimary);
     }
-    return Icon(
-      iconData,
-      size: 18,
-      color: AppColors.textPrimary,
-    );
+    return Icon(iconData, size: 18, color: AppColors.textPrimary);
   }
 }
 
@@ -213,11 +205,7 @@ class SettingsStatusRow extends StatelessWidget {
                 color: AppColors.settingsIconBackground,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: AppSvgIcon(
-                icon,
-                size: 18,
-                color: AppColors.textPrimary,
-              ),
+              child: AppSvgIcon(icon, size: 18, color: AppColors.textPrimary),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -245,10 +233,7 @@ class SettingsStatusRow extends StatelessWidget {
                 ),
               )
             else if (actionLabel case final actionLabel?)
-              TextButton(
-                onPressed: onActionPressed,
-                child: Text(actionLabel),
-              )
+              TextButton(onPressed: onActionPressed, child: Text(actionLabel))
             else if (showCompleted)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -311,9 +296,7 @@ class SettingsActionRow extends StatelessWidget {
                       Text(
                         title,
                         style: AppTextStyles.homeBody.copyWith(
-                          color: isEnabled
-                              ? actionColor
-                              : AppColors.textMuted,
+                          color: isEnabled ? actionColor : AppColors.textMuted,
                         ),
                       ),
                       if (subtitle case final subtitle?) ...[

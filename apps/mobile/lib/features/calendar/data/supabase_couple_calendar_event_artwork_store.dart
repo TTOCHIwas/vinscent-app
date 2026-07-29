@@ -20,9 +20,7 @@ class SupabaseCoupleCalendarEventArtworkStore
     _ensureConfigured();
 
     try {
-      return await _bucket
-          .download(path)
-          .timeout(AppConfig.supabaseRpcTimeout);
+      return await _bucket.download(path).timeout(AppConfig.supabaseRpcTimeout);
     } on TimeoutException {
       throw const CoupleCalendarEventRepositoryException(
         CoupleCalendarEventFailureReason.requestTimeout,
@@ -84,27 +82,18 @@ class SupabaseCoupleCalendarEventArtworkStore
           .timeout(AppConfig.supabaseRpcTimeout);
       return artifactId;
     } on TimeoutException {
-      await discardUploadedArtwork(
-        eventId: eventId,
-        artifactId: artifactId,
-      );
+      await discardUploadedArtwork(eventId: eventId, artifactId: artifactId);
       throw const CoupleCalendarEventRepositoryException(
         CoupleCalendarEventFailureReason.requestTimeout,
       );
     } on StorageException catch (error) {
-      await discardUploadedArtwork(
-        eventId: eventId,
-        artifactId: artifactId,
-      );
+      await discardUploadedArtwork(eventId: eventId, artifactId: artifactId);
       throw CoupleCalendarEventRepositoryException(
         CoupleCalendarEventFailureReason.storage,
         error.message,
       );
     } catch (_) {
-      await discardUploadedArtwork(
-        eventId: eventId,
-        artifactId: artifactId,
-      );
+      await discardUploadedArtwork(eventId: eventId, artifactId: artifactId);
       rethrow;
     }
   }

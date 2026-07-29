@@ -25,9 +25,7 @@ class AccountDeletionAuthorizer
         return null;
       }
 
-      final authorizationCode = (
-        await _requestAppleAuthorizationCode()
-      ).trim();
+      final authorizationCode = (await _requestAppleAuthorizationCode()).trim();
       if (authorizationCode.isEmpty) {
         throw const AccountDeletionException(
           AccountDeletionFailureReason.reauthenticationFailed,

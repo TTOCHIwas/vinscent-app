@@ -13,10 +13,7 @@ void main() {
     final runner = runnerEntitlements.readAsStringSync();
 
     expect(runner, contains('<key>aps-environment</key>'));
-    expect(
-      runner,
-      contains('<key>com.apple.developer.applesignin</key>'),
-    );
+    expect(runner, contains('<key>com.apple.developer.applesignin</key>'));
     expect(runner, contains('<string>Default</string>'));
   });
 

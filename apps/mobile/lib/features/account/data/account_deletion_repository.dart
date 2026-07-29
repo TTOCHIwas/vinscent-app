@@ -73,13 +73,11 @@ class SupabaseAccountDeletionRepository implements AccountDeletionRepository {
         AccountDeletionFailureReason.requestTimeout,
       );
     } on FunctionException catch (error) {
-      throw AccountDeletionException(
-        switch (error.status) {
-          401 => AccountDeletionFailureReason.sessionExpired,
-          409 => AccountDeletionFailureReason.reauthenticationRequired,
-          _ => AccountDeletionFailureReason.requestFailed,
-        },
-      );
+      throw AccountDeletionException(switch (error.status) {
+        401 => AccountDeletionFailureReason.sessionExpired,
+        409 => AccountDeletionFailureReason.reauthenticationRequired,
+        _ => AccountDeletionFailureReason.requestFailed,
+      });
     } on FormatException {
       throw const AccountDeletionException(
         AccountDeletionFailureReason.invalidResponse,

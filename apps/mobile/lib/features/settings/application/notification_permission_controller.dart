@@ -47,9 +47,7 @@ class NotificationPermissionController
 
   Future<void> _registerCurrentDeviceToken() async {
     try {
-      await ref
-          .read(pushTokenRepositoryProvider)
-          .registerCurrentDeviceToken();
+      await ref.read(pushTokenRepositoryProvider).registerCurrentDeviceToken();
     } catch (error) {
       if (kDebugMode) {
         debugPrint(

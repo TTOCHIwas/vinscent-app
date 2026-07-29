@@ -91,10 +91,7 @@ void main() {
 
     final actionBar = find.byType(StoryCardEditorActionBar);
     expect(actionBar, findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('story-card-caption-tool')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('story-card-caption-tool')), findsNothing);
 
     final stageCenter = tester.getCenter(find.byType(StoryCardCameraStage));
     final actionBarCenter = tester.getCenter(actionBar);

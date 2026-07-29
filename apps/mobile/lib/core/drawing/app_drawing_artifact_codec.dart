@@ -128,9 +128,7 @@ void _validateDrawingJson(Map<String, dynamic> json) {
     throw const FormatException('Drawing artifact strokes are invalid.');
   }
   if (strokes.length > AppDrawingArtifactCodec.maxStrokeCount) {
-    throw const FormatException(
-      'Drawing artifact contains too many strokes.',
-    );
+    throw const FormatException('Drawing artifact contains too many strokes.');
   }
 
   var totalPointCount = 0;
@@ -168,9 +166,7 @@ void _validateDrawingJson(Map<String, dynamic> json) {
     }
     totalPointCount += points.length;
     if (totalPointCount > AppDrawingArtifactCodec.maxTotalPointCount) {
-      throw const FormatException(
-        'Drawing artifact contains too many points.',
-      );
+      throw const FormatException('Drawing artifact contains too many points.');
     }
 
     for (final rawPoint in points) {
@@ -186,9 +182,7 @@ void _validateDrawingJson(Map<String, dynamic> json) {
 
 void _validateNormalizedCoordinate(Object? rawValue) {
   if (rawValue is! num) {
-    throw const FormatException(
-      'Drawing artifact coordinate is invalid.',
-    );
+    throw const FormatException('Drawing artifact coordinate is invalid.');
   }
   final value = rawValue.toDouble();
   if (!value.isFinite || value < 0 || value > 1) {

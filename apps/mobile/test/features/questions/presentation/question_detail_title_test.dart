@@ -77,9 +77,7 @@ void main() {
       ),
     );
 
-    await tester.tap(
-      find.byKey(const Key('ai-generated-content-indicator')),
-    );
+    await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
 
     expect(pressed, isTrue);
   });

@@ -9,10 +9,7 @@ void main() {
         CoupleRecordingFailureReason.recordingFileMissing,
       );
 
-      expect(
-        recordingCaptureErrorMessage(error),
-        '저장을 완료하지 못했어요. 다시 시도해 주세요.',
-      );
+      expect(recordingCaptureErrorMessage(error), '저장을 완료하지 못했어요. 다시 시도해 주세요.');
     });
 
     test('maps request timeout to upload delay guidance', () {
@@ -31,17 +28,11 @@ void main() {
         CoupleRecordingFailureReason.storage,
       );
 
-      expect(
-        recordingCaptureErrorMessage(error),
-        '녹음 파일을 저장하지 못했어요.',
-      );
+      expect(recordingCaptureErrorMessage(error), '녹음 파일을 저장하지 못했어요.');
     });
 
     test('falls back to generic message for unknown errors', () {
-      expect(
-        recordingCaptureErrorMessage(Exception('boom')),
-        '녹음을 저장하지 못했어요.',
-      );
+      expect(recordingCaptureErrorMessage(Exception('boom')), '녹음을 저장하지 못했어요.');
     });
   });
 }

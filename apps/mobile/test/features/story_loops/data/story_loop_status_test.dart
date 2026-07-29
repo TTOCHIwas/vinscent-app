@@ -27,9 +27,6 @@ void main() {
   });
 
   test('throws on unknown story loop status', () {
-    expect(
-      () => StoryLoopStatus.fromJson('draft'),
-      throwsFormatException,
-    );
+    expect(() => StoryLoopStatus.fromJson('draft'), throwsFormatException);
   });
 }

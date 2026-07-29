@@ -99,30 +99,33 @@ void main() {
     expect(executor.authorizationCodes, ['authorization-code']);
   });
 
-  test('does not execute deletion when reauthentication is cancelled', () async {
-    final executor = _FakeAccountDeletionExecutor();
-    final container = _container(
-      userId: 'user-a',
-      executor: executor,
-      authorizer: _FakeAccountDeletionAuthorizer(
-        error: const AccountDeletionException(
-          AccountDeletionFailureReason.reauthenticationCancelled,
+  test(
+    'does not execute deletion when reauthentication is cancelled',
+    () async {
+      final executor = _FakeAccountDeletionExecutor();
+      final container = _container(
+        userId: 'user-a',
+        executor: executor,
+        authorizer: _FakeAccountDeletionAuthorizer(
+          error: const AccountDeletionException(
+            AccountDeletionFailureReason.reauthenticationCancelled,
+          ),
         ),
-      ),
-    );
-    addTearDown(container.dispose);
+      );
+      addTearDown(container.dispose);
 
-    final succeeded = await container
-        .read(accountDeletionControllerProvider.notifier)
-        .deleteAccount();
+      final succeeded = await container
+          .read(accountDeletionControllerProvider.notifier)
+          .deleteAccount();
 
-    expect(succeeded, isFalse);
-    expect(executor.userIds, isEmpty);
-    expect(
-      container.read(accountDeletionControllerProvider).failureReason,
-      AccountDeletionFailureReason.reauthenticationCancelled,
-    );
-  });
+      expect(succeeded, isFalse);
+      expect(executor.userIds, isEmpty);
+      expect(
+        container.read(accountDeletionControllerProvider).failureReason,
+        AccountDeletionFailureReason.reauthenticationCancelled,
+      );
+    },
+  );
 }
 
 ProviderContainer _container({
@@ -172,10 +175,7 @@ class _FakeAccountDeletionExecutor implements AccountDeletionExecutor {
 
 class _FakeAccountDeletionAuthorizer
     implements AccountDeletionAuthorizationProvider {
-  const _FakeAccountDeletionAuthorizer({
-    this.authorizationCode,
-    this.error,
-  });
+  const _FakeAccountDeletionAuthorizer({this.authorizationCode, this.error});
 
   final String? authorizationCode;
   final Object? error;

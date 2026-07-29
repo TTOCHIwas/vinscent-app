@@ -15,8 +15,7 @@ class RecordingSlotArtworkCodec {
   static const maxDecodedDrawingBytes =
       AppDrawingArtifactCodec.maxDecodedDrawingBytes;
   static const maxStrokeCount = AppDrawingArtifactCodec.maxStrokeCount;
-  static const maxPointsPerStroke =
-      AppDrawingArtifactCodec.maxPointsPerStroke;
+  static const maxPointsPerStroke = AppDrawingArtifactCodec.maxPointsPerStroke;
   static const maxTotalPointCount = AppDrawingArtifactCodec.maxTotalPointCount;
 
   final AppDrawingArtifactCodec _codec;

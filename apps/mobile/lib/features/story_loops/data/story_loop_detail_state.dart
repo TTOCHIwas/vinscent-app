@@ -7,9 +7,7 @@ enum StoryLoopDetailUnavailableReason {
 }
 
 sealed class StoryLoopDetailState {
-  const StoryLoopDetailState({
-    required this.targetDate,
-  });
+  const StoryLoopDetailState({required this.targetDate});
 
   final DateTime targetDate;
 }

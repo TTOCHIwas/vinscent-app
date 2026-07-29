@@ -28,25 +28,28 @@ void main() {
     expect(state.nextDate, DateTime(2026, 7, 6));
   });
 
-  test('returns current date only when requested date is out of range', () async {
-    final container = ProviderContainer(
-      overrides: [
-        coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => activeCouple(
-            relationshipStartDate: DateTime(2026, 7, 1),
-            currentDate: DateTime(2026, 7, 6),
+  test(
+    'returns current date only when requested date is out of range',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          coupleControllerProvider.overrideWithBuild(
+            (ref, notifier) async => activeCouple(
+              relationshipStartDate: DateTime(2026, 7, 1),
+              currentDate: DateTime(2026, 7, 6),
+            ),
           ),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final state = await container.read(
-      storyLoopDetailNavigationProvider(DateTime(2026, 7, 7)).future,
-    );
+      final state = await container.read(
+        storyLoopDetailNavigationProvider(DateTime(2026, 7, 7)).future,
+      );
 
-    expect(state.currentDate, DateTime(2026, 7, 7));
-    expect(state.previousDate, isNull);
-    expect(state.nextDate, isNull);
-  });
+      expect(state.currentDate, DateTime(2026, 7, 7));
+      expect(state.previousDate, isNull);
+      expect(state.nextDate, isNull);
+    },
+  );
 }
