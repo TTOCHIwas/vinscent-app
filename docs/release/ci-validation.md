@@ -15,6 +15,8 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 외부 액션은 전체 커밋 SHA로 고정한다.
 
 - [GitHub Actions 보안 사용 지침](https://docs.github.com/en/actions/reference/security/secure-use)
+- [Flutter 통합 테스트](https://docs.flutter.dev/testing/integration-tests)
+- [GitHub-hosted Android 하드웨어 가속](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 - [GitHub macOS 26 runner 이미지](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md)
 - [Supabase 자동화된 데이터베이스 테스트](https://supabase.com/docs/guides/deployment/ci/testing)
 
@@ -23,12 +25,13 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 | 체크 | 검증 범위 |
 |---|---|
 | `Flutter` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
+| `Android integration` | API 36 에뮬레이터에서 프로덕션 진입점 콜드 스타트, Firebase·홈 위젯 플러그인 등록, 백엔드 미설정 시 안전한 로그인 화면 |
 | `iOS native build` | `main` 반영 또는 수동 실행 시 macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
 | `Node services` | 저장소 출시·비밀값 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
 | `Edge functions` | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
 | `Supabase database` | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
 
-GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 네 체크를
+GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 다섯 체크를
 `main` 병합 전 필수로 설정한다. macOS 비용을 제한하기 위해 iOS 빌드는
 Pull Request에서는 건너뛰고 `main` 반영 직후와 수동 실행에서 검증한다.
 워크플로 자체의 쓰기 권한이나 배포 비밀키는 추가하지 않는다.
@@ -42,11 +45,21 @@ Windows에서는 저장소에 포함된 Flutter 래퍼를 사용한다.
 
 ```powershell
 cd apps/mobile
-..\..\.toolchains\flutter\bin\dart.bat format --output=none --set-exit-if-changed lib test
+..\..\.toolchains\flutter\bin\dart.bat format --output=none --set-exit-if-changed lib test integration_test
 .\flutterw.cmd pub get
 .\flutterw.cmd analyze --no-pub
 .\flutterw.cmd test --no-pub
 .\flutterw.cmd build apk --debug --no-pub
+```
+
+Android 통합 테스트는 실제 기기 또는 에뮬레이터가 연결된 환경에서만
+실행한다. 이 테스트는 릴리스 비밀값을 주입하지 않은 프로덕션 진입점이
+네이티브 플러그인을 등록하고 안전하게 로그인 화면까지 도달하는지
+확인한다.
+
+```powershell
+cd apps/mobile
+.\flutterw.cmd test integration_test/app_startup_test.dart --no-pub
 ```
 
 iOS 앱과 위젯 확장의 컴파일 검증은 macOS에서 다음 명령으로 수행한다.

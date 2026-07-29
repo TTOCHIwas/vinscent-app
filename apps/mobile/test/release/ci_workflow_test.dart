@@ -31,6 +31,23 @@ void main() {
     );
   });
 
+  test('Android integration runs the production entrypoint on an emulator', () {
+    final source = workflow.readAsStringSync();
+
+    expect(
+      source,
+      matches(
+        RegExp(
+          r'android-integration:[\s\S]*?runs-on:\s+ubuntu-latest[\s\S]*?'
+          r'ReactiveCircus/android-emulator-runner@'
+          r'a421e43855164a8197daf9d8d40fe71c6996bb0d[\s\S]*?'
+          r'api-level:\s+36[\s\S]*?'
+          r'flutter test integration_test/app_startup_test.dart --no-pub',
+        ),
+      ),
+    );
+  });
+
   test(
     'CI uses least privilege and immutable actions without deployment secrets',
     () {
@@ -54,6 +71,7 @@ void main() {
 
 const _requiredJobs = <String>[
   'mobile',
+  'android-integration',
   'ios-build',
   'node-services',
   'edge-functions',
@@ -61,9 +79,10 @@ const _requiredJobs = <String>[
 ];
 
 const _requiredCommands = <String>[
-  'dart format --output=none --set-exit-if-changed lib test',
+  'dart format --output=none --set-exit-if-changed lib test integration_test',
   'flutter analyze --no-pub',
   'flutter test --no-pub',
+  'flutter test integration_test/app_startup_test.dart --no-pub',
   'flutter build apk --debug --no-pub',
   'flutter build ios --simulator --debug --no-codesign --no-pub',
   'node --test "tests/release/*.test.mjs"',

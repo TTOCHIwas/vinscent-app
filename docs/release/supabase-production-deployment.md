@@ -31,7 +31,7 @@ Environment에는 다음 값을 등록한다.
 다음 조건을 모두 확인한 뒤 실행한다.
 
 - 배포할 commit이 원격 `main`에 존재한다.
-- `CI` workflow의 Linux 네 작업과 직전 iOS native build가 통과했다.
+- `CI` workflow의 Linux 다섯 작업과 직전 iOS native build가 통과했다.
 - migration은 이미 적용된 동작을 깨지 않는 전진 호환 변경이다.
 - Edge Function이 새 schema에 의존한다면 migration 적용 뒤에도 이전
   함수가 잠시 동작할 수 있는 경계를 유지한다.
