@@ -85,6 +85,11 @@ cd apps/mobile
 사용한다. 최종 제출 자산에는 Android·iOS 출시 후보를 만들 때 입력한 실제
 빌드 번호를 명시한다.
 
+`Store asset verification` workflow는 `flutter pub get` 직후와 자산 검증
+완료 뒤에 공통 source 검증기를 실행한다. 두 시점 모두 현재 HEAD가 workflow
+commit과 같고 추적 파일 수정, staged 변경과 미추적 파일이 없어야 검증 결과를
+해당 commit의 증빙으로 인정한다.
+
 ## 3. Google Play
 
 ### 앱 아이콘

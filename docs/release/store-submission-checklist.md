@@ -112,6 +112,7 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] 태블릿 지원 화면 screenshot 제작
 - [ ] `tool/verify_store_assets.dart`로 장수·파일명·해상도·알파 채널 검증
 - [ ] `Store asset verification` workflow에 실제 version·build를 입력해 통과
+- [ ] 의존성 해석 후와 최종 요약 전 source commit·worktree 검증 통과
 - [ ] 카테고리와 tag 선택
 - [ ] 한국어를 기본 언어로 지정하고 자동 번역 의존 여부 결정
 

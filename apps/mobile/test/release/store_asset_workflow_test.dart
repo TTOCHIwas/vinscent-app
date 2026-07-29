@@ -28,6 +28,38 @@ void main() {
     expect(source, contains('--build-number "\$BUILD_NUMBER"'));
   });
 
+  test('verified assets remain bound to the triggering source commit', () {
+    final source = workflow.readAsStringSync();
+    const verifierCommand =
+        r'../../scripts/verify_release_source.sh "$GITHUB_SHA"';
+
+    expect(source, contains('- name: Verify resolved release source'));
+    expect(source, contains('- name: Verify final release source'));
+    expect(
+      RegExp(
+        '^\\s*run:\\s+${RegExp.escape(verifierCommand)}\$',
+        multiLine: true,
+      ).allMatches(source),
+      hasLength(2),
+    );
+
+    final dependencyIndex = source.indexOf(
+      '- name: Resolve Flutter dependencies',
+    );
+    final resolvedSourceIndex = source.indexOf(
+      '- name: Verify resolved release source',
+    );
+    final assetIndex = source.indexOf('- name: Verify store assets');
+    final finalSourceIndex = source.indexOf(
+      '- name: Verify final release source',
+    );
+    final summaryIndex = source.indexOf('- name: Summarize verified assets');
+
+    expect(resolvedSourceIndex, greaterThan(dependencyIndex));
+    expect(finalSourceIndex, greaterThan(assetIndex));
+    expect(summaryIndex, greaterThan(finalSourceIndex));
+  });
+
   test('workflow uses least privilege and immutable actions', () {
     final source = workflow.readAsStringSync();
     final actionReferences = RegExp(

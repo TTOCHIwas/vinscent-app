@@ -56,6 +56,8 @@ jobs:
           fi
       - name: Resolve Flutter dependencies
         run: flutter pub get
+      - name: Verify resolved release source
+        run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Verify store listing copy
         run: dart run tool/verify_store_listing_copy.dart
       - name: Verify store assets
@@ -63,6 +65,8 @@ jobs:
           dart run tool/verify_store_assets.dart
           --app-version "$APP_VERSION"
           --build-number "$BUILD_NUMBER"
+      - name: Verify final release source
+        run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Summarize verified assets
         run: |
           {
