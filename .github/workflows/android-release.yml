@@ -57,6 +57,7 @@ jobs:
           DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
           DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
+          DANJJAN_PLAY_UPLOAD_CERT_SHA256: ${{ vars.DANJJAN_PLAY_UPLOAD_CERT_SHA256 }}
         run: |
           set -euo pipefail
           if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
@@ -99,6 +100,12 @@ jobs:
 
           validate_https_url "DANJJAN_SUPABASE_URL" "$DANJJAN_SUPABASE_URL"
           validate_https_url "DANJJAN_POLICY_BASE_URL" "$DANJJAN_POLICY_BASE_URL"
+          play_upload_fingerprint="${DANJJAN_PLAY_UPLOAD_CERT_SHA256^^}"
+          play_upload_fingerprint="${play_upload_fingerprint//:/}"
+          if [[ ! "$play_upload_fingerprint" =~ ^[A-F0-9]{64}$ ]]; then
+            echo "DANJJAN_PLAY_UPLOAD_CERT_SHA256 must be a SHA-256 certificate fingerprint." >&2
+            exit 1
+          fi
       - name: Resolve Flutter dependencies
         run: flutter pub get
       - name: Check Dart formatting
@@ -139,6 +146,7 @@ jobs:
         env:
           DANJJAN_UPLOAD_STORE_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_STORE_PASSWORD }}
           DANJJAN_UPLOAD_KEY_ALIAS: ${{ secrets.DANJJAN_UPLOAD_KEY_ALIAS }}
+          DANJJAN_PLAY_UPLOAD_CERT_SHA256: ${{ vars.DANJJAN_PLAY_UPLOAD_CERT_SHA256 }}
         run: |
           set -euo pipefail
           source_aab="build/app/outputs/bundle/release/app-release.aab"
@@ -228,6 +236,12 @@ jobs:
             echo "Release AAB signer does not match the configured upload key." >&2
             exit 1
           fi
+          play_upload_fingerprint="${DANJJAN_PLAY_UPLOAD_CERT_SHA256^^}"
+          play_upload_fingerprint="${play_upload_fingerprint//:/}"
+          if [[ "$bundle_fingerprint" != "$play_upload_fingerprint" ]]; then
+            echo "Release AAB signer does not match the Play upload certificate." >&2
+            exit 1
+          fi
 
           now_epoch="$(date -u +%s)"
           certificate_start="$(
@@ -257,6 +271,7 @@ jobs:
             printf 'upload_signature=verified\n'
             printf 'upload_certificate_match=verified\n'
             printf 'upload_certificate_validity=verified\n'
+            printf 'play_upload_certificate_match=verified\n'
             printf 'minimum_certificate_expiry=after_2033-10-22\n'
           } > "$signature_report"
 
@@ -353,6 +368,7 @@ jobs:
             printf 'upload_signature=verified\n'
             printf 'upload_certificate_match=verified\n'
             printf 'upload_certificate_validity=verified\n'
+            printf 'play_upload_certificate_match=verified\n'
             printf 'native_debug_symbols=embedded\n'
             printf 'proguard_mapping=embedded_and_exported\n'
             printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

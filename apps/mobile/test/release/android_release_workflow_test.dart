@@ -37,6 +37,7 @@ void main() {
     expect(source, contains('--dart-define=KAKAO_NATIVE_APP_KEY='));
     expect(source, contains('--dart-define=POLICY_BASE_URL='));
     expect(source, contains(r'vars.DANJJAN_POLICY_BASE_URL'));
+    expect(source, contains(r'vars.DANJJAN_PLAY_UPLOAD_CERT_SHA256'));
     expect(source, contains('validate_https_url "DANJJAN_SUPABASE_URL"'));
     expect(source, contains('validate_https_url "DANJJAN_POLICY_BASE_URL"'));
     expect(source, contains(r'"$value" == *"?"*'));
@@ -74,6 +75,7 @@ void main() {
     expect(source, contains('upload_signature=verified'));
     expect(source, contains('upload_certificate_match=verified'));
     expect(source, contains('upload_certificate_validity=verified'));
+    expect(source, contains('play_upload_certificate_match=verified'));
     expect(source, contains('AndroidManifest.xml.sha256'));
     expect(source, contains('Analyze Android app size'));
     expect(source, contains('--analyze-size'));
@@ -150,4 +152,5 @@ const _requiredConfiguration = <String>[
   'DANJJAN_SUPABASE_ANON_KEY',
   'DANJJAN_KAKAO_NATIVE_APP_KEY',
   'DANJJAN_POLICY_BASE_URL',
+  'DANJJAN_PLAY_UPLOAD_CERT_SHA256',
 ];

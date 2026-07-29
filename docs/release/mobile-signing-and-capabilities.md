@@ -74,11 +74,13 @@ Supabase URL·anon key와 Kakao Native App Key는 최종 앱에 포함되는 클
 등록한다.
 
 - `DANJJAN_POLICY_BASE_URL`: 쿼리와 fragment가 없는 HTTPS 정책 웹 기본 주소
+- `DANJJAN_PLAY_UPLOAD_CERT_SHA256`: Play Console에 등록된 업로드 인증서의
+  SHA-256 지문
 
-이 주소는 공개 정보이므로 secret이 아니라 Environment variable로
-관리한다. 앱은 기본 주소 아래의 `/privacy`와 `/terms`를 설정 화면에서
-외부 브라우저로 연다. 값이 없거나 안전한 HTTPS 주소가 아니면 릴리스 후보
-작업이 실패한다.
+두 값은 공개 정보이므로 secret이 아니라 Environment variable로 관리한다.
+앱은 정책 웹 기본 주소 아래의 `/privacy`와 `/terms`를 설정 화면에서 외부
+브라우저로 연다. 정책 주소가 없거나 안전한 HTTPS 주소가 아니거나 인증서
+지문 형식이 올바르지 않으면 릴리스 후보 작업이 실패한다.
 
 PowerShell에서 업로드 키를 Base64로 바꿔 클립보드에 넣을 수 있다.
 
@@ -104,6 +106,20 @@ gh secret set DANJJAN_SUPABASE_ANON_KEY --env android-release
 gh secret set DANJJAN_KAKAO_NATIVE_APP_KEY --env android-release
 gh variable set DANJJAN_POLICY_BASE_URL --env android-release `
   --body "https://정책-웹-기본-주소"
+gh variable set DANJJAN_PLAY_UPLOAD_CERT_SHA256 --env android-release `
+  --body "AA:BB:...:FF"
+```
+
+업로드 인증서 지문은 Play Console의 App signing 페이지에 표시된 SHA-256을
+사용한다. 첫 업로드 전에는 다음 명령으로 업로드 keystore의 지문을 확인해
+같은 값을 등록하고, Play App Signing 설정 후 Console에 표시된 값과 다시
+대조한다. 지문은 공개 인증서 식별자이므로 secret이 아니라 Environment
+variable로 관리한다.
+
+```powershell
+keytool -list -v `
+  -keystore apps/mobile/android/upload-keystore.jks `
+  -alias upload
 ```
 
 Actions의 `Android release candidate`를 실행할 때 Play Console에서 아직
@@ -123,10 +139,10 @@ Actions의 `Android release candidate`를 실행할 때 Play Console에서 아�
 워크플로는 실제 manifest의 package, versionName, versionCode, min SDK,
 target SDK를 입력값과 저장소 계약에 대조한다. 완성된 AAB는 JAR 서명
 무결성, 단일 서명자, CI에 등록된 업로드 키 인증서와의 SHA-256 지문 일치,
-현재 유효 여부를 다시 확인한다. 인증서 만료일은 Google Play의 최소 기준인
-2033년 10월 22일 이후여야 한다. 새 업로드 키를 만들 때는 Android 공식
-권장에 따라 25년 이상의 유효기간을 사용하며, 위의 `-validity 10000` 예시는
-약 27년을 제공한다.
+Play Console 업로드 인증서 지문 일치, 현재 유효 여부를 다시 확인한다.
+인증서 만료일은 Google Play의 최소 기준인 2033년 10월 22일 이후여야 한다.
+새 업로드 키를 만들 때는 Android 공식 권장에 따라 25년 이상의 유효기간을
+사용하며, 위의 `-validity 10000` 예시는 약 27년을 제공한다.
 
 AAB 내부의 native debug symbol과 ProGuard mapping뿐 아니라 BundleConfig의
 `PAGE_ALIGNMENT_16K`와 모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 표준

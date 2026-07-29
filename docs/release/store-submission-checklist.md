@@ -118,8 +118,10 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 
 - [ ] Android upload key를 암호화된 별도 보관소에 백업
 - [ ] GitHub `android-release` Environment에 7개 빌드 secret과
-  `DANJJAN_POLICY_BASE_URL` 공개 변수 등록
+  `DANJJAN_POLICY_BASE_URL`, `DANJJAN_PLAY_UPLOAD_CERT_SHA256` 공개 변수 등록
 - [ ] Play App Signing 활성화
+- [ ] Play Console 업로드 인증서 SHA-256 지문과
+  `DANJJAN_PLAY_UPLOAD_CERT_SHA256` 값이 일치함
 - [ ] `versionCode`가 이전 업로드보다 큼
 - [ ] Release AAB의 target SDK가 Android 16(API 36) 이상임
 - [ ] Release AAB의 JAR 서명, 등록된 업로드 키 일치, 인증서 유효기간
