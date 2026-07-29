@@ -125,6 +125,24 @@ test('Supabase production release rejects stale and missing remote functions', a
   assert.doesNotMatch(source, /--prune/);
 });
 
+test('Supabase production release verifies the final migration inventory', async () => {
+  const source = await loadWorkflow();
+  const migrationListIndex = source.indexOf('supabase migration list');
+  const migrationVerifierIndex = source.indexOf(
+    'verify_supabase_migration_inventory.mjs',
+  );
+  const uploadIndex = source.indexOf('- name: Upload release evidence');
+
+  assert.ok(migrationListIndex >= 0);
+  assert.match(
+    source,
+    /supabase migration list[\s\\]*--linked[\s\\]*--output-format json/,
+  );
+  assert.ok(migrationVerifierIndex > migrationListIndex);
+  assert.ok(uploadIndex > migrationVerifierIndex);
+  assert.match(source, /migrations\.json/);
+});
+
 test('Supabase production release verifies deployed Edge JWT modes', async () => {
   const source = await loadWorkflow();
 

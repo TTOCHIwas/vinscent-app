@@ -169,7 +169,12 @@ jobs:
           evidence_dir="build/supabase-release-evidence"
           mkdir -p "$evidence_dir"
           supabase --version > "$evidence_dir/supabase-cli-version.txt"
-          supabase migration list --linked > "$evidence_dir/migrations.txt"
+          supabase migration list \
+            --linked \
+            --output-format json \
+            > "$evidence_dir/migrations.json"
+          node scripts/verify_supabase_migration_inventory.mjs \
+            --remote "$evidence_dir/migrations.json"
           supabase functions list \
             --project-ref "$SUPABASE_PROJECT_ID" \
             --output json \
