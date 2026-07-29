@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "name": "AI_WORKER_MAX_BATCH_SIZE",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Maximum number of AI learning jobs processed per worker call.",
+      "functions": [
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "AI_WORKER_SECRET",
+      "availability": "fallback",
+      "fallbackTo": "SCHEDULE_WEBHOOK_SECRET",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Dedicated shared secret for scheduled AI learning worker calls.",
+      "functions": [
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "ANSWER_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for answer completion database webhooks.",
+      "functions": [
+        "send-answer-complete-notification"
+      ]
+    },
+    {
+      "name": "APP_NOTIFICATION_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for application notification database webhooks.",
+      "functions": [
+        "send-app-notification"
+      ]
+    },
+    {
+      "name": "APPLE_SIGN_IN_CLIENT_ID",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Apple Sign in with Apple client identifier used for token revocation.",
+      "functions": [
+        "delete-account"
+      ]
+    },
+    {
+      "name": "APPLE_SIGN_IN_KEY_ID",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Apple private key identifier used to sign token revocation requests.",
+      "functions": [
+        "delete-account"
+      ]
+    },
+    {
+      "name": "APPLE_SIGN_IN_PRIVATE_KEY",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Apple private key used to sign token revocation requests.",
+      "functions": [
+        "delete-account"
+      ]
+    },
+    {
+      "name": "APPLE_SIGN_IN_TEAM_ID",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Apple Developer team identifier used for token revocation.",
+      "functions": [
+        "delete-account"
+      ]
+    },
+    {
+      "name": "ARCHIVE_PURGE_WEBHOOK_SECRET",
+      "availability": "fallback",
+      "fallbackTo": "SCHEDULE_WEBHOOK_SECRET",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Dedicated shared secret for disconnected couple archive purge calls.",
+      "functions": [
+        "purge-disconnected-couple-archives"
+      ]
+    },
+    {
+      "name": "COUPLE_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for couple disconnection database webhooks.",
+      "functions": [
+        "send-couple-disconnect-notification"
+      ]
+    },
+    {
+      "name": "FCM_CLIENT_EMAIL",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Firebase service account client email used to request FCM access tokens.",
+      "functions": [
+        "dispatch-scheduled-notifications",
+        "send-answer-complete-notification",
+        "send-app-notification",
+        "send-couple-disconnect-notification",
+        "send-recording-notification",
+        "send-story-loop-notification"
+      ]
+    },
+    {
+      "name": "FCM_PRIVATE_KEY",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Firebase service account private key used to request FCM access tokens.",
+      "functions": [
+        "dispatch-scheduled-notifications",
+        "send-answer-complete-notification",
+        "send-app-notification",
+        "send-couple-disconnect-notification",
+        "send-recording-notification",
+        "send-story-loop-notification"
+      ]
+    },
+    {
+      "name": "FCM_PROJECT_ID",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Firebase project identifier used by the FCM HTTP v1 endpoint.",
+      "functions": [
+        "dispatch-scheduled-notifications",
+        "send-answer-complete-notification",
+        "send-app-notification",
+        "send-couple-disconnect-notification",
+        "send-recording-notification",
+        "send-story-loop-notification"
+      ]
+    },
+    {
+      "name": "GEMINI_API_KEY",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Gemini API credential used for structured AI generation.",
+      "functions": [
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "GEMINI_GENERATE_CONTENT_ENDPOINT",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional Gemini generateContent endpoint override.",
+      "functions": [
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "GEMINI_MODEL",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional Gemini model override.",
+      "functions": [
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "GEMINI_TIMEOUT_MS",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional positive timeout in milliseconds for AI learning model calls.",
+      "functions": [
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "OPEN_METEO_API_KEY",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Optional Open-Meteo customer API key for proactive weather context.",
+      "functions": [
+        "generate-ai-proactive-suggestion"
+      ]
+    },
+    {
+      "name": "RECORDING_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for recording notification database webhooks.",
+      "functions": [
+        "send-recording-notification"
+      ]
+    },
+    {
+      "name": "SCHEDULE_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for scheduled notification and maintenance calls.",
+      "functions": [
+        "dispatch-scheduled-notifications",
+        "process-ai-learning-jobs",
+        "purge-disconnected-couple-archives"
+      ]
+    },
+    {
+      "name": "STORAGE_CLEANUP_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for storage cleanup database webhooks.",
+      "functions": [
+        "process-storage-cleanup"
+      ]
+    },
+    {
+      "name": "STORY_LOOP_WEBHOOK_SECRET",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Shared secret for story loop notification database webhooks.",
+      "functions": [
+        "send-story-loop-notification"
+      ]
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "availability": "required",
+      "provisioning": "supabase_platform",
+      "sensitivity": "secret",
+      "description": "Supabase-provided service role credential for privileged server operations.",
+      "functions": [
+        "delete-account",
+        "dispatch-scheduled-notifications",
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs",
+        "process-storage-cleanup",
+        "purge-disconnected-couple-archives",
+        "send-answer-complete-notification",
+        "send-app-notification",
+        "send-couple-disconnect-notification",
+        "send-recording-notification",
+        "send-story-loop-notification"
+      ]
+    },
+    {
+      "name": "SUPABASE_URL",
+      "availability": "required",
+      "provisioning": "supabase_platform",
+      "sensitivity": "configuration",
+      "description": "Supabase-provided project API URL.",
+      "functions": [
+        "delete-account",
+        "dispatch-scheduled-notifications",
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs",
+        "process-storage-cleanup",
+        "purge-disconnected-couple-archives",
+        "send-answer-complete-notification",
+        "send-app-notification",
+        "send-couple-disconnect-notification",
+        "send-recording-notification",
+        "send-story-loop-notification"
+      ]
+    },
+    {
+      "name": "WEATHER_FORECAST_ENDPOINT",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional weather forecast endpoint override for proactive suggestions.",
+      "functions": [
+        "generate-ai-proactive-suggestion"
+      ]
+    }
+  ]
+}

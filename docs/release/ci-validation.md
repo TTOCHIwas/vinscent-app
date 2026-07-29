@@ -19,7 +19,7 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 | `Flutter` | 의존성 복원, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
 | `iOS native build` | `main` 반영 또는 수동 실행 시 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
 | `Node services` | AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
-| `Edge functions` | Node 단위 테스트 자동 검색, Deno 진입점 타입 검사 |
+| `Edge functions` | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
 | `Supabase database` | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
 
 GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 네 체크를
@@ -60,12 +60,16 @@ npm.cmd run lint
 npm.cmd test
 
 cd ..\..
+node scripts/verify_supabase_runtime_environment.mjs
 node scripts/test_supabase_functions.mjs
 $entrypoints = Get-ChildItem supabase/functions -Directory |
   ForEach-Object { Join-Path $_.FullName 'index.ts' } |
   Where-Object { Test-Path -LiteralPath $_ }
 deno check $entrypoints
 ```
+
+운영 Edge Function 환경변수의 분류와 원격 대조 절차는
+`docs/release/supabase-runtime-configuration.md`를 따른다.
 
 데이터베이스 검증에는 Docker 호환 런타임과 Supabase CLI `2.109.1`이
 필요하다.
