@@ -134,11 +134,13 @@ jobs:
           set -euo pipefail
           source_aab="build/app/outputs/bundle/release/app-release.aab"
           source_mapping="build/app/outputs/mapping/release/mapping.txt"
+          source_manifest="build/app/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml"
           release_dir="build/release-evidence"
           release_name="danjjan-android-build-${BUILD_NUMBER}"
 
           test -s "$source_aab"
           test -s "$source_mapping"
+          test -s "$source_manifest"
           unzip -t "$source_aab" >/dev/null
           unzip -l "$source_aab" > "$RUNNER_TEMP/danjjan-aab-contents.txt"
           grep -q "BUNDLE-METADATA/com.android.tools.build.debugsymbols/" \
@@ -146,14 +148,29 @@ jobs:
           grep -q "BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map" \
             "$RUNNER_TEMP/danjjan-aab-contents.txt"
 
+          target_sdk="$(
+            sed -n \
+              's/.*android:targetSdkVersion="\([0-9][0-9]*\)".*/\1/p' \
+              "$source_manifest" |
+              head -n 1
+          )"
+          if [[ ! "$target_sdk" =~ ^[0-9]+$ ]] || (( target_sdk < 36 )); then
+            echo "Release target SDK must be at least 36; found '${target_sdk:-missing}'." >&2
+            exit 1
+          fi
+
           mkdir -p "$release_dir"
           cp "$source_aab" "$release_dir/${release_name}.aab"
           cp "$source_mapping" "$release_dir/${release_name}-mapping.txt"
+          cp "$RUNNER_TEMP/danjjan-aab-contents.txt" \
+            "$release_dir/${release_name}-aab-contents.txt"
           (
             cd "$release_dir"
             sha256sum "${release_name}.aab" > "${release_name}.aab.sha256"
             sha256sum "${release_name}-mapping.txt" \
               > "${release_name}-mapping.txt.sha256"
+            sha256sum "${release_name}-aab-contents.txt" \
+              > "${release_name}-aab-contents.txt.sha256"
           )
 
           app_version="$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)"
@@ -162,6 +179,9 @@ jobs:
             printf 'run_id=%s\n' "$GITHUB_RUN_ID"
             printf 'app_version=%s\n' "$app_version"
             printf 'build_number=%s\n' "$BUILD_NUMBER"
+            printf 'target_sdk=%s\n' "$target_sdk"
+            printf 'native_debug_symbols=embedded\n'
+            printf 'proguard_mapping=embedded_and_exported\n'
             printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > "$release_dir/metadata.txt"
       - name: Upload release evidence

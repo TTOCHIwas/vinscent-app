@@ -37,11 +37,20 @@ void main() {
     expect(source, contains(r'"$value" == *"@"*'));
   });
 
-  test('release evidence contains the bundle, mapping and checksums', () {
+  test('release evidence contains build, symbol and SDK proof', () {
     final source = workflow.readAsStringSync();
 
     expect(source, contains('app-release.aab'));
     expect(source, contains('mapping/release/mapping.txt'));
+    expect(source, contains('merged_manifests/release'));
+    expect(source, contains(r'(( target_sdk < 36 ))'));
+    expect(source, contains('target_sdk=%s'));
+    expect(
+      source,
+      contains('BUNDLE-METADATA/com.android.tools.build.debugsymbols/'),
+    );
+    expect(source, contains('native_debug_symbols=embedded'));
+    expect(source, contains('aab-contents.txt'));
     expect(source, contains('sha256sum'));
     expect(source, contains('actions/upload-artifact@'));
     expect(source, contains('if-no-files-found: error'));
