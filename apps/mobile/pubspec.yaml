@@ -71,6 +71,7 @@ dev_dependencies:
     sdk: flutter
   archive: ^4.0.9
   camera_platform_interface: ^2.13.1
+  xml: ^7.0.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
