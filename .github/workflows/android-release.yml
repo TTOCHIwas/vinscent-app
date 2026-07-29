@@ -136,24 +136,129 @@ jobs:
             --dart-define=KAKAO_NATIVE_APP_KEY="$DANJJAN_KAKAO_NATIVE_APP_KEY" \
             --dart-define=POLICY_BASE_URL="$DANJJAN_POLICY_BASE_URL"
       - name: Prepare release evidence
+        env:
+          DANJJAN_UPLOAD_STORE_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_STORE_PASSWORD }}
+          DANJJAN_UPLOAD_KEY_ALIAS: ${{ secrets.DANJJAN_UPLOAD_KEY_ALIAS }}
         run: |
           set -euo pipefail
           source_aab="build/app/outputs/bundle/release/app-release.aab"
           source_mapping="build/app/outputs/mapping/release/mapping.txt"
           source_manifest="build/app/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml"
+          upload_keystore="$RUNNER_TEMP/danjjan-upload-keystore.jks"
           release_dir="build/release-evidence"
           release_name="danjjan-android-build-${BUILD_NUMBER}"
           app_version="$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)"
+          signature_log="$RUNNER_TEMP/danjjan-aab-signature.log"
+          signature_report="$RUNNER_TEMP/danjjan-aab-signature.txt"
+          bundle_certificates="$RUNNER_TEMP/danjjan-aab-certificates.txt"
+          bundle_certificate="$RUNNER_TEMP/danjjan-aab-certificate.pem"
+          expected_certificate="$RUNNER_TEMP/danjjan-upload-certificate.pem"
 
           test -s "$source_aab"
           test -s "$source_mapping"
           test -s "$source_manifest"
+          test -s "$upload_keystore"
+          command -v jarsigner >/dev/null
+          command -v keytool >/dev/null
+          command -v openssl >/dev/null
           unzip -t "$source_aab" >/dev/null
           unzip -l "$source_aab" > "$RUNNER_TEMP/danjjan-aab-contents.txt"
           grep -q "BUNDLE-METADATA/com.android.tools.build.debugsymbols/" \
             "$RUNNER_TEMP/danjjan-aab-contents.txt"
           grep -q "BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map" \
             "$RUNNER_TEMP/danjjan-aab-contents.txt"
+          if ! jarsigner -verify -verbose:summary "$source_aab" \
+            > "$signature_log" 2>&1; then
+            cat "$signature_log"
+            exit 1
+          fi
+          if ! grep -Fq "jar verified." "$signature_log"; then
+            cat "$signature_log"
+            echo "Release AAB is not signed with a verifiable JAR signature." >&2
+            exit 1
+          fi
+          keytool \
+            '-J-Duser.language=en' \
+            '-J-Duser.country=US' \
+            -printcert \
+            -jarfile "$source_aab" \
+            -rfc > "$bundle_certificates"
+          signer_count="$(
+            grep -Ec '^Signer #[0-9]+:' "$bundle_certificates" || true
+          )"
+          if [[ "$signer_count" != "1" ]]; then
+            echo "Release AAB must have exactly one signer; found $signer_count." >&2
+            exit 1
+          fi
+          awk '
+            /-----BEGIN CERTIFICATE-----/ { capture = 1 }
+            capture { print }
+            /-----END CERTIFICATE-----/ { exit }
+          ' "$bundle_certificates" > "$bundle_certificate"
+          keytool \
+            -exportcert \
+            -rfc \
+            -keystore "$upload_keystore" \
+            -alias "$DANJJAN_UPLOAD_KEY_ALIAS" \
+            -storepass:env DANJJAN_UPLOAD_STORE_PASSWORD \
+            > "$expected_certificate"
+          test -s "$bundle_certificate"
+          test -s "$expected_certificate"
+
+          bundle_fingerprint="$(
+            openssl x509 \
+              -in "$bundle_certificate" \
+              -noout \
+              -fingerprint \
+              -sha256 |
+              cut -d= -f2 |
+              tr -d ':'
+          )"
+          expected_fingerprint="$(
+            openssl x509 \
+              -in "$expected_certificate" \
+              -noout \
+              -fingerprint \
+              -sha256 |
+              cut -d= -f2 |
+              tr -d ':'
+          )"
+          if [[ -z "$bundle_fingerprint" ||
+                "$bundle_fingerprint" != "$expected_fingerprint" ]]; then
+            echo "Release AAB signer does not match the configured upload key." >&2
+            exit 1
+          fi
+
+          now_epoch="$(date -u +%s)"
+          certificate_start="$(
+            openssl x509 -in "$bundle_certificate" -noout -startdate |
+              cut -d= -f2-
+          )"
+          certificate_start_epoch="$(date -u -d "$certificate_start" +%s)"
+          if (( certificate_start_epoch > now_epoch )); then
+            echo "Release upload certificate is not valid yet." >&2
+            exit 1
+          fi
+          play_minimum_expiry_epoch="$(
+            date -u -d '2033-10-23T00:00:00Z' +%s
+          )"
+          minimum_remaining_seconds="$((play_minimum_expiry_epoch - now_epoch))"
+          if (( minimum_remaining_seconds < 0 )); then
+            minimum_remaining_seconds=0
+          fi
+          if ! openssl x509 \
+            -in "$bundle_certificate" \
+            -noout \
+            -checkend "$minimum_remaining_seconds"; then
+            echo "Release upload certificate must expire after 2033-10-22." >&2
+            exit 1
+          fi
+          {
+            printf 'upload_signature=verified\n'
+            printf 'upload_certificate_match=verified\n'
+            printf 'upload_certificate_validity=verified\n'
+            printf 'minimum_certificate_expiry=after_2033-10-22\n'
+          } > "$signature_report"
 
           manifest_package="$(
             sed -n \
@@ -219,6 +324,8 @@ jobs:
           cp "$source_manifest" "$release_dir/${release_name}-AndroidManifest.xml"
           cp "$RUNNER_TEMP/danjjan-aab-contents.txt" \
             "$release_dir/${release_name}-aab-contents.txt"
+          cp "$signature_report" \
+            "$release_dir/${release_name}-aab-signature.txt"
           (
             cd "$release_dir"
             sha256sum "${release_name}.aab" > "${release_name}.aab.sha256"
@@ -230,6 +337,8 @@ jobs:
               > "${release_name}-16kb-page-support.json.sha256"
             sha256sum "${release_name}-aab-contents.txt" \
               > "${release_name}-aab-contents.txt.sha256"
+            sha256sum "${release_name}-aab-signature.txt" \
+              > "${release_name}-aab-signature.txt.sha256"
           )
 
           {
@@ -241,6 +350,9 @@ jobs:
             printf 'min_sdk=%s\n' "$min_sdk"
             printf 'target_sdk=%s\n' "$target_sdk"
             printf 'page_alignment=16KB\n'
+            printf 'upload_signature=verified\n'
+            printf 'upload_certificate_match=verified\n'
+            printf 'upload_certificate_validity=verified\n'
             printf 'native_debug_symbols=embedded\n'
             printf 'proguard_mapping=embedded_and_exported\n'
             printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

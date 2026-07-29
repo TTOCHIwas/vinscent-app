@@ -122,6 +122,8 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] Play App Signing 활성화
 - [ ] `versionCode`가 이전 업로드보다 큼
 - [ ] Release AAB의 target SDK가 Android 16(API 36) 이상임
+- [ ] Release AAB의 JAR 서명, 등록된 업로드 키 일치, 인증서 유효기간
+  검증 보고서가 통과함
 - [ ] Release manifest의 package, versionName, versionCode, min SDK가
   출시 입력과 일치함
 - [ ] 16KB 검증 보고서에서 BundleConfig와 모든 native library가 통과함

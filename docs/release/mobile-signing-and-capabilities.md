@@ -115,19 +115,27 @@ Actions의 `Android release candidate`를 실행할 때 Play Console에서 아�
 - AAB의 SHA-256
 - ProGuard/R8 mapping 파일과 SHA-256
 - 병합된 Release manifest와 SHA-256
+- 업로드 키 JAR 서명·인증서 검증 보고서와 SHA-256
 - 16KB BundleConfig·ELF 정렬 검증 보고서와 SHA-256
 - Flutter Dart·asset 코드 크기 분석 JSON과 SHA-256
 - commit SHA, 앱 version, build number, 생성 시각
 
 워크플로는 실제 manifest의 package, versionName, versionCode, min SDK,
-target SDK를 입력값과 저장소 계약에 대조한다. AAB 내부의 native debug
-symbol과 ProGuard mapping뿐 아니라 BundleConfig의 `PAGE_ALIGNMENT_16K`와
-모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 표준 AAB를 증빙 폴더에 먼저
-보존한 뒤 별도의 종료형 `--analyze-size` 빌드에서 코드 크기 분석 JSON을
-생성하므로, 분석용 빌드가 제출 후보 AAB를 대체하지 않는다. 분석 빌드는
-Flutter 도구 계약에 따라 단일 `android-arm64` ABI를 대상으로 하며 제출
-AAB의 전체 다운로드 크기가 아니라 릴리스 간 코드·asset 크기 변화 비교에
-사용한다. 로컬 AAB는 다음 종료형 명령으로 같은 정렬 검사를 실행할 수 있다.
+target SDK를 입력값과 저장소 계약에 대조한다. 완성된 AAB는 JAR 서명
+무결성, 단일 서명자, CI에 등록된 업로드 키 인증서와의 SHA-256 지문 일치,
+현재 유효 여부를 다시 확인한다. 인증서 만료일은 Google Play의 최소 기준인
+2033년 10월 22일 이후여야 한다. 새 업로드 키를 만들 때는 Android 공식
+권장에 따라 25년 이상의 유효기간을 사용하며, 위의 `-validity 10000` 예시는
+약 27년을 제공한다.
+
+AAB 내부의 native debug symbol과 ProGuard mapping뿐 아니라 BundleConfig의
+`PAGE_ALIGNMENT_16K`와 모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 표준
+AAB를 증빙 폴더에 먼저 보존한 뒤 별도의 종료형 `--analyze-size` 빌드에서
+코드 크기 분석 JSON을 생성하므로, 분석용 빌드가 제출 후보 AAB를 대체하지
+않는다. 분석 빌드는 Flutter 도구 계약에 따라 단일 `android-arm64` ABI를
+대상으로 하며 제출 AAB의 전체 다운로드 크기가 아니라 릴리스 간 코드·asset
+크기 변화 비교에 사용한다. 로컬 AAB는 다음 종료형 명령으로 같은 정렬
+검사를 실행할 수 있다.
 
 ```powershell
 cd apps/mobile
@@ -148,6 +156,7 @@ cd apps/mobile
 - [Android 앱 서명](https://developer.android.com/studio/publish/app-signing)
 - [Android App Bundle](https://developer.android.com/guide/app-bundle)
 - [Android 16KB 페이지 크기 지원](https://developer.android.com/guide/practices/page-sizes)
+- [JDK `jarsigner` 검증](https://docs.oracle.com/en/java/javase/21/docs/specs/man/jarsigner.html)
 - [GitHub Actions secrets](https://docs.github.com/en/actions/concepts/security/secrets)
 - [GitHub Actions artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)
 
