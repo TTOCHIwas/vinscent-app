@@ -2,8 +2,11 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
+  compareFunctionAuthorizationModes,
   compareFunctionInventory,
+  loadLocalFunctionAuthorizationModes,
   listLocalFunctionNames,
+  parseRemoteFunctionAuthorizationModes,
   parseRemoteFunctionNames,
 } from './lib/supabase-function-inventory.mjs';
 
@@ -23,16 +26,25 @@ const repositoryRoot = path.resolve(import.meta.dirname, '..');
 
 try {
   const { allowMissing, remoteFile } = parseArguments(process.argv.slice(2));
-  const [localNames, remoteJson] = await Promise.all([
+  const [localNames, localModes, remoteJson] = await Promise.all([
     listLocalFunctionNames(repositoryRoot),
+    loadLocalFunctionAuthorizationModes(repositoryRoot),
     readFile(path.resolve(remoteFile), 'utf8'),
   ]);
   const remoteNames = parseRemoteFunctionNames(remoteJson);
-  const errors = compareFunctionInventory({
-    localNames,
-    remoteNames,
-    allowMissing,
-  });
+  const remoteModes = parseRemoteFunctionAuthorizationModes(remoteJson);
+  const errors = [
+    ...compareFunctionInventory({
+      localNames,
+      remoteNames,
+      allowMissing,
+    }),
+    ...compareFunctionAuthorizationModes({
+      localModes,
+      remoteModes,
+      allowMissing,
+    }),
+  ];
 
   if (errors.length > 0) {
     process.stderr.write(
@@ -43,7 +55,8 @@ try {
     process.exitCode = 1;
   } else {
     process.stdout.write(
-      `Validated ${localNames.length} tracked Edge Functions against the remote inventory.\n`,
+      `Validated ${localNames.length} tracked Edge Functions and JWT modes `
+        + `against the remote inventory.\n`,
     );
   }
 } catch (error) {

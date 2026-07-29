@@ -87,6 +87,16 @@ test('Supabase production release rejects stale and missing remote functions', a
   assert.doesNotMatch(source, /--prune/);
 });
 
+test('Supabase production release verifies deployed Edge JWT modes', async () => {
+  const source = await loadWorkflow();
+
+  assert.match(
+    source,
+    /verify_supabase_function_inventory\.mjs[\s\S]*functions\.json/,
+  );
+  assert.match(source, /Capture release evidence/);
+});
+
 test('Supabase production workflow pins every external action to a commit', async () => {
   const source = await loadWorkflow();
   const uses = [...source.matchAll(/uses:\s*([^\s#]+)/g)].map(

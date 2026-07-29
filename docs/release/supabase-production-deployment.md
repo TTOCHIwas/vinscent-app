@@ -71,7 +71,7 @@ Environment에는 다음 값을 등록한다.
 4. `db push --dry-run`
 5. pending migration 전진 적용
 6. 저장소의 모든 Edge Function 배포
-7. 로컬·원격 Edge Function 목록의 정확한 일치 확인
+7. 로컬·원격 Edge Function 목록과 `verify_jwt` 모드의 정확한 일치 확인
 8. migration·function 목록과 파일 hash 증빙 업로드
 
 원격에만 남은 함수는 자동 삭제하지 않는다. 해당 함수의 호출자와 운영
