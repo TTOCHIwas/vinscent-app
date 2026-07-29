@@ -168,6 +168,30 @@ iOS 18 이상을 대상으로 하며, Runner와 동일한 App Group을 통해 �
 
 ## 4. 아카이브 검증
 
+공개 정책 웹과 앱 런타임 값을 포함한 릴리스 후보는 저장소 루트에서 다음
+환경변수를 설정한 뒤 종료형 스크립트로 만든다.
+
+```bash
+export DANJJAN_SUPABASE_URL="https://프로젝트.supabase.co"
+export DANJJAN_SUPABASE_ANON_KEY="<anon-key>"
+export DANJJAN_KAKAO_NATIVE_APP_KEY="<native-app-key>"
+export DANJJAN_POLICY_BASE_URL="https://정책-웹-기본-주소"
+scripts/build_ios_release_candidate.sh 1
+```
+
+스크립트는 macOS와 양의 build number, 필수 값, Supabase·정책 웹의 HTTPS를
+검증한다. 이후 전체 분석·테스트와 `flutter build ipa --release`를
+실행하고 다음 증빙을
+`apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에 만든다.
+
+- IPA와 SHA-256
+- dSYM을 포함한 `.xcarchive.zip`과 SHA-256
+- commit SHA, 앱 version, build number, 생성 시각
+
+빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 스크립트는
+App Store Connect에 업로드하지 않으므로 Organizer 또는 Transporter에서
+검증 후 사람이 업로드한다.
+
 Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한다.
 
 1. Runner와 위젯의 bundle identifier와 Development Team이 올바르다.
@@ -182,3 +206,8 @@ Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한
 
 저장소에는 `DEVELOPMENT_TEAM`을 하드코딩하지 않는다. 팀 선택과 App ID
 capability 활성화는 Apple 계정 권한이 있는 담당자가 수행한다.
+
+참고:
+
+- [Flutter iOS 릴리스](https://docs.flutter.dev/deployment/ios)
+- [App Store Connect build 업로드](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/)

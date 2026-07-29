@@ -139,6 +139,8 @@ App Privacy 세부 답변은
 - [ ] 앱 아이콘과 화면이 실제 출시 build와 일치
 - [ ] version `1.0.0`, build number가 App Store Connect에서 고유함
 - [ ] Distribution 서명 archive 생성
+- [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값 주입
+- [ ] IPA·xcarchive·SHA-256·commit SHA 증빙 보관
 - [ ] Runner의 production push entitlement 확인
 - [ ] 위젯에는 App Group 이외의 불필요한 entitlement가 없음
 - [ ] archive validation 통과 후 build upload
