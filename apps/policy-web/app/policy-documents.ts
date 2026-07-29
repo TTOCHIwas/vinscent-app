@@ -16,6 +16,11 @@ export const policyDocuments: readonly PolicyDocument[] = [
     description: "단짠 서비스 이용에 적용되는 기본 조건을 안내합니다.",
   },
   {
+    href: "/safety",
+    title: "안전 이용 약속",
+    description: "공유 콘텐츠와 신고·차단에 적용되는 기준을 안내합니다.",
+  },
+  {
     href: "/account-deletion",
     title: "계정 삭제 안내",
     description: "단짠 계정과 관련 데이터의 삭제 절차를 안내합니다.",

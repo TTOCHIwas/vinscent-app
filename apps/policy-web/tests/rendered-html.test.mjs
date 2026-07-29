@@ -36,6 +36,7 @@ test("server-renders the Danjjan policy entry point", async () => {
   assert.match(html, /정책 및 지원/);
   assert.match(html, /개인정보처리방침/);
   assert.match(html, /서비스 이용약관/);
+  assert.match(html, /안전 이용 약속/);
   assert.match(html, /계정 삭제 안내/);
   assert.match(html, /name="robots" content="noindex, nofollow"/i);
   assert.doesNotMatch(html, /codex-preview|Codex/i);
@@ -58,6 +59,20 @@ test("server-renders every policy route with shared navigation", async () => {
     assert.match(html, /공개 전 검토 중입니다/);
     assert.match(html, /aria-label="정책 문서"/);
   }
+});
+
+test("publishes the current UGC safety promise", async () => {
+  const response = await render("/safety");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /<title>안전 이용 약속 \| 단짠<\/title>/i);
+  assert.match(html, /<h1>안전 이용 약속<\/h1>/);
+  assert.match(html, /ugc-safety-v1/);
+  assert.match(html, /이런 내용은 나눌 수 없어요/);
+  assert.match(html, /불편한 내용은 신고하거나 차단할 수 있어요/);
+  assert.match(html, /동의한 뒤 기록을 공유할 수 있어요/);
+  assert.doesNotMatch(html, /공개 전 검토 중입니다/);
 });
 
 test("removes starter-only capabilities", async () => {

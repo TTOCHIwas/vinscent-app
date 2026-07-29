@@ -285,6 +285,60 @@ a:focus-visible {
   overflow-wrap: break-word;
 }
 
+.document-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 40px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--brand-surface);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.document-version strong {
+  color: var(--foreground);
+}
+
+.policy-section {
+  max-width: 720px;
+  padding-block: 34px;
+  border-top: 1px solid var(--border);
+}
+
+.document-version + .policy-section {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.policy-section h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.45;
+}
+
+.policy-section p,
+.policy-section li {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.policy-section p {
+  margin: 14px 0 0;
+}
+
+.policy-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding-left: 22px;
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
 }
@@ -384,6 +438,18 @@ a:focus-visible {
 
   .publication-notice {
     padding: 22px 20px;
+  }
+
+  .document-version {
+    margin-bottom: 32px;
+  }
+
+  .policy-section {
+    padding-block: 28px;
+  }
+
+  .policy-section h2 {
+    font-size: 20px;
   }
 }
 
