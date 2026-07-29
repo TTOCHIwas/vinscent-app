@@ -21,7 +21,8 @@
 | AI 실행 진단 | 작업 종류, 모델, 프롬프트 버전, 입력 답변 ID, 토큰 수, 지연 시간, 상태와 오류 코드 | 작업 재시도, 장애 분석, 비용·품질 관찰 | Supabase Database |
 | 위치 및 날씨 | 사용 시점의 저정밀 현재 위도·경도, 날씨 결과 | 개인화 완료 사용자의 일회성 선제 추천 | 요청 중 메모리, Open-Meteo 요청 |
 | 알림 | FCM 토큰, 플랫폼, 활성 상태, 알림 선호, 발송·성공·실패 기록 | 푸시 알림 발송, 사용자 설정 적용, 재시도와 장애 분석 | Supabase Database, Firebase Cloud Messaging |
-| 신고 및 차단 | 신고자·대상 사용자, 신고 대상, 사유, 선택적 상세 설명, 제한된 콘텐츠 스냅샷, 처리 상태, 차단 관계 | UGC·AI 안전 신고 처리, 동일 사용자 재연결 제한 | Supabase Database |
+| 안전 이용 동의 | 정책 종류, 정책 버전, 동의 시각 | 공유 콘텐츠 작성 전 현재 안전 이용 약속 동의 확인, 정책 변경 시 재동의 | Supabase Database |
+| 신고·차단·검토 | 신고자·대상 사용자, 신고 대상, 사유, 선택적 상세 설명, 제한된 콘텐츠 스냅샷, 처리 상태, 차단 관계, 모더레이션 알림 시도·상태·오류 | UGC·AI 안전 신고 검토, 운영 알림 재시도, 동일 사용자 재연결 제한 | Supabase Database |
 | 기기 로컬 데이터 | 인증 세션, 선제 추천 캐시, 캘린더 표시 설정, 한마디 노출 상태, 미완료 녹음, 위젯 표시 데이터 | 로그인 유지, 성능, 복구, 개인 설정, 위젯 | 보안 저장소, SharedPreferences, 앱 전용 파일, OS 위젯 저장소 |
 
 ## 2. 외부 처리자와 전송 범위
@@ -93,6 +94,8 @@
 - 신고 기록에는 자동 파기 기준이 구현되어 있지 않다.
 - 공개 개인정보처리방침 URL과 외부 계정 삭제 요청 URL이 아직 없다.
 - 앱 설정에 개인정보처리방침·이용약관 링크가 아직 없다.
+- `ugc-safety-v1` 안전 이용 약속 페이지는 구현됐지만 공개 배포 URL은 아직 없다.
+- 신고 모더레이션 알림 큐는 구현됐지만 외부 수신 채널과 전송 함수는 아직 없다.
 
 ## 8. 주요 근거 파일
 
@@ -103,7 +106,9 @@
 - `apps/mobile/lib/features/ai/application/ai_current_location_service.dart`
 - `apps/mobile/lib/features/ai/data/ai_proactive_suggestion_repository.dart`
 - `apps/mobile/lib/features/notifications/data/push_token_repository.dart`
+- `apps/mobile/lib/features/safety/presentation/ugc_safety_policy_screen.dart`
 - `apps/mobile/lib/features/account/application/account_local_data_cleanup.dart`
+- `apps/policy-web/app/safety/page.tsx`
 - `supabase/functions/delete-account/`
 - `supabase/functions/_shared/push.ts`
 - `services/ai-api/src/domain/learning-contract.ts`
@@ -117,3 +122,6 @@
 - `supabase/migrations/20260729004000_add_private_safety_reports.sql`
 - `supabase/migrations/20260729005000_add_ugc_safety_report_targets.sql`
 - `supabase/migrations/20260729006000_add_user_blocking.sql`
+- `supabase/migrations/20260729008000_add_ugc_safety_policy_acceptance.sql`
+- `supabase/migrations/20260729009000_enforce_ugc_safety_policy_write_boundary.sql`
+- `supabase/migrations/20260729010000_add_safety_moderation_alert_outbox.sql`
