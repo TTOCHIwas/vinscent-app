@@ -4,6 +4,7 @@ import type {
 import type {
   DirectQuestionContext,
   LearningDomain,
+  PersonalizationMemoryContext,
 } from '../domain/learning-contract.ts';
 
 const learningDomains = new Set<LearningDomain>([
@@ -62,20 +63,22 @@ function parsePersonalizationContext(
   const memories = requireArray(record.confirmed_memories);
   const recentQuestions = requireArray(record.recent_completed_questions);
 
-  const parsedMemories = memories.map((memory) => {
-    const item = requireRecord(memory);
-    const subject = item.subject;
-    if (subject !== 'me' && subject !== 'partner' && subject !== 'couple') {
-      throw new TypeError('invalid personalization memory subject');
-    }
-    return {
-      subject,
-      kind: requireString(item.kind, 100),
-      domain: requireLearningDomain(item.learning_domain),
-      statement: requireString(item.statement, 500),
-      confidence: requireConfidence(item.confidence),
-    };
-  });
+  const parsedMemories: PersonalizationMemoryContext[] = memories.map(
+    (memory) => {
+      const item = requireRecord(memory);
+      const subject = item.subject;
+      if (subject !== 'me' && subject !== 'partner' && subject !== 'couple') {
+        throw new TypeError('invalid personalization memory subject');
+      }
+      return {
+        subject,
+        kind: requireString(item.kind, 100),
+        domain: requireLearningDomain(item.learning_domain),
+        statement: requireString(item.statement, 500),
+        confidence: requireConfidence(item.confidence),
+      };
+    },
+  );
 
   return {
     confirmedMemories: parsedMemories,
