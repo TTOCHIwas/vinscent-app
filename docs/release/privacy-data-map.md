@@ -88,7 +88,9 @@
 
 ## 7. 출시 전 코드·설정 확인 항목
 
-- iOS Runner에 앱 자체 `PrivacyInfo.xcprivacy`가 없다.
+- iOS Runner와 위젯에 각각 `PrivacyInfo.xcprivacy`가 있으며 target
+  Resources 포함 여부를 자동 테스트한다. 실제 배포 archive의 통합
+  Privacy Report 검증은 Mac에서 남아 있다.
 - Android와 iOS 권한 설명은 공개 정책의 실제 이용 목적과 맞춰야 한다.
 - 생일 입력은 미래 날짜만 제한하며 만 14세 이상 검증은 없다.
 - 신고 기록에는 자동 파기 기준이 구현되어 있지 않다.
@@ -108,7 +110,10 @@
 - `apps/mobile/lib/features/notifications/data/push_token_repository.dart`
 - `apps/mobile/lib/features/safety/presentation/ugc_safety_policy_screen.dart`
 - `apps/mobile/lib/features/account/application/account_local_data_cleanup.dart`
+- `apps/mobile/ios/Runner/PrivacyInfo.xcprivacy`
+- `apps/mobile/ios/VinscentWidgets/PrivacyInfo.xcprivacy`
 - `apps/policy-web/app/safety/page.tsx`
+- `docs/release/ios-privacy-declaration.md`
 - `supabase/functions/delete-account/`
 - `supabase/functions/_shared/push.ts`
 - `services/ai-api/src/domain/learning-contract.ts`
