@@ -47,10 +47,12 @@ class SupabaseCoupleCalendarEventChangeSource
     channel.subscribe((status, error) {
       if (status == RealtimeSubscribeStatus.channelError ||
           status == RealtimeSubscribeStatus.timedOut) {
-        debugPrint(
-          '[calendar] Realtime channel unavailable: '
-          'coupleId=$coupleId, status=${status.name}, error=$error',
-        );
+        if (kDebugMode) {
+          debugPrint(
+            '[calendar] Realtime channel unavailable: '
+            'coupleId=$coupleId, status=${status.name}, error=$error',
+          );
+        }
       }
     });
 

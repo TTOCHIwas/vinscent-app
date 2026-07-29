@@ -82,7 +82,9 @@ class UserSafetyRealtimeController extends AsyncNotifier<void> {
         .listen(
           (_) => _scheduleRefresh(),
           onError: (Object error, StackTrace stackTrace) {
-            debugPrint('[safety] Realtime stream failed: $error');
+            if (kDebugMode) {
+              debugPrint('[safety] Realtime stream failed: $error');
+            }
           },
         );
   }
@@ -107,7 +109,9 @@ class UserSafetyRealtimeController extends AsyncNotifier<void> {
     try {
       await subscription.cancel();
     } catch (error) {
-      debugPrint('[safety] Realtime cancellation failed: $error');
+      if (kDebugMode) {
+        debugPrint('[safety] Realtime cancellation failed: $error');
+      }
     }
   }
 

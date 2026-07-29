@@ -85,7 +85,9 @@ class AiDirectQuestionController
     try {
       await refresh();
     } on Object {
-      debugPrint('[ai] direct question polling failed');
+      if (kDebugMode) {
+        debugPrint('[ai] direct question polling failed');
+      }
     }
   }
 

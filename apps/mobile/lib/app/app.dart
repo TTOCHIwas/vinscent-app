@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -125,7 +126,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
         _queueNotificationLaunch(initialData);
       }
     } catch (error) {
-      debugPrint('[push] Initial notification launch failed: $error');
+      if (kDebugMode) {
+        debugPrint('[push] Initial notification launch failed: $error');
+      }
     }
   }
 
@@ -179,7 +182,9 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     try {
       await configureHomeWidgetPlatform();
     } catch (error) {
-      debugPrint('[widget] initial platform configuration failed: $error');
+      if (kDebugMode) {
+        debugPrint('[widget] initial platform configuration failed: $error');
+      }
     }
     if (!mounted) {
       return;
@@ -189,13 +194,17 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     _widgetClickSubscription = coordinator.widgetClicks.listen(
       _queueWidgetLaunch,
       onError: (Object error) {
-        debugPrint('[widget] launch stream failed: $error');
+        if (kDebugMode) {
+          debugPrint('[widget] launch stream failed: $error');
+        }
       },
     );
     try {
       _queueWidgetLaunch(await coordinator.initiallyLaunchedFromWidget());
     } catch (error) {
-      debugPrint('[widget] initial launch lookup failed: $error');
+      if (kDebugMode) {
+        debugPrint('[widget] initial launch lookup failed: $error');
+      }
     }
     _scheduleWidgetSync();
   }

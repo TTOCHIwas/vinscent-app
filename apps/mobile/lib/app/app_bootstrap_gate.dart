@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
@@ -33,7 +34,9 @@ class _AppBootstrapGateState extends State<AppBootstrapGate> {
     try {
       await widget.initialize();
     } catch (error, stackTrace) {
-      debugPrint('[bootstrap] initialization failed: $error');
+      if (kDebugMode) {
+        debugPrint('[bootstrap] initialization failed: $error');
+      }
       Error.throwWithStackTrace(error, stackTrace);
     }
   }

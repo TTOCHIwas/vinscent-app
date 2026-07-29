@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -207,8 +208,10 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
       ).showSnackBar(const SnackBar(content: Text('보관 데이터를 삭제했어요.')));
       context.go('/couple');
     } catch (error, stackTrace) {
-      debugPrint('[couple] Failed to delete archived couple data: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      if (kDebugMode) {
+        debugPrint('[couple] Failed to delete archived couple data: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
       if (!mounted) {
         return;
       }

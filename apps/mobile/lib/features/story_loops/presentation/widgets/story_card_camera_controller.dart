@@ -221,7 +221,9 @@ class StoryCardCameraController extends ChangeNotifier {
     try {
       await controller?.dispose();
     } catch (error) {
-      debugPrint('Failed to dispose story card camera: $error');
+      if (kDebugMode) {
+        debugPrint('Failed to dispose story card camera: $error');
+      }
     }
   }
 

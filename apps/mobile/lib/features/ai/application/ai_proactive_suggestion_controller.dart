@@ -103,15 +103,19 @@ class AiProactiveSuggestionCoordinator {
             now: DateTime.now(),
             currentHasCardToday: request.hasCardToday,
           )) {
-        debugPrint('[ai proactive] discarded a stale generated suggestion');
+        if (kDebugMode) {
+          debugPrint('[ai proactive] discarded a stale generated suggestion');
+        }
         return null;
       }
       await _saveSuggestion(request.userId, suggestion);
       return suggestion;
     } on Object catch (error) {
-      debugPrint(
-        '[ai proactive] suggestion resolution failed: ${_errorReason(error)}',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          '[ai proactive] suggestion resolution failed: ${_errorReason(error)}',
+        );
+      }
       return null;
     }
   }
@@ -126,13 +130,17 @@ class AiProactiveSuggestionCoordinator {
         sessionId: request.sessionId,
       );
       if (!claimed) {
-        debugPrint('[ai proactive] impression claim rejected');
+        if (kDebugMode) {
+          debugPrint('[ai proactive] impression claim rejected');
+        }
       }
       return claimed;
     } on Object catch (error) {
-      debugPrint(
-        '[ai proactive] impression claim failed: ${_errorReason(error)}',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          '[ai proactive] impression claim failed: ${_errorReason(error)}',
+        );
+      }
       return false;
     }
   }
@@ -149,9 +157,11 @@ class AiProactiveSuggestionCoordinator {
         contextDate: suggestion.contextDate,
       );
     } on Object catch (error) {
-      debugPrint(
-        '[ai proactive] dismissal persistence failed: ${error.runtimeType}',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          '[ai proactive] dismissal persistence failed: ${error.runtimeType}',
+        );
+      }
       return;
     }
   }

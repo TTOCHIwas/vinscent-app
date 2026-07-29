@@ -79,7 +79,9 @@ class CoupleCalendarEventRealtimeController extends AsyncNotifier<void> {
         .listen(
           (_) => _scheduleRefresh(),
           onError: (Object error, StackTrace stackTrace) {
-            debugPrint('[calendar] Realtime stream failed: $error');
+            if (kDebugMode) {
+              debugPrint('[calendar] Realtime stream failed: $error');
+            }
           },
         );
   }
@@ -104,7 +106,9 @@ class CoupleCalendarEventRealtimeController extends AsyncNotifier<void> {
     try {
       await subscription.cancel();
     } catch (error) {
-      debugPrint('[calendar] Realtime cancellation failed: $error');
+      if (kDebugMode) {
+        debugPrint('[calendar] Realtime cancellation failed: $error');
+      }
     }
   }
 
