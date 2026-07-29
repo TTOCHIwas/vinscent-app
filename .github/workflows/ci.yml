@@ -57,7 +57,7 @@ jobs:
   ios-build:
     name: iOS native build
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     defaults:
       run:

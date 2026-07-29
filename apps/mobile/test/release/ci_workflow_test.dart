@@ -17,6 +17,20 @@ void main() {
     }
   });
 
+  test('iOS native validation uses the release SDK generation', () {
+    final source = workflow.readAsStringSync();
+
+    expect(
+      source,
+      matches(
+        RegExp(
+          r'ios-build:[\s\S]*?runs-on:\s+macos-26[\s\S]*?'
+          r'flutter build ios --simulator --debug --no-codesign --no-pub',
+        ),
+      ),
+    );
+  });
+
   test(
     'CI uses least privilege and immutable actions without deployment secrets',
     () {
