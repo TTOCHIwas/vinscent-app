@@ -47,6 +47,7 @@ export class SafetyModerationWebhookDelivery
     try {
       response = await this.#fetch(this.#endpoint, {
         method: 'POST',
+        redirect: 'error',
         headers,
         body: JSON.stringify({
           type: 'danjjan.safety_report.created',

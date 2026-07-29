@@ -34,6 +34,7 @@ test('sends only the minimal moderation notification envelope', async () => {
   await delivery.deliver(alert);
 
   assert.ok(receivedRequest);
+  assert.equal(receivedRequest.redirect, 'error');
   assert.equal(receivedRequest.headers.get('authorization'), 'Bearer receiver-secret');
   assert.equal(receivedRequest.headers.get('x-danjjan-event-id'), 'report-1');
   const body = await receivedRequest.json();
