@@ -130,6 +130,16 @@ jobs:
           fi
       - name: Link protected production project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - name: Verify production Edge secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets list \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --output json \
+            > "$RUNNER_TEMP/secrets-before-deploy.json"
+          node scripts/verify_supabase_secret_inventory.mjs \
+            --remote "$RUNNER_TEMP/secrets-before-deploy.json"
       - name: Reject untracked remote Edge functions
         shell: bash
         run: |

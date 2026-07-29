@@ -59,6 +59,20 @@ test('Supabase production release uses forward-only deployment commands', async 
   assert.doesNotMatch(source, /supabase secrets (?:set|unset)/);
 });
 
+test('Supabase production release verifies Edge secrets before deployment', async () => {
+  const source = await loadWorkflow();
+  const secretCheckIndex = source.indexOf(
+    'verify_supabase_secret_inventory.mjs',
+  );
+  const migrationPreviewIndex = source.indexOf(
+    'supabase db push --linked --dry-run',
+  );
+
+  assert.match(source, /supabase secrets list/);
+  assert.ok(secretCheckIndex >= 0);
+  assert.ok(migrationPreviewIndex > secretCheckIndex);
+});
+
 test('Supabase production release rejects stale and missing remote functions', async () => {
   const source = await loadWorkflow();
 

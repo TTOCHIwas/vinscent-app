@@ -37,6 +37,8 @@ Environment에는 다음 값을 등록한다.
   함수가 잠시 동작할 수 있는 경계를 유지한다.
 - `supabase/runtime-environment.manifest.json`의 필수 secret 이름이 운영
   프로젝트에 등록되어 있다.
+- 운영 secret 값은 로그에 노출하지 않고 `supabase secrets list`가 반환한
+  이름만 런타임 환경 매니페스트와 대조한다.
 
 ## 3. 실행 방법
 
@@ -62,12 +64,13 @@ Environment에는 다음 값을 등록한다.
 `deploy`는 Environment 승인 뒤 다음 순서로 실행한다.
 
 1. 운영 project 연결
-2. 저장소에 없는 원격 Edge Function 존재 여부 확인
-3. `db push --dry-run`
-4. pending migration 전진 적용
-5. 저장소의 모든 Edge Function 배포
-6. 로컬·원격 Edge Function 목록의 정확한 일치 확인
-7. migration·function 목록과 파일 hash 증빙 업로드
+2. 운영 Edge secret 이름과 필수·fallback 계약 확인
+3. 저장소에 없는 원격 Edge Function 존재 여부 확인
+4. `db push --dry-run`
+5. pending migration 전진 적용
+6. 저장소의 모든 Edge Function 배포
+7. 로컬·원격 Edge Function 목록의 정확한 일치 확인
+8. migration·function 목록과 파일 hash 증빙 업로드
 
 원격에만 남은 함수는 자동 삭제하지 않는다. 해당 함수의 호출자와 운영
 상태를 확인한 뒤 별도 변경으로 제거한다. `--prune`, `db reset`,
