@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  FLUTTER_SUPPRESS_ANALYTICS: true
+
+jobs:
+  mobile:
+    name: Flutter
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            apps/mobile/android/*.gradle*
+            apps/mobile/android/gradle/wrapper/gradle-wrapper.properties
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Analyze Flutter
+        run: flutter analyze --no-pub
+      - name: Test Flutter
+        run: flutter test --no-pub
+      - name: Build Android debug APK
+        run: flutter build apk --debug --no-pub
+
+  node-services:
+    name: Node services
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22.19.0"
+          package-manager-cache: false
+      - name: Test AI service
+        working-directory: services/ai-api
+        run: npm test
+      - name: Install policy web dependencies
+        working-directory: apps/policy-web
+        run: npm ci
+      - name: Lint policy web
+        working-directory: apps/policy-web
+        run: npm run lint
+      - name: Test policy web
+        working-directory: apps/policy-web
+        run: npm test
+
+  edge-functions:
+    name: Edge functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22.19.0"
+          package-manager-cache: false
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+        with:
+          deno-version: "2.9.4"
+          cache: true
+      - name: Test Edge function units
+        run: >
+          node --experimental-strip-types --test
+          supabase/tests/functions/*.test.ts
+          supabase/functions/dispatch-scheduled-notifications/*.test.ts
+      - name: Type-check Edge entrypoints
+        shell: bash
+        run: |
+          mapfile -t entrypoints < <(
+            find supabase/functions -mindepth 2 -maxdepth 2 -type f -name index.ts -print |
+              sort
+          )
+          test "${#entrypoints[@]}" -gt 0
+          deno check "${entrypoints[@]}"
+
+  database:
+    name: Supabase database
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: "2.109.1"
+      - name: Start local database
+        run: supabase db start
+      - name: Test database contracts
+        run: supabase test db
+      - name: Lint database
+        run: supabase db lint --local --level error
+      - name: Stop local database
+        if: always()
+        continue-on-error: true
+        run: supabase stop --no-backup
