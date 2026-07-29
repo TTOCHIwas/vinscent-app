@@ -143,6 +143,28 @@ test('Supabase production release verifies the final migration inventory', async
   assert.match(source, /migrations\.json/);
 });
 
+test('Supabase production release rejects remote-only migrations before applying changes', async () => {
+  const source = await loadWorkflow();
+  const preflightIndex = source.indexOf(
+    '- name: Reject untracked remote migrations',
+  );
+  const allowUnappliedIndex = source.indexOf(
+    '--allow-unapplied',
+    preflightIndex,
+  );
+  const migrationPreviewIndex = source.indexOf(
+    '- name: Preview pending migrations',
+  );
+
+  assert.ok(preflightIndex >= 0);
+  assert.ok(allowUnappliedIndex > preflightIndex);
+  assert.ok(migrationPreviewIndex > allowUnappliedIndex);
+  assert.match(
+    source.slice(preflightIndex, migrationPreviewIndex),
+    /supabase migration list[\s\\]*--linked[\s\\]*--output-format json/,
+  );
+});
+
 test('Supabase production release verifies deployed Edge JWT modes', async () => {
   const source = await loadWorkflow();
 

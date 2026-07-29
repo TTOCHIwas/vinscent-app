@@ -153,6 +153,17 @@ jobs:
           node scripts/verify_supabase_function_inventory.mjs \
             --remote "$RUNNER_TEMP/functions-before-deploy.json" \
             --allow-missing
+      - name: Reject untracked remote migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list \
+            --linked \
+            --output-format json \
+            > "$RUNNER_TEMP/migrations-before-deploy.json"
+          node scripts/verify_supabase_migration_inventory.mjs \
+            --remote "$RUNNER_TEMP/migrations-before-deploy.json" \
+            --allow-unapplied
       - name: Preview pending migrations
         run: supabase db push --linked --dry-run
       - name: Apply pending migrations

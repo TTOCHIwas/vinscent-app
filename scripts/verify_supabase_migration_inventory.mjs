@@ -12,19 +12,25 @@ function parseArguments(args) {
   if (remoteIndex === -1 || remoteIndex === args.length - 1) {
     throw new Error('--remote <json-file> is required');
   }
-  return { remoteFile: args[remoteIndex + 1] };
+  return {
+    allowUnapplied: args.includes('--allow-unapplied'),
+    remoteFile: args[remoteIndex + 1],
+  };
 }
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..');
 
 try {
-  const { remoteFile } = parseArguments(process.argv.slice(2));
+  const { allowUnapplied, remoteFile } = parseArguments(
+    process.argv.slice(2),
+  );
   const [localVersions, remoteJson] = await Promise.all([
     listLocalMigrationVersions(repositoryRoot),
     readFile(path.resolve(remoteFile), 'utf8'),
   ]);
   const remoteVersions = parseRemoteMigrationVersions(remoteJson);
   const errors = compareMigrationInventory({
+    allowUnapplied,
     localVersions,
     remoteVersions,
   });
@@ -38,7 +44,9 @@ try {
     process.exitCode = 1;
   } else {
     process.stdout.write(
-      `Validated ${remoteVersions.length} applied Supabase migrations.\n`,
+      allowUnapplied
+        ? `Validated ${remoteVersions.length} known remote Supabase migrations.\n`
+        : `Validated ${remoteVersions.length} applied Supabase migrations.\n`,
     );
   }
 } catch (error) {

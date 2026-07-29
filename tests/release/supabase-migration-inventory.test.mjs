@@ -106,3 +106,22 @@ test('requires exact local and remote migration inventories', () => {
     [],
   );
 });
+
+test('allows unapplied local migrations while still rejecting remote-only history', () => {
+  assert.deepEqual(
+    compareMigrationInventory({
+      allowUnapplied: true,
+      localVersions: ['20260728000000', '20260729000000'],
+      remoteVersions: ['20260727000000', '20260728000000'],
+    }),
+    ['remote-only migrations: 20260727000000'],
+  );
+  assert.deepEqual(
+    compareMigrationInventory({
+      allowUnapplied: true,
+      localVersions: ['20260728000000', '20260729000000'],
+      remoteVersions: ['20260728000000'],
+    }),
+    [],
+  );
+});

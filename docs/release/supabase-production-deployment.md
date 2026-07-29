@@ -69,12 +69,14 @@ Environment에는 다음 값을 등록한다.
 2. 운영 project 연결
 3. 운영 Edge secret 이름과 필수·fallback 계약 확인
 4. 저장소에 없는 원격 Edge Function 존재 여부 확인
-5. `db push --dry-run`
-6. pending migration 전진 적용
-7. 저장소의 모든 Edge Function 배포
-8. 로컬·원격 migration 버전, Edge Function 목록과 `verify_jwt` 모드의
+5. 저장소에 없는 원격 migration 이력이 없는지 확인하되 아직 적용하지
+   않은 로컬 migration은 허용
+6. `db push --dry-run`
+7. pending migration 전진 적용
+8. 저장소의 모든 Edge Function 배포
+9. 로컬·원격 migration 버전, Edge Function 목록과 `verify_jwt` 모드의
    정확한 일치 확인
-9. source commit과 worktree를 다시 확인하고 migration·function 목록과 파일
+10. source commit과 worktree를 다시 확인하고 migration·function 목록과 파일
    hash 증빙 업로드
 
 원격에만 남은 함수는 자동 삭제하지 않는다. 해당 함수의 호출자와 운영

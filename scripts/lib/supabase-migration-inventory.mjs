@@ -75,6 +75,7 @@ export function parseRemoteMigrationVersions(rawJson) {
 }
 
 export function compareMigrationInventory({
+  allowUnapplied = false,
   localVersions,
   remoteVersions,
 }) {
@@ -87,7 +88,7 @@ export function compareMigrationInventory({
   if (remoteOnly.length > 0) {
     errors.push(`remote-only migrations: ${remoteOnly.join(', ')}`);
   }
-  if (unapplied.length > 0) {
+  if (!allowUnapplied && unapplied.length > 0) {
     errors.push(`unapplied migrations: ${unapplied.join(', ')}`);
   }
 
