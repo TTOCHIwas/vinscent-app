@@ -263,6 +263,23 @@ final class StoreAssetValidator {
         );
       }
     }
+    if (rule.playLargeScreenScreenshot) {
+      final shortest = raster.width < raster.height
+          ? raster.width
+          : raster.height;
+      final longest = raster.width > raster.height
+          ? raster.width
+          : raster.height;
+      if (shortest < 1080 || longest > 7680 || longest * 9 != shortest * 16) {
+        errors.add(
+          _issue(
+            relativePath,
+            'dimensions',
+            'Play tablet screenshots require 1080-7680 px and 16:9 or 9:16.',
+          ),
+        );
+      }
+    }
     if (rule.portrait && raster.height <= raster.width) {
       errors.add(_issue(relativePath, 'orientation', 'Portrait is required.'));
     }
@@ -345,6 +362,7 @@ final class _ImageRule {
     this.pngOnly = false,
     this.maximumBytes,
     this.playScreenshot = false,
+    this.playLargeScreenScreenshot = false,
     this.portrait = false,
   });
 
@@ -353,6 +371,7 @@ final class _ImageRule {
   final bool pngOnly;
   final int? maximumBytes;
   final bool playScreenshot;
+  final bool playLargeScreenScreenshot;
   final bool portrait;
 }
 
@@ -403,7 +422,7 @@ const _playIconRule = _ImageRule(
 );
 const _playFeatureRule = _ImageRule(allowedSizes: {(1024, 500)});
 const _playPhoneRule = _ImageRule(playScreenshot: true, portrait: true);
-const _playTabletRule = _ImageRule(playScreenshot: true);
+const _playTabletRule = _ImageRule(playLargeScreenScreenshot: true);
 const _iphoneRule = _ImageRule(
   allowedSizes: {(1260, 2736), (1290, 2796), (1320, 2868)},
 );

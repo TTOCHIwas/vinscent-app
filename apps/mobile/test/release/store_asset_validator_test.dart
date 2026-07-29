@@ -105,6 +105,31 @@ void main() {
     );
   });
 
+  test(
+    'rejects Play tablet images outside the large-screen contract',
+    () async {
+      await _createCompleteLayout(root);
+
+      final report = await StoreAssetValidator(
+        repositoryRoot: root,
+        rasterReader: (file) {
+          final path = file.path.replaceAll(Platform.pathSeparator, '/');
+          if (path.contains('/google-play/tablet/')) {
+            return Future.value(_raster(1600, 2560));
+          }
+          return _fixtureRaster(file);
+        },
+      ).validate(appVersion: '1.0.0');
+
+      expect(
+        report.errors.join('\n'),
+        contains(
+          'Play tablet screenshots require 1080-7680 px and 16:9 or 9:16.',
+        ),
+      );
+    },
+  );
+
   test('reads PNG dimensions and alpha-channel information', () async {
     final opaque = File('${root.path}/opaque.png')
       ..writeAsBytesSync(
