@@ -50,7 +50,7 @@ const _requiredCommands = <String>[
   'flutter test --no-pub',
   'flutter build apk --debug --no-pub',
   'npm test',
-  'node --experimental-strip-types --test',
+  'node scripts/test_supabase_functions.mjs',
   'deno check',
   'supabase db start',
   'supabase test db',

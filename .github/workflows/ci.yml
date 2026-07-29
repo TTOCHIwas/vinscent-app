@@ -93,10 +93,7 @@ jobs:
           deno-version: "2.9.4"
           cache: true
       - name: Test Edge function units
-        run: >
-          node --experimental-strip-types --test
-          supabase/tests/functions/*.test.ts
-          supabase/functions/dispatch-scheduled-notifications/*.test.ts
+        run: node scripts/test_supabase_functions.mjs
       - name: Type-check Edge entrypoints
         shell: bash
         run: |
