@@ -39,6 +39,9 @@ void main() {
     expect(source, contains(r'"$value" == *"?"*'));
     expect(source, contains(r'"$value" == *"#"*'));
     expect(source, contains(r'"$value" == *"@"*'));
+    expect(source, contains(r'local authority="${value#https://}"'));
+    expect(source, contains(r'-z "$authority"'));
+    expect(source, contains(r'"$value" == *[[:space:]]*'));
   });
 
   test('release evidence contains build, symbol and SDK proof', () {

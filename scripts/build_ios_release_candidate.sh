@@ -46,12 +46,16 @@ done
 validate_https_url() {
   local variable_name="$1"
   local value="$2"
+  local authority="${value#https://}"
+  authority="${authority%%/*}"
 
   if [[ "$value" != https://* ||
+        -z "$authority" ||
+        "$value" == *[[:space:]]* ||
         "$value" == *"?"* ||
         "$value" == *"#"* ||
         "$value" == *"@"* ]]; then
-    echo "${variable_name} must be an HTTPS URL without user info, query, or fragment." >&2
+    echo "${variable_name} must be an HTTPS URL with a host and without whitespace, user info, query, or fragment." >&2
     exit 1
   fi
 }

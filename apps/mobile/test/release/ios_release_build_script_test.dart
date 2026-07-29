@@ -17,6 +17,9 @@ void main() {
     }
     expect(source, contains('validate_https_url "DANJJAN_SUPABASE_URL"'));
     expect(source, contains('validate_https_url "DANJJAN_POLICY_BASE_URL"'));
+    expect(source, contains(r'local authority="${value#https://}"'));
+    expect(source, contains(r'-z "$authority"'));
+    expect(source, contains(r'"$value" == *[[:space:]]*'));
     expect(source, contains('xcodebuild -version'));
     expect(source, contains('xcrun --sdk iphoneos --show-sdk-version'));
     expect(
