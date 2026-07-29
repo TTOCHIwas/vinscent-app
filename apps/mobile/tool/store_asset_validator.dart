@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:image/image.dart' as image;
 
 import 'store_asset_alt_text_validator.dart';
+import 'store_asset_capture_manifest_validator.dart';
 
 typedef RasterReader = Future<RasterInfo> Function(File file);
 
@@ -44,8 +45,19 @@ final class StoreAssetValidator {
   final Directory _root;
   final RasterReader _readRaster;
 
-  Future<StoreAssetReport> validate({String? appVersion}) async {
-    final version = appVersion ?? await _readAppVersion();
+  Future<StoreAssetReport> validate({
+    String? appVersion,
+    int? buildNumber,
+  }) async {
+    if ((appVersion == null) != (buildNumber == null)) {
+      throw ArgumentError(
+        'appVersion and buildNumber must be provided together.',
+      );
+    }
+    final identity = appVersion == null
+        ? await _readAppIdentity()
+        : (version: appVersion, buildNumber: buildNumber!);
+    final version = identity.version;
     final errors = <String>[];
     var count = 0;
 
@@ -64,9 +76,11 @@ final class StoreAssetValidator {
       errors,
     );
     final tabletScenes = <String>{};
+    final screenshotPaths = <String>{};
     for (final group in _groups) {
       final result = await _validateGroup(group, version, errors);
       count += result.validatedFileCount;
+      screenshotPaths.addAll(result.relativePaths);
       if (group.directory == 'store-assets/google-play/tablet') {
         tabletScenes.addAll(result.scenes);
       }
@@ -79,6 +93,20 @@ final class StoreAssetValidator {
       const StoreAssetAltTextValidator().validate(
         altTextFile,
         requiredTabletScenes: tabletScenes,
+      ),
+    );
+    final captureManifestFile = _file(
+      StoreAssetCaptureManifestValidator.manifestPath,
+    );
+    if (captureManifestFile.existsSync()) {
+      count += 1;
+    }
+    errors.addAll(
+      const StoreAssetCaptureManifestValidator().validate(
+        captureManifestFile,
+        appVersion: version,
+        buildNumber: identity.buildNumber,
+        screenshotPaths: screenshotPaths,
       ),
     );
 
@@ -147,9 +175,11 @@ final class StoreAssetValidator {
     );
     final sequences = <int>[];
     final scenes = <String>[];
+    final relativePaths = <String>[];
 
     for (final file in files) {
       final relativePath = '${group.directory}/${_name(file)}';
+      relativePaths.add(relativePath);
       final match = pattern.firstMatch(_name(file));
       if (match == null) {
         errors.add(
@@ -203,6 +233,7 @@ final class StoreAssetValidator {
     return _GroupValidationResult(
       validatedFileCount: files.length,
       scenes: scenes.where(_scenes.contains).toSet(),
+      relativePaths: relativePaths.toSet(),
     );
   }
 
@@ -285,16 +316,16 @@ final class StoreAssetValidator {
     }
   }
 
-  Future<String> _readAppVersion() async {
+  Future<({String version, int buildNumber})> _readAppIdentity() async {
     final source = await _file('apps/mobile/pubspec.yaml').readAsString();
     final match = RegExp(
-      r'^version:\s*(\d+\.\d+\.\d+)(?:\+\d+)?\s*$',
+      r'^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$',
       multiLine: true,
     ).firstMatch(source);
     if (match == null) {
-      throw StateError('Unable to read the Flutter release version.');
+      throw StateError('Unable to read the Flutter release identity.');
     }
-    return match.group(1)!;
+    return (version: match.group(1)!, buildNumber: int.parse(match.group(2)!));
   }
 
   File _file(String relativePath) => File(_resolve(relativePath));
@@ -397,10 +428,12 @@ final class _GroupValidationResult {
   const _GroupValidationResult({
     required this.validatedFileCount,
     required this.scenes,
+    required this.relativePaths,
   });
 
   final int validatedFileCount;
   final Set<String> scenes;
+  final Set<String> relativePaths;
 }
 
 const _scenes = <String>{

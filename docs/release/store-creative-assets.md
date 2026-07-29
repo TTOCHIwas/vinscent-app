@@ -49,14 +49,41 @@ commit과 런타임 설정으로 빌드한 앱에서 생성한다.
 
 각 스크린샷 파일의 `platform-device-class`는 차례로
 `android-phone`, `android-tablet`, `ios-iphone-6.9`,
-`ios-ipad-13`을 사용한다. 제출 직전에는 다음 유한 명령으로 장수, 파일명,
-해상도, 형식과 알파 채널을 검증한다. 자산이 아직 준비되지 않은 동안에는
-누락된 그룹을 실패로 보고하는 것이 정상이다.
+`ios-ipad-13`을 사용한다. 스크린샷을 추가할 때
+`store-assets/capture-manifest.json`에 출시 버전·빌드 번호·commit과
+파일별 실제 기기·OS를 함께 기록한다.
+
+```json
+{
+  "schemaVersion": 1,
+  "appVersion": "1.0.0",
+  "buildNumber": 1,
+  "releaseCommit": "a1b2c3d",
+  "captures": [
+    {
+      "file": "store-assets/google-play/phone/android-phone-01-home-1.0.0-a1b2c3d.png",
+      "device": "실제 기기 모델명",
+      "os": "Android 실제 버전"
+    }
+  ]
+}
+```
+
+모든 스크린샷은 매니페스트에 정확히 한 번 포함되어야 하며 파일명의
+commit과 `releaseCommit`이 같아야 한다. 제출 직전에는 다음 유한 명령으로
+장수, 파일명, 캡처 출처, 해상도, 형식과 알파 채널을 검증한다. 자산이 아직
+준비되지 않은 동안에는 누락된 그룹을 실패로 보고하는 것이 정상이다.
 
 ```powershell
 cd apps/mobile
-..\..\.toolchains\flutter\bin\dart.bat run tool/verify_store_assets.dart
+..\..\.toolchains\flutter\bin\dart.bat run tool/verify_store_assets.dart `
+  --app-version 1.0.0 `
+  --build-number <출시 후보 빌드 번호>
 ```
+
+옵션을 생략하면 개발 중 확인을 위해 `pubspec.yaml`의 버전과 빌드 번호를
+사용한다. 최종 제출 자산에는 Android·iOS 출시 후보를 만들 때 입력한 실제
+빌드 번호를 명시한다.
 
 ## 3. Google Play
 
@@ -133,6 +160,7 @@ UI와 기능이 같은 경우 App Store Connect가 고해상도 이미지를 작
 
 - [ ] 모든 파일이 현재 출시 후보 commit에서 만들어짐
 - [ ] 파일명, 촬영 기기, OS, 앱 version·build 기록
+- [ ] `capture-manifest.json`과 파일명의 버전·commit 일치
 - [ ] Play 아이콘 512×512px, 최대 1,024KB
 - [ ] Play feature graphic 1024×500px, 알파 없음
 - [ ] Play 휴대전화 8장과 태블릿 최소 4장 규격 확인

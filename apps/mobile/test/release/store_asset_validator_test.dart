@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 
 import '../../tool/store_asset_alt_text_validator.dart';
+import '../../tool/store_asset_capture_manifest_validator.dart';
 import '../../tool/store_asset_validator.dart';
 
 void main() {
@@ -18,23 +20,83 @@ void main() {
     final report = await StoreAssetValidator(
       repositoryRoot: root,
       rasterReader: _fixtureRaster,
-    ).validate(appVersion: '1.0.0');
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
 
     expect(report.errors, isEmpty);
-    expect(report.validatedFileCount, 31);
+    expect(report.validatedFileCount, 32);
   });
 
   test('reports missing asset groups without duplicate scene errors', () async {
     final report = await StoreAssetValidator(
       repositoryRoot: root,
       rasterReader: _fixtureRaster,
-    ).validate(appVersion: '1.0.0');
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
 
     expect(report.errors, hasLength(7));
     expect(report.errors.where((error) => error.contains('[scene]')), isEmpty);
     expect(report.errors.join('\n'), contains('feature-graphic.png [missing]'));
     expect(report.errors.join('\n'), contains('google-play/phone [count]'));
     expect(report.errors.join('\n'), contains('app-store/ipad-13 [count]'));
+  });
+
+  test('requires capture metadata when screenshots are present', () async {
+    await _createCompleteLayout(root);
+    await _file(root, StoreAssetCaptureManifestValidator.manifestPath).delete();
+
+    final report = await StoreAssetValidator(
+      repositoryRoot: root,
+      rasterReader: _fixtureRaster,
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
+
+    expect(
+      report.errors.join('\n'),
+      contains('Required capture manifest is missing.'),
+    );
+  });
+
+  test('binds screenshot filenames to the captured release commit', () async {
+    await _createCompleteLayout(root);
+    final manifest = _file(
+      root,
+      StoreAssetCaptureManifestValidator.manifestPath,
+    );
+    final values =
+        jsonDecode(await manifest.readAsString()) as Map<String, Object?>;
+    values['releaseCommit'] = 'abcdef0';
+    await manifest.writeAsString(jsonEncode(values));
+
+    final report = await StoreAssetValidator(
+      repositoryRoot: root,
+      rasterReader: _fixtureRaster,
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
+
+    expect(
+      report.errors.join('\n'),
+      contains('Screenshot filename does not match releaseCommit:'),
+    );
+  });
+
+  test('rejects incomplete capture inventory and source details', () async {
+    await _createCompleteLayout(root);
+    final manifest = _file(
+      root,
+      StoreAssetCaptureManifestValidator.manifestPath,
+    );
+    final values =
+        jsonDecode(await manifest.readAsString()) as Map<String, Object?>;
+    final captures = (values['captures']! as List<Object?>)
+        .cast<Map<String, Object?>>();
+    captures.first['device'] = '';
+    captures.removeLast();
+    await manifest.writeAsString(jsonEncode(values));
+
+    final report = await StoreAssetValidator(
+      repositoryRoot: root,
+      rasterReader: _fixtureRaster,
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
+
+    expect(report.errors.join('\n'), contains('captures[0].device'));
+    expect(report.errors.join('\n'), contains('Missing capture metadata:'));
   });
 
   test('rejects invalid screenshot naming and alpha channels', () async {
@@ -49,7 +111,7 @@ void main() {
         hasAlpha: true,
         byteLength: 1,
       ),
-    ).validate(appVersion: '1.0.0');
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
 
     expect(report.errors.join('\n'), contains('[filename]'));
     expect(report.errors.join('\n'), contains('[alpha]'));
@@ -93,7 +155,7 @@ void main() {
     final report = await StoreAssetValidator(
       repositoryRoot: root,
       rasterReader: _fixtureRaster,
-    ).validate(appVersion: '1.0.0');
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
 
     expect(
       report.errors.join('\n'),
@@ -135,7 +197,7 @@ void main() {
           }
           return _fixtureRaster(file);
         },
-      ).validate(appVersion: '1.0.0');
+      ).validate(appVersion: '1.0.0', buildNumber: 1);
 
       expect(
         report.errors.join('\n'),
@@ -178,6 +240,7 @@ Future<void> _createCompleteLayout(Directory root) async {
   ]);
   await _createGroup(root, 'app-store/iphone-6.9', 'ios-iphone-6.9', _scenes);
   await _createGroup(root, 'app-store/ipad-13', 'ios-ipad-13', _scenes);
+  await _writeCaptureManifest(root);
 }
 
 Future<void> _writeAltTextManifest(Directory root) async {
@@ -204,6 +267,69 @@ Future<void> _writeAltTextManifest(Directory root) async {
   }
 }
 ''');
+}
+
+Future<void> _writeCaptureManifest(Directory root) async {
+  final captures = <Map<String, Object?>>[];
+  void addGroup(
+    String directory,
+    String prefix,
+    List<String> scenes,
+    String device,
+    String os,
+  ) {
+    for (var index = 0; index < scenes.length; index += 1) {
+      final order = (index + 1).toString().padLeft(2, '0');
+      captures.add({
+        'file':
+            'store-assets/$directory/'
+            '$prefix-$order-${scenes[index]}-1.0.0-abcdef1.png',
+        'device': device,
+        'os': os,
+      });
+    }
+  }
+
+  addGroup(
+    'google-play/phone',
+    'android-phone',
+    _scenes,
+    'Pixel 9 Pro',
+    'Android 16',
+  );
+  addGroup(
+    'google-play/tablet',
+    'android-tablet',
+    const ['home', 'calendar', 'ai', 'settings'],
+    'Pixel Tablet',
+    'Android 16',
+  );
+  addGroup(
+    'app-store/iphone-6.9',
+    'ios-iphone-6.9',
+    _scenes,
+    'iPhone 16 Pro Max',
+    'iOS 26',
+  );
+  addGroup(
+    'app-store/ipad-13',
+    'ios-ipad-13',
+    _scenes,
+    'iPad Pro 13-inch',
+    'iPadOS 26',
+  );
+
+  final file = _file(root, StoreAssetCaptureManifestValidator.manifestPath);
+  await file.create(recursive: true);
+  await file.writeAsString(
+    const JsonEncoder.withIndent('  ').convert({
+      'schemaVersion': 1,
+      'appVersion': '1.0.0',
+      'buildNumber': 1,
+      'releaseCommit': 'abcdef1',
+      'captures': captures,
+    }),
+  );
 }
 
 Future<void> _createGroup(
