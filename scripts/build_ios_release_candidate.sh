@@ -104,14 +104,128 @@ if [[ ${#ipa_candidates[@]} -ne 1 ]]; then
   exit 1
 fi
 
+archive_path="${archive_candidates[0]}"
+ipa_path="${ipa_candidates[0]}"
+app_bundle="$archive_path/Products/Applications/Runner.app"
+widget_bundle="$app_bundle/PlugIns/VinscentWidgets.appex"
+
+test -d "$app_bundle"
+test -d "$widget_bundle"
+test -s "$app_bundle/PrivacyInfo.xcprivacy"
+test -s "$widget_bundle/PrivacyInfo.xcprivacy"
+unzip -t "$ipa_path" >/dev/null
+codesign --verify --deep --strict "$app_bundle"
+
+read_plist_value() {
+  local plist_path="$1"
+  local key_path="$2"
+  /usr/libexec/PlistBuddy -c "Print :${key_path}" "$plist_path"
+}
+
+require_equal() {
+  local label="$1"
+  local actual="$2"
+  local expected="$3"
+
+  if [[ "$actual" != "$expected" ]]; then
+    echo "${label} must be '${expected}'; found '${actual:-missing}'." >&2
+    exit 1
+  fi
+}
+
+runner_bundle_id="$(read_plist_value "$app_bundle/Info.plist" CFBundleIdentifier)"
+widget_bundle_id="$(
+  read_plist_value "$widget_bundle/Info.plist" CFBundleIdentifier
+)"
+archive_version="$(
+  read_plist_value "$app_bundle/Info.plist" CFBundleShortVersionString
+)"
+archive_build_number="$(read_plist_value "$app_bundle/Info.plist" CFBundleVersion)"
+
+require_equal "Runner bundle ID" "$runner_bundle_id" "com.vinscent.vinscent"
+require_equal \
+  "Widget bundle ID" \
+  "$widget_bundle_id" \
+  "com.vinscent.vinscent.widgets"
+require_equal "Archive version" "$archive_version" "$app_version"
+require_equal "Archive build number" "$archive_build_number" "$build_number"
+
+temporary_evidence="$(mktemp -d)"
+trap 'rm -rf "$temporary_evidence"' EXIT
+runner_entitlements="$temporary_evidence/Runner-entitlements.plist"
+widget_entitlements="$temporary_evidence/VinscentWidgets-entitlements.plist"
+privacy_manifest_list="$temporary_evidence/privacy-manifests.txt"
+
+codesign -d --entitlements :- "$app_bundle" \
+  > "$runner_entitlements" \
+  2> "$temporary_evidence/Runner-codesign.txt"
+codesign -d --entitlements :- "$widget_bundle" \
+  > "$widget_entitlements" \
+  2> "$temporary_evidence/VinscentWidgets-codesign.txt"
+test -s "$runner_entitlements"
+test -s "$widget_entitlements"
+
+push_environment="$(
+  read_plist_value "$runner_entitlements" aps-environment
+)"
+runner_app_group="$(
+  read_plist_value \
+    "$runner_entitlements" \
+    "com.apple.security.application-groups:0"
+)"
+widget_app_group="$(
+  read_plist_value \
+    "$widget_entitlements" \
+    "com.apple.security.application-groups:0"
+)"
+sign_in_with_apple="$(
+  read_plist_value \
+    "$runner_entitlements" \
+    "com.apple.developer.applesignin:0"
+)"
+
+require_equal "Push environment" "$push_environment" "production"
+require_equal \
+  "Runner App Group" \
+  "$runner_app_group" \
+  "group.com.vinscent.vinscent"
+require_equal \
+  "Widget App Group" \
+  "$widget_app_group" \
+  "group.com.vinscent.vinscent"
+require_equal "Sign in with Apple" "$sign_in_with_apple" "Default"
+
+if read_plist_value "$widget_entitlements" aps-environment >/dev/null 2>&1; then
+  echo "Widget must not declare the push notification entitlement." >&2
+  exit 1
+fi
+
+if read_plist_value \
+  "$widget_entitlements" \
+  "com.apple.developer.applesignin:0" \
+  >/dev/null 2>&1; then
+  echo "Widget must not declare Sign in with Apple." >&2
+  exit 1
+fi
+
+find "$app_bundle" -name PrivacyInfo.xcprivacy -type f -print |
+  sort > "$privacy_manifest_list"
+if [[ "$(wc -l < "$privacy_manifest_list")" -lt 2 ]]; then
+  echo "Runner archive must contain app and widget privacy manifests." >&2
+  exit 1
+fi
+
 mkdir -p "$evidence_directory"
 
 ipa_output="$evidence_directory/danjjan-ios-build-${build_number}.ipa"
 archive_output="$evidence_directory/danjjan-ios-build-${build_number}.xcarchive.zip"
-cp "${ipa_candidates[0]}" "$ipa_output"
+cp "$ipa_path" "$ipa_output"
 ditto -c -k --sequesterRsrc --keepParent \
-  "${archive_candidates[0]}" \
+  "$archive_path" \
   "$archive_output"
+cp "$runner_entitlements" "$evidence_directory/"
+cp "$widget_entitlements" "$evidence_directory/"
+cp "$privacy_manifest_list" "$evidence_directory/"
 
 commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
 created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -122,6 +236,10 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf 'build_number=%s\n' "$build_number"
   printf 'xcode_version=%s\n' "$xcode_version"
   printf 'iphoneos_sdk_version=%s\n' "$iphoneos_sdk_version"
+  printf 'runner_bundle_id=%s\n' "$runner_bundle_id"
+  printf 'widget_bundle_id=%s\n' "$widget_bundle_id"
+  printf 'push_environment=%s\n' "$push_environment"
+  printf 'app_group=%s\n' "$runner_app_group"
   printf 'created_at=%s\n' "$created_at"
 } > "$evidence_directory/metadata.txt"
 
@@ -130,7 +248,13 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   shasum -a 256 \
     "$(basename "$ipa_output")" \
     "$(basename "$archive_output")" \
+    "$(basename "$runner_entitlements")" \
+    "$(basename "$widget_entitlements")" \
+    "$(basename "$privacy_manifest_list")" \
     > SHA256SUMS
 )
+
+trap - EXIT
+rm -rf "$temporary_evidence"
 
 echo "iOS release candidate created at ${evidence_directory}"
