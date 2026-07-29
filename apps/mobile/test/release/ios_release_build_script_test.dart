@@ -12,6 +12,8 @@ void main() {
     expect(source, contains('set -euo pipefail'));
     expect(source, contains(r'"$(uname -s)" != "Darwin"'));
     expect(source, contains('positive-build-number'));
+    expect(source, contains('main-commit-sha'));
+    expect(source, contains(r'^[0-9a-f]{40}$'));
     for (final variable in _requiredConfiguration) {
       expect(source, contains(variable));
     }
@@ -30,11 +32,17 @@ void main() {
     );
     expect(
       RegExp(
-        r'^"\$source_verifier" "\$source_commit_sha"$',
+        r'^"\$source_verifier" "\$expected_commit_sha"$',
         multiLine: true,
       ).allMatches(source),
       hasLength(2),
     );
+    expect(
+      source,
+      contains(r'git -C "$repository_root" branch --show-current'),
+    );
+    expect(source, contains(r'"$source_branch" != "main"'));
+    expect(source, contains(r'expected_commit_sha="$2"'));
     expect(source, contains(r'source_commit_sha="$('));
     expect(source, contains('xcodebuild -version'));
     expect(source, contains('xcrun --sdk iphoneos --show-sdk-version'));

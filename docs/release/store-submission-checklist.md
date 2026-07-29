@@ -194,7 +194,10 @@ App Privacy 세부 답변은
 - [ ] Xcode 26 이상과 iOS 26 SDK로 Distribution 서명 archive 생성
 - [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값과
   Apple Developer Membership의 10자리 `DANJJAN_APPLE_TEAM_ID` 주입
-- [ ] 추적 파일 수정과 미추적 파일이 없는 source commit에서 스크립트 실행
+- [ ] `main`에서 출시할 40자 commit SHA를 명시해
+  `build_ios_release_candidate.sh` 실행
+- [ ] 입력한 SHA와 HEAD가 일치하고 추적 파일 수정과 미추적 파일이 없는
+  source commit에서 스크립트 실행
 - [ ] IPA·xcarchive·SHA-256·commit SHA 증빙 보관
 - [ ] 최종 IPA 증빙의 export 방식이 `app-store`이고 Runner·위젯 Team ID와
   application identifier가 지정한 Apple Team ID에 정확히 일치함

@@ -243,12 +243,13 @@ export DANJJAN_SUPABASE_ANON_KEY="<anon-key>"
 export DANJJAN_KAKAO_NATIVE_APP_KEY="<native-app-key>"
 export DANJJAN_POLICY_BASE_URL="https://정책-웹-기본-주소"
 export DANJJAN_APPLE_TEAM_ID="<10자리-Team-ID>"
-scripts/build_ios_release_candidate.sh 1
+scripts/build_ios_release_candidate.sh 1 <main의-40자-commit-SHA>
 ```
 
-스크립트는 macOS와 양의 build number, Xcode 26 이상, iOS 26 SDK 이상,
-필수 값, 10자리 Apple Team ID, Supabase·정책 웹의 HTTPS를 검증한다. 이후
-Dart 포맷·전체 분석·테스트를 거쳐 App Store 배포 방식이 명시된
+스크립트는 macOS와 양의 build number, 40자 소문자 commit SHA, 현재
+branch가 `main`이고 HEAD가 입력한 SHA와 같은지, Xcode 26 이상, iOS 26 SDK
+이상, 필수 값, 10자리 Apple Team ID, Supabase·정책 웹의 HTTPS를 검증한다.
+이후 Dart 포맷·전체 분석·테스트를 거쳐 App Store 배포 방식이 명시된
 `flutter build ipa --release --export-method app-store`를 실행하고 다음
 증빙을 `apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에
 만든다.

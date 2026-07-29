@@ -6,8 +6,12 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-if [[ $# -ne 1 || ! "$1" =~ ^[1-9][0-9]*$ ]]; then
-  echo "Usage: scripts/build_ios_release_candidate.sh <positive-build-number>" >&2
+if [[ $# -ne 2 ||
+      ! "$1" =~ ^[1-9][0-9]*$ ||
+      ! "$2" =~ ^[0-9a-f]{40}$ ]]; then
+  echo \
+    "Usage: scripts/build_ios_release_candidate.sh <positive-build-number> <main-commit-sha>" \
+    >&2
   exit 1
 fi
 
@@ -75,13 +79,21 @@ script_directory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repository_root="$(cd "$script_directory/.." && pwd)"
 mobile_directory="$repository_root/apps/mobile"
 build_number="$1"
+expected_commit_sha="$2"
 flutter_binary="${FLUTTER_BIN:-flutter}"
 dart_binary="${DART_BIN:-dart}"
 evidence_directory="$mobile_directory/build/release-evidence/ios-build-${build_number}"
 evidence_parent="$(dirname "$evidence_directory")"
 source_verifier="$repository_root/scripts/verify_release_source.sh"
+source_branch="$(git -C "$repository_root" branch --show-current)"
 source_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
-"$source_verifier" "$source_commit_sha"
+
+if [[ "$source_branch" != "main" ]]; then
+  echo "iOS release candidates must be built from main." >&2
+  exit 1
+fi
+
+"$source_verifier" "$expected_commit_sha"
 
 cd "$mobile_directory"
 
@@ -281,7 +293,7 @@ if [[ "$(wc -l < "$privacy_manifest_list")" -lt 2 ]]; then
   exit 1
 fi
 
-"$source_verifier" "$source_commit_sha"
+"$source_verifier" "$expected_commit_sha"
 
 mkdir -p "$evidence_parent"
 staged_evidence="$(
