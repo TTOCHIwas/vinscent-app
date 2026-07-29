@@ -58,6 +58,16 @@ void main() {
     });
   });
 
+  test('Google Play icon matches store asset requirements', () {
+    final icon = File('../../store-assets/google-play/app-icon-512.png');
+
+    expect(icon.existsSync(), isTrue, reason: icon.path);
+    final png = _readPng(icon);
+    expect(png.size, (width: 512, height: 512));
+    expect(png.colorType, _truecolorWithAlpha);
+    expect(icon.lengthSync(), lessThanOrEqualTo(1024 * 1024));
+  });
+
   group('iOS app icons', () {
     final iconDirectory = Directory(
       'ios/Runner/Assets.xcassets/AppIcon.appiconset',
@@ -152,6 +162,7 @@ _PngInfo _readPng(File file) {
   return _PngInfo(
     width: data.getUint32(16),
     height: data.getUint32(20),
+    colorType: colorType,
     hasTransparency:
         colorType == _grayscaleWithAlpha ||
         colorType == _truecolorWithAlpha ||
@@ -178,11 +189,13 @@ final class _PngInfo {
   const _PngInfo({
     required this.width,
     required this.height,
+    required this.colorType,
     required this.hasTransparency,
   });
 
   final int width;
   final int height;
+  final int colorType;
   final bool hasTransparency;
 
   ({int width, int height}) get size => (width: width, height: height);

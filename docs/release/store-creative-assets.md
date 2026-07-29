@@ -48,6 +48,14 @@ commit과 런타임 설정으로 빌드한 앱에서 생성한다.
   `apps/mobile/assets/icons/app_icon.svg`에서 출력한다.
 - Play 아이콘은 기기 런처의 adaptive icon과 별개인 스토어 자산이다.
 
+제출 파일은 `store-assets/google-play/app-icon-512.png`에 보관한다.
+검증된 iOS 1024px 출력물에서 다시 생성할 때는 다음 유한 명령을 사용한다.
+
+```powershell
+cd apps/mobile
+..\..\.toolchains\flutter\bin\dart.bat run tool/generate_play_store_icon.dart
+```
+
 ### Feature graphic
 
 - 1024×500px JPEG 또는 24-bit PNG
