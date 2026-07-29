@@ -68,6 +68,7 @@ void main() {
     "calendar": "캘린더",
     "ai": "AI",
     "settings": "설정",
+    "card-editor": "태블릿 카드 편집",
     "unknown": "잘못된 키"
   }
 }
@@ -78,6 +79,30 @@ void main() {
     expect(errors.join('\n'), contains('[length]'));
     expect(errors.join('\n'), contains('phone.home'));
     expect(errors.join('\n'), contains('tablet.unknown'));
+    expect(errors.join('\n'), isNot(contains('tablet.card-editor')));
+  });
+
+  test('requires alt text for optional Play tablet scenes in use', () async {
+    await _createCompleteLayout(root);
+    await _touch(
+      root,
+      'store-assets/google-play/tablet/'
+      'android-tablet-05-card-editor-1.0.0-abcdef0.png',
+    );
+
+    final report = await StoreAssetValidator(
+      repositoryRoot: root,
+      rasterReader: _fixtureRaster,
+    ).validate(appVersion: '1.0.0');
+
+    expect(
+      report.errors.join('\n'),
+      contains('Missing alt text: tablet.card-editor.'),
+    );
+    expect(
+      report.errors.join('\n'),
+      isNot(contains('Unknown alt-text key: tablet.card-editor.')),
+    );
   });
 
   test('reads PNG dimensions and alpha-channel information', () async {

@@ -63,14 +63,24 @@ final class StoreAssetValidator {
       _playFeatureRule,
       errors,
     );
+    final tabletScenes = <String>{};
+    for (final group in _groups) {
+      final result = await _validateGroup(group, version, errors);
+      count += result.validatedFileCount;
+      if (group.directory == 'store-assets/google-play/tablet') {
+        tabletScenes.addAll(result.scenes);
+      }
+    }
     final altTextFile = _file(StoreAssetAltTextValidator.manifestPath);
     if (altTextFile.existsSync()) {
       count += 1;
     }
-    errors.addAll(const StoreAssetAltTextValidator().validate(altTextFile));
-    for (final group in _groups) {
-      count += await _validateGroup(group, version, errors);
-    }
+    errors.addAll(
+      const StoreAssetAltTextValidator().validate(
+        altTextFile,
+        requiredTabletScenes: tabletScenes,
+      ),
+    );
 
     errors.sort();
     return StoreAssetReport(
@@ -103,7 +113,7 @@ final class StoreAssetValidator {
     return 1;
   }
 
-  Future<int> _validateGroup(
+  Future<_GroupValidationResult> _validateGroup(
     _GroupSpec group,
     String version,
     List<String> errors,
@@ -190,7 +200,10 @@ final class StoreAssetValidator {
         errors.add(_issue(group.directory, 'scene', 'Missing scene: $scene.'));
       }
     }
-    return files.length;
+    return _GroupValidationResult(
+      validatedFileCount: files.length,
+      scenes: scenes.where(_scenes.contains).toSet(),
+    );
   }
 
   Future<void> _validateImage(
@@ -359,6 +372,16 @@ final class _GroupSpec {
   final int maximum;
   final Set<String> requiredScenes;
   final _ImageRule rule;
+}
+
+final class _GroupValidationResult {
+  const _GroupValidationResult({
+    required this.validatedFileCount,
+    required this.scenes,
+  });
+
+  final int validatedFileCount;
+  final Set<String> scenes;
 }
 
 const _scenes = <String>{

@@ -7,7 +7,10 @@ final class StoreAssetAltTextValidator {
   static const manifestPath = 'store-assets/google-play/alt-text.ko.json';
   static const maximumCharacterCount = 140;
 
-  List<String> validate(File file) {
+  List<String> validate(
+    File file, {
+    Set<String> requiredTabletScenes = const {},
+  }) {
     if (!file.existsSync()) {
       return [_issue('missing', 'Required Play alt-text manifest is missing.')];
     }
@@ -30,25 +33,44 @@ final class StoreAssetAltTextValidator {
       errors,
     );
     _validateText(decoded['featureGraphic'], 'featureGraphic', errors);
-    _validateGroup(decoded['phone'], 'phone', _phoneScenes, errors);
-    _validateGroup(decoded['tablet'], 'tablet', _tabletScenes, errors);
+    _validateGroup(
+      decoded['phone'],
+      'phone',
+      requiredScenes: _phoneScenes,
+      allowedScenes: _phoneScenes,
+      errors: errors,
+    );
+    _validateGroup(
+      decoded['tablet'],
+      'tablet',
+      requiredScenes: {..._minimumTabletScenes, ...requiredTabletScenes},
+      allowedScenes: _phoneScenes,
+      errors: errors,
+    );
     return errors;
   }
 
   void _validateGroup(
     Object? value,
-    String group,
-    Set<String> requiredScenes,
-    List<String> errors,
-  ) {
+    String group, {
+    required Set<String> requiredScenes,
+    required Set<String> allowedScenes,
+    required List<String> errors,
+  }) {
     if (value is! Map<String, Object?>) {
       errors.add(_issue('format', '$group must be a JSON object.'));
       return;
     }
 
-    _validateKeys(value, requiredScenes, group, errors);
+    _validateRequiredKeys(value, requiredScenes, group, errors);
+    _validateAllowedKeys(value, allowedScenes, group, errors);
     for (final scene in requiredScenes) {
       _validateText(value[scene], '$group.$scene', errors);
+    }
+    for (final scene in value.keys.where(allowedScenes.contains)) {
+      if (!requiredScenes.contains(scene)) {
+        _validateText(value[scene], '$group.$scene', errors);
+      }
     }
   }
 
@@ -58,11 +80,28 @@ final class StoreAssetAltTextValidator {
     String group,
     List<String> errors,
   ) {
-    final actualKeys = values.keys.toSet();
-    for (final key in expectedKeys.difference(actualKeys)) {
+    _validateRequiredKeys(values, expectedKeys, group, errors);
+    _validateAllowedKeys(values, expectedKeys, group, errors);
+  }
+
+  void _validateRequiredKeys(
+    Map<String, Object?> values,
+    Set<String> requiredKeys,
+    String group,
+    List<String> errors,
+  ) {
+    for (final key in requiredKeys.difference(values.keys.toSet())) {
       errors.add(_issue('missing', 'Missing alt text: $group.$key.'));
     }
-    for (final key in actualKeys.difference(expectedKeys)) {
+  }
+
+  void _validateAllowedKeys(
+    Map<String, Object?> values,
+    Set<String> allowedKeys,
+    String group,
+    List<String> errors,
+  ) {
+    for (final key in values.keys.toSet().difference(allowedKeys)) {
       errors.add(_issue('key', 'Unknown alt-text key: $group.$key.'));
     }
   }
@@ -94,4 +133,4 @@ const _phoneScenes = <String>{
   'settings',
 };
 
-const _tabletScenes = <String>{'home', 'calendar', 'ai', 'settings'};
+const _minimumTabletScenes = <String>{'home', 'calendar', 'ai', 'settings'};
