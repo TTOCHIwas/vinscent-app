@@ -1,11 +1,9 @@
-import {
-  assertEquals,
-  assertRejects,
-} from 'jsr:@std/assert@1.0.14';
+import assert from 'node:assert/strict';
+import test from 'node:test';
 
 import { dispatchInBatches } from './dispatch_in_batches.ts';
 
-Deno.test('dispatchInBatches preserves order and bounds concurrency', async () => {
+test('dispatchInBatches preserves order and bounds concurrency', async () => {
   let activeCount = 0;
   let maximumActiveCount = 0;
 
@@ -21,21 +19,21 @@ Deno.test('dispatchInBatches preserves order and bounds concurrency', async () =
     },
   );
 
-  assertEquals(results, [2, 4, 6, 8, 10]);
-  assertEquals(maximumActiveCount, 2);
+  assert.deepEqual(results, [2, 4, 6, 8, 10]);
+  assert.equal(maximumActiveCount, 2);
 });
 
-Deno.test('dispatchInBatches rejects an invalid concurrency', async () => {
-  await assertRejects(
+test('dispatchInBatches rejects an invalid concurrency', async () => {
+  await assert.rejects(
     () => dispatchInBatches([1], 0, async (value) => value),
     RangeError,
   );
 });
 
-Deno.test('dispatchInBatches attempts later batches after one item fails', async () => {
+test('dispatchInBatches attempts later batches after one item fails', async () => {
   const attemptedValues: number[] = [];
 
-  await assertRejects(
+  await assert.rejects(
     () =>
       dispatchInBatches([1, 2, 3, 4], 2, async (value) => {
         attemptedValues.push(value);
@@ -47,5 +45,5 @@ Deno.test('dispatchInBatches attempts later batches after one item fails', async
     AggregateError,
   );
 
-  assertEquals(attemptedValues, [1, 2, 3, 4]);
+  assert.deepEqual(attemptedValues, [1, 2, 3, 4]);
 });
