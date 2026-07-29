@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import 'push_token_authorization_policy.dart';
 import 'push_token_failure.dart';
 
 final pushTokenRepositoryProvider = Provider<PushTokenRepository>((ref) {
@@ -29,7 +30,7 @@ abstract interface class PushTokenRepository {
 
   Future<Map<String, dynamic>?> initiallyOpenedNotification();
 
-  Future<void> registerToken(String token);
+  Future<void> registerRefreshedTokenIfAuthorized(String token);
 }
 
 class FirebasePushTokenRepository implements PushTokenRepository {
@@ -46,6 +47,7 @@ class FirebasePushTokenRepository implements PushTokenRepository {
     description: '질문, 스토리, 녹음, 연결 상태 알림을 표시합니다.',
     importance: Importance.high,
   );
+  static const _authorizationPolicy = PushTokenAuthorizationPolicy();
 
   final FirebaseMessaging _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications;
@@ -160,9 +162,10 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       'FCM notification permission result: ${settings.authorizationStatus}',
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+    if (!_authorizationPolicy.canRegister(settings.authorizationStatus)) {
       _debugPushLog(
-        'Current device token registration skipped: permission denied',
+        'Current device token registration skipped: '
+        'authorization=${settings.authorizationStatus}',
       );
       return;
     }
@@ -180,7 +183,7 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       'FCM token received: prefix=${_tokenPrefix(token)}, '
       'length=${token.length}',
     );
-    await registerToken(token);
+    await _registerToken(token);
   }
 
   @override
@@ -220,7 +223,31 @@ class FirebasePushTokenRepository implements PushTokenRepository {
   }
 
   @override
-  Future<void> registerToken(String token) async {
+  Future<void> registerRefreshedTokenIfAuthorized(String token) async {
+    _ensureSupabaseConfigured();
+
+    if (!_isPushPlatformSupported) {
+      _debugPushLog(
+        'Refreshed token registration skipped: unsupported platform',
+      );
+      throw const PushTokenRepositoryException(
+        PushTokenFailureReason.unsupportedPlatform,
+      );
+    }
+
+    final settings = await _messaging.getNotificationSettings();
+    if (!_authorizationPolicy.canRegister(settings.authorizationStatus)) {
+      _debugPushLog(
+        'Refreshed token registration skipped: '
+        'authorization=${settings.authorizationStatus}',
+      );
+      return;
+    }
+
+    await _registerToken(token);
+  }
+
+  Future<void> _registerToken(String token) async {
     _ensureSupabaseConfigured();
 
     if (!_isPushPlatformSupported) {

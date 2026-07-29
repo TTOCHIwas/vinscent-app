@@ -133,5 +133,5 @@ class _FakePushTokenRepository implements PushTokenRepository {
   }
 
   @override
-  Future<void> registerToken(String token) async {}
+  Future<void> registerRefreshedTokenIfAuthorized(String token) async {}
 }

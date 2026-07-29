@@ -56,7 +56,7 @@ class PushTokenController extends AsyncNotifier<void> {
 
       unawaited(
         repository
-            .registerToken(token)
+            .registerRefreshedTokenIfAuthorized(token)
             .then((_) {
               _debugPushLog('Refreshed token registration completed');
             })
