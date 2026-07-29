@@ -12,6 +12,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] Gemini Cloud Billing과 데이터 처리 조건 확정
 - [ ] 상업 이용 가능한 날씨 API 계약·엔드포인트 확정
 - [ ] AI·알림 진단 로그와 신고 기록 보관기간 확정
+- [ ] UGC 게시 전 필터 공급자와 텍스트·이미지·오디오 검사 범위 확정
 - [ ] 신고 운영 채널, 담당자, 검토 목표 시간 확정
 - [ ] `/privacy`, `/terms`, `/safety`, `/account-deletion` 공개 배포
 - [ ] 앱 설정에서 개인정보처리방침과 이용약관 URL 연결
@@ -54,6 +55,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] Data safety에 `play-data-safety.md`의 검토 완료 답변 반영
 - [ ] 계정 삭제 질문에 앱 내부 경로와 외부 삭제 URL 등록
 - [ ] AI 생성 콘텐츠, UGC 신고·차단·운영 검토 흐름을 review note에 설명
+- [ ] UGC 게시 전 필터와 검사 실패 시 비공개 처리 흐름을 review note에 설명
 - [ ] coarse location의 일회성 날씨 추천 목적을 정확히 선언
 - [ ] 카메라, 마이크, 사진 저장, 알림 권한의 사용자 기능 설명
 
