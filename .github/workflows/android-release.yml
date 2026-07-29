@@ -108,6 +108,8 @@ jobs:
           fi
       - name: Resolve Flutter dependencies
         run: flutter pub get
+      - name: Verify resolved release source
+        run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Check Dart formatting
         run: dart format --output=none --set-exit-if-changed lib test integration_test
       - name: Analyze Flutter
@@ -425,6 +427,8 @@ jobs:
           )
           printf 'size_analysis=flutter-code-size\n' \
             >> "$release_dir/metadata.txt"
+      - name: Verify final release source
+        run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Upload release evidence
         id: release-artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

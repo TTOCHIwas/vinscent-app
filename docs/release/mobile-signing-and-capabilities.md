@@ -137,6 +137,13 @@ Actions의 `Android release candidate`를 실행할 때 Play Console에서 아�
 - Flutter Dart·asset 코드 크기 분석 JSON과 SHA-256
 - commit SHA, 앱 version, build number, 생성 시각
 
+워크플로는 `flutter pub get` 직후와 최종 artifact 업로드 직전에
+`scripts/verify_release_source.sh`를 실행한다. 두 시점 모두 현재 HEAD가
+workflow를 시작한 `GITHUB_SHA`와 같고 추적 파일 수정, staged 변경과
+미추적 파일이 없어야 한다. 따라서 의존성 해석이나 빌드가 lockfile 또는
+source를 바꾼 결과를 원래 commit의 AAB로 기록하지 않는다. Git에서 제외된
+빌드 산출물은 검사 대상이 아니다.
+
 워크플로는 실제 manifest의 package, versionName, versionCode, min SDK,
 target SDK를 입력값과 저장소 계약에 대조한다. 완성된 AAB는 JAR 서명
 무결성, 단일 서명자, CI에 등록된 업로드 키 인증서와의 SHA-256 지문 일치,
@@ -253,10 +260,11 @@ Dart 포맷·전체 분석·테스트를 거쳐 App Store 배포 방식이 명�
 - production push 환경과 App Group
 
 릴리스 후보는 추적 파일 수정과 미추적 파일이 전혀 없는 source worktree에서
-만들어야 한다. 스크립트는 빌드 시작 전에 이를 검사하고 source commit SHA를
-고정한다. archive 검증이 끝난 뒤 worktree와 HEAD를 다시 검사하므로 빌드
-도중 소스나 lockfile이 바뀐 결과를 원래 commit의 증빙으로 기록하지 않는다.
-빌드 산출물처럼 Git에서 제외된 파일은 이 검사 대상이 아니다.
+만들어야 한다. iOS 스크립트도 공통 `verify_release_source.sh`를 빌드 시작
+전과 archive 검증 후에 실행해 source commit SHA와 worktree를 다시
+검사한다. 따라서 빌드 도중 소스나 lockfile이 바뀐 결과를 원래 commit의
+증빙으로 기록하지 않는다. 빌드 산출물처럼 Git에서 제외된 파일은 이 검사
+대상이 아니다.
 
 스크립트는 archive의 코드 서명과 IPA 압축 무결성을 먼저 검사한다. 이어서
 IPA의 `Payload`에 앱이 하나만 있는지 확인하고, 최종 export된 Runner·위젯의

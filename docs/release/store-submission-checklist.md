@@ -131,6 +131,7 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] 16KB 검증 보고서에서 BundleConfig와 모든 native library가 통과함
 - [ ] Android 15 이상 16KB 환경에서 설치·시작·핵심 기능 smoke test 통과
 - [ ] `Android release candidate` workflow로 서명된 Release AAB 생성
+- [ ] 의존성 해석 후와 artifact 업로드 전 source commit·worktree 검증 통과
 - [ ] mapping file과 native debug symbols 보관·업로드
 - [ ] workflow artifact의 AAB·mapping·manifest·16KB 보고서 SHA-256과
   commit SHA 보관

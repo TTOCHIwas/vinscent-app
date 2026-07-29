@@ -21,24 +21,21 @@ void main() {
     expect(source, contains(r'-z "$authority"'));
     expect(source, contains(r'"$value" == *[[:space:]]*'));
     expect(source, contains(r'^[A-Z0-9]{10}$'));
-    expect(source, contains('require_clean_source_worktree()'));
     expect(
       source,
       contains(
-        r'git -C "$repository_root" status --porcelain --untracked-files=all',
+        r'source_verifier="$repository_root/scripts/'
+        'verify_release_source.sh"',
       ),
     );
     expect(
       RegExp(
-        r'^require_clean_source_worktree$',
+        r'^"\$source_verifier" "\$source_commit_sha"$',
         multiLine: true,
       ).allMatches(source),
       hasLength(2),
     );
-    expect(source, contains('iOS release source worktree must be clean.'));
     expect(source, contains(r'source_commit_sha="$('));
-    expect(source, contains(r'current_commit_sha="$('));
-    expect(source, contains('Release source commit'));
     expect(source, contains('xcodebuild -version'));
     expect(source, contains('xcrun --sdk iphoneos --show-sdk-version'));
     expect(

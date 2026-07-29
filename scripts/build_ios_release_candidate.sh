@@ -79,18 +79,9 @@ flutter_binary="${FLUTTER_BIN:-flutter}"
 dart_binary="${DART_BIN:-dart}"
 evidence_directory="$mobile_directory/build/release-evidence/ios-build-${build_number}"
 evidence_parent="$(dirname "$evidence_directory")"
-
-require_clean_source_worktree() {
-  if [[ -n "$(
-    git -C "$repository_root" status --porcelain --untracked-files=all
-  )" ]]; then
-    echo "iOS release source worktree must be clean." >&2
-    exit 1
-  fi
-}
-
-require_clean_source_worktree
+source_verifier="$repository_root/scripts/verify_release_source.sh"
 source_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
+"$source_verifier" "$source_commit_sha"
 
 cd "$mobile_directory"
 
@@ -290,9 +281,7 @@ if [[ "$(wc -l < "$privacy_manifest_list")" -lt 2 ]]; then
   exit 1
 fi
 
-current_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
-require_equal "Release source commit" "$current_commit_sha" "$source_commit_sha"
-require_clean_source_worktree
+"$source_verifier" "$source_commit_sha"
 
 mkdir -p "$evidence_parent"
 staged_evidence="$(

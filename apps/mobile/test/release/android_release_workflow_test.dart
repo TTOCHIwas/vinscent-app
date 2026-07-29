@@ -48,6 +48,40 @@ void main() {
     expect(source, contains(r'"$value" == *[[:space:]]*'));
   });
 
+  test('release evidence remains bound to the triggering source commit', () {
+    final source = workflow.readAsStringSync();
+    const verifierCommand =
+        r'../../scripts/verify_release_source.sh "$GITHUB_SHA"';
+
+    expect(source, contains('- name: Verify resolved release source'));
+    expect(source, contains('- name: Verify final release source'));
+    expect(
+      RegExp(
+        '^\\s*run:\\s+${RegExp.escape(verifierCommand)}\$',
+        multiLine: true,
+      ).allMatches(source),
+      hasLength(2),
+    );
+
+    final dependencyIndex = source.indexOf(
+      '- name: Resolve Flutter dependencies',
+    );
+    final resolvedSourceIndex = source.indexOf(
+      '- name: Verify resolved release source',
+    );
+    final sizeAnalysisIndex = source.indexOf(
+      '- name: Analyze Android app size',
+    );
+    final finalSourceIndex = source.indexOf(
+      '- name: Verify final release source',
+    );
+    final uploadIndex = source.indexOf('- name: Upload release evidence');
+
+    expect(resolvedSourceIndex, greaterThan(dependencyIndex));
+    expect(finalSourceIndex, greaterThan(sizeAnalysisIndex));
+    expect(uploadIndex, greaterThan(finalSourceIndex));
+  });
+
   test('release evidence contains build, symbol and SDK proof', () {
     final source = workflow.readAsStringSync();
 

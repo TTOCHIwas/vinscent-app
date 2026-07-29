@@ -1,1 +1,2 @@
 scripts/build_ios_release_candidate.sh text eol=lf
+scripts/verify_release_source.sh text eol=lf
