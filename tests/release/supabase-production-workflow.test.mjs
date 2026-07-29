@@ -1,17 +1,17 @@
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import test from "node:test";
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
 
 const workflowUrl = new URL(
-  "../../.github/workflows/supabase-production.yml",
+  '../../.github/workflows/supabase-production.yml',
   import.meta.url,
 );
 
 async function loadWorkflow() {
-  return readFile(workflowUrl, "utf8");
+  return readFile(workflowUrl, 'utf8');
 }
 
-test("Supabase production release is manual, serialized, and approval-gated", async () => {
+test('Supabase production release is manual, serialized, and approval-gated', async () => {
   const source = await loadWorkflow();
 
   assert.match(source, /^on:\r?\n\s+workflow_dispatch:/m);
@@ -22,7 +22,7 @@ test("Supabase production release is manual, serialized, and approval-gated", as
   assert.match(source, /permissions:\r?\n\s+contents: read/);
 });
 
-test("Supabase production release verifies the exact main commit and project", async () => {
+test('Supabase production release verifies the exact main commit and project', async () => {
   const source = await loadWorkflow();
 
   assert.match(source, /GITHUB_REF.*refs\/heads\/main/);
@@ -33,7 +33,7 @@ test("Supabase production release verifies the exact main commit and project", a
   assert.match(source, /vars\.SUPABASE_PROJECT_ID/);
 });
 
-test("Supabase production release revalidates database and Edge contracts", async () => {
+test('Supabase production release revalidates database and Edge contracts', async () => {
   const source = await loadWorkflow();
 
   assert.match(source, /verify_supabase_runtime_environment\.mjs/);
@@ -44,7 +44,7 @@ test("Supabase production release revalidates database and Edge contracts", asyn
   assert.match(source, /supabase db lint --local --level error/);
 });
 
-test("Supabase production release uses forward-only deployment commands", async () => {
+test('Supabase production release uses forward-only deployment commands', async () => {
   const source = await loadWorkflow();
 
   assert.match(source, /supabase db push --linked --dry-run/);
@@ -59,7 +59,21 @@ test("Supabase production release uses forward-only deployment commands", async 
   assert.doesNotMatch(source, /supabase secrets (?:set|unset)/);
 });
 
-test("Supabase production workflow pins every external action to a commit", async () => {
+test('Supabase production release rejects stale and missing remote functions', async () => {
+  const source = await loadWorkflow();
+
+  assert.match(
+    source,
+    /verify_supabase_function_inventory\.mjs[\s\S]*--allow-missing/,
+  );
+  assert.match(
+    source,
+    /verify_supabase_function_inventory\.mjs[\s\S]*functions\.json/,
+  );
+  assert.doesNotMatch(source, /--prune/);
+});
+
+test('Supabase production workflow pins every external action to a commit', async () => {
   const source = await loadWorkflow();
   const uses = [...source.matchAll(/uses:\s*([^\s#]+)/g)].map(
     (match) => match[1],

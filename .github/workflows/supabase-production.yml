@@ -130,6 +130,17 @@ jobs:
           fi
       - name: Link protected production project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - name: Reject untracked remote Edge functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions list \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --output json \
+            > "$RUNNER_TEMP/functions-before-deploy.json"
+          node scripts/verify_supabase_function_inventory.mjs \
+            --remote "$RUNNER_TEMP/functions-before-deploy.json" \
+            --allow-missing
       - name: Preview pending migrations
         run: supabase db push --linked --dry-run
       - name: Apply pending migrations
@@ -151,6 +162,8 @@ jobs:
             --project-ref "$SUPABASE_PROJECT_ID" \
             --output json \
             > "$evidence_dir/functions.json"
+          node scripts/verify_supabase_function_inventory.mjs \
+            --remote "$evidence_dir/functions.json"
           find supabase/migrations -type f -name '*.sql' -print0 |
             sort -z |
             xargs -0 sha256sum > "$evidence_dir/migration-files.sha256"
