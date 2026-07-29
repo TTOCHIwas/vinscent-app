@@ -91,6 +91,7 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
   `DANJJAN_POLICY_BASE_URL` 공개 변수 등록
 - [ ] Play App Signing 활성화
 - [ ] `versionCode`가 이전 업로드보다 큼
+- [ ] Release AAB의 target SDK가 Android 16(API 36) 이상임
 - [ ] `Android release candidate` workflow로 서명된 Release AAB 생성
 - [ ] mapping file과 native debug symbols 보관·업로드
 - [ ] workflow artifact의 AAB·mapping SHA-256과 commit SHA 보관
@@ -138,7 +139,7 @@ App Privacy 세부 답변은
 - [ ] iPad 지원 화면 screenshot 등록
 - [ ] 앱 아이콘과 화면이 실제 출시 build와 일치
 - [ ] version `1.0.0`, build number가 App Store Connect에서 고유함
-- [ ] Distribution 서명 archive 생성
+- [ ] Xcode 26 이상과 iOS 26 SDK로 Distribution 서명 archive 생성
 - [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값 주입
 - [ ] IPA·xcarchive·SHA-256·commit SHA 증빙 보관
 - [ ] Runner의 production push entitlement 확인

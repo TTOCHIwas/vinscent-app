@@ -17,6 +17,19 @@ void main() {
     }
     expect(source, contains('validate_https_url "DANJJAN_SUPABASE_URL"'));
     expect(source, contains('validate_https_url "DANJJAN_POLICY_BASE_URL"'));
+    expect(source, contains('xcodebuild -version'));
+    expect(source, contains('xcrun --sdk iphoneos --show-sdk-version'));
+    expect(
+      source,
+      contains('validate_minimum_major_version "Xcode" "\$xcode_version" 26'),
+    );
+    expect(
+      source,
+      contains(
+        'validate_minimum_major_version '
+        '"iPhoneOS SDK" "\$iphoneos_sdk_version" 26',
+      ),
+    );
   });
 
   test('iOS release script builds a verified archive without uploading it', () {
@@ -37,6 +50,8 @@ void main() {
     expect(source, contains('ditto -c -k'));
     expect(source, contains('shasum -a 256'));
     expect(source, contains(r'git -C "$repository_root" rev-parse HEAD'));
+    expect(source, contains(r"printf 'xcode_version=%s\n'"));
+    expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
     expect(source, isNot(contains('altool')));
     expect(source, isNot(contains('transporter')));
     expect(source, isNot(contains('app-store-connect')));

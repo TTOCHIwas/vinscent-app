@@ -11,6 +11,24 @@ if [[ $# -ne 1 || ! "$1" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
+xcode_version="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
+iphoneos_sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+
+validate_minimum_major_version() {
+  local tool_name="$1"
+  local version="$2"
+  local minimum_major="$3"
+  local major="${version%%.*}"
+
+  if [[ ! "$major" =~ ^[0-9]+$ ]] || (( major < minimum_major )); then
+    echo "${tool_name} ${minimum_major} or later is required; found ${version:-unknown}." >&2
+    exit 1
+  fi
+}
+
+validate_minimum_major_version "Xcode" "$xcode_version" 26
+validate_minimum_major_version "iPhoneOS SDK" "$iphoneos_sdk_version" 26
+
 required_variables=(
   DANJJAN_SUPABASE_URL
   DANJJAN_SUPABASE_ANON_KEY
@@ -102,6 +120,8 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf 'commit_sha=%s\n' "$commit_sha"
   printf 'app_version=%s\n' "$app_version"
   printf 'build_number=%s\n' "$build_number"
+  printf 'xcode_version=%s\n' "$xcode_version"
+  printf 'iphoneos_sdk_version=%s\n' "$iphoneos_sdk_version"
   printf 'created_at=%s\n' "$created_at"
 } > "$evidence_directory/metadata.txt"
 

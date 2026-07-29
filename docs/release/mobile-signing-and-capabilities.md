@@ -179,14 +179,14 @@ export DANJJAN_POLICY_BASE_URL="https://정책-웹-기본-주소"
 scripts/build_ios_release_candidate.sh 1
 ```
 
-스크립트는 macOS와 양의 build number, 필수 값, Supabase·정책 웹의 HTTPS를
-검증한다. 이후 전체 분석·테스트와 `flutter build ipa --release`를
-실행하고 다음 증빙을
+스크립트는 macOS와 양의 build number, Xcode 26 이상, iOS 26 SDK 이상,
+필수 값, Supabase·정책 웹의 HTTPS를 검증한다. 이후 전체 분석·테스트와
+`flutter build ipa --release`를 실행하고 다음 증빙을
 `apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에 만든다.
 
 - IPA와 SHA-256
 - dSYM을 포함한 `.xcarchive.zip`과 SHA-256
-- commit SHA, 앱 version, build number, 생성 시각
+- commit SHA, 앱 version, build number, Xcode·iOS SDK version, 생성 시각
 
 빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 스크립트는
 App Store Connect에 업로드하지 않으므로 Organizer 또는 Transporter에서
@@ -211,3 +211,4 @@ capability 활성화는 Apple 계정 권한이 있는 담당자가 수행한다.
 
 - [Flutter iOS 릴리스](https://docs.flutter.dev/deployment/ios)
 - [App Store Connect build 업로드](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/)
+- [Apple SDK 최소 제출 요구사항](https://developer.apple.com/news/upcoming-requirements/)
