@@ -67,7 +67,7 @@ private struct VinscentCharacterWidget: Widget {
         .containerBackground(.white, for: .widget)
     }
     .configurationDisplayName("단짠 캐릭터")
-    .description("Play or record your shared couple message.")
+    .description("둘이 나눈 녹음을 재생하거나 새로 녹음해요")
     .supportedFamilies([.systemSmall])
     .contentMarginsDisabled()
   }
@@ -279,14 +279,14 @@ enum VinscentCardTilt: String, AppEnum {
   case rightFive
 
   static var typeDisplayRepresentation = TypeDisplayRepresentation(
-    name: "Card tilt"
+    name: "카드 기울기"
   )
   static var caseDisplayRepresentations: [VinscentCardTilt: DisplayRepresentation] = [
-    .leftFive: "Left 5 degrees",
-    .leftTwoPointFive: "Left 2.5 degrees",
-    .none: "Straight",
-    .rightTwoPointFive: "Right 2.5 degrees",
-    .rightFive: "Right 5 degrees",
+    .leftFive: "왼쪽으로 5도",
+    .leftTwoPointFive: "왼쪽으로 2.5도",
+    .none: "기울이지 않음",
+    .rightTwoPointFive: "오른쪽으로 2.5도",
+    .rightFive: "오른쪽으로 5도",
   ]
 
   var degrees: Double {
@@ -301,12 +301,12 @@ enum VinscentCardTilt: String, AppEnum {
 }
 
 struct VinscentCardConfigurationIntent: WidgetConfigurationIntent {
-  static var title: LocalizedStringResource = "Card appearance"
+  static var title: LocalizedStringResource = "카드 모양"
   static var description = IntentDescription(
-    "Choose whether the card is straight or lightly tilted."
+    "카드를 그대로 두거나 살짝 기울여 표시해요"
   )
 
-  @Parameter(title: "Tilt", default: VinscentCardTilt.none)
+  @Parameter(title: "기울기", default: VinscentCardTilt.none)
   var tilt: VinscentCardTilt
 }
 
@@ -360,7 +360,7 @@ private struct VinscentCardWidget: Widget {
         .containerBackground(.clear, for: .widget)
     }
     .configurationDisplayName("단짠 카드")
-    .description("Show your partner's latest card.")
+    .description("상대방이 남긴 최신 카드를 보여줘요")
     .supportedFamilies([.systemSmall])
     .contentMarginsDisabled()
   }

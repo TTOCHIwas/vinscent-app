@@ -5,15 +5,15 @@ enum VinscentWidgetIntentError: LocalizedError {
   case appProcessRequired
 
   var errorDescription: String? {
-    "The widget action must run in the containing app process."
+    "위젯 동작을 실행하려면 단짠 앱 프로세스가 필요해요"
   }
 }
 
 @available(iOS 18.0, *)
 struct ToggleVinscentWidgetRecordingIntent: AudioRecordingIntent {
-  static var title: LocalizedStringResource = "Toggle widget recording"
+  static var title: LocalizedStringResource = "위젯 녹음 시작 또는 종료"
   static var description = IntentDescription(
-    "Starts or stops the 15-second couple recording."
+    "15초 녹음을 시작하거나 종료해요"
   )
   static var openAppWhenRun = false
 
@@ -31,9 +31,9 @@ struct ToggleVinscentWidgetRecordingIntent: AudioRecordingIntent {
 
 @available(iOS 18.0, *)
 struct ToggleVinscentWidgetPlaybackIntent: AudioPlaybackIntent {
-  static var title: LocalizedStringResource = "Toggle widget playback"
+  static var title: LocalizedStringResource = "위젯 녹음 재생 또는 정지"
   static var description = IntentDescription(
-    "Plays or stops the current couple recording."
+    "현재 녹음을 재생하거나 멈춰요"
   )
   static var openAppWhenRun = false
 
