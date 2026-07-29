@@ -18,7 +18,10 @@ import {
 import {
   createProactiveSuggestionHttpHandler,
 } from '../../../services/ai-api/src/presentation/proactive-suggestion-http-handler.ts';
-import { requiredEnv } from '../_shared/environment.ts';
+import {
+  optionalEnv,
+  requiredEnv,
+} from '../_shared/environment.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 
 const defaultModel = 'gemini-3.1-flash-lite';
@@ -45,11 +48,6 @@ Deno.serve(createProactiveSuggestionHttpHandler({
   authenticator: new SupabaseAccessTokenAuthenticator(supabase),
   generator,
 }));
-
-function optionalEnv(name: string): string | undefined {
-  const value = Deno.env.get(name)?.trim();
-  return value ? value : undefined;
-}
 
 function createWeatherClient(): OpenMeteoForecastClient | null {
   try {

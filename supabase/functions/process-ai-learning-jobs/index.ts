@@ -3,7 +3,11 @@ import { GeminiStructuredGenerationClient } from '../../../services/ai-api/src/i
 import { GeminiLearningModel } from '../../../services/ai-api/src/infrastructure/gemini-learning-model.ts';
 import { SupabaseLearningJobRepository } from '../../../services/ai-api/src/infrastructure/supabase-learning-job-repository.ts';
 import { createLearningWorkerHttpHandler } from '../../../services/ai-api/src/presentation/learning-worker-http-handler.ts';
-import { requiredEnv } from '../_shared/environment.ts';
+import {
+  optionalEnv,
+  optionalPositiveIntegerEnv,
+  requiredEnv,
+} from '../_shared/environment.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 
 const defaultModel = 'gemini-3.1-flash-lite';
@@ -32,21 +36,3 @@ Deno.serve(createLearningWorkerHttpHandler({
   maximumBatchSize: optionalPositiveIntegerEnv('AI_WORKER_MAX_BATCH_SIZE') ?? 3,
   processor,
 }));
-
-function optionalEnv(name: string): string | undefined {
-  const value = Deno.env.get(name)?.trim();
-  return value ? value : undefined;
-}
-
-function optionalPositiveIntegerEnv(name: string): number | undefined {
-  const value = optionalEnv(name);
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new RangeError(`${name} must be a positive integer`);
-  }
-  return parsed;
-}
