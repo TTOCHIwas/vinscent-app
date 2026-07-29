@@ -62,6 +62,21 @@ void main() {
     expect(source, contains('16kb-page-support.json'));
     expect(source, contains('page_alignment=16KB'));
     expect(source, contains('AndroidManifest.xml.sha256'));
+    expect(source, contains('Analyze Android app size'));
+    expect(source, contains('--analyze-size'));
+    expect(source, contains('--target-platform android-arm64'));
+    expect(source, contains(r'size_report_dir="$HOME/.flutter-devtools"'));
+    expect(source, contains("'aab-code-size-analysis*.json'"));
+    expect(source, contains(r'${#size_reports[@]} != 1'));
+    expect(
+      source,
+      contains(r'sha256sum "${release_name}-code-size-analysis.json"'),
+    );
+    expect(
+      source,
+      contains(r'> "${release_name}-code-size-analysis.json.sha256"'),
+    );
+    expect(source, contains('size_analysis=flutter-code-size'));
     for (final metadataKey in const [
       'commit_sha',
       'package_name',
@@ -85,6 +100,15 @@ void main() {
       source,
       isNot(matches(RegExp(r'path:\s+.*upload-keystore', multiLine: true))),
     );
+
+    final evidenceIndex = source.indexOf('- name: Prepare release evidence');
+    final sizeAnalysisIndex = source.indexOf(
+      '- name: Analyze Android app size',
+    );
+    final uploadIndex = source.indexOf('- name: Upload release evidence');
+    expect(evidenceIndex, greaterThanOrEqualTo(0));
+    expect(sizeAnalysisIndex, greaterThan(evidenceIndex));
+    expect(uploadIndex, greaterThan(sizeAnalysisIndex));
   });
 
   test('release workflow uses least privilege and immutable actions', () {

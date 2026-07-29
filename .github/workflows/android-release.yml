@@ -242,6 +242,58 @@ jobs:
             printf 'proguard_mapping=embedded_and_exported\n'
             printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > "$release_dir/metadata.txt"
+      - name: Analyze Android app size
+        env:
+          DANJJAN_UPLOAD_STORE_FILE: ${{ runner.temp }}/danjjan-upload-keystore.jks
+          DANJJAN_UPLOAD_STORE_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_STORE_PASSWORD }}
+          DANJJAN_UPLOAD_KEY_ALIAS: ${{ secrets.DANJJAN_UPLOAD_KEY_ALIAS }}
+          DANJJAN_UPLOAD_KEY_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_KEY_PASSWORD }}
+          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
+          DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
+        run: |
+          set -euo pipefail
+          release_dir="build/release-evidence"
+          release_name="danjjan-android-build-${BUILD_NUMBER}"
+
+          size_report_dir="$HOME/.flutter-devtools"
+          mkdir -p "$size_report_dir"
+          find "$size_report_dir" \
+            -type f \
+            -name 'aab-code-size-analysis*.json' \
+            -delete
+          flutter build appbundle \
+            --release \
+            --no-pub \
+            --analyze-size \
+            --target-platform android-arm64 \
+            --build-number "$BUILD_NUMBER" \
+            --dart-define=SUPABASE_URL="$DANJJAN_SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$DANJJAN_SUPABASE_ANON_KEY" \
+            --dart-define=KAKAO_NATIVE_APP_KEY="$DANJJAN_KAKAO_NATIVE_APP_KEY" \
+            --dart-define=POLICY_BASE_URL="$DANJJAN_POLICY_BASE_URL"
+
+          mapfile -t size_reports < <(
+            find "$size_report_dir" \
+              -type f \
+              -name 'aab-code-size-analysis*.json' \
+              -print
+          )
+          if (( ${#size_reports[@]} != 1 )); then
+            echo "Expected one Flutter code-size report; found ${#size_reports[@]}." >&2
+            exit 1
+          fi
+
+          size_evidence="${release_dir}/${release_name}-code-size-analysis.json"
+          cp "${size_reports[0]}" "$size_evidence"
+          (
+            cd "$release_dir"
+            sha256sum "${release_name}-code-size-analysis.json" \
+              > "${release_name}-code-size-analysis.json.sha256"
+          )
+          printf 'size_analysis=flutter-code-size\n' \
+            >> "$release_dir/metadata.txt"
       - name: Upload release evidence
         id: release-artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

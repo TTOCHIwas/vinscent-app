@@ -116,13 +116,18 @@ Actions의 `Android release candidate`를 실행할 때 Play Console에서 아�
 - ProGuard/R8 mapping 파일과 SHA-256
 - 병합된 Release manifest와 SHA-256
 - 16KB BundleConfig·ELF 정렬 검증 보고서와 SHA-256
+- Flutter Dart·asset 코드 크기 분석 JSON과 SHA-256
 - commit SHA, 앱 version, build number, 생성 시각
 
 워크플로는 실제 manifest의 package, versionName, versionCode, min SDK,
 target SDK를 입력값과 저장소 계약에 대조한다. AAB 내부의 native debug
 symbol과 ProGuard mapping뿐 아니라 BundleConfig의 `PAGE_ALIGNMENT_16K`와
-모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 로컬 AAB는 다음 종료형 명령으로
-같은 검사를 실행할 수 있다.
+모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 표준 AAB를 증빙 폴더에 먼저
+보존한 뒤 별도의 종료형 `--analyze-size` 빌드에서 코드 크기 분석 JSON을
+생성하므로, 분석용 빌드가 제출 후보 AAB를 대체하지 않는다. 분석 빌드는
+Flutter 도구 계약에 따라 단일 `android-arm64` ABI를 대상으로 하며 제출
+AAB의 전체 다운로드 크기가 아니라 릴리스 간 코드·asset 크기 변화 비교에
+사용한다. 로컬 AAB는 다음 종료형 명령으로 같은 정렬 검사를 실행할 수 있다.
 
 ```powershell
 cd apps/mobile

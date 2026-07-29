@@ -110,10 +110,17 @@ Flutter DevTools Performance view에서 UI·Raster frame, shader compilation,
 crash, ANR, startup, slow rendering, partial wake lock 알림을 활성화한다.
 
 Release App Bundle의 Dart·asset 크기 분석은 다음 명령으로 생성한다.
+`Android release candidate` workflow는 표준 제출 AAB를 먼저 증빙에 복사한
+뒤 단일 `android-arm64` 분석 빌드를 별도로 실행하고, 분석 JSON과 SHA-256을
+같은 artifact에 보관한다. 이 JSON은 릴리스 간 Dart·asset 구성 변화를
+비교하는 자료이며 Play Console의 기기별 다운로드 크기를 대신하지 않는다.
 
 ```powershell
 cd apps/mobile
-.\flutterw.cmd build appbundle --release --analyze-size
+.\flutterw.cmd build appbundle `
+  --release `
+  --analyze-size `
+  --target-platform android-arm64
 ```
 
 같은 AAB의 16KB ZIP·ELF 정렬은 다음 종료형 도구로 검증한다.
