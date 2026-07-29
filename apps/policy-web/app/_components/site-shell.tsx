@@ -24,6 +24,7 @@ export function SiteShell({ children }: SiteShellProps) {
             <Link href="/privacy">개인정보</Link>
             <Link href="/terms">이용약관</Link>
             <Link href="/account-deletion">계정 삭제</Link>
+            <Link href="/support">고객지원</Link>
           </nav>
         </div>
       </header>

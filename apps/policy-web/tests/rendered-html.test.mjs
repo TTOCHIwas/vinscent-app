@@ -38,6 +38,7 @@ test("server-renders the Danjjan policy entry point", async () => {
   assert.match(html, /서비스 이용약관/);
   assert.match(html, /안전 이용 약속/);
   assert.match(html, /계정 삭제 안내/);
+  assert.match(html, /고객지원/);
   assert.match(html, /name="robots" content="noindex, nofollow"/i);
   assert.doesNotMatch(html, /codex-preview|Codex/i);
 });
@@ -47,6 +48,7 @@ test("server-renders every policy route with shared navigation", async () => {
     ["/privacy", "개인정보처리방침"],
     ["/terms", "서비스 이용약관"],
     ["/account-deletion", "계정 삭제 안내"],
+    ["/support", "고객지원"],
   ];
 
   for (const [pathname, title] of routes) {
@@ -99,6 +101,19 @@ test("documents the implemented in-app account deletion boundary", async () => {
   assert.match(html, /카드, 녹음, 답변, 캐릭터, 일정과 AI 데이터/);
   assert.match(html, /앱을 사용할 수 없는 경우/);
   assert.match(html, /아직 삭제 접수 창구로 사용할 수 없습니다/);
+  assert.doesNotMatch(html, /mailto:|support@example\.com|example\.com/);
+});
+
+test("publishes a support draft without inventing a contact address", async () => {
+  const response = await render("/support");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /앱에서 바로 확인할 수 있어요/);
+  assert.match(html, /문의가 필요한 문제/);
+  assert.match(html, /계정과 데이터 삭제/);
+  assert.match(html, /href="\/account-deletion"/);
+  assert.match(html, /현재 이 페이지에서는 문의를 접수하지 않습니다/);
   assert.doesNotMatch(html, /mailto:|support@example\.com|example\.com/);
 });
 

@@ -25,4 +25,9 @@ export const policyDocuments: readonly PolicyDocument[] = [
     title: "계정 삭제 안내",
     description: "단짠 계정과 관련 데이터의 삭제 절차를 안내합니다.",
   },
+  {
+    href: "/support",
+    title: "고객지원",
+    description: "단짠 이용 방법과 문의가 필요한 문제를 안내합니다.",
+  },
 ] as const;

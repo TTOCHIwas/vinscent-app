@@ -24,6 +24,7 @@ const requiredPolicyPages = Object.freeze([
   "app/terms/page.tsx",
   "app/safety/page.tsx",
   "app/account-deletion/page.tsx",
+  "app/support/page.tsx",
 ]);
 
 const draftMarkers = Object.freeze([
@@ -31,6 +32,12 @@ const draftMarkers = Object.freeze([
   "공개 전 검토 중입니다",
   "배포용 최종본이 아닙니다",
 ]);
+
+const publicContactPattern =
+  /mailto:[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
+const placeholderContactPattern =
+  /(?:support@)?example\.(?:com|net|org)|example\.test/i;
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -83,6 +90,12 @@ export function validatePolicyReleaseState({ state, pageSources }) {
   }
 
   if (state.status === "ready") {
+    for (const relativePath of requiredPolicyPages) {
+      if (!(relativePath in pageSources)) {
+        errors.push(`Missing required policy page source: ${relativePath}`);
+      }
+    }
+
     for (const [relativePath, source] of Object.entries(pageSources)) {
       const matchedMarker = draftMarkers.find((marker) =>
         source.includes(marker),
@@ -90,6 +103,24 @@ export function validatePolicyReleaseState({ state, pageSources }) {
       if (matchedMarker !== undefined) {
         errors.push(
           `${relativePath} still contains draft marker: ${matchedMarker}`,
+        );
+      }
+    }
+
+    for (const relativePath of [
+      "app/support/page.tsx",
+      "app/account-deletion/page.tsx",
+    ]) {
+      const source = pageSources[relativePath];
+      if (source === undefined) {
+        continue;
+      }
+      if (
+        !publicContactPattern.test(source) ||
+        placeholderContactPattern.test(source)
+      ) {
+        errors.push(
+          `${relativePath} does not include a non-placeholder public mailto contact`,
         );
       }
     }
