@@ -180,7 +180,6 @@ select is(
       and trigger.tgname in (
         'daily_question_answers_require_ugc_policy',
         'couple_characters_require_ugc_policy',
-        'couple_expressions_require_ugc_policy',
         'couple_recordings_require_ugc_policy',
         'couple_current_recordings_require_ugc_policy',
         'couple_recording_slots_require_ugc_policy',
@@ -192,7 +191,7 @@ select is(
         'couples_require_ugc_policy_on_activation'
       )
   ),
-  12::bigint,
+  11::bigint,
   'shared UGC roots and couple activation enforce the current policy'
 );
 select is(

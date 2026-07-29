@@ -70,11 +70,6 @@ create trigger couple_characters_require_ugc_policy
   for each row
   execute function private.enforce_current_user_ugc_safety_policy_acceptance();
 
-create trigger couple_expressions_require_ugc_policy
-  before insert or update on public.couple_expressions
-  for each row
-  execute function private.enforce_current_user_ugc_safety_policy_acceptance();
-
 create trigger couple_recordings_require_ugc_policy
   before insert or update on public.couple_recordings
   for each row
