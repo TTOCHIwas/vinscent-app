@@ -3,8 +3,9 @@
 작성일: 2026-07-29
 
 이 문서는 저장소에서 자동화할 수 없는 Android 업로드 키와 Apple Developer
-계정 설정을 재현하기 위한 체크리스트다. 실제 키, 비밀번호, Team ID는 Git에
-커밋하지 않는다.
+계정 설정을 재현하기 위한 체크리스트다. 실제 키와 비밀번호는 Git에
+커밋하지 않는다. Apple Team ID는 공개 식별자이지만 환경별 설정값으로
+관리한다.
 
 ## 1. Android 업로드 키
 
@@ -195,6 +196,10 @@ Development Team을 지정한다. Apple Developer의
 Firebase Console의 iOS 앱 설정에는 APNs authentication key(`.p8`), Key ID,
 Team ID를 등록한다.
 
+Apple Team ID는 Apple Developer 계정의 Membership details에 표시되는
+10자리 영문 대문자·숫자 식별자다. 비밀값은 아니지만 릴리스 후보가 다른
+개발 팀으로 서명되는 일을 막기 위해 `DANJJAN_APPLE_TEAM_ID`로 명시한다.
+
 Runner의 소스 entitlement에는 개발용 `aps-environment`가 들어간다.
 App Store 아카이브의 최종 서명 entitlement는 배포 프로비저닝 프로파일에
 따라 `production`이어야 한다.
@@ -226,12 +231,13 @@ export DANJJAN_SUPABASE_URL="https://프로젝트.supabase.co"
 export DANJJAN_SUPABASE_ANON_KEY="<anon-key>"
 export DANJJAN_KAKAO_NATIVE_APP_KEY="<native-app-key>"
 export DANJJAN_POLICY_BASE_URL="https://정책-웹-기본-주소"
+export DANJJAN_APPLE_TEAM_ID="<10자리-Team-ID>"
 scripts/build_ios_release_candidate.sh 1
 ```
 
 스크립트는 macOS와 양의 build number, Xcode 26 이상, iOS 26 SDK 이상,
-필수 값, Supabase·정책 웹의 HTTPS를 검증한다. 이후 Dart 포맷·전체
-분석·테스트를 거쳐 App Store 배포 방식이 명시된
+필수 값, 10자리 Apple Team ID, Supabase·정책 웹의 HTTPS를 검증한다. 이후
+Dart 포맷·전체 분석·테스트를 거쳐 App Store 배포 방식이 명시된
 `flutter build ipa --release --export-method app-store`를 실행하고 다음
 증빙을 `apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에
 만든다.
@@ -250,8 +256,10 @@ scripts/build_ios_release_candidate.sh 1
 IPA의 `Payload`에 앱이 하나만 있는지 확인하고, 최종 export된 Runner·위젯의
 코드 서명, bundle ID, version·build number, privacy manifest, production
 push, Sign in with Apple과 App Group을 검사한다. Runner와 위젯의 Team ID가
-다르거나 application identifier가 각 bundle ID와 일치하지 않거나, 위젯에
-push 또는 Sign in with Apple entitlement가 들어가면 실패한다.
+`DANJJAN_APPLE_TEAM_ID`와 다르거나 application identifier가
+`<Team ID>.<bundle ID>`와 정확히 일치하지 않거나, 위젯에 push 또는 Sign in
+with Apple entitlement가 들어가면 실패한다. 서로 같은 잘못된 팀으로 두
+타깃이 서명된 경우도 이 검증에서 차단한다.
 
 빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 검증 중
 실패한 임시 자료는 제거하며, 모든 검사를 통과한 경우에만 최종 증빙
@@ -278,5 +286,6 @@ capability 활성화는 Apple 계정 권한이 있는 담당자가 수행한다.
 참고:
 
 - [Flutter iOS 릴리스](https://docs.flutter.dev/deployment/ios)
+- [Apple Team ID](https://developer.apple.com/help/glossary/team-id/)
 - [App Store Connect build 업로드](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/)
 - [Apple SDK 최소 제출 요구사항](https://developer.apple.com/news/upcoming-requirements/)

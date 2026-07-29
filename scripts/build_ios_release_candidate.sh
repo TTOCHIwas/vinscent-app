@@ -34,6 +34,7 @@ required_variables=(
   DANJJAN_SUPABASE_ANON_KEY
   DANJJAN_KAKAO_NATIVE_APP_KEY
   DANJJAN_POLICY_BASE_URL
+  DANJJAN_APPLE_TEAM_ID
 )
 
 for variable_name in "${required_variables[@]}"; do
@@ -42,6 +43,13 @@ for variable_name in "${required_variables[@]}"; do
     exit 1
   fi
 done
+
+if [[ ! "$DANJJAN_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+  echo \
+    "DANJJAN_APPLE_TEAM_ID must be a 10-character Apple Developer Team ID." \
+    >&2
+  exit 1
+fi
 
 validate_https_url() {
   local variable_name="$1"
@@ -239,21 +247,16 @@ require_equal \
   "$widget_app_group" \
   "group.com.vinscent.vinscent"
 require_equal "Sign in with Apple" "$sign_in_with_apple" "Default"
-require_equal "Widget Team ID" "$widget_team_id" "$runner_team_id"
-
-if [[ "$runner_application_identifier" != *".${runner_bundle_id}" ]]; then
-  echo \
-    "Runner application identifier must end with '.${runner_bundle_id}'; found '${runner_application_identifier:-missing}'." \
-    >&2
-  exit 1
-fi
-
-if [[ "$widget_application_identifier" != *".${widget_bundle_id}" ]]; then
-  echo \
-    "Widget application identifier must end with '.${widget_bundle_id}'; found '${widget_application_identifier:-missing}'." \
-    >&2
-  exit 1
-fi
+require_equal "Runner Team ID" "$runner_team_id" "$DANJJAN_APPLE_TEAM_ID"
+require_equal "Widget Team ID" "$widget_team_id" "$DANJJAN_APPLE_TEAM_ID"
+require_equal \
+  "Runner application identifier" \
+  "$runner_application_identifier" \
+  "${DANJJAN_APPLE_TEAM_ID}.${runner_bundle_id}"
+require_equal \
+  "Widget application identifier" \
+  "$widget_application_identifier" \
+  "${DANJJAN_APPLE_TEAM_ID}.${widget_bundle_id}"
 
 if read_plist_value "$widget_entitlements" aps-environment >/dev/null 2>&1; then
   echo "Widget must not declare the push notification entitlement." >&2
@@ -304,6 +307,7 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf 'runner_bundle_id=%s\n' "$runner_bundle_id"
   printf 'widget_bundle_id=%s\n' "$widget_bundle_id"
   printf 'team_id=%s\n' "$runner_team_id"
+  printf 'team_id_verification=verified\n'
   printf 'runner_application_identifier=%s\n' \
     "$runner_application_identifier"
   printf 'widget_application_identifier=%s\n' \

@@ -184,9 +184,11 @@ App Privacy 세부 답변은
 - [ ] 앱 아이콘과 화면이 실제 출시 build와 일치
 - [ ] version `1.0.0`, build number가 App Store Connect에서 고유함
 - [ ] Xcode 26 이상과 iOS 26 SDK로 Distribution 서명 archive 생성
-- [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값 주입
+- [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값과
+  Apple Developer Membership의 10자리 `DANJJAN_APPLE_TEAM_ID` 주입
 - [ ] IPA·xcarchive·SHA-256·commit SHA 증빙 보관
-- [ ] 최종 IPA 증빙의 export 방식이 `app-store`이고 Runner·위젯 Team ID가 동일함
+- [ ] 최종 IPA 증빙의 export 방식이 `app-store`이고 Runner·위젯 Team ID와
+  application identifier가 지정한 Apple Team ID에 정확히 일치함
 - [ ] Runner의 production push entitlement 확인
 - [ ] 위젯에는 App Group 이외의 불필요한 entitlement가 없음
 - [ ] archive validation 통과 후 build upload

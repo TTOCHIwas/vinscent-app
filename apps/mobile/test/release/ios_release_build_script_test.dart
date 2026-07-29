@@ -20,6 +20,7 @@ void main() {
     expect(source, contains(r'local authority="${value#https://}"'));
     expect(source, contains(r'-z "$authority"'));
     expect(source, contains(r'"$value" == *[[:space:]]*'));
+    expect(source, contains(r'^[A-Z0-9]{10}$'));
     expect(source, contains('xcodebuild -version'));
     expect(source, contains('xcrun --sdk iphoneos --show-sdk-version'));
     expect(
@@ -80,14 +81,25 @@ void main() {
     expect(source, contains('group.com.vinscent.vinscent'));
     expect(source, contains('com.apple.developer.applesignin:0'));
     expect(source, contains('com.apple.developer.team-identifier'));
+    expect(source, contains('Runner Team ID'));
     expect(source, contains('Widget Team ID'));
+    expect(source, contains(r'${DANJJAN_APPLE_TEAM_ID}.${runner_bundle_id}'));
+    expect(source, contains(r'${DANJJAN_APPLE_TEAM_ID}.${widget_bundle_id}'));
     expect(
       source,
-      contains(r'"$runner_application_identifier" != *".${runner_bundle_id}"'),
+      isNot(
+        contains(
+          r'"$runner_application_identifier" != *".${runner_bundle_id}"',
+        ),
+      ),
     );
     expect(
       source,
-      contains(r'"$widget_application_identifier" != *".${widget_bundle_id}"'),
+      isNot(
+        contains(
+          r'"$widget_application_identifier" != *".${widget_bundle_id}"',
+        ),
+      ),
     );
     expect(source, contains('privacy-manifests.txt'));
     expect(source, contains('ditto -c -k'));
@@ -117,4 +129,5 @@ const _requiredConfiguration = <String>[
   'DANJJAN_SUPABASE_ANON_KEY',
   'DANJJAN_KAKAO_NATIVE_APP_KEY',
   'DANJJAN_POLICY_BASE_URL',
+  'DANJJAN_APPLE_TEAM_ID',
 ];
