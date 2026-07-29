@@ -56,6 +56,7 @@ jobs:
           DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
           DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
+          DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
         run: |
           set -euo pipefail
           if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
@@ -78,6 +79,11 @@ jobs:
               exit 1
             fi
           done
+
+          if [[ "$DANJJAN_POLICY_BASE_URL" != https://* ]]; then
+            echo "Missing or invalid android-release variable: DANJJAN_POLICY_BASE_URL" >&2
+            exit 1
+          fi
       - name: Resolve Flutter dependencies
         run: flutter pub get
       - name: Analyze Flutter
@@ -102,6 +108,7 @@ jobs:
           DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
           DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
+          DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
         run: |
           flutter build appbundle \
             --release \
@@ -109,7 +116,8 @@ jobs:
             --build-number "$BUILD_NUMBER" \
             --dart-define=SUPABASE_URL="$DANJJAN_SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$DANJJAN_SUPABASE_ANON_KEY" \
-            --dart-define=KAKAO_NATIVE_APP_KEY="$DANJJAN_KAKAO_NATIVE_APP_KEY"
+            --dart-define=KAKAO_NATIVE_APP_KEY="$DANJJAN_KAKAO_NATIVE_APP_KEY" \
+            --dart-define=POLICY_BASE_URL="$DANJJAN_POLICY_BASE_URL"
       - name: Prepare release evidence
         run: |
           set -euo pipefail

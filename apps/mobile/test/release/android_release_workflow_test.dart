@@ -28,6 +28,8 @@ void main() {
     expect(source, contains('--dart-define=SUPABASE_URL='));
     expect(source, contains('--dart-define=SUPABASE_ANON_KEY='));
     expect(source, contains('--dart-define=KAKAO_NATIVE_APP_KEY='));
+    expect(source, contains('--dart-define=POLICY_BASE_URL='));
+    expect(source, contains(r'vars.DANJJAN_POLICY_BASE_URL'));
   });
 
   test('release evidence contains the bundle, mapping and checksums', () {
@@ -69,4 +71,5 @@ const _requiredConfiguration = <String>[
   'DANJJAN_SUPABASE_URL',
   'DANJJAN_SUPABASE_ANON_KEY',
   'DANJJAN_KAKAO_NATIVE_APP_KEY',
+  'DANJJAN_POLICY_BASE_URL',
 ];

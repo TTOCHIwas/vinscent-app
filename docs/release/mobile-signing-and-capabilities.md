@@ -70,6 +70,16 @@ Supabase URL·anon key와 Kakao Native App Key는 최종 앱에 포함되는 클
 관리한다. service role key, Gemini API key와 같은 서버 비밀키는 모바일
 빌드에 넣지 않는다.
 
+공개 정책 웹을 배포한 뒤 같은 Environment의 variable에 다음 값을
+등록한다.
+
+- `DANJJAN_POLICY_BASE_URL`: 쿼리와 fragment가 없는 HTTPS 정책 웹 기본 주소
+
+이 주소는 공개 정보이므로 secret이 아니라 Environment variable로
+관리한다. 앱은 기본 주소 아래의 `/privacy`와 `/terms`를 설정 화면에서
+외부 브라우저로 연다. 값이 없거나 안전한 HTTPS 주소가 아니면 릴리스 후보
+작업이 실패한다.
+
 PowerShell에서 업로드 키를 Base64로 바꿔 클립보드에 넣을 수 있다.
 
 ```powershell
@@ -92,6 +102,8 @@ gh secret set DANJJAN_UPLOAD_KEY_PASSWORD --env android-release
 gh secret set DANJJAN_SUPABASE_URL --env android-release
 gh secret set DANJJAN_SUPABASE_ANON_KEY --env android-release
 gh secret set DANJJAN_KAKAO_NATIVE_APP_KEY --env android-release
+gh variable set DANJJAN_POLICY_BASE_URL --env android-release `
+  --body "https://정책-웹-기본-주소"
 ```
 
 Actions의 `Android release candidate`를 실행할 때 Play Console에서 아직
