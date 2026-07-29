@@ -105,6 +105,22 @@ void main() {
     );
   });
 
+  test('rejects duplicate screenshot alt text within a device group', () async {
+    final manifest = _file(root, StoreAssetAltTextValidator.manifestPath);
+    await _writeAltTextManifest(root);
+    final source = await manifest.readAsString();
+    await manifest.writeAsString(
+      source.replaceFirst('"calendar": "캘린더"', '"calendar": "홈"'),
+    );
+
+    final errors = const StoreAssetAltTextValidator().validate(manifest);
+
+    expect(
+      errors.join('\n'),
+      contains('phone alt text must be unique: calendar, home.'),
+    );
+  });
+
   test(
     'rejects Play tablet images outside the large-screen contract',
     () async {

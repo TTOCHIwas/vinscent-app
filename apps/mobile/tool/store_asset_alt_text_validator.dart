@@ -72,6 +72,7 @@ final class StoreAssetAltTextValidator {
         _validateText(value[scene], '$group.$scene', errors);
       }
     }
+    _validateUniqueTexts(value, allowedScenes, group, errors);
   }
 
   void _validateKeys(
@@ -114,6 +115,34 @@ final class StoreAssetAltTextValidator {
     if (value.runes.length > maximumCharacterCount) {
       errors.add(
         _issue('length', '$key exceeds $maximumCharacterCount characters.'),
+      );
+    }
+  }
+
+  void _validateUniqueTexts(
+    Map<String, Object?> values,
+    Set<String> allowedKeys,
+    String group,
+    List<String> errors,
+  ) {
+    final keysByText = <String, List<String>>{};
+    for (final entry in values.entries) {
+      if (!allowedKeys.contains(entry.key) || entry.value is! String) {
+        continue;
+      }
+      final text = (entry.value! as String).trim();
+      if (text.isEmpty) {
+        continue;
+      }
+      keysByText.putIfAbsent(text, () => []).add(entry.key);
+    }
+    for (final keys in keysByText.values.where((keys) => keys.length > 1)) {
+      keys.sort();
+      errors.add(
+        _issue(
+          'duplicate',
+          '$group alt text must be unique: ${keys.join(', ')}.',
+        ),
       );
     }
   }
