@@ -88,6 +88,10 @@ jobs:
         with:
           node-version: "22.19.0"
           package-manager-cache: false
+      - name: Test repository release contracts
+        run: node --test "tests/release/*.test.mjs"
+      - name: Reject tracked release secrets
+        run: node scripts/verify_tracked_secrets.mjs
       - name: Test AI service
         working-directory: services/ai-api
         run: npm test

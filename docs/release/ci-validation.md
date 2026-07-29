@@ -18,7 +18,7 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 |---|---|
 | `Flutter` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
 | `iOS native build` | `main` 반영 또는 수동 실행 시 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
-| `Node services` | AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
+| `Node services` | 저장소 출시·비밀값 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
 | `Edge functions` | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
 | `Supabase database` | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
 
@@ -52,6 +52,9 @@ flutter build ios --simulator --debug --no-codesign --no-pub
 Node와 Edge 함수 검증은 종료형 명령으로 실행한다.
 
 ```powershell
+node --test "tests/release/*.test.mjs"
+node scripts/verify_tracked_secrets.mjs
+
 cd services/ai-api
 npm.cmd test
 

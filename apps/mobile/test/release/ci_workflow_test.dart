@@ -52,6 +52,8 @@ const _requiredCommands = <String>[
   'flutter test --no-pub',
   'flutter build apk --debug --no-pub',
   'flutter build ios --simulator --debug --no-codesign --no-pub',
+  'node --test "tests/release/*.test.mjs"',
+  'node scripts/verify_tracked_secrets.mjs',
   'npm test',
   'node scripts/test_supabase_functions.mjs',
   'deno check',
