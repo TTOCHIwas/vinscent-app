@@ -261,12 +261,16 @@ select ok(
   'successful delivery records its completion time'
 );
 
-update public.safety_reports
-set
-  status = 'reviewed',
-  reviewed_at = now(),
-  moderation_note = '확인함'
-where id = '2b000000-0000-0000-0000-000000000001';
+do $$
+begin
+  perform public.review_safety_report(
+    '2b000000-0000-0000-0000-000000000001',
+    'reviewed',
+    'moderation-alert-test',
+    '확인함'
+  );
+end;
+$$;
 
 select is(
   (
@@ -310,12 +314,16 @@ select is(
   'a fresh alert resets earlier transport attempts'
 );
 
-update public.safety_reports
-set
-  status = 'dismissed',
-  reviewed_at = now(),
-  moderation_note = '기각'
-where id = '2b000000-0000-0000-0000-000000000001';
+do $$
+begin
+  perform public.review_safety_report(
+    '2b000000-0000-0000-0000-000000000001',
+    'dismissed',
+    'moderation-alert-test',
+    '기각'
+  );
+end;
+$$;
 
 select is(
   (

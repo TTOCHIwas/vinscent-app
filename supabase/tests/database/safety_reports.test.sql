@@ -317,15 +317,20 @@ select is(
   'ephemeral content is normalized before storage'
 );
 
-update public.safety_reports
-set status = 'dismissed',
-    moderation_note = 'reviewed once',
-    reviewed_at = now()
-where id = (
-  select report_id
-  from captured_safety_reports
-  where name = 'proactive'
-);
+do $$
+begin
+  perform public.review_safety_report(
+    (
+      select report_id
+      from captured_safety_reports
+      where name = 'proactive'
+    ),
+    'dismissed',
+    'safety-reports-test',
+    'reviewed once'
+  );
+end;
+$$;
 
 set local role authenticated;
 
@@ -399,15 +404,20 @@ select is(
   'a changed report clears the previous review time'
 );
 
-update public.safety_reports
-set status = 'dismissed',
-    moderation_note = 'same content reviewed',
-    reviewed_at = now()
-where id = (
-  select report_id
-  from captured_safety_reports
-  where name = 'proactive'
-);
+do $$
+begin
+  perform public.review_safety_report(
+    (
+      select report_id
+      from captured_safety_reports
+      where name = 'proactive'
+    ),
+    'dismissed',
+    'safety-reports-test',
+    'same content reviewed'
+  );
+end;
+$$;
 
 set local role authenticated;
 
