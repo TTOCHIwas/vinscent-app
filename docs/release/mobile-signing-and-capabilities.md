@@ -252,6 +252,12 @@ Dart 포맷·전체 분석·테스트를 거쳐 App Store 배포 방식이 명�
 - 두 target에 공통으로 적용된 Team ID
 - production push 환경과 App Group
 
+릴리스 후보는 추적 파일 수정과 미추적 파일이 전혀 없는 source worktree에서
+만들어야 한다. 스크립트는 빌드 시작 전에 이를 검사하고 source commit SHA를
+고정한다. archive 검증이 끝난 뒤 worktree와 HEAD를 다시 검사하므로 빌드
+도중 소스나 lockfile이 바뀐 결과를 원래 commit의 증빙으로 기록하지 않는다.
+빌드 산출물처럼 Git에서 제외된 파일은 이 검사 대상이 아니다.
+
 스크립트는 archive의 코드 서명과 IPA 압축 무결성을 먼저 검사한다. 이어서
 IPA의 `Payload`에 앱이 하나만 있는지 확인하고, 최종 export된 Runner·위젯의
 코드 서명, bundle ID, version·build number, privacy manifest, production

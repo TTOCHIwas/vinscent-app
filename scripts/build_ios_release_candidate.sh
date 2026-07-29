@@ -80,6 +80,18 @@ dart_binary="${DART_BIN:-dart}"
 evidence_directory="$mobile_directory/build/release-evidence/ios-build-${build_number}"
 evidence_parent="$(dirname "$evidence_directory")"
 
+require_clean_source_worktree() {
+  if [[ -n "$(
+    git -C "$repository_root" status --porcelain --untracked-files=all
+  )" ]]; then
+    echo "iOS release source worktree must be clean." >&2
+    exit 1
+  fi
+}
+
+require_clean_source_worktree
+source_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
+
 cd "$mobile_directory"
 
 app_version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
@@ -278,6 +290,10 @@ if [[ "$(wc -l < "$privacy_manifest_list")" -lt 2 ]]; then
   exit 1
 fi
 
+current_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
+require_equal "Release source commit" "$current_commit_sha" "$source_commit_sha"
+require_clean_source_worktree
+
 mkdir -p "$evidence_parent"
 staged_evidence="$(
   mktemp -d "$evidence_parent/.ios-build-${build_number}.XXXXXX"
@@ -294,11 +310,10 @@ cp "$runner_entitlements" "$staged_evidence/"
 cp "$widget_entitlements" "$staged_evidence/"
 cp "$privacy_manifest_list" "$staged_evidence/"
 
-commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
 created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 {
-  printf 'commit_sha=%s\n' "$commit_sha"
+  printf 'commit_sha=%s\n' "$source_commit_sha"
   printf 'app_version=%s\n' "$app_version"
   printf 'build_number=%s\n' "$build_number"
   printf 'xcode_version=%s\n' "$xcode_version"

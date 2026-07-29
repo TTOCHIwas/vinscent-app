@@ -21,6 +21,24 @@ void main() {
     expect(source, contains(r'-z "$authority"'));
     expect(source, contains(r'"$value" == *[[:space:]]*'));
     expect(source, contains(r'^[A-Z0-9]{10}$'));
+    expect(source, contains('require_clean_source_worktree()'));
+    expect(
+      source,
+      contains(
+        r'git -C "$repository_root" status --porcelain --untracked-files=all',
+      ),
+    );
+    expect(
+      RegExp(
+        r'^require_clean_source_worktree$',
+        multiLine: true,
+      ).allMatches(source),
+      hasLength(2),
+    );
+    expect(source, contains('iOS release source worktree must be clean.'));
+    expect(source, contains(r'source_commit_sha="$('));
+    expect(source, contains(r'current_commit_sha="$('));
+    expect(source, contains('Release source commit'));
     expect(source, contains('xcodebuild -version'));
     expect(source, contains('xcrun --sdk iphoneos --show-sdk-version'));
     expect(
@@ -105,6 +123,17 @@ void main() {
     expect(source, contains('ditto -c -k'));
     expect(source, contains('shasum -a 256'));
     expect(source, contains(r'git -C "$repository_root" rev-parse HEAD'));
+    expect(
+      RegExp(
+        r'^commit_sha="\$\(git -C "\$repository_root" rev-parse HEAD\)"$',
+        multiLine: true,
+      ).hasMatch(source),
+      isFalse,
+    );
+    expect(
+      source,
+      contains(r'''printf 'commit_sha=%s\n' "$source_commit_sha"'''),
+    );
     expect(source, contains(r"printf 'xcode_version=%s\n'"));
     expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
     expect(source, contains(r"printf 'export_method=app-store\n'"));
