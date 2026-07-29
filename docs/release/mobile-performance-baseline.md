@@ -68,6 +68,23 @@ cd apps/mobile
 .\flutterw.cmd run --profile -d <DEVICE_ID>
 ```
 
+동일한 설치 빌드의 cold start를 반복 측정할 때는 앱을 실행하는 장기
+프로세스 대신 다음 종료형 도구를 사용한다.
+
+```powershell
+cd apps/mobile
+..\..\.toolchains\flutter\bin\dart.bat run `
+  tool/measure_android_cold_start.dart `
+  --device <DEVICE_ID> `
+  --output build/release-evidence/android-cold-start.json
+```
+
+도구는 `am force-stop` 뒤 `am start -W`를 실행한다. 첫 1회는 버리고
+기본 10회를 측정한 뒤 p50·p90과 기기·OS·설치 버전·target SDK·commit SHA를
+JSON에 기록하고 종료한다. 각 `adb`·`git` 명령은 20초를 넘기면 실패하며,
+기존 증빙 파일은 덮어쓰지 않는다. 이 결과는 Android vitals와 실제 화면
+표시 시점 측정을 보조하며, Play의 현장 지표를 대체하지 않는다.
+
 시작 시간을 측정할 때 앱을 강제 종료하고 Logcat의 `Displayed` 값을
 기록한다. Android 12 이상에서는 `am start -W` 결과도 함께 보조 자료로
 남길 수 있다.
