@@ -70,6 +70,9 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 
 ### Store listing
 
+한국어 문구, 스크린샷 순서와 심사 재현 절차는
+`docs/release/store-listing-copy-ko.md`를 기준으로 준비한다.
+
 - [ ] 앱 이름 `단짠` 확인, 30자 이하
 - [ ] 짧은 설명 작성, 80자 이하
 - [ ] 전체 설명 작성, 4,000자 이하
