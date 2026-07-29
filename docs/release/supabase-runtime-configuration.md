@@ -82,6 +82,13 @@ Database Webhook과 예약 호출의 생성 자체는 아직 Dashboard 운영
 비밀값을 SQL이나 함수 정의에 평문으로 넣지 않고 Supabase Vault 기반
 호출로 설계한다.
 
+원격 리소스의 현재 상태는 Supabase SQL Editor에서
+`supabase/snippets/audit_edge_runtime_resources.sql`을 실행해 확인한다.
+이 쿼리는 웹훅 정의와 Cron 명령 원문을 반환하지 않으므로 저장된 비밀값을
+노출하지 않는다. 두 결과의 `audit_status`가 모두 `ready`여야 하며,
+archive purge는 운영 주기를 확정하기 전까지
+`cadence_decision_required`로 표시된다.
+
 `supabase/.temp`에는 원격 카탈로그 캐시가 저장되며 운영 설정 일부가
 포함될 수 있다. 이 경로는 Git에서 무시되지만 외부 공유 파일이나 빌드
 산출물에 포함하지 않는다.
