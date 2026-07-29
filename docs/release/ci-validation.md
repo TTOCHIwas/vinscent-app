@@ -6,6 +6,11 @@
 회귀를 검증한다. 이 워크플로는 원격 Supabase, Play Console, App Store
 Connect에 배포하지 않으며 배포 비밀키를 사용하지 않는다.
 
+`.github/workflows/supabase-production.yml`은 CI와 분리된 수동 운영 배포
+워크플로다. 정확한 `main` commit과 project ref 확인, GitHub Environment
+승인, 동일한 Database·Edge 검증을 모두 통과한 뒤에만 migration과
+Edge Function을 배포한다.
+
 GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제한하고,
 외부 액션은 전체 커밋 SHA로 고정한다.
 
@@ -26,6 +31,9 @@ GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 네 �
 `main` 병합 전 필수로 설정한다. macOS 비용을 제한하기 위해 iOS 빌드는
 Pull Request에서는 건너뛰고 `main` 반영 직후와 수동 실행에서 검증한다.
 워크플로 자체의 쓰기 권한이나 배포 비밀키는 추가하지 않는다.
+
+Supabase 운영 배포 설정과 실행 절차는
+`docs/release/supabase-production-deployment.md`를 따른다.
 
 ## 로컬 검증
 

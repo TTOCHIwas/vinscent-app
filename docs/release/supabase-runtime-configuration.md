@@ -100,6 +100,12 @@ archive purge는 운영 주기를 확정하기 전까지
 포함될 수 있다. 이 경로는 Git에서 무시되지만 외부 공유 파일이나 빌드
 산출물에 포함하지 않는다.
 
+Database migration과 Edge Function의 승인된 운영 배포는
+`.github/workflows/supabase-production.yml`을 사용한다. 이 workflow는
+secret 값을 등록하거나 Database Webhook·Cron을 바꾸지 않으며, 실행
+방법과 복구 원칙은
+`docs/release/supabase-production-deployment.md`를 따른다.
+
 ## 공식 근거
 
 - Supabase Edge Function 환경변수와 운영 secrets:
