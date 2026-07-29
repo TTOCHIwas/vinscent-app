@@ -15,8 +15,8 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] UGC 게시 전 필터 공급자와 텍스트·이미지·오디오 검사 범위 확정
 - [ ] 신고 운영 채널, 담당자, 검토 목표 시간 확정
 - [ ] 모더레이션 알림 워커 배포·Cron 연결 후 실제 신고 수신과 재시도 검증
-- [ ] `/privacy`, `/terms`, `/safety`, `/account-deletion` 공개 배포
-- [ ] 앱 설정에서 개인정보처리방침과 이용약관 URL 연결
+- [ ] `/privacy`, `/terms`, `/safety`, `/account-deletion`, `/support` 공개 배포
+- [ ] 앱 설정에서 개인정보처리방침, 이용약관과 고객지원 URL 연결
 - [ ] 공개 정책, `play-data-safety.md`, App Store App Privacy 답변 일치
 - [ ] CI의 Flutter, iOS, Node, Edge, Database 작업이 원격에서 통과
 - [ ] 출시 commit의 모든 Edge Function을 운영 Supabase에 배포
@@ -29,6 +29,18 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 
 정책 웹 공개 조건과 미확정 운영 정보는
 `docs/release/policy-web-release-gates.md`를 따른다.
+
+### 스토어 URL 계약
+
+| 용도 | 공개 URL |
+|---|---|
+| 개인정보처리방침 | `${POLICY_BASE_URL}/privacy` |
+| App Store Support URL·일반 고객지원 | `${POLICY_BASE_URL}/support` |
+| 앱을 사용할 수 없는 경우의 계정 삭제 | `${POLICY_BASE_URL}/account-deletion` |
+| 안전 이용 약속 | `${POLICY_BASE_URL}/safety` |
+
+`POLICY_BASE_URL`은 user info·query·fragment가 없는 공개 HTTPS 기본
+주소여야 하며, 위 경로는 로그인 없이 모바일과 데스크톱에서 열려야 한다.
 
 ## 2. Android 제출
 
@@ -87,7 +99,7 @@ Play Console의 App content에서 두 foreground service 유형마다 다음을
 - [ ] 짧은 설명 작성, 80자 이하
 - [ ] 전체 설명 작성, 4,000자 이하
 - [ ] 지원 이메일 등록
-- [ ] 정책·지원 웹사이트 URL 등록
+- [ ] 정책 웹사이트 URL과 `${POLICY_BASE_URL}/support` 지원 URL 등록
 - [ ] 앱 아이콘과 feature graphic 제작
 - [ ] 실제 기능을 보여주는 휴대전화 screenshot 제작
 - [ ] 태블릿 지원 화면 screenshot 제작
@@ -142,7 +154,8 @@ capability와 archive 검증은
   실제 1:1 공유 범위에 맞게 답변
 - [ ] DSA trader 여부를 자체 판단해 선언하고, EU에 trader로 배포하면
   공개 주소·전화번호·이메일 검증
-- [ ] Support URL과 Privacy Policy URL 입력
+- [ ] Support URL에 `${POLICY_BASE_URL}/support` 입력
+- [ ] Privacy Policy URL에 `${POLICY_BASE_URL}/privacy` 입력
 - [ ] App Privacy에 앱과 모든 제3자 SDK의 수집·사용 데이터 입력
 - [ ] 콘텐츠 권리와 암호화 수출 규정 질문 답변
 - [ ] UGC·AI 기능, 신고·차단, review용 테스트 계정을 review note에 설명
@@ -204,6 +217,8 @@ App Privacy 세부 답변은
 
 - Google Play 앱 생성과 listing:
   https://support.google.com/googleplay/android-developer/answer/9859152
+- Google Play 고객지원 요구사항:
+  https://support.google.com/googleplay/android-developer/answer/113477
 - Google Play target API 요구사항:
   https://support.google.com/googleplay/android-developer/answer/11926878
 - 새 개인 계정 테스트 요구사항:

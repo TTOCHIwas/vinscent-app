@@ -1,9 +1,9 @@
 # 단짠 정책 웹 출시 게이트
 
-이 문서는 공개 개인정보처리방침, 이용약관, 계정 삭제 안내를 작성하고
-배포하기 전에 코드와 운영 조건이 충족해야 하는 기준을 정리한다. 공개
-문서는 실제 처리 상태와 일치해야 하며, 미확정 정보를 추정해서 기재하지
-않는다.
+이 문서는 공개 개인정보처리방침, 이용약관, 계정 삭제 안내와 고객지원
+안내를 작성하고 배포하기 전에 코드와 운영 조건이 충족해야 하는 기준을
+정리한다. 공개 문서는 실제 처리 상태와 일치해야 하며, 미확정 정보를
+추정해서 기재하지 않는다.
 
 검토 기준일은 2026년 7월 29일이다.
 
@@ -74,6 +74,7 @@
 | 진단·신고 보관기간 | 공개 가능한 구체적 보관기간이 확정되지 않음 | 운영자 결정 및 정리 정책 필요 |
 | 신고 기록의 계정 삭제 동작 | `safety_reports.reporter_user_id`가 `auth.users` 삭제 시 연쇄 삭제되므로 신고자의 계정 삭제와 함께 신고·검토·알림 기록도 제거됨 | `20260729004000_add_private_safety_reports.sql` |
 | 외부 삭제 접수 | 정책 웹에 초안만 있고 본인 확인 방법, 공개 접수 주소, 처리 기한과 완료 통지 절차가 없음 | `apps/policy-web/app/account-deletion/page.tsx` |
+| 고객지원 웹 경로 | `/support` 초안은 구현됐지만 실제 공개 이메일과 응답 기준이 없음 | `apps/policy-web/app/support/page.tsx` |
 
 `ap-northeast-1`은 Supabase와 AWS가 표기하는 일본 도쿄 리전이다.
 
@@ -129,6 +130,7 @@
 | `/terms` | 서비스 이용약관 |
 | `/safety` | 공유 콘텐츠와 신고·차단에 적용되는 안전 이용 약속 |
 | `/account-deletion` | 앱 없이 계정 삭제를 요청하는 외부 경로 |
+| `/support` | App Store Support URL과 일반 고객지원 진입점 |
 
 계정 삭제 페이지에는 다음 내용을 포함한다.
 
@@ -139,11 +141,19 @@
 - 법령상 또는 안전 목적상 예외적으로 보관되는 데이터와 기간
 - 요청 처리 예상 기간
 
+고객지원 페이지에는 다음 내용을 포함한다.
+
+- 실제로 수신하고 확인하는 공개 지원 이메일
+- 앱에서 직접 해결할 수 있는 설정과 계정 관리 경로
+- 로그인, 동기화, 알림, 위젯, AI와 안전 신고 문의 범위
+- 계정 삭제 안내로 이동하는 경로
+- 실제 운영 가능한 응답 기준
+
 ## 5. 배포 승인 조건
 
 다음 조건을 모두 충족한 경우에만 정책 웹을 배포한다.
 
-- 운영 결정 12개가 모두 확정됨
+- 운영 결정 13개가 모두 확정됨
 - 공개 문서와 `privacy-data-map.md`가 일치함
 - Gemini와 날씨 API의 운영 계약이 실제 배포 설정과 일치함
 - 앱 내부 계정 삭제 결과와 외부 안내 문구가 일치함
@@ -152,7 +162,13 @@
 - `/safety` 문서와 앱에서 동의받는 정책 버전·내용이 일치함
 - 신규 신고가 실제 운영 채널로 전달되고 재시도·실패를 확인할 수 있음
 - 앱 설정에 개인정보처리방침과 이용약관 링크가 연결됨
-- App Store Connect와 Play Console에 사용할 URL이 확정됨
+- 앱 설정에 고객지원 링크가 연결됨
+- App Store Connect의 Support URL이 `${POLICY_BASE_URL}/support`로
+  연결되고 공개 이메일로 실제 문의할 수 있음
+- App Store Connect와 Play Console의 Privacy Policy URL이
+  `${POLICY_BASE_URL}/privacy`로 연결됨
+- Play Console의 외부 계정 삭제 URL이
+  `${POLICY_BASE_URL}/account-deletion`로 연결됨
 
 ## 6. 공식 자료
 
@@ -168,8 +184,12 @@
   https://www.law.go.kr/LSW/lsLawLinkInfo.do?chrClsCd=010202&lsJoLnkSeq=900079801
 - Apple App Review Guidelines:
   https://developer.apple.com/app-store/review/guidelines/
+- Apple App Store Connect 필수 속성:
+  https://developer.apple.com/help/app-store-connect/reference/app-information/required-localizable-and-editable-properties/
 - Apple 계정 삭제 안내:
   https://developer.apple.com/support/offering-account-deletion-in-your-app
+- Google Play 고객지원 요구사항:
+  https://support.google.com/googleplay/android-developer/answer/113477
 - Google Play 계정 삭제 요구사항:
   https://support.google.com/googleplay/android-developer/answer/13327111
 - Gemini API 추가 서비스 약관:
