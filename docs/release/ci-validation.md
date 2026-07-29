@@ -17,12 +17,15 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 | 체크 | 검증 범위 |
 |---|---|
 | `Flutter` | 의존성 복원, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
+| `iOS native build` | `main` 반영 또는 수동 실행 시 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
 | `Node services` | AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
 | `Edge functions` | Node 단위 테스트 자동 검색, Deno 진입점 타입 검사 |
 | `Supabase database` | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
 
-GitHub 저장소의 브랜치 보호 규칙에서 위 네 체크를 `main` 병합 전 필수로
-설정한다. 워크플로 자체의 쓰기 권한이나 배포 비밀키는 추가하지 않는다.
+GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 네 체크를
+`main` 병합 전 필수로 설정한다. macOS 비용을 제한하기 위해 iOS 빌드는
+Pull Request에서는 건너뛰고 `main` 반영 직후와 수동 실행에서 검증한다.
+워크플로 자체의 쓰기 권한이나 배포 비밀키는 추가하지 않는다.
 
 ## 로컬 검증
 
@@ -34,6 +37,15 @@ cd apps/mobile
 .\flutterw.cmd analyze --no-pub
 .\flutterw.cmd test --no-pub
 .\flutterw.cmd build apk --debug --no-pub
+```
+
+iOS 앱과 위젯 확장의 컴파일 검증은 macOS에서 다음 명령으로 수행한다.
+서명 자격 증명이나 App Store Connect 비밀키는 필요하지 않다.
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter build ios --simulator --debug --no-codesign --no-pub
 ```
 
 Node와 Edge 함수 검증은 종료형 명령으로 실행한다.

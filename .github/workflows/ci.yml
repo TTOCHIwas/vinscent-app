@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
@@ -50,6 +51,28 @@ jobs:
         run: flutter test --no-pub
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub
+
+  ios-build:
+    name: iOS native build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Build iOS app and widget extension
+        run: flutter build ios --simulator --debug --no-codesign --no-pub
 
   node-services:
     name: Node services

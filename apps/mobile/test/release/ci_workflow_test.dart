@@ -40,6 +40,7 @@ void main() {
 
 const _requiredJobs = <String>[
   'mobile',
+  'ios-build',
   'node-services',
   'edge-functions',
   'database',
@@ -49,6 +50,7 @@ const _requiredCommands = <String>[
   'flutter analyze --no-pub',
   'flutter test --no-pub',
   'flutter build apk --debug --no-pub',
+  'flutter build ios --simulator --debug --no-codesign --no-pub',
   'npm test',
   'node scripts/test_supabase_functions.mjs',
   'deno check',
