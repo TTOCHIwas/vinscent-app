@@ -11,6 +11,11 @@ Connect에 배포하지 않으며 배포 비밀키를 사용하지 않는다.
 승인, 동일한 Database·Edge 검증을 모두 통과한 뒤에만 migration과
 Edge Function을 배포한다.
 
+`.github/workflows/store-assets.yml`은 출시 후보 화면을 캡처하고 저장소에
+추가한 뒤 실행하는 수동 검증 워크플로다. 일반 PR과 출시 후보 빌드를
+차단하지 않으며 실제 앱 버전과 빌드 번호를 입력받아 스토어 자산 계약을
+검증한다.
+
 GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제한하고,
 외부 액션은 전체 커밋 SHA로 고정한다.
 

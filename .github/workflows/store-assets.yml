@@ -1,0 +1,71 @@
+name: Store asset verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_version:
+        description: Release app version in X.Y.Z format
+        required: true
+        type: string
+      build_number:
+        description: Positive release candidate build number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-assets-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  FLUTTER_SUPPRESS_ANALYTICS: true
+  APP_VERSION: ${{ inputs.app_version }}
+  BUILD_NUMBER: ${{ inputs.build_number }}
+
+jobs:
+  verify:
+    name: Verify store assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/mobile
+        shell: bash
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+      - name: Validate release identity
+        run: |
+          set -euo pipefail
+          if [[ ! "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "app_version must use X.Y.Z format." >&2
+            exit 1
+          fi
+          if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "build_number must be a positive integer." >&2
+            exit 1
+          fi
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Verify store assets
+        run: >-
+          dart run tool/verify_store_assets.dart
+          --app-version "$APP_VERSION"
+          --build-number "$BUILD_NUMBER"
+      - name: Summarize verified assets
+        run: |
+          {
+            echo "### Store assets"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- App version: \`$APP_VERSION\`"
+            echo "- Build number: \`$BUILD_NUMBER\`"
+          } >> "$GITHUB_STEP_SUMMARY"
