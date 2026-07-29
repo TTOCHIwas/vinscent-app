@@ -90,7 +90,7 @@ cd apps/mobile
 ### 앱 아이콘
 
 - 512×512px
-- 32-bit PNG
+- 알파 채널을 포함한 32-bit PNG
 - 최대 1,024KB
 - 런처 아이콘을 단순 확대하지 않고
   `apps/mobile/assets/icons/app_icon.svg`에서 출력한다.

@@ -117,6 +117,26 @@ void main() {
     expect(report.errors.join('\n'), contains('[alpha]'));
   });
 
+  test('requires an alpha channel in the Play store icon', () async {
+    await _touch(root, 'store-assets/google-play/app-icon-512.png');
+
+    final report = await StoreAssetValidator(
+      repositoryRoot: root,
+      rasterReader: (_) async => const RasterInfo(
+        format: 'png',
+        width: 512,
+        height: 512,
+        hasAlpha: false,
+        byteLength: 1,
+      ),
+    ).validate(appVersion: '1.0.0', buildNumber: 1);
+
+    expect(
+      report.errors.join('\n'),
+      contains('app-icon-512.png [alpha] Alpha channel is required.'),
+    );
+  });
+
   test('rejects incomplete or overlong Play alt text', () async {
     final manifest = _file(root, StoreAssetAltTextValidator.manifestPath);
     await manifest.create(recursive: true);

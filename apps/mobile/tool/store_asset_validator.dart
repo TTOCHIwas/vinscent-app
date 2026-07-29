@@ -264,6 +264,9 @@ final class StoreAssetValidator {
         _issue(relativePath, 'alpha', 'Alpha channel is not allowed.'),
       );
     }
+    if (rule.requiresAlpha && !raster.hasAlpha) {
+      errors.add(_issue(relativePath, 'alpha', 'Alpha channel is required.'));
+    }
     if (rule.maximumBytes != null && raster.byteLength > rule.maximumBytes!) {
       errors.add(_issue(relativePath, 'size', 'File is too large.'));
     }
@@ -390,6 +393,7 @@ final class _ImageRule {
   const _ImageRule({
     this.allowedSizes = const {},
     this.opaque = true,
+    this.requiresAlpha = false,
     this.pngOnly = false,
     this.maximumBytes,
     this.playScreenshot = false,
@@ -399,6 +403,7 @@ final class _ImageRule {
 
   final Set<(int, int)> allowedSizes;
   final bool opaque;
+  final bool requiresAlpha;
   final bool pngOnly;
   final int? maximumBytes;
   final bool playScreenshot;
@@ -450,6 +455,7 @@ const _scenes = <String>{
 const _playIconRule = _ImageRule(
   allowedSizes: {(512, 512)},
   opaque: false,
+  requiresAlpha: true,
   pngOnly: true,
   maximumBytes: 1024 * 1024,
 );
