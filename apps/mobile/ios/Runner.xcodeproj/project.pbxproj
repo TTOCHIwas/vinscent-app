@@ -18,6 +18,8 @@
 		A10000000000000000000009 /* VinscentWidgetAudioIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* VinscentWidgetAudioIntents.swift */; };
 		A1000000000000000000000A /* VinscentWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* VinscentWidgets.swift */; };
 		A1000000000000000000000B /* VinscentWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* VinscentWidgets.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A1000000000000000000000C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* PrivacyInfo.xcprivacy */; };
+		A1000000000000000000000D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* PrivacyInfo.xcprivacy */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -83,6 +85,8 @@
 		A2000000000000000000000A /* VinscentWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VinscentWidgets.entitlements; sourceTree = "<group>"; };
 		A2000000000000000000000B /* VinscentWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VinscentWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000000000000000000000C /* Widget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Widget.xcconfig; path = Flutter/Widget.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A2000000000000000000000E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
@@ -136,6 +140,7 @@
 				A20000000000000000000008 /* VinscentWidgets.swift */,
 				A20000000000000000000009 /* Info.plist */,
 				A2000000000000000000000A /* VinscentWidgets.entitlements */,
+				A2000000000000000000000E /* PrivacyInfo.xcprivacy */,
 			);
 			path = VinscentWidgets;
 			sourceTree = "<group>";
@@ -198,6 +203,7 @@
 				A20000000000000000000005 /* VinscentWidgetRecordingUploadBridge.swift */,
 				A20000000000000000000006 /* VinscentWidgetBackgroundTask.swift */,
 				A20000000000000000000007 /* Runner.entitlements */,
+				A2000000000000000000000D /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -310,6 +316,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1000000000000000000000D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -329,6 +336,7 @@
 				42F1A0012ED5A00000F00001 /* GoogleService-Info.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+				A1000000000000000000000C /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
