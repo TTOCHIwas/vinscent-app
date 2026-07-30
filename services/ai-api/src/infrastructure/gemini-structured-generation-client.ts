@@ -1,11 +1,12 @@
+import {
+  StructuredGenerationError,
+  type StructuredGenerationClient,
+  type StructuredGenerationRequest,
+  type StructuredGenerationResult,
+} from '../application/structured-generation-client.ts';
 import type {
   LearningModelUsage,
 } from '../application/learning-model-port.ts';
-import type {
-  StructuredGenerationClient,
-  StructuredGenerationRequest,
-  StructuredGenerationResult,
-} from '../application/structured-generation-client.ts';
 
 const defaultEndpointBase =
   'https://generativelanguage.googleapis.com/v1beta/models';
@@ -13,7 +14,6 @@ const defaultModel = 'gemini-3.1-flash-lite';
 const defaultTimeoutMs = 30_000;
 const maximumRetryAfterMs = 86_400_000;
 const maximumProviderErrorDetailLength = 500;
-const outputValidationDetailPattern = /^[a-z][a-z0-9_.]{0,159}$/;
 const defaultSafetySettings = [
   {
     category: 'HARM_CATEGORY_HARASSMENT',
@@ -49,75 +49,6 @@ interface GeminiStructuredGenerationClientOptions {
   timeoutMs?: number;
   fetcher?: typeof fetch;
   now?: () => number;
-}
-
-export class GeminiProviderError extends Error {
-  readonly code: string;
-  readonly retryable: boolean;
-  readonly status: number | null;
-  readonly providerStatus: string | null;
-  readonly providerErrorDetail: string | null;
-  readonly retryAfterMs: number | null;
-  readonly latencyMs: number;
-
-  constructor(params: {
-    code: string;
-    retryable: boolean;
-    status?: number | null;
-    providerStatus?: string | null;
-    providerErrorDetail?: string | null;
-    retryAfterMs?: number | null;
-    latencyMs?: number;
-    cause?: unknown;
-  }) {
-    super(params.code, { cause: params.cause });
-    this.name = 'GeminiProviderError';
-    this.code = params.code;
-    this.retryable = params.retryable;
-    this.status = params.status ?? null;
-    this.providerStatus = params.providerStatus ?? null;
-    this.providerErrorDetail = params.providerErrorDetail ?? null;
-    this.retryAfterMs = params.retryAfterMs ?? null;
-    this.latencyMs = params.latencyMs ?? 0;
-  }
-}
-
-export class GeminiOutputError extends Error {
-  readonly code = 'gemini_invalid_output';
-  readonly retryable = false;
-  readonly latencyMs: number;
-  readonly validationDetail: string | null;
-
-  constructor(
-    cause?: unknown,
-    latencyMs = 0,
-    validationDetail: string | null = null,
-  ) {
-    super('gemini_invalid_output', { cause });
-    this.name = 'GeminiOutputError';
-    this.latencyMs = latencyMs;
-    this.validationDetail = validationDetail !== null
-      && outputValidationDetailPattern.test(validationDetail)
-      ? validationDetail
-      : null;
-  }
-}
-
-export class GeminiSafetyError extends Error {
-  readonly code = 'gemini_content_blocked';
-  readonly retryable = false;
-  readonly blockSource: 'prompt' | 'candidate';
-  readonly usage: LearningModelUsage;
-
-  constructor(params: {
-    blockSource: 'prompt' | 'candidate';
-    usage: LearningModelUsage;
-  }) {
-    super('gemini_content_blocked');
-    this.name = 'GeminiSafetyError';
-    this.blockSource = params.blockSource;
-    this.usage = params.usage;
-  }
 }
 
 export class GeminiStructuredGenerationClient
@@ -208,7 +139,7 @@ export class GeminiStructuredGenerationClient
       try {
         value = JSON.parse(outputText);
       } catch (error) {
-        throw new GeminiOutputError(error, latencyMs);
+        throw invalidOutputError(error, latencyMs);
       }
 
       return {
@@ -216,33 +147,49 @@ export class GeminiStructuredGenerationClient
         usage,
       };
     } catch (error) {
-      if (
-        error instanceof GeminiProviderError
-        || error instanceof GeminiOutputError
-        || error instanceof GeminiSafetyError
-      ) {
+      if (error instanceof StructuredGenerationError) {
         throw error;
       }
 
       if (isAbortError(error)) {
-        throw new GeminiProviderError({
-          code: 'gemini_timeout',
+        throw new StructuredGenerationError({
+          code: 'timeout',
           retryable: true,
-          latencyMs: Math.max(0, this.#now() - startedAt),
+          usage: emptyUsage(Math.max(0, this.#now() - startedAt)),
           cause: error,
         });
       }
 
-      throw new GeminiProviderError({
-        code: 'gemini_network_error',
+      throw new StructuredGenerationError({
+        code: 'network_error',
         retryable: true,
-        latencyMs: Math.max(0, this.#now() - startedAt),
+        usage: emptyUsage(Math.max(0, this.#now() - startedAt)),
         cause: error,
       });
     } finally {
       clearTimeout(timeout);
     }
   }
+}
+
+function invalidOutputError(
+  cause: unknown,
+  latencyMs: number,
+): StructuredGenerationError {
+  return new StructuredGenerationError({
+    code: 'invalid_output',
+    retryable: false,
+    usage: emptyUsage(latencyMs),
+    cause,
+  });
+}
+
+function emptyUsage(latencyMs: number): LearningModelUsage {
+  return {
+    inputTokenCount: null,
+    outputTokenCount: null,
+    latencyMs,
+  };
 }
 
 function requireConfigValue(value: string, name: string): string {
@@ -275,7 +222,7 @@ async function readJsonResponse(
     return await response.json();
   } catch (error) {
     if (response.ok) {
-      throw new GeminiOutputError(error, latencyMs);
+      throw invalidOutputError(error, latencyMs);
     }
     return null;
   }
@@ -295,7 +242,7 @@ function readOutputText(payload: unknown, latencyMs: number): string {
     .join('');
 
   if (text.length === 0) {
-    throw new GeminiOutputError(undefined, latencyMs);
+    throw invalidOutputError(undefined, latencyMs);
   }
   return text;
 }
@@ -312,8 +259,10 @@ function throwForSafetyBlock(
     && blockReason.length > 0
     && blockReason !== 'BLOCK_REASON_UNSPECIFIED'
   ) {
-    throw new GeminiSafetyError({
-      blockSource: 'prompt',
+    throw new StructuredGenerationError({
+      code: 'content_blocked',
+      retryable: false,
+      diagnosticDetail: 'prompt_blocked',
       usage,
     });
   }
@@ -328,8 +277,10 @@ function throwForSafetyBlock(
         && safetyFinishReasons.has(finishReason);
     })
   ) {
-    throw new GeminiSafetyError({
-      blockSource: 'candidate',
+    throw new StructuredGenerationError({
+      code: 'content_blocked',
+      retryable: false,
+      diagnosticDetail: 'candidate_blocked',
       usage,
     });
   }
@@ -360,53 +311,53 @@ function providerErrorForResponse(
   payload: unknown,
   completedAt: number,
   latencyMs: number,
-): GeminiProviderError {
+): StructuredGenerationError {
   const status = response.status;
   const diagnostics = {
-    status,
-    providerStatus: readProviderStatus(payload),
-    providerErrorDetail: readProviderErrorDetail(payload),
+    providerHttpStatus: status,
+    providerErrorStatus: readProviderStatus(payload),
+    diagnosticDetail: readProviderErrorDetail(payload),
     retryAfterMs: readRetryAfterMs(response, payload, completedAt),
-    latencyMs,
+    usage: emptyUsage(latencyMs),
   };
 
   if (status === 429) {
-    return new GeminiProviderError({
-      code: 'gemini_rate_limited',
+    return new StructuredGenerationError({
+      code: 'rate_limited',
       retryable: true,
       ...diagnostics,
     });
   }
   if (status === 408 || status === 409 || status >= 500) {
-    return new GeminiProviderError({
-      code: 'gemini_provider_unavailable',
+    return new StructuredGenerationError({
+      code: 'provider_unavailable',
       retryable: true,
       ...diagnostics,
     });
   }
   if (status === 400) {
-    return new GeminiProviderError({
-      code: 'gemini_invalid_request',
+    return new StructuredGenerationError({
+      code: 'invalid_request',
       retryable: false,
       ...diagnostics,
     });
   }
   if (status === 401 || status === 403) {
-    return new GeminiProviderError({
-      code: 'gemini_auth_failed',
+    return new StructuredGenerationError({
+      code: 'auth_failed',
       retryable: false,
       ...diagnostics,
     });
   }
   if (status === 404) {
-    return new GeminiProviderError({
-      code: 'gemini_model_not_found',
+    return new StructuredGenerationError({
+      code: 'model_not_found',
       retryable: false,
       ...diagnostics,
     });
   }
-  return new GeminiProviderError({
-    code: 'gemini_request_failed',
+  return new StructuredGenerationError({
+    code: 'request_failed',
     retryable: false,
     ...diagnostics,
   });

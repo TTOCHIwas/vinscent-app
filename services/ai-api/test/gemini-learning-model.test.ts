@@ -5,9 +5,10 @@ import {
   LearningModelError,
 } from '../src/application/learning-model-port.ts';
 import {
+  StructuredGenerationError,
+} from '../src/application/structured-generation-client.ts';
+import {
   GeminiStructuredGenerationClient,
-  GeminiOutputError,
-  GeminiProviderError,
 } from '../src/infrastructure/gemini-structured-generation-client.ts';
 import { GeminiLearningModel } from '../src/infrastructure/gemini-learning-model.ts';
 import type {
@@ -225,21 +226,15 @@ test('Gemini client classifies a blocked prompt as a safety failure', async () =
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof Error);
-      assert.equal(
-        (error as { code?: string }).code,
-        'gemini_content_blocked',
-      );
-      assert.equal((error as { blockSource?: string }).blockSource, 'prompt');
-      assert.equal((error as { retryable?: boolean }).retryable, false);
-      assert.deepEqual(
-        (error as { usage?: unknown }).usage,
-        {
-          inputTokenCount: 9,
-          outputTokenCount: null,
-          latencyMs: 180,
-        },
-      );
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'content_blocked');
+      assert.equal(error.diagnosticDetail, 'prompt_blocked');
+      assert.equal(error.retryable, false);
+      assert.deepEqual(error.usage, {
+        inputTokenCount: 9,
+        outputTokenCount: null,
+        latencyMs: 180,
+      });
       return true;
     },
   );
@@ -271,15 +266,9 @@ test('Gemini client classifies a safety-stopped candidate as a safety failure', 
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof Error);
-      assert.equal(
-        (error as { code?: string }).code,
-        'gemini_content_blocked',
-      );
-      assert.equal(
-        (error as { blockSource?: string }).blockSource,
-        'candidate',
-      );
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'content_blocked');
+      assert.equal(error.diagnosticDetail, 'candidate_blocked');
       return true;
     },
   );
@@ -316,13 +305,13 @@ test('Gemini client classifies rate limits as retryable', async () => {
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiProviderError);
-      assert.equal(error.code, 'gemini_rate_limited');
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'rate_limited');
       assert.equal(error.retryable, true);
-      assert.equal(error.status, 429);
-      assert.equal(error.providerStatus, 'RESOURCE_EXHAUSTED');
+      assert.equal(error.providerHttpStatus, 429);
+      assert.equal(error.providerErrorStatus, 'RESOURCE_EXHAUSTED');
       assert.equal(error.retryAfterMs, 45_250);
-      assert.equal(error.latencyMs, 275);
+      assert.equal(error.usage.latencyMs, 275);
       return true;
     },
   );
@@ -401,12 +390,12 @@ test('Gemini client classifies invalid requests as terminal', async () => {
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiProviderError);
-      assert.equal(error.code, 'gemini_invalid_request');
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'invalid_request');
       assert.equal(error.retryable, false);
-      assert.equal(error.providerStatus, 'INVALID_ARGUMENT');
+      assert.equal(error.providerErrorStatus, 'INVALID_ARGUMENT');
       assert.equal(
-        error.providerErrorDetail,
+        error.diagnosticDetail,
         'Malformed response schema for key [REDACTED]',
       );
       return true;
@@ -426,8 +415,8 @@ test('Gemini client classifies provider failures as retryable', async () => {
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiProviderError);
-      assert.equal(error.code, 'gemini_provider_unavailable');
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'provider_unavailable');
       assert.equal(error.retryable, true);
       return true;
     },
@@ -454,8 +443,8 @@ test('Gemini client classifies request aborts as retryable timeouts', async () =
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiProviderError);
-      assert.equal(error.code, 'gemini_timeout');
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'timeout');
       assert.equal(error.retryable, true);
       return true;
     },
@@ -478,8 +467,8 @@ test('Gemini client rejects malformed structured output', async () => {
       schema: { type: 'object' },
     }),
     (error: unknown) => {
-      assert.ok(error instanceof GeminiOutputError);
-      assert.equal(error.code, 'gemini_invalid_output');
+      assert.ok(error instanceof StructuredGenerationError);
+      assert.equal(error.code, 'invalid_output');
       assert.equal(error.retryable, false);
       return true;
     },
@@ -489,14 +478,18 @@ test('Gemini client rejects malformed structured output', async () => {
 test('Gemini model translates provider failures into the model error contract', async () => {
   const model = new GeminiLearningModel({
     async generateStructured() {
-      throw new GeminiProviderError({
-        code: 'gemini_rate_limited',
+      throw new StructuredGenerationError({
+        code: 'rate_limited',
         retryable: true,
-        status: 429,
-        providerStatus: 'RESOURCE_EXHAUSTED',
-        providerErrorDetail: 'Quota exhausted for this project.',
+        providerHttpStatus: 429,
+        providerErrorStatus: 'RESOURCE_EXHAUSTED',
+        diagnosticDetail: 'Quota exhausted for this project.',
         retryAfterMs: 45_000,
-        latencyMs: 275,
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 275,
+        },
       });
     },
   });
