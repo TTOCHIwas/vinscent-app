@@ -11,6 +11,7 @@ import type {
 const endpointBase = 'https://api.cloudflare.com/client/v4/accounts';
 const defaultTimeoutMs = 30_000;
 const defaultMaxTokens = 1_024;
+const maximumInvalidOutputAttempts = 2;
 const maximumRetryAfterMs = 86_400_000;
 const maximumProviderErrorDetailLength = 500;
 const accountIdPattern = /^[a-f0-9]{32}$/i;
@@ -65,6 +66,45 @@ export class CloudflareWorkersAiStructuredGenerationClient
       throw new TypeError('Cloudflare Workers AI prompt is required');
     }
 
+    let accumulatedUsage: LearningModelUsage | null = null;
+    for (
+      let attempt = 0;
+      attempt < maximumInvalidOutputAttempts;
+      attempt += 1
+    ) {
+      try {
+        const result = await this.#generateOnce(prompt, request.schema);
+        return {
+          ...result,
+          usage: accumulatedUsage === null
+            ? result.usage
+            : combineUsage(accumulatedUsage, result.usage),
+        };
+      } catch (error) {
+        if (!(error instanceof StructuredGenerationError)) {
+          throw error;
+        }
+
+        accumulatedUsage = accumulatedUsage === null
+          ? error.usage
+          : combineUsage(accumulatedUsage, error.usage);
+        if (
+          error.code === 'invalid_output'
+          && attempt + 1 < maximumInvalidOutputAttempts
+        ) {
+          continue;
+        }
+        throw copyErrorWithUsage(error, accumulatedUsage);
+      }
+    }
+
+    throw new Error('Cloudflare Workers AI retry loop exhausted');
+  }
+
+  async #generateOnce(
+    prompt: string,
+    schema: Record<string, unknown>,
+  ): Promise<StructuredGenerationResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.#timeoutMs);
     const startedAt = this.#now();
@@ -80,7 +120,7 @@ export class CloudflareWorkersAiStructuredGenerationClient
           messages: [{ role: 'user', content: prompt }],
           response_format: {
             type: 'json_schema',
-            json_schema: request.schema,
+            json_schema: schema,
           },
           stream: false,
           max_tokens: this.#maxTokens,
@@ -130,6 +170,46 @@ export class CloudflareWorkersAiStructuredGenerationClient
       clearTimeout(timeout);
     }
   }
+}
+
+function combineUsage(
+  first: LearningModelUsage,
+  second: LearningModelUsage,
+): LearningModelUsage {
+  return {
+    inputTokenCount: sumKnownCounts(
+      first.inputTokenCount,
+      second.inputTokenCount,
+    ),
+    outputTokenCount: sumKnownCounts(
+      first.outputTokenCount,
+      second.outputTokenCount,
+    ),
+    latencyMs: first.latencyMs + second.latencyMs,
+  };
+}
+
+function sumKnownCounts(
+  first: number | null,
+  second: number | null,
+): number | null {
+  return first === null || second === null ? null : first + second;
+}
+
+function copyErrorWithUsage(
+  error: StructuredGenerationError,
+  usage: LearningModelUsage,
+): StructuredGenerationError {
+  return new StructuredGenerationError({
+    code: error.code,
+    retryable: error.retryable,
+    providerHttpStatus: error.providerHttpStatus,
+    providerErrorStatus: error.providerErrorStatus,
+    diagnosticDetail: error.diagnosticDetail,
+    retryAfterMs: error.retryAfterMs,
+    usage,
+    cause: error,
+  });
 }
 
 function requireAccountId(value: string): string {

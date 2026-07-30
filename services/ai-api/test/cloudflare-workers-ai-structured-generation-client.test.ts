@@ -110,20 +110,24 @@ test('Cloudflare client parses a JSON string response', async () => {
 
 test('Cloudflare client classifies daily allocation exhaustion as rate limited', async () => {
   const clockValues = [1_000, 1_275];
+  let requestCount = 0;
   const client = new CloudflareWorkersAiStructuredGenerationClient({
     accountId,
     apiToken: 'test-api-token',
     model,
     now: () => clockValues.shift() ?? 1_275,
-    fetcher: async () => Response.json({
-      result: null,
-      success: false,
-      errors: [{ code: 3036, message: 'Daily allocation exhausted' }],
-      messages: [],
-    }, {
-      status: 429,
-      headers: { 'retry-after': '30' },
-    }),
+    fetcher: async () => {
+      requestCount += 1;
+      return Response.json({
+        result: null,
+        success: false,
+        errors: [{ code: 3036, message: 'Daily allocation exhausted' }],
+        messages: [],
+      }, {
+        status: 429,
+        headers: { 'retry-after': '30' },
+      });
+    },
   });
 
   await assert.rejects(
@@ -139,6 +143,7 @@ test('Cloudflare client classifies daily allocation exhaustion as rate limited',
       assert.equal(error.providerErrorStatus, 'CF_3036');
       assert.equal(error.retryAfterMs, 30_000);
       assert.equal(error.usage.latencyMs, 275);
+      assert.equal(requestCount, 1);
       return true;
     },
   );
