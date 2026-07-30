@@ -7,14 +7,14 @@ import {
   type LearningModelPort,
   type LearningModelResult,
   type ProactiveSuggestionGenerationOptions,
-} from '../application/learning-model-port.ts';
+} from './learning-model-port.ts';
 import {
   StructuredGenerationError,
   type StructuredGenerationClient,
   type StructuredGenerationErrorCode,
   type StructuredGenerationRequest,
   type StructuredGenerationResult,
-} from '../application/structured-generation-client.ts';
+} from './structured-generation-client.ts';
 import type {
   AnonymizedCompletedQuestionContext,
   CoupleFeedbackCandidate,
@@ -111,7 +111,7 @@ const proactiveSuggestionSchema = objectSchema({
   },
 }, ['suggestion_text', 'kind']);
 
-export class GeminiLearningModel implements LearningModelPort {
+export class StructuredLearningModel implements LearningModelPort {
   readonly #client: StructuredGenerationClient;
 
   constructor(client: StructuredGenerationClient) {

@@ -10,7 +10,9 @@ import {
 import {
   GeminiStructuredGenerationClient,
 } from '../src/infrastructure/gemini-structured-generation-client.ts';
-import { GeminiLearningModel } from '../src/infrastructure/gemini-learning-model.ts';
+import {
+  StructuredLearningModel,
+} from '../src/application/structured-learning-model.ts';
 import type {
   AnonymizedCompletedQuestionContext,
   GeneralQuestionContext,
@@ -476,7 +478,7 @@ test('Gemini client rejects malformed structured output', async () => {
 });
 
 test('Gemini model translates provider failures into the model error contract', async () => {
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     async generateStructured() {
       throw new StructuredGenerationError({
         code: 'rate_limited',
@@ -530,7 +532,7 @@ test('Gemini model translates safety blocks into a provider-neutral error', asyn
       }),
     ),
   });
-  const model = new GeminiLearningModel(client);
+  const model = new StructuredLearningModel(client);
 
   await assert.rejects(
     () => model.generateCoupleFeedback(context),
@@ -550,7 +552,7 @@ test('Gemini model translates safety blocks into a provider-neutral error', asyn
 
 test('Gemini model maps memory output without real user identifiers', async () => {
   let capturedPrompt = '';
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
       capturedPrompt = prompt;
       return {
@@ -603,7 +605,7 @@ test('Gemini model maps memory output without real user identifiers', async () =
 test('memory extraction uses a typed provider schema and a complete prompt contract', async () => {
   let capturedPrompt = '';
   let capturedSchema: unknown;
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt, schema }) => {
       capturedPrompt = prompt;
       capturedSchema = schema;
@@ -712,7 +714,7 @@ test('memory extraction uses a typed provider schema and a complete prompt contr
 });
 
 test('memory extraction reports the invalid field without exposing its value', async () => {
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async () => ({
       value: {
         memories: [
@@ -754,7 +756,7 @@ test('memory extraction reports the invalid field without exposing its value', a
 });
 
 test('memory extraction rejects more than three model candidates', async () => {
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async () => ({
       value: {
         memories: Array.from({ length: 4 }, (_, index) => ({
@@ -786,7 +788,7 @@ test('memory extraction rejects more than three model candidates', async () => {
 
 test('foundation ranking receives metadata but not answers or memories', async () => {
   let capturedPrompt = '';
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
       capturedPrompt = prompt;
       return {
@@ -816,7 +818,7 @@ test('foundation ranking receives metadata but not answers or memories', async (
 
 test('feedback prompt requests a shared character reaction instead of an answer summary', async () => {
   const prompts: string[] = [];
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
       prompts.push(prompt);
       return {
@@ -882,7 +884,7 @@ test('feedback prompt requests a shared character reaction instead of an answer 
 
 test('feedback uses profile and recent six answers only after personalization opens', async () => {
   const prompts: string[] = [];
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
       prompts.push(prompt);
       return {
@@ -948,7 +950,7 @@ test('feedback uses profile and recent six answers only after personalization op
 
 test('general question prompt contains history metadata but no answer or memory', async () => {
   let prompt = '';
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async (request) => {
       prompt = request.prompt;
       return {
@@ -1000,7 +1002,7 @@ test('Gemini model maps feedback and question outputs', async () => {
       rationale: 'Their preferred ways of spending time differ.',
     },
   ];
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async () => ({
       value: outputs.shift(),
       usage: {
@@ -1039,7 +1041,7 @@ test('Gemini model maps feedback and question outputs', async () => {
 });
 
 test('Gemini model rejects structurally invalid values after JSON decoding', async () => {
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async () => ({
       value: { feedback_text: 42 },
       usage: {
@@ -1077,7 +1079,7 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
       kind: 'sunset_card',
     },
   ];
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
       prompts.push(prompt);
       return {
@@ -1136,7 +1138,7 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
 
 test('Gemini model keeps an insufficient answer separate from its follow-up', async () => {
   let capturedPrompt = '';
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
       capturedPrompt = prompt;
       return {
@@ -1175,7 +1177,7 @@ test('Gemini model keeps an insufficient answer separate from its follow-up', as
 test('Gemini model generates a follow-up with a required dedicated schema', async () => {
   let capturedPrompt = '';
   let capturedSchema: unknown;
-  const model = new GeminiLearningModel({
+  const model = new StructuredLearningModel({
     generateStructured: async ({ prompt, schema }) => {
       capturedPrompt = prompt;
       capturedSchema = schema;

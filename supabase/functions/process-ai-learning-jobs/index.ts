@@ -1,6 +1,6 @@
 import { LearningJobProcessor } from '../../../services/ai-api/src/application/process-learning-jobs.ts';
+import { StructuredLearningModel } from '../../../services/ai-api/src/application/structured-learning-model.ts';
 import { GeminiStructuredGenerationClient } from '../../../services/ai-api/src/infrastructure/gemini-structured-generation-client.ts';
-import { GeminiLearningModel } from '../../../services/ai-api/src/infrastructure/gemini-learning-model.ts';
 import { SupabaseLearningJobRepository } from '../../../services/ai-api/src/infrastructure/supabase-learning-job-repository.ts';
 import { createLearningWorkerHttpHandler } from '../../../services/ai-api/src/presentation/learning-worker-http-handler.ts';
 import {
@@ -23,7 +23,7 @@ const client = new GeminiStructuredGenerationClient({
 });
 const processor = new LearningJobProcessor({
   repository,
-  model: new GeminiLearningModel(client),
+  model: new StructuredLearningModel(client),
   workerId: `edge-${crypto.randomUUID()}`,
   provider: 'google',
   modelName,

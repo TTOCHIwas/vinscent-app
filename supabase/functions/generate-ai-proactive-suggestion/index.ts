@@ -2,11 +2,11 @@ import {
   GenerateProactiveSuggestionUseCase,
 } from '../../../services/ai-api/src/application/generate-proactive-suggestion.ts';
 import {
+  StructuredLearningModel,
+} from '../../../services/ai-api/src/application/structured-learning-model.ts';
+import {
   GeminiStructuredGenerationClient,
 } from '../../../services/ai-api/src/infrastructure/gemini-structured-generation-client.ts';
-import {
-  GeminiLearningModel,
-} from '../../../services/ai-api/src/infrastructure/gemini-learning-model.ts';
 import {
   OpenMeteoForecastClient,
 } from '../../../services/ai-api/src/infrastructure/open-meteo-forecast-client.ts';
@@ -29,7 +29,7 @@ const proactiveModelTimeoutMs = 15_000;
 const proactiveWeatherTimeoutMs = 5_000;
 
 const supabase = createServiceRoleClient();
-const model = new GeminiLearningModel(
+const model = new StructuredLearningModel(
   new GeminiStructuredGenerationClient({
     apiKey: requiredEnv('GEMINI_API_KEY'),
     model: optionalEnv('GEMINI_MODEL') ?? defaultModel,
