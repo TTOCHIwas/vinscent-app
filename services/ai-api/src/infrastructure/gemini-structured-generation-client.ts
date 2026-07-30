@@ -1,6 +1,11 @@
 import type {
   LearningModelUsage,
 } from '../application/learning-model-port.ts';
+import type {
+  StructuredGenerationClient,
+  StructuredGenerationRequest,
+  StructuredGenerationResult,
+} from '../application/structured-generation-client.ts';
 
 const defaultEndpointBase =
   'https://generativelanguage.googleapis.com/v1beta/models';
@@ -36,22 +41,6 @@ const safetyFinishReasons = new Set([
   'IMAGE_PROHIBITED_CONTENT',
   'ESCALATION',
 ]);
-
-export interface StructuredGenerationRequest {
-  prompt: string;
-  schema: Record<string, unknown>;
-}
-
-export interface StructuredGenerationResult {
-  value: unknown;
-  usage: LearningModelUsage;
-}
-
-export interface StructuredGenerationClient {
-  generateStructured(
-    request: StructuredGenerationRequest,
-  ): Promise<StructuredGenerationResult>;
-}
 
 interface GeminiStructuredGenerationClientOptions {
   apiKey: string;

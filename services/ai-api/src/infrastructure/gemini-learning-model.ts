@@ -9,6 +9,11 @@ import {
   type ProactiveSuggestionGenerationOptions,
 } from '../application/learning-model-port.ts';
 import type {
+  StructuredGenerationClient,
+  StructuredGenerationRequest,
+  StructuredGenerationResult,
+} from '../application/structured-generation-client.ts';
+import type {
   AnonymizedCompletedQuestionContext,
   CoupleFeedbackCandidate,
   DirectQuestionAnswer,
@@ -27,9 +32,6 @@ import {
   GeminiOutputError,
   GeminiProviderError,
   GeminiSafetyError,
-  type StructuredGenerationRequest,
-  type StructuredGenerationClient,
-  type StructuredGenerationResult,
 } from './gemini-structured-generation-client.ts';
 
 const commonPolicy = [
