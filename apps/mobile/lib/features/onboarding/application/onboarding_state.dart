@@ -1,5 +1,8 @@
 import 'package:characters/characters.dart';
 
+import '../../../core/date/app_age_policy.dart';
+import '../../../core/date/app_date_policy.dart';
+
 enum OnboardingStep { nickname, birthDate }
 
 class OnboardingState {
@@ -23,13 +26,15 @@ class OnboardingState {
 
   bool get isNicknameValid => nicknameLength >= 2 && nicknameLength <= 8;
 
-  bool get isBirthDateValid {
+  bool get isBirthDateValid => isBirthDateValidOn(currentAppDate());
+
+  bool isBirthDateValidOn(DateTime onDate) {
     final selected = birthDate;
     if (selected == null) {
       return false;
     }
 
-    return !_dateOnly(selected).isAfter(_dateOnly(DateTime.now()));
+    return meetsMinimumServiceAge(birthDate: selected, onDate: onDate);
   }
 
   bool get canGoBack => step != OnboardingStep.nickname && !isSubmitting;
@@ -59,9 +64,5 @@ class OnboardingState {
           ? null
           : errorMessage ?? this.errorMessage,
     );
-  }
-
-  DateTime _dateOnly(DateTime date) {
-    return DateTime(date.year, date.month, date.day);
   }
 }
