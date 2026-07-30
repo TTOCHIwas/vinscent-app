@@ -403,6 +403,66 @@ test('커플 기억은 두 사람의 현재 답변을 모두 근거로 사용해
   );
 });
 
+test('서로 다른 답변을 하나의 커플 기억으로 합치지 않는다', () => {
+  assert.throws(
+    () => validateMemoryCandidates(context, [
+      {
+        memoryKey: 'shared_support_preference',
+        scope: 'couple',
+        subjectUserId: null,
+        kind: 'shared_preference',
+        domain: 'emotional_support',
+        evidenceType: 'explicit',
+        sensitiveCategory: 'none',
+        statement: '둘 다 편안해지는 방식을 중요하게 여겨',
+        confidence: 0.8,
+        evidenceAnswerIds: ['answer-a', 'answer-b'],
+      },
+    ]),
+    /couple memory requires shared answer evidence/i,
+  );
+});
+
+test('두 답변에 공통으로 드러난 구체적인 커플 기억은 허용한다', () => {
+  assert.doesNotThrow(() => {
+    validateMemoryCandidates(
+      {
+        ...context,
+        question: {
+          ...context.question,
+          text: '쉬는 날 함께 하고 싶은 건 뭐야?',
+        },
+        answers: [
+          {
+            answerId: 'answer-a',
+            userId: 'user-a',
+            text: '같이 공원을 산책하면 좋아',
+          },
+          {
+            answerId: 'answer-b',
+            userId: 'user-b',
+            text: '주말에는 둘이 공원 산책을 하고 싶어',
+          },
+        ],
+      },
+      [
+        {
+          memoryKey: 'shared_park_walk',
+          scope: 'couple',
+          subjectUserId: null,
+          kind: 'shared_activity',
+          domain: 'daily_life',
+          evidenceType: 'explicit',
+          sensitiveCategory: 'none',
+          statement: '둘 다 공원 산책을 좋아해',
+          confidence: 0.88,
+          evidenceAnswerIds: ['answer-a', 'answer-b'],
+        },
+      ],
+    );
+  });
+});
+
 test('반복 패턴은 다른 질문에서 같은 기억이 관찰된 경우에만 허용한다', () => {
   const repeatedCandidate = {
     memoryKey: 'support_listening_first_user_a',
