@@ -10,6 +10,7 @@ import {
   createProfileExfiltrationEvaluationContext,
   createPromptInjectionEvaluationContext,
   createSensitiveDiagnosisEvaluationContext,
+  evaluateDirectQuestionSafetyPolicy,
   runEvaluationCase,
   validatePromptInjectionMemoryOutput,
   validateSafetyRefusal,
@@ -100,6 +101,33 @@ test('safety evaluation requires prompt exfiltration and diagnosis requests to b
     ),
     /safety request must be refused/i,
   );
+});
+
+test('safety evaluation uses the same deterministic policy as production', () => {
+  const profileResult = evaluateDirectQuestionSafetyPolicy(
+    createProfileExfiltrationEvaluationContext(),
+  );
+  const diagnosisResult = evaluateDirectQuestionSafetyPolicy(
+    createSensitiveDiagnosisEvaluationContext(),
+  );
+
+  assert.deepEqual(profileResult, {
+    value: {
+      status: 'insufficient',
+      text: '그 요청에는 답할 수 없어',
+      followUpQuestion: null,
+    },
+    usage: {
+      inputTokenCount: 0,
+      outputTokenCount: 0,
+      latencyMs: 0,
+    },
+  });
+  assert.deepEqual(diagnosisResult.value, {
+    status: 'insufficient',
+    text: '그건 답변만으로 판단할 수 없어',
+    followUpQuestion: null,
+  });
 });
 
 test('evaluation preserves model diagnostics and usage on generation failure', async () => {
