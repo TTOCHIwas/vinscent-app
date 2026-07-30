@@ -22,7 +22,12 @@ import {
 import {
   createCompletedEvaluationContext,
   createFoundationEvaluationContext,
+  createProfileExfiltrationEvaluationContext,
+  createPromptInjectionEvaluationContext,
+  createSensitiveDiagnosisEvaluationContext,
   runEvaluationCase,
+  validatePromptInjectionMemoryOutput,
+  validateSafetyRefusal,
 } from './cloudflare-model-eval-support.ts';
 
 const defaultModels = [
@@ -36,6 +41,9 @@ const foundationContext = anonymizeCompletedQuestionContext(
   createFoundationEvaluationContext(),
 );
 const foundationCandidates = foundationContext.remainingFoundationQuestions;
+const promptInjectionContext = createPromptInjectionEvaluationContext();
+const anonymizedPromptInjectionContext =
+  anonymizeCompletedQuestionContext(promptInjectionContext);
 const answerableDirectQuestionContext: DirectQuestionContext = {
   questionText: '상대방은 쉬는 날에 어떤 시간을 좋아해?',
   confirmedMemories: [
@@ -66,6 +74,9 @@ const insufficientDirectQuestionContext: DirectQuestionContext = {
     '둘이 여행을 간다면 꼭 챙기고 싶은 건 뭐야?',
   ],
 };
+const profileExfiltrationContext =
+  createProfileExfiltrationEvaluationContext();
+const sensitiveDiagnosisContext = createSensitiveDiagnosisEvaluationContext();
 const proactiveContext: ProactiveSuggestionContext = {
   localDate: '2026-07-30',
   localHour: 19,
@@ -129,6 +140,18 @@ const evaluationCases: EvaluationCase[] = [
     },
   },
   {
+    name: 'memory_prompt_injection',
+    run: (model) => model.extractMemoryCandidates(
+      anonymizedPromptInjectionContext,
+    ),
+    validate: (value) => {
+      const memories = value as Awaited<
+        ReturnType<StructuredLearningModel['extractMemoryCandidates']>
+      >['value'];
+      validatePromptInjectionMemoryOutput(promptInjectionContext, memories);
+    },
+  },
+  {
     name: 'couple_feedback',
     run: (model) => model.generateCoupleFeedback(anonymizedContext),
     validate: (value) => {
@@ -180,6 +203,26 @@ const evaluationCases: EvaluationCase[] = [
         throw new Error('unknown preference was answered without evidence');
       }
       requireKoreanText(answer.text, 'insufficient answer');
+    },
+  },
+  {
+    name: 'profile_exfiltration_refusal',
+    run: (model) => model.answerDirectQuestion(profileExfiltrationContext),
+    validate: (value) => {
+      const answer = value as Awaited<
+        ReturnType<StructuredLearningModel['answerDirectQuestion']>
+      >['value'];
+      validateSafetyRefusal(profileExfiltrationContext, answer);
+    },
+  },
+  {
+    name: 'sensitive_diagnosis_refusal',
+    run: (model) => model.answerDirectQuestion(sensitiveDiagnosisContext),
+    validate: (value) => {
+      const answer = value as Awaited<
+        ReturnType<StructuredLearningModel['answerDirectQuestion']>
+      >['value'];
+      validateSafetyRefusal(sensitiveDiagnosisContext, answer);
     },
   },
   {
