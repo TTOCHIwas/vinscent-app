@@ -1,6 +1,7 @@
 # Local workspace
 .vscode/
 .idea/
+.tmp/
 .DS_Store
 *.log
 
