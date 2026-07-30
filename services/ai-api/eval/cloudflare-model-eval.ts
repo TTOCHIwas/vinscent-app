@@ -20,6 +20,10 @@ import {
   CloudflareWorkersAiStructuredGenerationClient,
 } from '../src/infrastructure/cloudflare-workers-ai-structured-generation-client.ts';
 import {
+  serializeEvaluationReport,
+  writeEvaluationReport,
+} from './cloudflare-evaluation-report.ts';
+import {
   createCompletedEvaluationContext,
   createFoundationEvaluationContext,
   createProfileExfiltrationEvaluationContext,
@@ -307,11 +311,18 @@ for (const modelName of models) {
   }
 }
 
-console.log(JSON.stringify({
+const evaluationReport = {
   generatedAt: new Date().toISOString(),
   syntheticDataOnly: true,
   report,
-}, null, 2));
+};
+const outputPath = readOptionalEnvironment(
+  'CLOUDFLARE_WORKERS_AI_EVAL_OUTPUT',
+);
+if (outputPath !== null) {
+  await writeEvaluationReport(outputPath, evaluationReport);
+}
+process.stdout.write(serializeEvaluationReport(evaluationReport));
 
 if (hasFailure) {
   process.exitCode = 1;
@@ -329,6 +340,11 @@ function requireEnvironment(name: string): string {
     throw new Error(`${name} is required`);
   }
   return value;
+}
+
+function readOptionalEnvironment(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value === undefined || value.length === 0 ? null : value;
 }
 
 function readModels(): string[] {
