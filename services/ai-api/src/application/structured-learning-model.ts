@@ -105,10 +105,11 @@ const directQuestionAnswerSchema = objectSchema({
 
 const directQuestionFollowUpSchema = objectSchema({
   question_text: { type: 'string', maxLength: 299 },
-  category: { type: 'string' },
-  mood: { type: ['string', 'null'] },
-  rationale: { type: 'string' },
-}, ['question_text', 'category', 'mood', 'rationale']);
+}, ['question_text']);
+
+const directQuestionFollowUpCategory = 'direct_follow_up';
+const directQuestionFollowUpRationale =
+  '요청한 질문에 직접 답할 확인된 근거가 아직 부족해';
 
 export class StructuredLearningModel implements LearningModelPort {
   readonly #client: StructuredGenerationClient;
@@ -249,24 +250,9 @@ export class StructuredLearningModel implements LearningModelPort {
       return withUsage(result, {
         questionKey: buildDirectQuestionFollowUpKey(text),
         text,
-        category: requireString(
-          output,
-          'category',
-          100,
-          'direct_question.follow_up.category.invalid',
-        ),
-        mood: requireNullableString(
-          output,
-          'mood',
-          100,
-          'direct_question.follow_up.mood.invalid',
-        ),
-        rationale: requireString(
-          output,
-          'rationale',
-          500,
-          'direct_question.follow_up.rationale.invalid',
-        ),
+        category: directQuestionFollowUpCategory,
+        mood: null,
+        rationale: directQuestionFollowUpRationale,
       });
     } catch (error) {
       throw attachParsingUsage(error, result.usage);
@@ -668,7 +654,6 @@ function buildDirectQuestionFollowUpPrompt(
       '형식:',
       '- recent_shared_questions와 중복되지 않는 자연스러운 한국어 반말 질문 하나야.',
       '- question_text는 반드시 물음표로 끝나야 해.',
-      '- category는 짧게, mood는 선택적으로, rationale에는 채울 근거 공백만 써.',
       '- 마크다운, 제목, 목록, 인용 표시는 쓰지 마.',
     ].join('\n'),
     data,
