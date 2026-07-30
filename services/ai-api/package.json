@@ -6,6 +6,7 @@
     "node": ">=22.6.0"
   },
   "scripts": {
+    "eval:cloudflare": "node --experimental-strip-types eval/cloudflare-model-eval.ts",
     "test": "node --experimental-strip-types --test \"test/*.test.ts\""
   }
 }
