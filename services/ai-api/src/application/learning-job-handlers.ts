@@ -66,7 +66,7 @@ class ExtractMemoriesHandler implements LearningJobHandler {
     const context = await this.#repository.loadContext(job.jobId);
     const modelContext = anonymizeCompletedQuestionContext(context);
 
-    return modelJob('memory-v7', async () => {
+    return modelJob('memory-v8', async () => {
       const result = await this.#model.extractMemoryCandidates(modelContext);
       const memories = resolveMemoryCandidates(
         context,
@@ -111,7 +111,7 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('feedback-v4', async () => {
+    return modelJob('feedback-v5', async () => {
       let rejectedText: string | null = null;
       let combinedUsage: LearningModelUsage | null = null;
 
@@ -229,7 +229,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v3', async () => {
+    return modelJob('personalized-question-v4', async () => {
       const result = await this.#model.generatePersonalizedQuestion(context);
       validatePersonalizedQuestion(result.value);
       return {
@@ -259,7 +259,7 @@ class AnswerUserQuestionHandler implements LearningJobHandler {
   async prepare(job: ClaimedLearningJob): Promise<PreparedLearningJob> {
     const context = await this.#repository.loadDirectQuestionContext(job.jobId);
 
-    return modelJob('direct-question-v6', async () => {
+    return modelJob('direct-question-v7', async () => {
       const result = await generateDirectQuestionAnswer(
         this.#model,
         context,
