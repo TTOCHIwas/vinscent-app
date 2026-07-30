@@ -12,12 +12,26 @@ void main() {
     );
   });
 
-  test('rejects birth dates after today', () {
-    final today = DateTime.now();
-    final pastDate = DateTime(today.year - 1, today.month, today.day);
-    final futureDate = today.add(const Duration(days: 1));
+  test('requires the minimum service age on the requested date', () {
+    final onDate = DateTime(2026, 7, 30);
 
-    expect(OnboardingState(birthDate: pastDate).isBirthDateValid, isTrue);
-    expect(OnboardingState(birthDate: futureDate).isBirthDateValid, isFalse);
+    expect(
+      OnboardingState(
+        birthDate: DateTime(2012, 7, 30),
+      ).isBirthDateValidOn(onDate),
+      isTrue,
+    );
+    expect(
+      OnboardingState(
+        birthDate: DateTime(2012, 7, 31),
+      ).isBirthDateValidOn(onDate),
+      isFalse,
+    );
+    expect(
+      OnboardingState(
+        birthDate: DateTime(2026, 7, 31),
+      ).isBirthDateValidOn(onDate),
+      isFalse,
+    );
   });
 }
