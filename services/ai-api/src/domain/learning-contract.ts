@@ -1,3 +1,5 @@
+import { hasSharedMemoryEvidence } from './memory-evidence.ts';
+
 export type LearningStage =
   | 'collecting'
   | 'exploring'
@@ -577,6 +579,19 @@ export function validateMemoryCandidates(
       ) {
         throw new Error('personal memory evidence belongs to another participant');
       }
+    }
+
+    if (
+      candidate.scope === 'couple'
+      && !hasSharedMemoryEvidence({
+        questionText: context.question.text,
+        statement: candidate.statement,
+        answerTexts: candidate.evidenceAnswerIds.map(
+          (answerId) => answersById.get(answerId)!.text,
+        ),
+      })
+    ) {
+      throw new Error('couple memory requires shared answer evidence');
     }
 
     if (candidate.evidenceType === 'repeated_pattern') {
