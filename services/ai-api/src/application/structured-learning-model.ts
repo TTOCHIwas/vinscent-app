@@ -6,6 +6,7 @@ import {
   type LearningModelErrorCode,
   type LearningModelPort,
   type LearningModelResult,
+  type LearningModelUsage,
   type ProactiveSuggestionGenerationOptions,
 } from './learning-model-port.ts';
 import {
@@ -231,18 +232,45 @@ export class StructuredLearningModel implements LearningModelPort {
       directQuestionFollowUpSchema,
       generationProfiles.followUp,
     ));
-    const output = requireRecord(result.value);
-    const text = normalizeDirectQuestionFollowUpText(
-      requireString(output, 'question_text', 299),
-    );
+    try {
+      const output = requireRecord(
+        result.value,
+        'direct_question.follow_up.output.invalid',
+      );
+      const text = normalizeDirectQuestionFollowUpText(
+        requireString(
+          output,
+          'question_text',
+          299,
+          'direct_question.follow_up.question_text.invalid',
+        ),
+      );
 
-    return withUsage(result, {
-      questionKey: buildDirectQuestionFollowUpKey(text),
-      text,
-      category: requireString(output, 'category', 100),
-      mood: requireNullableString(output, 'mood', 100),
-      rationale: requireString(output, 'rationale', 500),
-    });
+      return withUsage(result, {
+        questionKey: buildDirectQuestionFollowUpKey(text),
+        text,
+        category: requireString(
+          output,
+          'category',
+          100,
+          'direct_question.follow_up.category.invalid',
+        ),
+        mood: requireNullableString(
+          output,
+          'mood',
+          100,
+          'direct_question.follow_up.mood.invalid',
+        ),
+        rationale: requireString(
+          output,
+          'rationale',
+          500,
+          'direct_question.follow_up.rationale.invalid',
+        ),
+      });
+    } catch (error) {
+      throw attachParsingUsage(error, result.usage);
+    }
   }
 
   async generateProactiveSuggestion(
@@ -947,10 +975,11 @@ function requireNullableString(
   record: Record<string, unknown>,
   key: string,
   maximum: number,
+  validationDetail: string | null = null,
 ): string | null {
   return record[key] === null
     ? null
-    : requireDirectString(record[key], maximum);
+    : requireDirectString(record[key], maximum, validationDetail);
 }
 
 function requireEnum<const T extends readonly string[]>(
@@ -971,6 +1000,29 @@ function throwInvalidOutput(validationDetail: string | null = null): never {
     code: 'model_invalid_output',
     retryable: false,
     diagnosticDetail: validationDetail,
+  });
+}
+
+function attachParsingUsage(
+  error: unknown,
+  usage: LearningModelUsage,
+): unknown {
+  if (
+    !(error instanceof LearningModelError)
+    || error.code !== 'model_invalid_output'
+  ) {
+    return error;
+  }
+
+  return new LearningModelError({
+    code: error.code,
+    retryable: error.retryable,
+    providerHttpStatus: error.providerHttpStatus,
+    providerErrorStatus: error.providerErrorStatus,
+    diagnosticDetail: error.diagnosticDetail,
+    retryAfterMs: error.retryAfterMs,
+    usage,
+    cause: error,
   });
 }
 
