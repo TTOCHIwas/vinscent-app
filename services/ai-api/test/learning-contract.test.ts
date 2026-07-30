@@ -8,6 +8,7 @@ import {
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
   validateMemoryCandidates,
+  validatePersonalizedQuestion,
   validateProactiveSuggestion,
   validateQuestionRecommendation,
   type CompletedQuestionContext,
@@ -115,6 +116,65 @@ test('direct answers reject internal participant labels and blocked topics', () 
       text: '건강 상태와 병원 기록을 보면 이런 경향이 있어',
       followUpQuestion: null,
     })
+  );
+});
+
+test('사용자에게 보이는 AI 문장은 다른 문자 체계를 섞지 않는다', () => {
+  assert.throws(
+    () =>
+      validateDirectQuestionAnswer(directQuestionContext, {
+        status: 'insufficient',
+        text: 'まだ情報が不足してるよ. 아직 여행 취향은 모르겠어',
+        followUpQuestion: null,
+      }),
+    /foreign script/i,
+  );
+  assert.throws(
+    () =>
+      validatePersonalizedQuestion({
+        questionKey: 'personalized_daily_rest_ab12cd34',
+        text: '함께 쉬는 시간을 어떻게 보낼지了解하고 싶어?',
+        category: 'daily_life',
+        mood: 'curious',
+        rationale: '쉬는 날의 공통점을 더 확인하기 위해서야',
+      }),
+    /foreign script/i,
+  );
+});
+
+test('사용자에게 보이는 AI 문장은 캐릭터의 반말을 사용한다', () => {
+  assert.doesNotThrow(() =>
+    validatePersonalizedQuestion({
+      questionKey: 'personalized_daily_rest_ab12cd34',
+      text: '함께 쉬는 날 가장 하고 싶은 건 뭐야?',
+      category: 'daily_life',
+      mood: 'curious',
+      rationale: '쉬는 날의 공통점을 더 확인하기 위해서야',
+    })
+  );
+  assert.throws(
+    () =>
+      validatePersonalizedQuestion({
+        questionKey: 'personalized_daily_rest_ab12cd34',
+        text: '함께 쉬는 날 가장 즐거운 활동은 무엇인가요?',
+        category: 'daily_life',
+        mood: 'curious',
+        rationale: '쉬는 날의 공통점을 더 확인하기 위해서야',
+      }),
+    /casual speech/i,
+  );
+  assert.throws(
+    () =>
+      validateDirectQuestionAnswer(directQuestionContext, {
+        status: 'answered',
+        text: '상대방은 새로운 동네를 걷는 걸 좋아해요.',
+        followUpQuestion: null,
+      }),
+    /casual speech/i,
+  );
+  assert.throws(
+    () => validateCoupleFeedback({ text: '오늘은 음악이 잘 어울리네요!' }),
+    /casual speech/i,
   );
 });
 
