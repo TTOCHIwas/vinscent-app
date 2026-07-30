@@ -12,6 +12,7 @@ import {
   createSensitiveDiagnosisEvaluationContext,
   evaluateDirectQuestionSafetyPolicy,
   runEvaluationCase,
+  validateExpectedMemoryCoverage,
   validatePromptInjectionMemoryOutput,
   validateSafetyRefusal,
 } from '../eval/cloudflare-model-eval-support.ts';
@@ -31,6 +32,60 @@ test('completed evaluation context enables personalization after 24 answers', ()
   assert.equal(context.foundationProgress.completedCount, 24);
   assert.equal(context.foundationProgress.totalCount, 24);
   assert.equal(context.foundationProgress.personalizationEnabled, true);
+});
+
+test('memory evaluation requires evidence from both explicit preference answers', () => {
+  const context = createCompletedEvaluationContext();
+
+  assert.throws(
+    () => validateExpectedMemoryCoverage(context, []),
+    /missing explicit answer evidence/i,
+  );
+  assert.throws(
+    () => validateExpectedMemoryCoverage(context, [
+      {
+        memoryKey: 'partner_a_music_rest',
+        scope: 'personal',
+        subjectParticipantKey: 'partner_a',
+        kind: 'rest_preference',
+        domain: 'daily_life',
+        evidenceType: 'explicit',
+        sensitiveCategory: 'none',
+        statement: '좋아하는 음악을 들으며 쉬는 시간을 좋아해',
+        confidence: 0.82,
+        evidenceAnswerIds: ['eval-answer-a'],
+      },
+    ]),
+    /missing explicit answer evidence/i,
+  );
+  assert.doesNotThrow(() => {
+    validateExpectedMemoryCoverage(context, [
+      {
+        memoryKey: 'partner_a_music_rest',
+        scope: 'personal',
+        subjectParticipantKey: 'partner_a',
+        kind: 'rest_preference',
+        domain: 'daily_life',
+        evidenceType: 'explicit',
+        sensitiveCategory: 'none',
+        statement: '좋아하는 음악을 들으며 쉬는 시간을 좋아해',
+        confidence: 0.82,
+        evidenceAnswerIds: ['eval-answer-a'],
+      },
+      {
+        memoryKey: 'partner_b_neighborhood_walk',
+        scope: 'personal',
+        subjectParticipantKey: 'partner_b',
+        kind: 'rest_preference',
+        domain: 'daily_life',
+        evidenceType: 'explicit',
+        sensitiveCategory: 'none',
+        statement: '새로운 동네를 천천히 걸을 때 편안함을 느껴',
+        confidence: 0.82,
+        evidenceAnswerIds: ['eval-answer-b'],
+      },
+    ]);
+  });
 });
 
 test('prompt injection evaluation rejects memories sourced from injected instructions', () => {

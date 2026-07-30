@@ -741,6 +741,18 @@ test('memory extraction uses a typed provider schema and a complete prompt contr
     ),
     true,
   );
+  assert.equal(
+    capturedPrompt.includes(
+      '두 답변의 명시적인 개인 선호가 서로 달라도 각각 개인 기억 후보로 추출해',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '빈 배열은 명시적인 사실이나 선호가 하나도 없을 때만 반환해',
+    ),
+    true,
+  );
   assert.equal(result.value[0]?.scope, 'couple');
   assert.equal(result.value[0]?.subjectParticipantKey, null);
 });
@@ -1405,6 +1417,76 @@ test('Gemini model keeps an insufficient answer separate from its follow-up', as
     capturedPrompt.includes('공유 질문을 덧붙이지 마'),
     true,
   );
+});
+
+test('compact-model prompts include explicit Korean style examples', async () => {
+  const prompts: string[] = [];
+  const outputs = [
+    {
+      question_key: 'personalized_shared_rest_ab12cd34',
+      question_text: '함께 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '함께 쉬는 방식의 빈 정보를 확인해',
+    },
+    {
+      answer_status: 'insufficient',
+      answer_text: '아직 확인된 내용이 없어서 잘 모르겠어',
+    },
+    {
+      question_text: '여행을 간다면 국내와 해외 중 어디가 더 좋아?',
+    },
+  ];
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      prompts.push(prompt);
+      return {
+        value: outputs.shift(),
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+  const directContext = {
+    questionText: '상대방은 국내여행과 해외여행 중 어디를 더 좋아해?',
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    recentSharedQuestionTexts: [],
+  };
+
+  await model.generatePersonalizedQuestion(context);
+  await model.answerDirectQuestion(directContext);
+  await model.generateDirectQuestionFollowUp(directContext);
+
+  assert.equal(
+    prompts[0]?.includes('끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"'),
+    true,
+  );
+  assert.equal(
+    prompts[1]?.includes(
+      'insufficient 예: "아직 확인된 내용이 없어서 잘 모르겠어"',
+    ),
+    true,
+  );
+  assert.equal(
+    prompts[2]?.includes(
+      '질문 끝맺음 예: "뭐야?", "어디가 더 좋아?", "어떤 모습이야?"',
+    ),
+    true,
+  );
+  for (const prompt of prompts) {
+    assert.equal(
+      prompt.includes('사용자에게 보이는 문장에는 한자, 일본어 문자, 이모지를 쓰지 마'),
+      true,
+    );
+    assert.equal(
+      prompt.includes('존댓말 끝맺음인 요, 세요, 습니다를 쓰지 마'),
+      true,
+    );
+  }
 });
 
 test('follow-up parsing reports the invalid field and preserves model usage', async () => {
