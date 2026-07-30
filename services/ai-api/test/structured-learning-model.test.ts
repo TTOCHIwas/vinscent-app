@@ -1031,6 +1031,78 @@ test('learning tasks use separated policy and bounded generation profiles', asyn
   );
 });
 
+test('proactive suggestion schema only allows context-valid kinds', async () => {
+  const allowedKinds: unknown[][] = [];
+  const outputs = [
+    {
+      suggestion_text: '이미 카드도 남겼으니 오늘은 둘이 천천히 산책하면 좋겠다',
+      kind: 'date_idea',
+    },
+    {
+      suggestion_text: '창가에 비친 저녁빛을 사진으로 남기면 카드로도 예쁘겠다',
+      kind: 'card_idea',
+    },
+    {
+      suggestion_text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진으로 남겨도 예쁘겠다',
+      kind: 'sunset_card',
+    },
+  ];
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ schema }) => {
+      const kindSchema = (
+        schema as {
+          properties: {
+            kind: { enum: unknown[] };
+          };
+        }
+      ).properties.kind;
+      allowedKinds.push(kindSchema.enum);
+      return {
+        value: outputs.shift(),
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+  const baseContext = {
+    localDate: '2026-07-30',
+    localHour: 18,
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+  };
+
+  await model.generateProactiveSuggestion({
+    ...baseContext,
+    hasCardToday: true,
+    weather: null,
+  });
+  await model.generateProactiveSuggestion({
+    ...baseContext,
+    hasCardToday: false,
+    weather: null,
+  });
+  await model.generateProactiveSuggestion({
+    ...baseContext,
+    hasCardToday: false,
+    weather: {
+      condition: 'clear',
+      apparentTemperatureC: 24,
+      precipitationPossible: false,
+      nearSunset: true,
+      sunsetLocalTime: '19:42',
+    },
+  });
+
+  assert.deepEqual(allowedKinds, [
+    ['date_idea'],
+    ['date_idea', 'card_idea'],
+    ['date_idea', 'card_idea', 'sunset_card'],
+  ]);
+});
+
 test('feedback uses profile and recent six answers only after personalization opens', async () => {
   const prompts: string[] = [];
   const model = new StructuredLearningModel({
