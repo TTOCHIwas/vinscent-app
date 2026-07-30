@@ -108,14 +108,6 @@ const directQuestionFollowUpSchema = objectSchema({
   rationale: { type: 'string' },
 }, ['question_text', 'category', 'mood', 'rationale']);
 
-const proactiveSuggestionSchema = objectSchema({
-  suggestion_text: { type: 'string', minLength: 35, maxLength: 100 },
-  kind: {
-    type: 'string',
-    enum: ['date_idea', 'card_idea', 'sunset_card'],
-  },
-}, ['suggestion_text', 'kind']);
-
 export class StructuredLearningModel implements LearningModelPort {
   readonly #client: StructuredGenerationClient;
 
@@ -261,7 +253,7 @@ export class StructuredLearningModel implements LearningModelPort {
         context,
         options?.rejectedText ?? null,
       ),
-      proactiveSuggestionSchema,
+      buildProactiveSuggestionSchema(context),
       generationProfiles.proactive,
     ));
     const output = requireRecord(result.value);
@@ -360,6 +352,28 @@ function buildMemorySchema(
       },
     },
   }, ['memories']);
+}
+
+function buildProactiveSuggestionSchema(
+  context: ProactiveSuggestionContext,
+): Record<string, unknown> {
+  const allowedKinds = context.hasCardToday
+    ? ['date_idea']
+    : context.weather?.nearSunset === true
+    ? ['date_idea', 'card_idea', 'sunset_card']
+    : ['date_idea', 'card_idea'];
+
+  return objectSchema({
+    suggestion_text: {
+      type: 'string',
+      minLength: 35,
+      maxLength: 100,
+    },
+    kind: {
+      type: 'string',
+      enum: allowedKinds,
+    },
+  }, ['suggestion_text', 'kind']);
 }
 
 function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
