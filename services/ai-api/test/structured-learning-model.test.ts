@@ -1450,7 +1450,7 @@ test('follow-up parsing reports the invalid field and preserves model usage', as
   );
 });
 
-test('Gemini model generates a follow-up with a required dedicated schema', async () => {
+test('Gemini model generates a follow-up from a minimal dedicated schema', async () => {
   let capturedPrompt = '';
   let capturedSchema: unknown;
   const model = new StructuredLearningModel({
@@ -1460,9 +1460,6 @@ test('Gemini model generates a follow-up with a required dedicated schema', asyn
       return {
         value: {
           question_text: '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아',
-          category: 'travel',
-          mood: null,
-          rationale: '여행지에서 선호하는 하루 시작 방식을 확인할 근거가 아직 부족해',
         },
         usage: {
           inputTokenCount: null,
@@ -1494,6 +1491,12 @@ test('Gemini model generates a follow-up with a required dedicated schema', asyn
     result.value.questionKey,
     /^direct_follow_up_generated_[a-z0-9]{8}$/,
   );
+  assert.equal(result.value.category, 'direct_follow_up');
+  assert.equal(result.value.mood, null);
+  assert.equal(
+    result.value.rationale,
+    '요청한 질문에 직접 답할 확인된 근거가 아직 부족해',
+  );
   assert.equal(
     capturedPrompt.includes('장소, 시간, 행동, 비교 기준, 선택지를 그대로 유지해'),
     true,
@@ -1510,16 +1513,8 @@ test('Gemini model generates a follow-up with a required dedicated schema', asyn
     type: 'object',
     properties: {
       question_text: { type: 'string', maxLength: 299 },
-      category: { type: 'string' },
-      mood: { type: ['string', 'null'] },
-      rationale: { type: 'string' },
     },
-    required: [
-      'question_text',
-      'category',
-      'mood',
-      'rationale',
-    ],
+    required: ['question_text'],
     additionalProperties: false,
   });
 });
