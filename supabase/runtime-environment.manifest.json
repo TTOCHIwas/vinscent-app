@@ -202,6 +202,16 @@
       ]
     },
     {
+      "name": "OPERATIONS_DISCORD_WEBHOOK_URL",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Discord incoming webhook URL used for operational alerts.",
+      "functions": [
+        "monitor-storage-cleanup-health"
+      ]
+    },
+    {
       "name": "RECORDING_WEBHOOK_SECRET",
       "availability": "required",
       "provisioning": "supabase_secret",
@@ -260,9 +270,31 @@
       "description": "Shared secret for scheduled notification and maintenance calls.",
       "functions": [
         "dispatch-scheduled-notifications",
+        "monitor-storage-cleanup-health",
         "process-ai-learning-jobs",
         "process-safety-moderation-alerts",
         "purge-disconnected-couple-archives"
+      ]
+    },
+    {
+      "name": "STORAGE_CLEANUP_ALERT_WORKER_MAX_BATCH_SIZE",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Maximum number of storage cleanup operational alerts processed per monitor call.",
+      "functions": [
+        "monitor-storage-cleanup-health"
+      ]
+    },
+    {
+      "name": "STORAGE_CLEANUP_ALERT_WORKER_SECRET",
+      "availability": "fallback",
+      "fallbackTo": "SCHEDULE_WEBHOOK_SECRET",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Dedicated shared secret for scheduled storage cleanup health monitoring.",
+      "functions": [
+        "monitor-storage-cleanup-health"
       ]
     },
     {
@@ -295,6 +327,7 @@
         "delete-account",
         "dispatch-scheduled-notifications",
         "generate-ai-proactive-suggestion",
+        "monitor-storage-cleanup-health",
         "process-ai-learning-jobs",
         "process-safety-moderation-alerts",
         "process-storage-cleanup",
@@ -316,6 +349,7 @@
         "delete-account",
         "dispatch-scheduled-notifications",
         "generate-ai-proactive-suggestion",
+        "monitor-storage-cleanup-health",
         "process-ai-learning-jobs",
         "process-safety-moderation-alerts",
         "process-storage-cleanup",

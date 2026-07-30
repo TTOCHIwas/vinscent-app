@@ -388,6 +388,9 @@ verify_jwt = false
 [functions.process-safety-moderation-alerts]
 verify_jwt = false
 
+[functions.monitor-storage-cleanup-health]
+verify_jwt = false
+
 [functions.delete-account]
 verify_jwt = false
 

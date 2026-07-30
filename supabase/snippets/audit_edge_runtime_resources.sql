@@ -125,6 +125,14 @@ with expected_schedules (
       array['x-schedule-webhook-secret']::text[]
     ),
     (
+      'monitor-storage-cleanup-health',
+      '*/5 * * * *',
+      array[
+        'x-storage-cleanup-alert-worker-secret',
+        'x-schedule-webhook-secret'
+      ]::text[]
+    ),
+    (
       'process-ai-learning-jobs',
       '* * * * *',
       array[
