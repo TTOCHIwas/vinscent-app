@@ -9,7 +9,7 @@
 | 분류 | 실제 데이터 | 처리 목적 | 저장 위치 |
 |---|---|---|---|
 | 계정 및 인증 | Supabase 사용자 ID, 소셜 로그인 제공자와 제공자 식별자, Apple이 최초 제공하는 이메일·이름 | 로그인, 계정 식별, Apple 계정 삭제 시 토큰 철회 | Supabase Auth |
-| 프로필 | 닉네임, 생일 | 앱 표시, 온보딩, 커플 캘린더의 기본 생일 일정 | Supabase Database |
+| 프로필 | 닉네임, 생일 | 만 14세 이상 이용 확인, 앱 표시, 온보딩, 커플 캘린더의 기본 생일 일정 | Supabase Database |
 | 커플 관계 | 초대 코드, 두 사용자 ID, 만난 날, 시간대, 연결·해제·차단 상태 | 커플 연결, 공유 날짜 계산, 접근 제어, 보관 및 재연결 | Supabase Database |
 | 카드 | 카드 이미지, 사진, 그림, 텍스트, 편집 장면 데이터, 작성자와 작성일 | 커플 카드 작성·공유·다운로드 | Supabase Database·Storage |
 | 질문과 답변 | 고정·AI 질문, 두 사용자의 답변, 답변 시각 | 커플 질문 기능, 기록 조회, AI 학습과 피드백 | Supabase Database |
@@ -100,13 +100,12 @@
 1. 개인정보처리자 또는 사업자 법적 명칭
 2. 개인정보 보호 책임자 또는 담당 부서와 연락처
 3. 고객지원·개인정보 문의 이메일
-4. 서비스 이용 가능 최저 연령과 만 14세 미만 처리 방침
-5. 신고 기록과 발송·AI 진단 로그의 구체적인 보관 기간
-6. 국외 이전 국가·리전, 이전 시점·방법, 보유 기간을 포함한 각 외부 처리자 계약 정보
-7. 웹 계정 삭제 요청의 본인 확인 및 운영 처리 절차
-8. 개인정보처리방침·이용약관 시행일
-9. 신고 기록을 계정 삭제와 함께 제거할지, 익명화 후 별도 보관할지 여부
-10. UGC 게시 전 필터 공급자와 텍스트·이미지·오디오 검사 범위
+4. 신고 기록과 발송·AI 진단 로그의 구체적인 보관 기간
+5. 국외 이전 국가·리전, 이전 시점·방법, 보유 기간을 포함한 각 외부 처리자 계약 정보
+6. 웹 계정 삭제 요청의 본인 확인 및 운영 처리 절차
+7. 개인정보처리방침·이용약관 시행일
+8. 신고 기록을 계정 삭제와 함께 제거할지, 익명화 후 별도 보관할지 여부
+9. UGC 게시 전 필터 공급자와 텍스트·이미지·오디오 검사 범위
 
 ## 7. 출시 전 코드·설정 확인 항목
 
@@ -114,7 +113,10 @@
   Resources 포함 여부를 자동 테스트한다. 실제 배포 archive의 통합
   Privacy Report 검증은 Mac에서 남아 있다.
 - Android와 iOS 권한 설명은 공개 정책의 실제 이용 목적과 맞춰야 한다.
-- 생일 입력은 미래 날짜만 제한하며 만 14세 이상 검증은 없다.
+- 서비스 가입과 이용은 만 14세 이상으로 제한한다. 앱은 생일 선택 단계에서
+  `app_age_policy.dart`로 안내와 진행 가능 여부를 계산하고, Database는
+  `20260730000000_enforce_profile_minimum_age.sql`의 프로필 쓰기 트리거로
+  우회 저장을 차단한다.
 - AI 실행, 푸시 발송과 신고 기록에는 기간 기반 자동 파기 기준이 구현되어
   있지 않다.
 - 공개 개인정보처리방침 URL과 외부 계정 삭제 요청 URL이 아직 없다.
@@ -131,6 +133,7 @@
 - `apps/mobile/lib/features/auth/data/kakao_auth_client.dart`
 - `apps/mobile/lib/features/auth/data/social_session_repository.dart`
 - `apps/mobile/lib/features/profile/data/profile_repository.dart`
+- `apps/mobile/lib/core/date/app_age_policy.dart`
 - `apps/mobile/lib/features/ai/application/ai_current_location_service.dart`
 - `apps/mobile/lib/features/ai/data/ai_proactive_suggestion_repository.dart`
 - `apps/mobile/lib/features/notifications/data/push_token_repository.dart`
@@ -157,3 +160,4 @@
 - `supabase/migrations/20260729009000_enforce_ugc_safety_policy_write_boundary.sql`
 - `supabase/migrations/20260729010000_add_safety_moderation_alert_outbox.sql`
 - `supabase/migrations/20260729011000_add_safety_report_review_boundary.sql`
+- `supabase/migrations/20260730000000_enforce_profile_minimum_age.sql`
