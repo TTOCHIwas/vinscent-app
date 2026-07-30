@@ -66,7 +66,7 @@ class ExtractMemoriesHandler implements LearningJobHandler {
     const context = await this.#repository.loadContext(job.jobId);
     const modelContext = anonymizeCompletedQuestionContext(context);
 
-    return modelJob('memory-v6', async () => {
+    return modelJob('memory-v7', async () => {
       const result = await this.#model.extractMemoryCandidates(modelContext);
       const memories = resolveMemoryCandidates(
         context,
@@ -111,7 +111,7 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('feedback-v3', async () => {
+    return modelJob('feedback-v4', async () => {
       let rejectedText: string | null = null;
       let combinedUsage: LearningModelUsage | null = null;
 
@@ -157,7 +157,7 @@ class SelectCuratedQuestionHandler implements LearningJobHandler {
     const context = await this.#repository.loadContext(job.jobId);
     const modelContext = anonymizeCompletedQuestionContext(context);
 
-    return modelJob('question-ranking-v2', async () => {
+    return modelJob('question-ranking-v3', async () => {
       const result = await this.#model.rankFoundationQuestions(
         modelContext,
         context.remainingFoundationQuestions,
@@ -197,7 +197,7 @@ class GenerateGeneralQuestionHandler implements LearningJobHandler {
       job.jobId,
     );
 
-    return modelJob('general-question-v1', async () => {
+    return modelJob('general-question-v2', async () => {
       const result = await this.#model.generateGeneralQuestion(context);
       validateGeneralQuestion(result.value);
       return {
@@ -229,7 +229,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v2', async () => {
+    return modelJob('personalized-question-v3', async () => {
       const result = await this.#model.generatePersonalizedQuestion(context);
       validatePersonalizedQuestion(result.value);
       return {
