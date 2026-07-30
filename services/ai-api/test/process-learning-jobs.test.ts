@@ -239,7 +239,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       seenModelContexts.push(context);
       return result({
         questionKey: 'personalized_shared_weekend_ab12cd34',
-        text: 'What would make this weekend feel balanced for both?',
+        text: '이번 주말을 둘 다 편하게 보내려면 어떤 시간이 필요할까?',
         category: 'personalized',
         mood: null,
         rationale: 'Their preferred ways of spending time differ.',
@@ -313,7 +313,7 @@ test('processor handles every learning job and restores IDs only at persistence'
   });
   assert.deepEqual(repository.successes[4]?.output, {
     question_key: 'personalized_shared_weekend_ab12cd34',
-    question_text: 'What would make this weekend feel balanced for both?',
+    question_text: '이번 주말을 둘 다 편하게 보내려면 어떤 시간이 필요할까?',
     category: 'personalized',
     mood: null,
     rationale: 'Their preferred ways of spending time differ.',

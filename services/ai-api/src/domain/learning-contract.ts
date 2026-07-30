@@ -615,6 +615,7 @@ function validateMemoryStatement(statement: string): void {
   ) {
     throw new Error('memory statement cannot expose an internal participant');
   }
+  validateKoreanCharacterText(statement, 'memory statement');
   if (
     reportStyleMemoryEndingPattern.test(statement)
     || statement.endsWith('.')
@@ -688,6 +689,7 @@ export function validateCoupleFeedback(
   candidate: CoupleFeedbackCandidate,
 ): void {
   requireNonBlank(candidate.text, 'couple feedback', 80);
+  validateKoreanCharacterText(candidate.text, 'couple feedback');
   const reactionBody = candidate.text.endsWith('...')
     ? candidate.text.slice(0, -3)
     : /[!?]$/u.test(candidate.text)
@@ -740,6 +742,7 @@ export function validateDirectQuestionAnswer(
   candidate: DirectQuestionAnswer,
 ): void {
   requireNonBlank(candidate.text, 'direct question answer', 400);
+  validateKoreanCharacterText(candidate.text, 'direct question answer');
 
   if (
     candidate.status !== 'answered'
@@ -780,6 +783,7 @@ export function validateProactiveSuggestion(
   candidate: ProactiveSuggestionCandidate,
 ): void {
   requireNonBlank(candidate.text, 'proactive suggestion', 100);
+  validateKoreanCharacterText(candidate.text, 'proactive suggestion');
 
   if (candidate.text.trim().length < 35) {
     throw new RangeError('proactive suggestion must contain at least 35 characters');
@@ -834,6 +838,7 @@ function validateGeneratedQuestion(
 ): void {
   requireNonBlank(candidate.questionKey, 'generated question key', 120);
   requireNonBlank(candidate.text, 'generated question', 300);
+  validateKoreanCharacterText(candidate.text, 'generated question');
   requireNonBlank(candidate.category, 'generated question category', 100);
   requireNonBlank(candidate.rationale, 'generated question rationale', 500);
 
@@ -860,6 +865,7 @@ export function validateDirectQuestionFollowUp(
   }
   try {
     requireNonBlank(candidate.text, 'generated question', 300);
+    validateKoreanCharacterText(candidate.text, 'generated question');
   } catch {
     throw new DirectQuestionFollowUpValidationError('invalid_question');
   }
@@ -904,6 +910,23 @@ export function validateDirectQuestionFollowUp(
   );
   if (isDuplicate) {
     throw new DirectQuestionFollowUpValidationError('duplicate_question');
+  }
+}
+
+const foreignLetterPattern =
+  /(?![\p{Script=Hangul}\p{Script=Latin}])\p{Letter}/u;
+const politeSpeechEndingPattern =
+  /(?:습니다|ㅂ니다|입니다|됩니다|합니다|드립니다|바랍니다|십시오|습니까|입니까|인가요|해요|돼요|이에요|예요|어요|아요|네요|군요|죠|나요|까요|세요)(?=$|[\s.!?…])/u;
+
+function validateKoreanCharacterText(value: string, label: string): void {
+  if (!/\p{Script=Hangul}/u.test(value)) {
+    throw new Error(`${label} must contain Korean text`);
+  }
+  if (foreignLetterPattern.test(value)) {
+    throw new Error(`${label} cannot contain a foreign script`);
+  }
+  if (politeSpeechEndingPattern.test(value)) {
+    throw new Error(`${label} must use casual speech`);
   }
 }
 
