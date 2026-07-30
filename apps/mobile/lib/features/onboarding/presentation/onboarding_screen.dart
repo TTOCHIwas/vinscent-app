@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/today_controller.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/presentation/widgets/app_action_tone.dart';
 import '../../../core/presentation/widgets/app_date_picker_sheet.dart';
@@ -62,6 +63,8 @@ class OnboardingScreen extends ConsumerWidget {
           OnboardingStep.birthDate => BirthDateStep(
             key: const ValueKey(OnboardingStep.birthDate),
             birthDate: state.birthDate,
+            showEligibilityError:
+                state.birthDate != null && !state.isBirthDateValid,
             onTap: () => _showBirthDatePicker(context, ref, state.birthDate),
           ),
         },
@@ -75,8 +78,7 @@ class OnboardingScreen extends ConsumerWidget {
     DateTime? selectedDate,
   ) async {
     final controller = ref.read(onboardingControllerProvider.notifier);
-    final now = DateTime.now();
-    final maxDate = DateTime(now.year, now.month, now.day);
+    final maxDate = ref.read(todayControllerProvider);
     final pickedDate = await showAppDatePickerSheet(
       context: context,
       title: '생일 선택',

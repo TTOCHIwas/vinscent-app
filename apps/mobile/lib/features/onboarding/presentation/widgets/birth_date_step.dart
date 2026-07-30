@@ -9,10 +9,12 @@ class BirthDateStep extends StatelessWidget {
   const BirthDateStep({
     super.key,
     required this.birthDate,
+    required this.showEligibilityError,
     required this.onTap,
   });
 
   final DateTime? birthDate;
+  final bool showEligibilityError;
   final VoidCallback onTap;
 
   @override
@@ -71,6 +73,13 @@ class BirthDateStep extends StatelessWidget {
             ),
           ),
         ),
+        if (showEligibilityError) ...[
+          const SizedBox(height: 8),
+          const Text(
+            '현재 이용 기준에 해당하지 않아 가입할 수 없어',
+            style: AppTextStyles.compactError,
+          ),
+        ],
       ],
     );
   }

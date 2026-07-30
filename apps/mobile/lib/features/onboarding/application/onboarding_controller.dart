@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/app_date_policy.dart';
+import '../../../core/date/today_controller.dart';
 import '../../profile/application/profile_controller.dart';
 import 'onboarding_state.dart';
 
@@ -45,9 +47,8 @@ class OnboardingController extends Notifier<OnboardingState> {
   }
 
   void updateBirthDate(DateTime value) {
-    final birthDate = DateTime(value.year, value.month, value.day);
-    final today = DateTime.now();
-    final maxDate = DateTime(today.year, today.month, today.day);
+    final birthDate = calendarDateOnly(value);
+    final maxDate = ref.read(todayControllerProvider);
     if (birthDate.isAfter(maxDate)) {
       return;
     }
