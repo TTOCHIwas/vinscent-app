@@ -1407,6 +1407,49 @@ test('Gemini model keeps an insufficient answer separate from its follow-up', as
   );
 });
 
+test('follow-up parsing reports the invalid field and preserves model usage', async () => {
+  const model = new StructuredLearningModel({
+    generateStructured: async () => ({
+      value: {
+        question_text: null,
+        category: 'travel',
+        mood: null,
+        rationale: '여행 취향을 확인할 근거가 아직 부족해',
+      },
+      usage: {
+        inputTokenCount: 321,
+        outputTokenCount: 45,
+        latencyMs: 678,
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => model.generateDirectQuestionFollowUp({
+      questionText: '상대방은 국내여행과 해외여행 중 어느 쪽을 더 좋아해?',
+      confirmedMemories: [],
+      recentCompletedQuestions: [],
+      recentSharedQuestionTexts: [],
+    }),
+    (error: unknown) => {
+      assert.equal(error instanceof LearningModelError, true);
+      if (!(error instanceof LearningModelError)) {
+        return false;
+      }
+      assert.equal(
+        error.diagnosticDetail,
+        'direct_question.follow_up.question_text.invalid',
+      );
+      assert.deepEqual(error.usage, {
+        inputTokenCount: 321,
+        outputTokenCount: 45,
+        latencyMs: 678,
+      });
+      return true;
+    },
+  );
+});
+
 test('Gemini model generates a follow-up with a required dedicated schema', async () => {
   let capturedPrompt = '';
   let capturedSchema: unknown;
