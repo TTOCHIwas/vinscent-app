@@ -340,6 +340,23 @@ test('processor handles every learning job and restores IDs only at persistence'
   assert.deepEqual(repository.directContextJobIds, ['job-direct']);
   assert.equal(repository.contextJobIds.includes('job-general'), false);
   assert.equal(repository.contextJobIds.includes('job-direct'), false);
+  assert.deepEqual(
+    repository.startedRuns.map(({ jobId, promptVersion }) => ({
+      jobId,
+      promptVersion,
+    })),
+    [
+      { jobId: 'job-memory', promptVersion: 'memory-v7' },
+      { jobId: 'job-feedback', promptVersion: 'feedback-v4' },
+      { jobId: 'job-rank', promptVersion: 'question-ranking-v3' },
+      { jobId: 'job-general', promptVersion: 'general-question-v2' },
+      {
+        jobId: 'job-personalized',
+        promptVersion: 'personalized-question-v3',
+      },
+      { jobId: 'job-direct', promptVersion: 'direct-question-v6' },
+    ],
+  );
 });
 
 test('direct question handler persists a structured follow-up proposal', async () => {
