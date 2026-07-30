@@ -118,8 +118,8 @@ select ok(
 );
 select is(
   private.ai_direct_question_daily_limit(),
-  100::smallint,
-  'the private policy owns the test daily limit'
+  3::smallint,
+  'the private policy owns the release daily limit'
 );
 
 select set_config(
@@ -131,13 +131,13 @@ set local role authenticated;
 
 select is(
   public.get_my_ai_user_questions()->>'daily_limit',
-  '100',
-  'the history contract reports the test daily limit'
+  '3',
+  'the history contract reports the release daily limit'
 );
 select is(
   public.get_my_ai_user_questions()->>'remaining_count',
-  '100',
-  'a member starts the day with the complete test allowance'
+  '3',
+  'a member starts the day with the complete release allowance'
 );
 
 reset role;
@@ -154,10 +154,10 @@ select lives_ok(
       '2a000000-0000-0000-0000-000000000001',
       '1a000000-0000-0000-0000-000000000001',
       current_date,
-      99
+      2
     )
   $$,
-  'usage storage does not duplicate the current product limit'
+  'usage storage accepts a count below the current product limit'
 );
 
 set local role authenticated;
