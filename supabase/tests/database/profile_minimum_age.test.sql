@@ -72,7 +72,7 @@ select throws_ok(
       '19000000-0000-0000-0000-000000000001',
       'Minor',
       (
-        private.current_app_date() - interval '13 years'
+        (now() at time zone 'Asia/Seoul')::date - interval '13 years'
       )::date
     )
   $$,
@@ -100,7 +100,7 @@ select lives_ok(
       '19000000-0000-0000-0000-000000000002',
       'Boundary',
       (
-        private.current_app_date() - interval '14 years'
+        (now() at time zone 'Asia/Seoul')::date - interval '14 years'
       )::date
     )
   $$,
@@ -119,7 +119,7 @@ select throws_ok(
   $$
     update public.profiles
     set birth_date = (
-      private.current_app_date() - interval '13 years'
+      (now() at time zone 'Asia/Seoul')::date - interval '13 years'
     )::date
     where id = '19000000-0000-0000-0000-000000000002'
   $$,
