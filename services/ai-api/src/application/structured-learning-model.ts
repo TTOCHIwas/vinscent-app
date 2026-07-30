@@ -43,6 +43,11 @@ const commonSystemInstruction = [
   '응답은 제공된 JSON Schema를 정확히 따라.',
 ].join('\n');
 
+const compactVisibleKoreanRules = [
+  '사용자에게 보이는 문장에는 한자, 일본어 문자, 이모지를 쓰지 마.',
+  '존댓말 끝맺음인 요, 세요, 습니다를 쓰지 마.',
+] as const;
+
 const maximumMemoryCandidates = 3;
 
 const learningDomains = [
@@ -483,12 +488,15 @@ function buildMemoryExtractionPrompt(
       '7. couple 기억은 두 답변이 같은 구체적 사실을 직접 지지할 때만 만들고 두 answer_id를 모두 써. 서로 다른 취향을 하나의 커플 기억으로 합치지 마.',
       '8. 일시적인 기분, 근거 없는 해석, rejected 상태의 후보는 저장하지 마.',
       '9. 근거가 없으면 memories를 빈 배열로 반환해.',
+      '10. 두 답변의 명시적인 개인 선호가 서로 달라도 각각 개인 기억 후보로 추출해.',
+      '11. 빈 배열은 명시적인 사실이나 선호가 하나도 없을 때만 반환해.',
       '필드 규칙:',
       '- scope는 personal 또는 couple이야.',
       '- subject_participant_key는 personal이면 partner_a 또는 partner_b, couple이면 null이야.',
       '- kind는 기억 내용을 나타내는 짧은 snake_case야.',
       '- learning_domain, evidence_type, sensitive_category, evidence_answer_ids는 스키마에 허용된 값만 써.',
       '- statement에는 참여자 표시, 닉네임, 사용자 ID를 넣지 마. 주어 없이 친근한 반말 한 문장으로 쓰고 마침표를 붙이지 마.',
+      ...compactVisibleKoreanRules,
       '- confidence는 0~1이야. 맥락상 분명한 선호는 0.75~0.85, 명백하고 지속적인 사실은 0.86~0.94, 예외적으로 직접적인 표현만 0.94를 넘겨.',
       '- 성생활, 임신·출산, 경제·부채, 건강·정신건강, 트라우마, 종교·정치, 가족 갈등은 알맞은 sensitive_category로 표시해 서버가 제외할 수 있게 해.',
     ].join('\n'),
@@ -551,6 +559,7 @@ function buildFeedbackPrompt(
       '- 마침표는 쓰지 마.',
       '- 문장 끝은 무기호, !, ?, ... 중 하나만 사용해.',
       '- ?!, !?, !!, ??, .., .... 같은 조합이나 반복은 쓰지 마.',
+      ...compactVisibleKoreanRules,
       '내용:',
       '- 두 답변의 의미를 모두 살펴. "몰라", "없어", "글쎄"도 의미 있는 답변이야.',
       '- 답변을 요약하거나 차이를 그대로 읽어주지 마. 핵심 단어를 새 표현에 쓰는 건 괜찮아.',
@@ -580,6 +589,8 @@ function buildPersonalizedQuestionPrompt(
       '두 사람이 같은 입장에서 편하게 답할 수 있는 중립적이고 열린 질문이어야 해.',
       '민감 주제, 진단, 관계 평가, 숨은 의도, 성격 단정은 묻지 마.',
       '고정 질문과 같은 친근한 반말을 사용해.',
+      ...compactVisibleKoreanRules,
+      '끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"',
       'question_key는 personalized_로 시작하고 8자리 영소문자·숫자 접미사로 끝나는 snake_case야.',
       'rationale에는 어떤 빈 정보를 확인하는지만 짧게 써.',
     ].join('\n'),
@@ -609,6 +620,9 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
       '- 근거가 부족하면 추측하지 말고 자연스럽게 모른다고 말해.',
       '답변:',
       '- 한국어 반말 2~4개의 짧은 문장, 전체 400자 이내야.',
+      ...compactVisibleKoreanRules,
+      '- answered 예: "쉬는 날에는 새로운 동네를 천천히 걷는 걸 좋아해"',
+      '- insufficient 예: "아직 확인된 내용이 없어서 잘 모르겠어"',
       '- 공유 질문을 덧붙이지 마. 후속 질문은 별도 작업에서 만들어.',
       '- 숨은 의도, 성격·감정 진단, 관계 평가, 이별 권유, 근거 이상의 확신은 금지야.',
       '- 민감하거나 고위험한 요청에는 답하지 마.',
@@ -653,6 +667,8 @@ function buildDirectQuestionFollowUpPrompt(
       '- 참여자 역할, 사용자 ID, 시스템 용어를 쓰지 마.',
       '형식:',
       '- recent_shared_questions와 중복되지 않는 자연스러운 한국어 반말 질문 하나야.',
+      ...compactVisibleKoreanRules,
+      '- 질문 끝맺음 예: "뭐야?", "어디가 더 좋아?", "어떤 모습이야?"',
       '- question_text는 반드시 물음표로 끝나야 해.',
       '- 마크다운, 제목, 목록, 인용 표시는 쓰지 마.',
     ].join('\n'),

@@ -27,6 +27,7 @@ import {
   createSensitiveDiagnosisEvaluationContext,
   evaluateDirectQuestionSafetyPolicy,
   runEvaluationCase,
+  validateExpectedMemoryCoverage,
   validatePromptInjectionMemoryOutput,
   validateSafetyRefusal,
 } from './cloudflare-model-eval-support.ts';
@@ -135,6 +136,7 @@ const evaluationCases: EvaluationCase[] = [
         ReturnType<StructuredLearningModel['extractMemoryCandidates']>
       >['value'];
       resolveMemoryCandidates(completedContext, memories);
+      validateExpectedMemoryCoverage(completedContext, memories);
       for (const memory of memories) {
         requireKoreanText(memory.statement, 'memory statement');
       }

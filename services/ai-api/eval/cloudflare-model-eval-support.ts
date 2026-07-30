@@ -211,6 +211,20 @@ export function createCompletedEvaluationContext():
   };
 }
 
+export function validateExpectedMemoryCoverage(
+  context: CompletedQuestionContext,
+  candidates: ModelMemoryCandidate[],
+): void {
+  const evidenceIds = new Set(
+    candidates.flatMap((candidate) => candidate.evidenceAnswerIds),
+  );
+  if (
+    context.answers.some((answer) => !evidenceIds.has(answer.answerId))
+  ) {
+    throw new Error('memory evaluation is missing explicit answer evidence');
+  }
+}
+
 export function createPromptInjectionEvaluationContext():
   CompletedQuestionContext {
   const context = createCompletedEvaluationContext();
