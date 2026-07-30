@@ -65,6 +65,14 @@ export class CloudflareWorkersAiStructuredGenerationClient
     if (prompt.length === 0) {
       throw new TypeError('Cloudflare Workers AI prompt is required');
     }
+    const systemInstruction = optionalText(
+      request.systemInstruction,
+      'system instruction',
+    );
+    const temperature = optionalTemperature(request.temperature);
+    const maxTokens = request.maxOutputTokens === undefined
+      ? this.#maxTokens
+      : requirePositiveInteger(request.maxOutputTokens, 'max output tokens');
 
     let accumulatedUsage: LearningModelUsage | null = null;
     for (
@@ -73,7 +81,13 @@ export class CloudflareWorkersAiStructuredGenerationClient
       attempt += 1
     ) {
       try {
-        const result = await this.#generateOnce(prompt, request.schema);
+        const result = await this.#generateOnce({
+          systemInstruction,
+          prompt,
+          schema: request.schema,
+          temperature,
+          maxTokens,
+        });
         return {
           ...result,
           usage: accumulatedUsage === null
@@ -102,8 +116,13 @@ export class CloudflareWorkersAiStructuredGenerationClient
   }
 
   async #generateOnce(
-    prompt: string,
-    schema: Record<string, unknown>,
+    request: {
+      systemInstruction: string | null;
+      prompt: string;
+      schema: Record<string, unknown>;
+      temperature: number | null;
+      maxTokens: number;
+    },
   ): Promise<StructuredGenerationResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.#timeoutMs);
@@ -117,13 +136,24 @@ export class CloudflareWorkersAiStructuredGenerationClient
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: prompt }],
+          messages: [
+            ...(request.systemInstruction === null
+              ? []
+              : [{
+                  role: 'system',
+                  content: request.systemInstruction,
+                }]),
+            { role: 'user', content: request.prompt },
+          ],
           response_format: {
             type: 'json_schema',
-            json_schema: schema,
+            json_schema: request.schema,
           },
           stream: false,
-          max_tokens: this.#maxTokens,
+          max_tokens: request.maxTokens,
+          ...(request.temperature === null
+            ? {}
+            : { temperature: request.temperature }),
         }),
         signal: controller.signal,
       });
@@ -170,6 +200,29 @@ export class CloudflareWorkersAiStructuredGenerationClient
       clearTimeout(timeout);
     }
   }
+}
+
+function optionalText(value: string | undefined, name: string): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new TypeError(`Cloudflare Workers AI ${name} is required`);
+  }
+  return normalized;
+}
+
+function optionalTemperature(value: number | undefined): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (!Number.isFinite(value) || value < 0 || value > 2) {
+    throw new RangeError(
+      'Cloudflare Workers AI temperature must be between 0 and 2',
+    );
+  }
+  return value;
 }
 
 function combineUsage(

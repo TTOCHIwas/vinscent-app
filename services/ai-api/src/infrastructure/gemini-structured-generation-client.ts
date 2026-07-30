@@ -84,9 +84,21 @@ export class GeminiStructuredGenerationClient
   async generateStructured(
     request: StructuredGenerationRequest,
   ): Promise<StructuredGenerationResult> {
-    if (request.prompt.trim().length === 0) {
+    const prompt = request.prompt.trim();
+    if (prompt.length === 0) {
       throw new TypeError('Gemini prompt is required');
     }
+    const systemInstruction = optionalText(
+      request.systemInstruction,
+      'system instruction',
+    );
+    const temperature = optionalTemperature(request.temperature);
+    const maxOutputTokens = request.maxOutputTokens === undefined
+      ? null
+      : requirePositiveInteger(
+          request.maxOutputTokens,
+          'max output tokens',
+        );
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.#timeoutMs);
@@ -100,16 +112,25 @@ export class GeminiStructuredGenerationClient
           'x-goog-api-key': this.#apiKey,
         },
         body: JSON.stringify({
+          ...(systemInstruction === null
+            ? {}
+            : {
+                systemInstruction: {
+                  parts: [{ text: systemInstruction }],
+                },
+              }),
           contents: [
             {
               role: 'user',
-              parts: [{ text: request.prompt }],
+              parts: [{ text: prompt }],
             },
           ],
           safetySettings: defaultSafetySettings,
           generationConfig: {
             responseMimeType: 'application/json',
             responseJsonSchema: request.schema,
+            ...(temperature === null ? {} : { temperature }),
+            ...(maxOutputTokens === null ? {} : { maxOutputTokens }),
           },
         }),
         signal: controller.signal,
@@ -170,6 +191,34 @@ export class GeminiStructuredGenerationClient
       clearTimeout(timeout);
     }
   }
+}
+
+function optionalText(value: string | undefined, name: string): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new TypeError(`Gemini ${name} is required`);
+  }
+  return normalized;
+}
+
+function optionalTemperature(value: number | undefined): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (!Number.isFinite(value) || value < 0 || value > 2) {
+    throw new RangeError('Gemini temperature must be between 0 and 2');
+  }
+  return value;
+}
+
+function requirePositiveInteger(value: number, name: string): number {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new RangeError(`Gemini ${name} must be a positive integer`);
+  }
+  return value;
 }
 
 function invalidOutputError(

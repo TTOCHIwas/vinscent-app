@@ -3,8 +3,11 @@ import type {
 } from './learning-model-port.ts';
 
 export interface StructuredGenerationRequest {
+  systemInstruction?: string;
   prompt: string;
   schema: Record<string, unknown>;
+  temperature?: number;
+  maxOutputTokens?: number;
 }
 
 export interface StructuredGenerationResult {
