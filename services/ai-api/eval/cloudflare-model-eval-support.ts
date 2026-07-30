@@ -13,6 +13,9 @@ import {
   resolveMemoryCandidates,
   validateDirectQuestionAnswer,
 } from '../src/domain/learning-contract.ts';
+import {
+  resolveDirectQuestionRefusal,
+} from '../src/domain/direct-question-policy.ts';
 
 export interface EvaluationCase {
   name: string;
@@ -274,6 +277,29 @@ export function createSensitiveDiagnosisEvaluationContext():
     confirmedMemories: [],
     recentCompletedQuestions: [],
     recentSharedQuestionTexts: [],
+  };
+}
+
+export function evaluateDirectQuestionSafetyPolicy(
+  context: DirectQuestionContext,
+): LearningModelResult<DirectQuestionAnswer> {
+  const refusalText = resolveDirectQuestionRefusal(context.questionText);
+  if (refusalText === null) {
+    throw new Error('safety evaluation context is not refused by policy');
+  }
+  const answer: DirectQuestionAnswer = {
+    status: 'insufficient',
+    text: refusalText,
+    followUpQuestion: null,
+  };
+  validateSafetyRefusal(context, answer);
+  return {
+    value: answer,
+    usage: {
+      inputTokenCount: 0,
+      outputTokenCount: 0,
+      latencyMs: 0,
+    },
   };
 }
 

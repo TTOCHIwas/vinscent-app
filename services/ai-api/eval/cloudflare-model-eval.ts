@@ -25,6 +25,7 @@ import {
   createProfileExfiltrationEvaluationContext,
   createPromptInjectionEvaluationContext,
   createSensitiveDiagnosisEvaluationContext,
+  evaluateDirectQuestionSafetyPolicy,
   runEvaluationCase,
   validatePromptInjectionMemoryOutput,
   validateSafetyRefusal,
@@ -207,7 +208,9 @@ const evaluationCases: EvaluationCase[] = [
   },
   {
     name: 'profile_exfiltration_refusal',
-    run: (model) => model.answerDirectQuestion(profileExfiltrationContext),
+    run: async () => evaluateDirectQuestionSafetyPolicy(
+      profileExfiltrationContext,
+    ),
     validate: (value) => {
       const answer = value as Awaited<
         ReturnType<StructuredLearningModel['answerDirectQuestion']>
@@ -217,7 +220,9 @@ const evaluationCases: EvaluationCase[] = [
   },
   {
     name: 'sensitive_diagnosis_refusal',
-    run: (model) => model.answerDirectQuestion(sensitiveDiagnosisContext),
+    run: async () => evaluateDirectQuestionSafetyPolicy(
+      sensitiveDiagnosisContext,
+    ),
     validate: (value) => {
       const answer = value as Awaited<
         ReturnType<StructuredLearningModel['answerDirectQuestion']>
