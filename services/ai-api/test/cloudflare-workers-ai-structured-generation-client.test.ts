@@ -201,16 +201,20 @@ test('Cloudflare client recognizes model errors returned with HTTP 400', async (
 });
 
 test('Cloudflare client rejects malformed structured output', async () => {
+  let requestCount = 0;
   const client = new CloudflareWorkersAiStructuredGenerationClient({
     accountId,
     apiToken: 'test-api-token',
     model,
-    fetcher: async () => Response.json({
-      result: { response: 'not-json' },
-      success: true,
-      errors: [],
-      messages: [],
-    }),
+    fetcher: async () => {
+      requestCount += 1;
+      return Response.json({
+        result: { response: 'not-json' },
+        success: true,
+        errors: [],
+        messages: [],
+      });
+    },
   });
 
   await assert.rejects(
@@ -222,9 +226,69 @@ test('Cloudflare client rejects malformed structured output', async () => {
       assert.ok(error instanceof StructuredGenerationError);
       assert.equal(error.code, 'invalid_output');
       assert.equal(error.retryable, false);
+      assert.equal(requestCount, 2);
       return true;
     },
   );
+});
+
+test('Cloudflare client retries malformed structured output once', async () => {
+  let requestCount = 0;
+  const clockValues = [1_000, 1_100, 1_100, 1_280];
+  const client = new CloudflareWorkersAiStructuredGenerationClient({
+    accountId,
+    apiToken: 'test-api-token',
+    model,
+    now: () => clockValues.shift() ?? 1_280,
+    fetcher: async () => {
+      requestCount += 1;
+      if (requestCount === 1) {
+        return Response.json({
+          result: {
+            response: 'not-json',
+            usage: {
+              prompt_tokens: 18,
+              completion_tokens: 2,
+            },
+          },
+          success: true,
+          errors: [],
+          messages: [],
+        });
+      }
+      return Response.json({
+        result: {
+          response: {
+            feedback_text: '오늘 답도 둘답다!',
+          },
+          usage: {
+            prompt_tokens: 18,
+            completion_tokens: 7,
+          },
+        },
+        success: true,
+        errors: [],
+        messages: [],
+      });
+    },
+  });
+
+  const result = await client.generateStructured({
+    prompt: '한 줄 피드백을 만들어줘',
+    schema: { type: 'object' },
+  });
+
+  assert.equal(requestCount, 2);
+  assert.deepEqual(result, {
+    value: {
+      feedback_text: '오늘 답도 둘답다!',
+    },
+    usage: {
+      inputTokenCount: 36,
+      outputTokenCount: 9,
+      latencyMs: 280,
+    },
+  });
 });
 
 test('Cloudflare client classifies request aborts as retryable timeouts', async () => {
