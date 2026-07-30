@@ -1,150 +1,165 @@
-# Storage Cleanup Webhook 설정
+# Storage cleanup worker setup
 
-작성일: 2026-06-29
+작성일: 2026-07-30
 
-## 1. 목적
+## 목적
 
-녹음 덮어쓰기, 업로드 실패 정리, 커플 아카이브 삭제 과정에서 Storage 파일을 직접 지우지 않고 `storage_cleanup_requests`에 정리 요청을 남긴 뒤 Edge Function이 Storage API로 실제 삭제를 처리한다.
+앱의 DB 트랜잭션에서는 Storage 파일을 직접 삭제하지 않는다. 카드, 캐릭터,
+녹음, 녹음 슬롯 그림, 일정 그림에서 더 이상 참조하지 않는 파일은
+`storage_cleanup_requests`에 기록하고 `process-storage-cleanup` Edge Function이
+Storage API로 삭제한다.
 
-이 문서는 그 흐름이 동작하도록 Supabase에 필요한 설정을 정리한다.
+정리 함수는 두 경로를 함께 지원한다.
 
-## 2. 배포 대상
+- Database Webhook: 새 요청 한 건을 즉시 처리한다.
+- 예약 배치: Webhook 실패, 일시 장애, 과거 누락으로 남은 요청을 복구한다.
 
-이번 설정은 아래 변경이 이미 로컬 repo에 반영되어 있다는 전제로 진행한다.
+예약 배치는 Storage에 올라온 지 60분이 지난 파일만 고아 여부를 검사한다.
+삭제 직전에도 현재 DB 참조를 다시 확인하므로 저장 중인 파일이나 다시 참조된
+파일은 삭제하지 않는다.
 
-- `supabase/migrations/20260629002000_add_storage_cleanup_requests.sql`
-- `supabase/migrations/20260629003000_redirect_storage_deletes_to_cleanup_requests.sql`
-- `supabase/functions/process-storage-cleanup/index.ts`
+## 배포
 
-## 3. Secret 준비
-
-새 웹훅용 secret 하나를 만든다.
-
-- Secret name: `STORAGE_CLEANUP_WEBHOOK_SECRET`
-- Header name: `x-storage-cleanup-webhook-secret`
-
-PowerShell에서 난수를 만들려면:
+프로젝트 루트에서 마이그레이션을 먼저 적용한다.
 
 ```powershell
-[guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
+npx.cmd supabase db push
 ```
 
-생성한 값을 Supabase secret에 저장한다.
+적용 대상 마이그레이션에
+`20260730002000_recover_storage_cleanup_backlogs.sql`이 포함되어야 한다.
+
+이후 Edge Function을 배포한다.
 
 ```powershell
-npx supabase secrets set STORAGE_CLEANUP_WEBHOOK_SECRET=<YOUR_SECRET>
+npx.cmd supabase functions deploy process-storage-cleanup --no-verify-jwt
 ```
 
-스토리지 정리 Webhook은 `STORAGE_CLEANUP_WEBHOOK_SECRET`만 사용한다.
-
-## 4. 마이그레이션 배포
-
-원격 프로젝트가 이미 link 되어 있는 루트에서 실행한다.
+기존 `STORAGE_CLEANUP_WEBHOOK_SECRET`은 그대로 사용한다. 값이 없다면 생성해서
+등록한다.
 
 ```powershell
-npx supabase migration list
-npx supabase db push
+$secret = [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
+npx.cmd supabase secrets set STORAGE_CLEANUP_WEBHOOK_SECRET=$secret
 ```
 
-`20260629002000`, `20260629003000`가 원격에 반영되어야 한다.
+## Database Webhook
 
-## 5. Edge Function 배포
+Supabase Dashboard의 Database Webhooks에서 다음 설정을 유지한다.
 
-`process-storage-cleanup` 함수는 Database Webhook이 secret header로 호출하므로 JWT 검증 없이 배포한다.
+- 이름: `process-storage-cleanup`
+- 테이블: `public.storage_cleanup_requests`
+- 이벤트: `INSERT`
+- 대상: Edge Function
+- 함수: `process-storage-cleanup`
+- 메서드: `POST`
+- 헤더:
+  `x-storage-cleanup-webhook-secret: <STORAGE_CLEANUP_WEBHOOK_SECRET>`
+
+이 Webhook은 새 요청의 지연을 줄인다. Webhook이 실패해도 요청은 DB에 남고
+예약 배치가 다시 회수한다.
+
+## 예약 배치
+
+Supabase Cron에서 HTTP 작업을 하나 추가한다.
+
+- 이름: `process-storage-cleanup-backlog`
+- 주기: `*/5 * * * *`
+- 메서드: `POST`
+- URL:
+  `https://<project-ref>.supabase.co/functions/v1/process-storage-cleanup`
+- 헤더:
+  `x-storage-cleanup-webhook-secret: <STORAGE_CLEANUP_WEBHOOK_SECRET>`
+- 헤더: `content-type: application/json`
+- 본문: `{"limit":20,"reconcileLimit":100}`
+
+한 번의 호출은 다음 순서로 동작한다.
+
+1. 60분 이상 지난 Storage 파일 중 DB 참조가 없는 파일을 최대 100개 찾는다.
+2. 누락된 정리 요청을 생성한다.
+3. 기존 pending 요청과 새 요청을 합쳐 최대 20개 claim한다.
+4. 삭제 직전 참조 여부를 다시 확인한다.
+5. 일시 실패는 최대 5회까지 지수 백오프로 재시도한다.
+6. 중단된 processing claim은 5분 뒤 다른 실행이 회수한다.
+
+## 수동 검증
+
+예약 배치와 같은 요청을 PowerShell에서 한 번 실행할 수 있다.
 
 ```powershell
-npx supabase functions deploy process-storage-cleanup --no-verify-jwt
+$secret = '<STORAGE_CLEANUP_WEBHOOK_SECRET>'
+$projectUrl = 'https://<project-ref>.supabase.co'
+
+$response = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$projectUrl/functions/v1/process-storage-cleanup" `
+  -Headers @{ 'x-storage-cleanup-webhook-secret' = $secret } `
+  -ContentType 'application/json' `
+  -Body '{"limit":20,"reconcileLimit":100}'
+
+$response
 ```
 
-배포 후 확인:
+응답 예시는 다음과 같다.
 
-```powershell
-npx supabase functions list
+```json
+{
+  "reconciled": 24,
+  "claimed": 20,
+  "deleted": 20,
+  "preserved": 0,
+  "retried": 0,
+  "failed": 0,
+  "stale": 0
+}
 ```
 
-목록에 `process-storage-cleanup`이 보여야 한다.
+현재 상태는 다음 쿼리로 확인한다.
 
-## 6. Database Webhook 생성
-
-Supabase Dashboard에서 Database Webhook을 추가한다.
-
-- Table: `public.storage_cleanup_requests`
-- Event: `INSERT`
-- Target: Edge Function
-- Function: `process-storage-cleanup`
-- Method: `POST`
-
-추가 헤더:
-
-```text
-x-storage-cleanup-webhook-secret: <STORAGE_CLEANUP_WEBHOOK_SECRET>
-Content-type: application/json
+```sql
+select
+  status,
+  completion_outcome,
+  count(*) as request_count,
+  pg_size_pretty(
+    coalesce(sum((object.metadata ->> 'size')::bigint), 0)
+  ) as storage_size
+from public.storage_cleanup_requests as request
+left join storage.objects as object
+  on object.bucket_id = request.bucket_id
+  and object.name = request.object_path
+group by status, completion_outcome
+order by status, completion_outcome;
 ```
 
-핵심은 헤더 값이 Supabase secret에 넣은 `STORAGE_CLEANUP_WEBHOOK_SECRET`와 정확히 같아야 한다는 점이다.
-
-## 7. 동작 확인 쿼리
-
-현재 녹음을 한 번 저장한 뒤 다시 덮어쓰면, 이전 파일 삭제 요청이 먼저 큐에 쌓인다.
+재시도 중인 요청은 다음 쿼리로 확인한다.
 
 ```sql
 select
   id,
   bucket_id,
   object_path,
-  cleanup_reason,
   status,
+  attempt_count,
+  max_attempts,
+  available_at,
   last_error,
-  created_at,
-  processed_at
+  created_at
 from public.storage_cleanup_requests
-order by created_at desc
-limit 20;
+where status in ('pending', 'processing', 'failed')
+order by available_at, created_at;
 ```
 
-정상 흐름이면:
+현재 DB가 참조하는 파일은 `completion_outcome = 'still_referenced'`로 완료되며
+Storage에서 보존된다. 같은 경로가 나중에 실제 고아가 되면 새 요청을 만들 수
+있다.
 
-1. 새 행이 `pending`으로 생성된다.
-2. Webhook이 Edge Function을 호출한다.
-3. 함수가 Storage API로 파일을 지운 뒤 `completed`로 바꾼다.
+## 기존 누적 데이터
 
-실패 시에는 `failed`와 `last_error`를 확인한다.
+이 마이그레이션과 함수를 배포한 뒤 예약 배치를 호출하면 기존의 pending 요청도
+오래된 순서대로 처리한다. 요청이 없던 과거 고아 파일도 60분 안전 유예를 통과한
+뒤 자동으로 발견한다.
 
-## 8. 확인 포인트
-
-- 첫 녹음 저장은 기존과 동일하게 성공한다.
-- 두 번째 녹음으로 현재 녹음을 덮어써도 finalize RPC가 `storage.objects` 직접 삭제 오류로 실패하지 않는다.
-- `discard_uploaded_couple_recording` 경로도 직접 삭제 대신 cleanup 요청을 남긴다.
-- 커플 아카이브 삭제 시 녹음/캐릭터 파일이 cleanup 요청으로 전환된다.
-- 실패한 요청은 `storage_cleanup_requests.last_error`에서 원인을 볼 수 있다.
-
-## 9. Webhook 복구 전 생성된 pending 요청 재처리
-
-Webhook이 잘못 연결된 동안 생성된 기존 `pending` 행은 Webhook을 수정해도 자동 재호출되지 않는다. 아래 PowerShell은 pending ID만 조회한 뒤 기존 Edge Function의 원자적 claim을 그대로 사용해 안전하게 재처리한다.
-
-```powershell
-$secret = '<STORAGE_CLEANUP_WEBHOOK_SECRET>'
-$projectUrl = 'https://<PROJECT_REF>.supabase.co'
-$serviceRoleKey = '<SUPABASE_SERVICE_ROLE_KEY>'
-
-$headers = @{
-  apikey = $serviceRoleKey
-  Authorization = "Bearer $serviceRoleKey"
-}
-
-$pending = Invoke-RestMethod `
-  -Method Get `
-  -Uri "$projectUrl/rest/v1/storage_cleanup_requests?status=eq.pending&select=id&order=created_at.asc" `
-  -Headers $headers
-
-foreach ($item in $pending) {
-  Invoke-RestMethod `
-    -Method Post `
-    -Uri "$projectUrl/functions/v1/process-storage-cleanup" `
-    -Headers @{ 'x-storage-cleanup-webhook-secret' = $secret } `
-    -ContentType 'application/json' `
-    -Body (@{ record = @{ id = $item.id } } | ConvertTo-Json -Depth 3)
-}
-```
-
-서비스 역할 키는 로컬 셸에서만 사용하고 로그나 저장소에 남기지 않는다. 재처리 후 `status = 'pending'`인 행이 남아 있는지 다시 확인한다.
+`storage.objects`를 직접 DELETE하거나 서비스 역할 키로 파일 목록을 반복 삭제할
+필요가 없다. 직접 삭제는 현재 참조 재검증과 재시도 기록을 우회하므로 사용하지
+않는다.

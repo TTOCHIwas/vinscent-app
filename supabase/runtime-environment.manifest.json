@@ -270,7 +270,7 @@
       "availability": "required",
       "provisioning": "supabase_secret",
       "sensitivity": "secret",
-      "description": "Shared secret for storage cleanup database webhooks.",
+      "description": "Shared secret for storage cleanup webhooks and scheduled backlog recovery.",
       "functions": [
         "process-storage-cleanup"
       ]

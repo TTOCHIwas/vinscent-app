@@ -141,6 +141,11 @@ with expected_schedules (
       ]::text[]
     ),
     (
+      'process-storage-cleanup',
+      '*/5 * * * *',
+      array['x-storage-cleanup-webhook-secret']::text[]
+    ),
+    (
       'purge-disconnected-couple-archives',
       null::text,
       array[
