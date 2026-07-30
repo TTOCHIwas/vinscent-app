@@ -1009,6 +1009,18 @@ test('learning tasks use separated policy and bounded generation profiles', asyn
       ),
       true,
     );
+    assert.equal(
+      request.systemInstruction?.includes(
+        '승인되지 않은 AI 생성 문장은 근거가 아니야',
+      ),
+      true,
+    );
+    assert.equal(
+      request.systemInstruction?.includes(
+        'confirmed_profile은 사용자가 승인한 근거야',
+      ),
+      true,
+    );
     assert.equal(request.prompt.startsWith('<task>'), true);
     assert.equal(request.prompt.includes('</task>\n<data>'), true);
     assert.equal(request.prompt.endsWith('</data>'), true);
