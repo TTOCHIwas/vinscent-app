@@ -358,12 +358,6 @@ function buildMemorySchema(
 function buildProactiveSuggestionSchema(
   context: ProactiveSuggestionContext,
 ): Record<string, unknown> {
-  const allowedKinds = context.hasCardToday
-    ? ['date_idea']
-    : context.weather?.nearSunset === true
-    ? ['date_idea', 'card_idea', 'sunset_card']
-    : ['date_idea', 'card_idea'];
-
   return objectSchema({
     suggestion_text: {
       type: 'string',
@@ -372,9 +366,21 @@ function buildProactiveSuggestionSchema(
     },
     kind: {
       type: 'string',
-      enum: allowedKinds,
+      enum: allowedProactiveSuggestionKinds(context),
     },
   }, ['suggestion_text', 'kind']);
+}
+
+function allowedProactiveSuggestionKinds(
+  context: ProactiveSuggestionContext,
+): string[] {
+  if (context.hasCardToday) {
+    return ['date_idea'];
+  }
+  if (context.weather?.nearSunset === true) {
+    return ['date_idea', 'card_idea', 'sunset_card'];
+  }
+  return ['date_idea', 'card_idea'];
 }
 
 function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
