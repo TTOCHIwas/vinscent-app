@@ -13,6 +13,9 @@ import {
   validateQuestionRecommendation,
 } from '../domain/learning-contract.ts';
 import {
+  resolveDirectQuestionRefusal,
+} from '../domain/direct-question-policy.ts';
+import {
   LearningJobHandlerRegistry,
   type LearningJobExecution,
   type LearningJobHandler,
@@ -256,7 +259,7 @@ class AnswerUserQuestionHandler implements LearningJobHandler {
   async prepare(job: ClaimedLearningJob): Promise<PreparedLearningJob> {
     const context = await this.#repository.loadDirectQuestionContext(job.jobId);
 
-    return modelJob('direct-question-v5', async () => {
+    return modelJob('direct-question-v6', async () => {
       const result = await generateDirectQuestionAnswer(
         this.#model,
         context,
@@ -293,6 +296,26 @@ async function generateDirectQuestionAnswer(
   followUpErrorCode: DirectQuestionFollowUpErrorCode | null;
   usage: LearningModelUsage;
 }> {
+  const refusalText = resolveDirectQuestionRefusal(context.questionText);
+  if (refusalText !== null) {
+    const answer: DirectQuestionAnswer = {
+      status: 'insufficient',
+      text: refusalText,
+      followUpQuestion: null,
+    };
+    validateDirectQuestionAnswer(context, answer);
+    return {
+      answer,
+      followUpGenerationStatus: 'not_applicable',
+      followUpErrorCode: null,
+      usage: {
+        inputTokenCount: 0,
+        outputTokenCount: 0,
+        latencyMs: 0,
+      },
+    };
+  }
+
   const firstResult = await model.answerDirectQuestion(context);
   const firstAnswer = {
     ...firstResult.value,
