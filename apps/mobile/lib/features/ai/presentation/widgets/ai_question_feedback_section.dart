@@ -109,7 +109,7 @@ class _LabeledFeedback extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               AiGeneratedContentIndicator(
-                onPressed: () => _showFeedbackReport(
+                onReportPressed: () => _showFeedbackReport(
                   context,
                   dailyQuestionId: dailyQuestionId,
                 ),

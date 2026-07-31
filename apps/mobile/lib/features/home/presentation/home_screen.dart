@@ -845,33 +845,30 @@ class _HomeQuestionBubble extends StatelessWidget {
         key: actionKey,
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            CharacterSpeechBubble(
-              key: bubbleKey,
-              speechText: questionText,
-              maxWidth: 320,
-              textStyle: AppTextStyles.homeQuestionBubble,
-              contentPadding: isAiGenerated
-                  ? const EdgeInsets.fromLTRB(16, 9, 38, 16)
-                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              tailSize: const Size(16, 8),
-            ),
-            if (isAiGenerated)
-              Positioned(
-                right: 5,
-                bottom: 3,
-                child: AiGeneratedContentIndicator(
-                  onPressed: reportTarget == null
-                      ? null
-                      : () => showSafetyReportSheet(
-                          context: context,
-                          target: reportTarget!,
-                        ),
+        child: AiGeneratedContentBadgeOverlay(
+          showIndicator: isAiGenerated,
+          attachmentBottomInset: 8,
+          onReportPressed: reportTarget == null
+              ? null
+              : () => showSafetyReportSheet(
+                  context: context,
+                  target: reportTarget!,
                 ),
-              ),
-          ],
+          child: CharacterSpeechBubble(
+            key: bubbleKey,
+            speechText: questionText,
+            maxWidth: 320,
+            textStyle: AppTextStyles.homeQuestionBubble,
+            contentPadding: isAiGenerated
+                ? const EdgeInsets.fromLTRB(
+                    16,
+                    9,
+                    16,
+                    AiGeneratedContentBadgeOverlay.contentBottomPadding,
+                  )
+                : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            tailSize: const Size(16, 8),
+          ),
         ),
       ),
     );

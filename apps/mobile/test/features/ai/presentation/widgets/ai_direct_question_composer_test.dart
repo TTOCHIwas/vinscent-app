@@ -64,6 +64,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-generated-content-report')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
     await tester.pump();
     await tester.ensureVisible(find.byKey(const Key('safety-report-submit')));
@@ -92,6 +94,8 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-generated-content-report')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
     await tester.pump();

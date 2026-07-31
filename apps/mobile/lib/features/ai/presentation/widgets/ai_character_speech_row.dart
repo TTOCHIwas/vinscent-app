@@ -54,7 +54,12 @@ class AiCharacterSpeechRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
     final contentPadding = showGeneratedIndicator
-        ? const EdgeInsets.fromLTRB(16, 12, 38, 18)
+        ? const EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            AiGeneratedContentBadgeOverlay.contentBottomPadding,
+          )
         : const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
     final bubble = _content == null
         ? CharacterSpeechBubble(
@@ -77,10 +82,9 @@ class AiCharacterSpeechRow extends StatelessWidget {
             tailPosition: SpeechBubbleTailPosition.left,
             child: _content,
           );
-    final presentedBubble = _GeneratedSpeechMarkerOverlay(
+    final presentedBubble = AiGeneratedContentBadgeOverlay(
       showIndicator: showGeneratedIndicator,
-      onIndicatorPressed: onGeneratedIndicatorPressed,
-      tailPosition: SpeechBubbleTailPosition.left,
+      onReportPressed: onGeneratedIndicatorPressed,
       child: Semantics(label: label, excludeSemantics: true, child: bubble),
     );
 
@@ -99,7 +103,7 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.characterKey,
     this.bubbleKey,
     this.characterSize = 132,
-    this.maximumBubbleWidth = 300,
+    this.maximumBubbleWidth = double.infinity,
     this.maxLines,
     this.semanticLabel,
     this.textAlign = TextAlign.start,
@@ -114,7 +118,7 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.characterKey,
     this.bubbleKey,
     this.characterSize = 132,
-    this.maximumBubbleWidth = 300,
+    this.maximumBubbleWidth = double.infinity,
     this.showGeneratedIndicator = false,
     this.onGeneratedIndicatorPressed,
   }) : speechText = null,
@@ -138,7 +142,12 @@ class AiCharacterSpeechColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
     final contentPadding = showGeneratedIndicator
-        ? const EdgeInsets.fromLTRB(18, 12, 40, 18)
+        ? const EdgeInsets.fromLTRB(
+            18,
+            12,
+            18,
+            AiGeneratedContentBadgeOverlay.contentBottomPadding,
+          )
         : const EdgeInsets.symmetric(horizontal: 18, vertical: 12);
     final bubble = _content == null
         ? CharacterSpeechBubble(
@@ -159,10 +168,10 @@ class AiCharacterSpeechColumn extends StatelessWidget {
             tailPosition: SpeechBubbleTailPosition.bottom,
             child: _content,
           );
-    final presentedBubble = _GeneratedSpeechMarkerOverlay(
+    final presentedBubble = AiGeneratedContentBadgeOverlay(
       showIndicator: showGeneratedIndicator,
-      onIndicatorPressed: onGeneratedIndicatorPressed,
-      tailPosition: SpeechBubbleTailPosition.bottom,
+      onReportPressed: onGeneratedIndicatorPressed,
+      attachmentBottomInset: 10,
       child: Semantics(label: label, excludeSemantics: true, child: bubble),
     );
 
@@ -184,39 +193,6 @@ class AiCharacterSpeechColumn extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _GeneratedSpeechMarkerOverlay extends StatelessWidget {
-  const _GeneratedSpeechMarkerOverlay({
-    required this.showIndicator,
-    required this.onIndicatorPressed,
-    required this.tailPosition,
-    required this.child,
-  });
-
-  final bool showIndicator;
-  final VoidCallback? onIndicatorPressed;
-  final SpeechBubbleTailPosition tailPosition;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!showIndicator) {
-      return child;
-    }
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        child,
-        Positioned(
-          right: 5,
-          bottom: tailPosition == SpeechBubbleTailPosition.bottom ? 11 : 3,
-          child: AiGeneratedContentIndicator(onPressed: onIndicatorPressed),
-        ),
-      ],
     );
   }
 }
@@ -263,7 +239,7 @@ class AiCharacterThinkingSpeechColumn extends StatelessWidget {
     this.bubbleKey,
     this.thinkingDotsKey,
     this.characterSize = 132,
-    this.maximumBubbleWidth = 300,
+    this.maximumBubbleWidth = double.infinity,
   });
 
   final String message;

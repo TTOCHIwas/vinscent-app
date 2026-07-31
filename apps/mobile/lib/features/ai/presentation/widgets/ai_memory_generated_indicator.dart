@@ -12,7 +12,7 @@ class AiMemoryGeneratedIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AiGeneratedContentIndicator(
-      onPressed: () => showSafetyReportSheet(
+      onReportPressed: () => showSafetyReportSheet(
         context: context,
         target: SafetyReportTarget(
           type: SafetyReportTargetType.aiMemory,

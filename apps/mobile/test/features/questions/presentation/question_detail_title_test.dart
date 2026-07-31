@@ -78,7 +78,11 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+    await tester.pumpAndSettle();
 
+    expect(pressed, isFalse);
+    await tester.tap(find.byKey(const Key('ai-generated-content-report')));
+    await tester.pumpAndSettle();
     expect(pressed, isTrue);
   });
 }

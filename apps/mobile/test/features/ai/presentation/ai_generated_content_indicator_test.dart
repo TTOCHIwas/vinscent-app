@@ -15,21 +15,53 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
-    expect(find.bySemanticsLabel('AI 생성'), findsOneWidget);
+    expect(find.byTooltip('AI 생성 내용 안내'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('ai-generated-content-indicator'))),
+      const Size.square(32),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('ai-generated-content-badge'))),
+      const Size.square(15),
+    );
     expect(
       tester.widget<Icon>(find.byIcon(Icons.auto_awesome_rounded)).size,
       15,
     );
   });
 
-  testWidgets('forwards an optional report action', (tester) async {
+  testWidgets(
+    'opens AI-generated content information without a report action',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: AiGeneratedContentIndicator())),
+      );
+
+      await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('ai-generated-content-info-sheet')),
+        findsOneWidget,
+      );
+      expect(find.text('AI가 만든 내용이에요'), findsOneWidget);
+      expect(
+        find.byKey(const Key('ai-generated-content-report')),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets('forwards a report action from the information sheet', (
+    tester,
+  ) async {
     var pressed = false;
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: AiGeneratedContentIndicator(
-            onPressed: () {
+            onReportPressed: () {
               pressed = true;
             },
           ),
@@ -38,8 +70,11 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+    await tester.pumpAndSettle();
 
+    expect(pressed, isFalse);
+    await tester.tap(find.byKey(const Key('ai-generated-content-report')));
+    await tester.pumpAndSettle();
     expect(pressed, isTrue);
-    expect(find.byTooltip('AI 생성 내용'), findsOneWidget);
   });
 }

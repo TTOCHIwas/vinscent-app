@@ -27,8 +27,8 @@ class QuestionAnswerPromptRow extends StatelessWidget {
         ? EdgeInsets.fromLTRB(
             compact ? 14 : 16,
             compact ? 8 : 12,
-            38,
-            compact ? 14 : 18,
+            compact ? 14 : 16,
+            AiGeneratedContentBadgeOverlay.contentBottomPadding,
           )
         : EdgeInsets.symmetric(
             horizontal: compact ? 14 : 16,
@@ -40,33 +40,24 @@ class QuestionAnswerPromptRow extends StatelessWidget {
         key: Key('question-answer-character'),
         size: characterSize,
       ),
-      bubble: Semantics(
-        label: showGeneratedIndicator
-            ? 'AI 생성 질문: $questionText'
-            : '질문: $questionText',
-        excludeSemantics: true,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            CharacterSpeechBubble(
-              key: const Key('question-answer-prompt'),
-              speechText: questionText,
-              maxWidth: double.infinity,
-              maxLines: compact ? 2 : 4,
-              contentPadding: contentPadding,
-              tailSize: const Size(10, 18),
-              tailPosition: SpeechBubbleTailPosition.left,
-              textStyle: AppTextStyles.homeQuestionBubble,
-            ),
-            if (showGeneratedIndicator)
-              Positioned(
-                right: 5,
-                bottom: 3,
-                child: AiGeneratedContentIndicator(
-                  onPressed: onGeneratedIndicatorPressed,
-                ),
-              ),
-          ],
+      bubble: AiGeneratedContentBadgeOverlay(
+        showIndicator: showGeneratedIndicator,
+        onReportPressed: onGeneratedIndicatorPressed,
+        child: Semantics(
+          label: showGeneratedIndicator
+              ? 'AI 생성 질문: $questionText'
+              : '질문: $questionText',
+          excludeSemantics: true,
+          child: CharacterSpeechBubble(
+            key: const Key('question-answer-prompt'),
+            speechText: questionText,
+            maxWidth: double.infinity,
+            maxLines: compact ? 2 : 4,
+            contentPadding: contentPadding,
+            tailSize: const Size(10, 18),
+            tailPosition: SpeechBubbleTailPosition.left,
+            textStyle: AppTextStyles.homeQuestionBubble,
+          ),
         ),
       ),
     );

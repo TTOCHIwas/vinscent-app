@@ -143,7 +143,24 @@ void main() {
     await scrollCalendarUp(tester);
     final indicator = find.byKey(const Key('ai-generated-content-indicator'));
     await tester.ensureVisible(indicator);
+    final questionTitle = find.byType(QuestionDetailTitle);
+    final generatedBadge = find.byKey(const Key('ai-generated-content-badge'));
+    final renderedQuestion = find.byKey(const Key('question-detail-title'));
+    expect(
+      tester.widget<QuestionDetailTitle>(questionTitle).textAlign,
+      TextAlign.start,
+    );
+    expect(
+      tester.getRect(generatedBadge).center.dx,
+      greaterThan(tester.getRect(questionTitle).center.dx),
+    );
+    expect(
+      tester.getRect(generatedBadge).top,
+      greaterThanOrEqualTo(tester.getRect(renderedQuestion).bottom),
+    );
     await tester.tap(indicator);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-generated-content-report')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
     await tester.pump();

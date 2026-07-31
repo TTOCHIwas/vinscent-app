@@ -42,6 +42,47 @@ void main() {
     );
   });
 
+  testWidgets('keeps generated speech padding compact', (tester) async {
+    const bubbleKey = Key('ai-character-speech-bubble');
+    const speechText = '둘의 답변을 바탕으로 만든 한마디';
+
+    await _pump(
+      tester,
+      const MaterialApp(
+        home: Scaffold(
+          body: AiCharacterSpeechRow(
+            bubbleKey: bubbleKey,
+            speechText: speechText,
+          ),
+        ),
+      ),
+    );
+    final regularSize = tester.getSize(find.byKey(bubbleKey));
+
+    await _pump(
+      tester,
+      const MaterialApp(
+        home: Scaffold(
+          body: AiCharacterSpeechRow(
+            bubbleKey: bubbleKey,
+            speechText: speechText,
+            showGeneratedIndicator: true,
+          ),
+        ),
+      ),
+    );
+    final generatedSize = tester.getSize(find.byKey(bubbleKey));
+    final generatedRect = tester.getRect(find.byKey(bubbleKey));
+    final badgeRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-badge')),
+    );
+
+    expect(generatedSize.width - regularSize.width, closeTo(0, 0.1));
+    expect(generatedSize.height - regularSize.height, closeTo(6, 0.1));
+    expect(badgeRect.right, lessThanOrEqualTo(generatedRect.right));
+    expect(badgeRect.bottom, lessThanOrEqualTo(generatedRect.bottom));
+  });
+
   testWidgets('labels generated custom speech content', (tester) async {
     await _pump(
       tester,
@@ -60,6 +101,30 @@ void main() {
       find.byKey(const Key('ai-generated-content-indicator')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('uses the width provided to primary speech content', (
+    tester,
+  ) async {
+    const bubbleKey = Key('ai-primary-speech-bubble');
+
+    await _pump(
+      tester,
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 640,
+            child: AiCharacterSpeechColumn.custom(
+              bubbleKey: bubbleKey,
+              semanticLabel: '넓은 AI 답변',
+              child: SizedBox(width: double.infinity, child: Text('넓은 AI 답변')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byKey(bubbleKey)).width, 640);
   });
 }
 

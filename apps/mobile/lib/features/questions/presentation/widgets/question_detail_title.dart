@@ -21,18 +21,24 @@ class QuestionDetailTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      header: true,
-      label: showGeneratedIndicator
-          ? 'AI 생성 질문: $questionText'
-          : '질문: $questionText',
-      excludeSemantics: true,
-      child: SizedBox(
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            WordBoundaryText(
+    return SizedBox(
+      width: double.infinity,
+      child: AiGeneratedContentBadgeOverlay(
+        showIndicator: showGeneratedIndicator,
+        onReportPressed: onGeneratedIndicatorPressed,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: showGeneratedIndicator
+                ? AiGeneratedContentBadgeOverlay.contentBottomPadding
+                : 0,
+          ),
+          child: Semantics(
+            header: true,
+            label: showGeneratedIndicator
+                ? 'AI 생성 질문: $questionText'
+                : '질문: $questionText',
+            excludeSemantics: true,
+            child: WordBoundaryText(
               questionText,
               key: const Key('question-detail-title'),
               semanticsLabel: questionText,
@@ -42,22 +48,7 @@ class QuestionDetailTitle extends StatelessWidget {
                 18,
               ),
             ),
-            if (showGeneratedIndicator)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Align(
-                  alignment: switch (textAlign) {
-                    TextAlign.center => Alignment.center,
-                    TextAlign.right ||
-                    TextAlign.end => AlignmentDirectional.centerEnd,
-                    _ => AlignmentDirectional.centerStart,
-                  },
-                  child: AiGeneratedContentIndicator(
-                    onPressed: onGeneratedIndicatorPressed,
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );

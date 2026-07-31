@@ -393,9 +393,31 @@ void main() {
       findTextIgnoringWordJoiners(aiQuestion.questionText),
       findsOneWidget,
     );
+    final questionText = findTextIgnoringWordJoiners(aiQuestion.questionText);
+    final generatedIndicator = find.byKey(
+      const Key('ai-generated-content-indicator'),
+    );
+    final generatedBadge = find.byKey(const Key('ai-generated-content-badge'));
+    expect(generatedIndicator, findsOneWidget);
+
+    final questionBubbleRect = tester.getRect(find.byKey(_questionBubbleKey));
+    final questionTextRect = tester.getRect(questionText);
+    final generatedBadgeRect = tester.getRect(generatedBadge);
     expect(
-      find.byKey(const Key('ai-generated-content-indicator')),
-      findsOneWidget,
+      generatedBadgeRect.top,
+      greaterThanOrEqualTo(questionTextRect.bottom),
+    );
+    expect(
+      generatedBadgeRect.center.dx,
+      closeTo(questionBubbleRect.right - 16, 0.5),
+    );
+    expect(
+      generatedBadgeRect.right,
+      lessThanOrEqualTo(questionBubbleRect.right),
+    );
+    expect(
+      generatedBadgeRect.bottom,
+      lessThanOrEqualTo(questionBubbleRect.bottom - 8),
     );
   });
 
@@ -1542,6 +1564,8 @@ Future<void> _pumpHome(
 
 Future<void> _submitVisibleAiReport(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('ai-generated-content-indicator')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('ai-generated-content-report')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('safety-report-reason-unsafeAi')));
   await tester.pump();
