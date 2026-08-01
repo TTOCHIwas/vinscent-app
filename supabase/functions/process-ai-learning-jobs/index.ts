@@ -1,8 +1,7 @@
 import { LearningJobProcessor } from '../../../services/ai-api/src/application/process-learning-jobs.ts';
-import { StructuredLearningModel } from '../../../services/ai-api/src/application/structured-learning-model.ts';
-import { GeminiStructuredGenerationClient } from '../../../services/ai-api/src/infrastructure/gemini-structured-generation-client.ts';
 import { SupabaseLearningJobRepository } from '../../../services/ai-api/src/infrastructure/supabase-learning-job-repository.ts';
 import { createLearningWorkerHttpHandler } from '../../../services/ai-api/src/presentation/learning-worker-http-handler.ts';
+import { createAiLearningModel } from '../_shared/ai_learning_model.ts';
 import {
   optionalEnv,
   optionalPositiveIntegerEnv,
@@ -10,23 +9,19 @@ import {
 } from '../_shared/environment.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 
-const defaultModel = 'gemini-3.1-flash-lite';
-
-const modelName = optionalEnv('GEMINI_MODEL') ?? defaultModel;
 const supabase = createServiceRoleClient();
 const repository = new SupabaseLearningJobRepository(supabase);
-const client = new GeminiStructuredGenerationClient({
-  apiKey: requiredEnv('GEMINI_API_KEY'),
-  model: modelName,
-  endpoint: optionalEnv('GEMINI_GENERATE_CONTENT_ENDPOINT'),
-  timeoutMs: optionalPositiveIntegerEnv('GEMINI_TIMEOUT_MS'),
+const aiRuntime = createAiLearningModel({
+  timeoutMs: optionalPositiveIntegerEnv(
+    'CLOUDFLARE_WORKERS_AI_TIMEOUT_MS',
+  ),
 });
 const processor = new LearningJobProcessor({
   repository,
-  model: new StructuredLearningModel(client),
+  model: aiRuntime.model,
   workerId: `edge-${crypto.randomUUID()}`,
-  provider: 'google',
-  modelName,
+  provider: aiRuntime.provider,
+  modelName: aiRuntime.modelName,
 });
 
 Deno.serve(createLearningWorkerHttpHandler({

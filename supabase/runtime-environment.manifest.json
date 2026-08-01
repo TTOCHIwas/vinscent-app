@@ -94,6 +94,49 @@
       ]
     },
     {
+      "name": "CLOUDFLARE_ACCOUNT_ID",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Cloudflare account identifier used by Workers AI REST requests.",
+      "functions": [
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "CLOUDFLARE_WORKERS_AI_API_TOKEN",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Cloudflare API token authorized to invoke Workers AI models.",
+      "functions": [
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "CLOUDFLARE_WORKERS_AI_MODEL",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional Cloudflare Workers AI model override.",
+      "functions": [
+        "generate-ai-proactive-suggestion",
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
+      "name": "CLOUDFLARE_WORKERS_AI_TIMEOUT_MS",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional positive timeout in milliseconds for queued AI learning model calls.",
+      "functions": [
+        "process-ai-learning-jobs"
+      ]
+    },
+    {
       "name": "COUPLE_WEBHOOK_SECRET",
       "availability": "required",
       "provisioning": "supabase_secret",
@@ -146,49 +189,6 @@
         "send-couple-disconnect-notification",
         "send-recording-notification",
         "send-story-loop-notification"
-      ]
-    },
-    {
-      "name": "GEMINI_API_KEY",
-      "availability": "required",
-      "provisioning": "supabase_secret",
-      "sensitivity": "secret",
-      "description": "Gemini API credential used for structured AI generation.",
-      "functions": [
-        "generate-ai-proactive-suggestion",
-        "process-ai-learning-jobs"
-      ]
-    },
-    {
-      "name": "GEMINI_GENERATE_CONTENT_ENDPOINT",
-      "availability": "optional",
-      "provisioning": "supabase_secret",
-      "sensitivity": "configuration",
-      "description": "Optional Gemini generateContent endpoint override.",
-      "functions": [
-        "generate-ai-proactive-suggestion",
-        "process-ai-learning-jobs"
-      ]
-    },
-    {
-      "name": "GEMINI_MODEL",
-      "availability": "optional",
-      "provisioning": "supabase_secret",
-      "sensitivity": "configuration",
-      "description": "Optional Gemini model override.",
-      "functions": [
-        "generate-ai-proactive-suggestion",
-        "process-ai-learning-jobs"
-      ]
-    },
-    {
-      "name": "GEMINI_TIMEOUT_MS",
-      "availability": "optional",
-      "provisioning": "supabase_secret",
-      "sensitivity": "configuration",
-      "description": "Optional positive timeout in milliseconds for AI learning model calls.",
-      "functions": [
-        "process-ai-learning-jobs"
       ]
     },
     {
