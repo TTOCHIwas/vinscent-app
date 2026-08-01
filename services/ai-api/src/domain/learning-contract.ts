@@ -1,4 +1,6 @@
 import { hasSharedMemoryEvidence } from './memory-evidence.ts';
+import { areQuestionsNearDuplicate } from './question-duplicate-detector.ts';
+import { preservesQuestionScope } from './question-scope-preservation.ts';
 import {
   KoreanOutputPolicyError,
   normalizeAndValidateKoreanOutput,
@@ -265,6 +267,7 @@ export type DirectQuestionFollowUpValidationCode =
   | 'invalid_metadata'
   | 'blocked_topic'
   | 'asymmetric_question'
+  | 'scope_drift'
   | 'duplicate_question'
   | KoreanOutputPolicyErrorCode;
 
@@ -313,6 +316,31 @@ export interface ProactiveSuggestionContext {
 export interface ProactiveSuggestionCandidate {
   text: string;
   kind: ProactiveSuggestionKind;
+}
+
+export type ProactiveSuggestionValidationCode =
+  | 'invalid_text'
+  | 'too_short'
+  | 'invalid_sunset_context'
+  | 'sunset_card_required'
+  | 'card_after_upload'
+  | 'period'
+  | 'excessive_punctuation'
+  | 'commanding_expression'
+  | 'forced_abstract_expression'
+  | 'weather_without_context'
+  | 'weather_overstatement'
+  | 'blocked_topic'
+  | KoreanOutputPolicyErrorCode;
+
+export class ProactiveSuggestionValidationError extends Error {
+  readonly code: ProactiveSuggestionValidationCode;
+
+  constructor(code: ProactiveSuggestionValidationCode, message: string) {
+    super(message);
+    this.name = 'ProactiveSuggestionValidationError';
+    this.code = code;
+  }
 }
 
 function requireNonBlank(value: string, field: string, maximum: number): void {
@@ -673,13 +701,28 @@ export function resolveMemoryCandidates(
       throw new Error('couple memory cannot have a personal subject');
     }
 
+    const hasPriorQuestionEvidence = context.memoryCandidates.some(
+      (memory) =>
+        memory.memoryKey === candidate.memoryKey
+        && memory.scope === candidate.scope
+        && memory.subjectUserId === (subjectUserId ?? null)
+        && memory.kind === candidate.kind
+        && memory.domain === candidate.domain
+        && memory.state !== 'rejected'
+        && memory.state !== 'superseded'
+        && memory.evidenceQuestionCount >= 1,
+    );
+
     return {
       memoryKey: candidate.memoryKey,
       scope: candidate.scope,
       subjectUserId: subjectUserId ?? null,
       kind: candidate.kind,
       domain: candidate.domain,
-      evidenceType: candidate.evidenceType,
+      evidenceType: candidate.evidenceType === 'explicit'
+          && hasPriorQuestionEvidence
+        ? 'repeated_pattern'
+        : candidate.evidenceType,
       sensitiveCategory: candidate.sensitiveCategory,
       statement: candidate.statement,
       confidence: candidate.confidence,
@@ -803,17 +846,43 @@ export function validateProactiveSuggestion(
   context: ProactiveSuggestionContext,
   candidate: ProactiveSuggestionCandidate,
 ): void {
-  requireNonBlank(candidate.text, 'proactive suggestion', 100);
-  validateKoreanCharacterText(candidate.text, 'proactive suggestion');
+  try {
+    requireNonBlank(candidate.text, 'proactive suggestion', 100);
+    validateKoreanCharacterText(candidate.text, 'proactive suggestion');
+  } catch (error) {
+    throw new ProactiveSuggestionValidationError(
+      error instanceof KoreanOutputPolicyError ? error.code : 'invalid_text',
+      error instanceof Error ? error.message : 'invalid proactive suggestion',
+    );
+  }
 
-  if (candidate.text.trim().length < 35) {
-    throw new RangeError('proactive suggestion must contain at least 35 characters');
+  if (candidate.text.trim().length < 24) {
+    throw new ProactiveSuggestionValidationError(
+      'too_short',
+      'proactive suggestion must contain at least 24 characters',
+    );
   }
   if (
     candidate.kind === 'sunset_card'
     && (context.hasCardToday || context.weather?.nearSunset !== true)
   ) {
-    throw new Error('sunset card suggestion is not valid for this context');
+    throw new ProactiveSuggestionValidationError(
+      'invalid_sunset_context',
+      'sunset card suggestion is not valid for this context',
+    );
+  }
+  if (
+    !context.hasCardToday
+    && context.weather?.nearSunset === true
+    && (
+      candidate.kind !== 'sunset_card'
+      || !/(?:사진|카드)/u.test(candidate.text)
+    )
+  ) {
+    throw new ProactiveSuggestionValidationError(
+      'sunset_card_required',
+      'sunset context requires a photo or card suggestion',
+    );
   }
   if (
     context.hasCardToday
@@ -823,35 +892,82 @@ export function validateProactiveSuggestion(
       || /카드/u.test(candidate.text)
     )
   ) {
-    throw new Error('card suggestion is not valid after a card was uploaded');
+    throw new ProactiveSuggestionValidationError(
+      'card_after_upload',
+      'card suggestion is not valid after a card was uploaded',
+    );
   }
   if (/[.]/u.test(candidate.text.replaceAll('...', ''))) {
-    throw new Error('proactive suggestion cannot use a period');
+    throw new ProactiveSuggestionValidationError(
+      'period',
+      'proactive suggestion cannot use a period',
+    );
   }
   const textWithoutEllipsis = candidate.text.replaceAll('...', '');
   if (/[!?]{2,}|\.\./u.test(textWithoutEllipsis)) {
-    throw new Error('proactive suggestion uses excessive punctuation');
+    throw new ProactiveSuggestionValidationError(
+      'excessive_punctuation',
+      'proactive suggestion uses excessive punctuation',
+    );
   }
   if (
     /(해\s*봐|가\s*봐|남겨|챙겨)(?:[!?….\s]|$)/u.test(candidate.text)
   ) {
-    throw new Error('proactive suggestion uses a commanding expression');
+    throw new ProactiveSuggestionValidationError(
+      'commanding_expression',
+      'proactive suggestion uses a commanding expression',
+    );
   }
   if (
     /(둘의 오늘|우리의 순간|기억 한 조각|추억 한 조각)/u.test(
       candidate.text,
     )
   ) {
-    throw new Error('proactive suggestion uses a forced abstract expression');
+    throw new ProactiveSuggestionValidationError(
+      'forced_abstract_expression',
+      'proactive suggestion uses a forced abstract expression',
+    );
+  }
+  if (
+    context.weather === null
+    && containsWeatherReference(candidate.text)
+  ) {
+    throw new ProactiveSuggestionValidationError(
+      'weather_without_context',
+      'proactive suggestion references unavailable weather context',
+    );
   }
   if (
     /(비|눈)(?:가|이)\s*(?:오니까|와서|내리니까)/u.test(candidate.text)
+    || containsCertainWeatherClaim(candidate.text)
   ) {
-    throw new Error('proactive suggestion overstates uncertain weather');
+    throw new ProactiveSuggestionValidationError(
+      'weather_overstatement',
+      'proactive suggestion overstates uncertain weather',
+    );
   }
   if (containsBlockedAiTopic(candidate.text)) {
-    throw new Error('proactive suggestion contains a blocked topic');
+    throw new ProactiveSuggestionValidationError(
+      'blocked_topic',
+      'proactive suggestion contains a blocked topic',
+    );
   }
+}
+
+function containsWeatherReference(value: string): boolean {
+  return /(?:날씨|기온|체감\s*온도|노을|폭염|한파|맑|흐리|선선|쌀쌀|덥|더우|추워|추우|비\s*소식|눈\s*소식|(?:비|눈)(?:가|이)\s*(?:오|내리|쌓|그치))/u
+    .test(value);
+}
+
+function containsCertainWeatherClaim(value: string): boolean {
+  const uncertaintyPattern =
+    /(?:수\s*있|것\s*같|듯|가능|예보|소식|괜찮다면|달라질|느껴질)/u;
+  if (uncertaintyPattern.test(value)) {
+    return false;
+  }
+
+  return /(?:(?:날씨|기온|공기|하늘)[^!?…]{0,24}(?:맑|흐리|선선|쌀쌀|더워|더우|추워|추우)[^!?…]{0,16}(?:니까|라서|해서|인데|는데)|(?:폭염|한파)[^!?…]{0,12}(?:이라|이어서|인데|이니까))/u
+    .test(value);
 }
 
 function validateGeneratedQuestion(
@@ -926,14 +1042,14 @@ export function validateDirectQuestionFollowUp(
   ) {
     throw new DirectQuestionFollowUpValidationError('asymmetric_question');
   }
-
-  const normalizedCandidate = normalizeQuestionForComparison(candidate.text);
   const isDuplicate = context.recentSharedQuestionTexts.some(
-    (questionText) =>
-      normalizeQuestionForComparison(questionText) === normalizedCandidate,
+    (questionText) => areQuestionsNearDuplicate(questionText, candidate.text),
   );
   if (isDuplicate) {
     throw new DirectQuestionFollowUpValidationError('duplicate_question');
+  }
+  if (!preservesQuestionScope(context.questionText, candidate.text)) {
+    throw new DirectQuestionFollowUpValidationError('scope_drift');
   }
 }
 
@@ -955,14 +1071,6 @@ const directFollowUpAsymmetricPatterns = [
   /사용자\s*[ab]/iu,
   /(?:첫|두)\s*번째\s*(?:사용자|사람|파트너)/u,
 ];
-
-function normalizeQuestionForComparison(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/gu, ' ')
-    .replace(/[?!]+$/u, '');
-}
 
 const blockedAiTopicPattern = new RegExp(
   [

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   anonymizeCompletedQuestionContext,
   deriveLearningStage,
+  ProactiveSuggestionValidationError,
   resolveMemoryCandidates,
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
@@ -242,6 +243,50 @@ test('근거가 부족할 때만 대칭적인 공용 질문 후보를 허용한�
   );
 });
 
+test('공용 후속 질문은 한국어 표현만 바꾼 의미 중복을 거부한다', () => {
+  const travelContext: DirectQuestionContext = {
+    ...directQuestionContext,
+    recentSharedQuestionTexts: [
+      '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?',
+    ],
+  };
+  const candidate = (text: string) => ({
+    questionKey: 'direct_follow_up_travel_ab12cd34',
+    text,
+    category: 'direct_follow_up',
+    mood: null,
+    rationale: '여행지에서 선호하는 생활 리듬을 확인하기 위해서야',
+  });
+
+  assert.throws(
+    () => validateDirectQuestionAnswer(travelContext, {
+      status: 'insufficient',
+      text: '아직 확인된 내용이 없어서 잘 모르겠어',
+      followUpQuestion: candidate(
+        '여행지에서 아침 일찍 움직이는 게 좋거나 느긋하게 쉬는 게 좋을까?',
+      ),
+    }),
+    /duplicate/i,
+  );
+  assert.throws(
+    () => validateDirectQuestionAnswer(travelContext, {
+      status: 'insufficient',
+      text: '아직 확인된 내용이 없어서 잘 모르겠어',
+      followUpQuestion: candidate(
+        '여행지에서 아침형 인간으로 움직이는 거랑 느긋하게 쉬는 거 중 뭐가 더 취향이야?',
+      ),
+    }),
+    /duplicate/i,
+  );
+  assert.doesNotThrow(() => validateDirectQuestionAnswer(travelContext, {
+    status: 'insufficient',
+    text: '아직 확인된 내용이 없어서 잘 모르겠어',
+    followUpQuestion: candidate(
+      '여행지에서 가장 기대하는 순간은 언제야?',
+    ),
+  }));
+});
+
 test('proactive suggestions enforce card, weather, and tone boundaries', () => {
   const proactiveContext = {
     localDate: '2026-07-24',
@@ -264,6 +309,15 @@ test('proactive suggestions enforce card, weather, and tone boundaries', () => {
       kind: 'sunset_card',
     })
   );
+  assert.throws(
+    () => validateProactiveSuggestion(proactiveContext, {
+      text: '밖에서 함께 걸으면서 둘만의 시간을 보내는 건 어때?',
+      kind: 'date_idea',
+    }),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'sunset_card_required',
+  );
   assert.throws(() =>
     validateProactiveSuggestion(
       { ...proactiveContext, hasCardToday: true },
@@ -284,6 +338,75 @@ test('proactive suggestions enforce card, weather, and tone boundaries', () => {
       text: '둘의 오늘을 기억 한 조각으로 남기면 좋겠다',
       kind: 'card_idea',
     })
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(
+      { ...proactiveContext, weather: null },
+      {
+        text: '밤공기가 선선해서 둘이 가까운 곳을 천천히 걸으면 좋겠다',
+        kind: 'date_idea',
+      },
+    ),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'weather_without_context',
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(
+      {
+        ...proactiveContext,
+        weather: {
+          ...proactiveContext.weather,
+          condition: 'hot',
+          apparentTemperatureC: 35,
+          nearSunset: false,
+        },
+      },
+      {
+        text: '오늘 날씨가 많이 더우니까 가까운 실내에서 함께 쉬는 건 어때?',
+        kind: 'date_idea',
+      },
+    ),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'weather_overstatement',
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(
+      {
+        ...proactiveContext,
+        weather: {
+          ...proactiveContext.weather,
+          condition: 'cold',
+          apparentTemperatureC: -4,
+          nearSunset: false,
+        },
+      },
+      {
+        text: '날씨가 많이 추워졌는데 가까운 실내에서 따뜻한 차를 마시는 건 어때?',
+        kind: 'date_idea',
+      },
+    ),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'weather_overstatement',
+  );
+  assert.doesNotThrow(() =>
+    validateProactiveSuggestion(
+      {
+        ...proactiveContext,
+        weather: {
+          ...proactiveContext.weather,
+          condition: 'hot',
+          apparentTemperatureC: 35,
+          nearSunset: false,
+        },
+      },
+      {
+        text: '오늘은 덥게 느껴질 수 있으니 가까운 실내에서 함께 쉬면 좋겠다',
+        kind: 'date_idea',
+      },
+    )
   );
 });
 
@@ -504,6 +627,43 @@ test('반복 패턴은 다른 질문에서 같은 기억이 관찰된 경우에�
       [repeatedCandidate],
     );
   });
+});
+
+test('기존 기억 키를 다시 사용한 명시적 후보는 반복 패턴으로 승격한다', () => {
+  const repeatedContext: CompletedQuestionContext = {
+    ...context,
+    memoryCandidates: [
+      {
+        memoryKey: 'support_listening_first_user_a',
+        scope: 'personal',
+        subjectUserId: 'user-a',
+        kind: 'support_preference',
+        domain: 'emotional_support',
+        evidenceType: 'explicit',
+        statement: '힘든 날에는 이야기를 먼저 들어주면 좋아',
+        confidence: 0.78,
+        state: 'pending',
+        evidenceQuestionCount: 1,
+      },
+    ],
+  };
+
+  const resolved = resolveMemoryCandidates(repeatedContext, [
+    {
+      memoryKey: 'support_listening_first_user_a',
+      scope: 'personal',
+      subjectParticipantKey: 'partner_a',
+      kind: 'support_preference',
+      domain: 'emotional_support',
+      evidenceType: 'explicit',
+      sensitiveCategory: 'none',
+      statement: '힘든 날에는 이야기를 먼저 들어주면 좋아',
+      confidence: 0.84,
+      evidenceAnswerIds: ['answer-a'],
+    },
+  ]);
+
+  assert.equal(resolved[0]?.evidenceType, 'repeated_pattern');
 });
 
 test('한 질문에서 기억 후보를 세 개보다 많이 만들 수 없다', () => {

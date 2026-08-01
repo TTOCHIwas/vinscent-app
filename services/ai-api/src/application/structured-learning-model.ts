@@ -31,6 +31,12 @@ import type {
   ProactiveSuggestionContext,
   SensitiveCategory,
 } from '../domain/learning-contract.ts';
+import {
+  buildGeneratedQuestionKey,
+} from '../domain/generated-question-key.ts';
+import {
+  classifyDirectQuestionResponse,
+} from '../domain/direct-question-evidence.ts';
 
 const commonSystemInstruction = [
   '너는 커플 앱 단짠의 작은 캐릭터이자 구조화 작업 도우미야.',
@@ -89,13 +95,12 @@ const feedbackSchema = objectSchema({
   feedback_text: { type: 'string', maxLength: 80 },
 }, ['feedback_text']);
 
-const personalizedQuestionSchema = objectSchema({
-  question_key: { type: 'string' },
+const generatedQuestionSchema = objectSchema({
   question_text: { type: 'string' },
   category: { type: 'string' },
   mood: { type: ['string', 'null'] },
   rationale: { type: 'string' },
-}, ['question_key', 'question_text', 'category', 'mood', 'rationale']);
+}, ['question_text', 'category', 'mood', 'rationale']);
 
 const directQuestionAnswerSchema = objectSchema({
   answer_status: {
@@ -183,14 +188,15 @@ export class StructuredLearningModel implements LearningModelPort {
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
     const result = await this.#generateStructured(buildStructuredRequest(
       buildGeneralQuestionPrompt(context),
-      personalizedQuestionSchema,
+      generatedQuestionSchema,
       generationProfiles.question,
     ));
     const output = requireRecord(result.value);
 
+    const text = requireString(output, 'question_text', 300);
     return withUsage(result, {
-      questionKey: requireString(output, 'question_key', 120),
-      text: requireString(output, 'question_text', 300),
+      questionKey: buildGeneratedQuestionKey('general_generated', text),
+      text,
       category: requireString(output, 'category', 100),
       mood: requireNullableString(output, 'mood', 100),
       rationale: requireString(output, 'rationale', 500),
@@ -202,14 +208,15 @@ export class StructuredLearningModel implements LearningModelPort {
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
     const result = await this.#generateStructured(buildStructuredRequest(
       buildPersonalizedQuestionPrompt(context),
-      personalizedQuestionSchema,
+      generatedQuestionSchema,
       generationProfiles.question,
     ));
     const output = requireRecord(result.value);
 
+    const text = requireString(output, 'question_text', 300);
     return withUsage(result, {
-      questionKey: requireString(output, 'question_key', 120),
-      text: requireString(output, 'question_text', 300),
+      questionKey: buildGeneratedQuestionKey('personalized_generated', text),
+      text,
       category: requireString(output, 'category', 100),
       mood: requireNullableString(output, 'mood', 100),
       rationale: requireString(output, 'rationale', 500),
@@ -253,7 +260,10 @@ export class StructuredLearningModel implements LearningModelPort {
       );
 
       return withUsage(result, {
-        questionKey: buildDirectQuestionFollowUpKey(text),
+        questionKey: buildGeneratedQuestionKey(
+          'direct_follow_up_generated',
+          text,
+        ),
         text,
         category: directQuestionFollowUpCategory,
         mood: null,
@@ -271,7 +281,7 @@ export class StructuredLearningModel implements LearningModelPort {
     const result = await this.#generateStructured(buildStructuredRequest(
       buildProactiveSuggestionPrompt(
         context,
-        options?.rejectedText ?? null,
+        options,
       ),
       buildProactiveSuggestionSchema(context),
       generationProfiles.proactive,
@@ -380,7 +390,7 @@ function buildProactiveSuggestionSchema(
   return objectSchema({
     suggestion_text: {
       type: 'string',
-      minLength: 35,
+      minLength: 24,
       maxLength: 100,
     },
     kind: {
@@ -412,7 +422,6 @@ function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
       '- 사생활이나 민감 정보를 요구하지 않고 서로를 조금 더 알아갈 수 있어야 해.',
       '- 진단, 관계 평가, 숨은 의도, 성격 단정을 묻지 마.',
       '- 고정 질문과 같은 친근한 반말을 사용해.',
-      '- question_key는 general_로 시작하고 8자리 영소문자·숫자 접미사로 끝나는 snake_case야.',
       '- rationale에는 최근 질문과 겹치지 않는 이유만 짧게 써.',
     ].join('\n'),
     {
@@ -490,6 +499,9 @@ function buildMemoryExtractionPrompt(
       '9. 근거가 없으면 memories를 빈 배열로 반환해.',
       '10. 두 답변의 명시적인 개인 선호가 서로 달라도 각각 개인 기억 후보로 추출해.',
       '11. 빈 배열은 명시적인 사실이나 선호가 하나도 없을 때만 반환해.',
+      '예시:',
+      '- explicit 예: 답변 "아침마다 커피를 마셔" -> 현재 참여자의 일상 기억 하나를 explicit로 만들어.',
+      '- repeated_pattern 예: existing_memory_candidates에 memory_key "morning_coffee"가 있고 다른 질문에서 같은 습관이 다시 나오면 같은 키와 repeated_pattern을 써.',
       '필드 규칙:',
       '- scope는 personal 또는 couple이야.',
       '- subject_participant_key는 personal이면 partner_a 또는 partner_b, couple이면 null이야.',
@@ -571,6 +583,7 @@ function buildFeedbackPrompt(
       '예시:',
       '- 질문 "요즘 네가 가장 소중하게 지키고 싶은 건 뭐야?", 답변 "몰라"와 "시간" -> "소중한 걸 고르는 데도 시간이 조금 필요한가 봐!"',
       '- 답변 "회사에서 버티기 힘들어"와 "아무 말도 하기 싫어" -> "오늘은 둘의 하루가 평소보다 조금 무거운 날인가 봐..."',
+      '- 답변 "떡볶이"와 "치킨" -> "오늘 밤 메뉴판 앞에서 행복한 고민이 시작되겠네!"',
       '- 나쁜 예: "서로 답변이 시간과 몰라로 달라", "너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐", "서로를 알아가는 소중한 과정이네"',
       '- rejected_feedback가 있으면 표현만 바꾸지 말고 규칙에 맞는 다른 관점의 한마디를 만들어.',
       '- confirmed_profile가 있으면 승인된 개인·커플 기억과 최근 답변만 은근히 활용하고 기억 주인은 드러내지 마.',
@@ -591,7 +604,6 @@ function buildPersonalizedQuestionPrompt(
       '고정 질문과 같은 친근한 반말을 사용해.',
       ...compactVisibleKoreanRules,
       '끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"',
-      'question_key는 personalized_로 시작하고 8자리 영소문자·숫자 접미사로 끝나는 snake_case야.',
       'rationale에는 어떤 빈 정보를 확인하는지만 짧게 써.',
     ].join('\n'),
     {
@@ -616,7 +628,10 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
       '- subject, 내부 키, ID, 기억 소유권, 시스템 용어는 답변에 드러내지 마.',
       '판정:',
       '- 질문에 직접 답하는 구체적인 근거가 하나 이상 있을 때만 answer_status를 answered로 해.',
-      '- 주제를 모름, 이야기한 적 없음, 근거 부족, 결과가 궁금하다는 말뿐이면 insufficient야.',
+      '- 질문과 관련된 답변이나 기억 자체가 없을 때만 insufficient야.',
+      '- response_semantics가 explicit_unknown 또는 explicit_none인 답변은 그 사실 자체가 명시적인 답이야. 질문과 관련되면 반드시 answered로 전달하고 다른 취향이나 의도를 추론하지 마.',
+      '- response_semantics가 substantive인 답변만 구체적인 선호나 경험의 근거로 사용해.',
+      '- confirmed_profile와 recent_completed_questions가 서로 충돌하면 하나를 고르지 말고 insufficient로 해.',
       '- 근거가 부족하면 추측하지 말고 자연스럽게 모른다고 말해.',
       '답변:',
       '- 한국어 반말 2~4개의 짧은 문장, 전체 400자 이내야.',
@@ -631,7 +646,7 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
     {
       requester_question: context.questionText,
       confirmed_profile: context.confirmedMemories,
-      recent_completed_questions: context.recentCompletedQuestions,
+      recent_completed_questions: serializeDirectQuestionHistory(context),
     },
   );
 }
@@ -655,6 +670,7 @@ function buildDirectQuestionFollowUpPrompt(
     [
       '목표: 확인된 근거가 부족했던 비공개 질문을 두 사람이 같은 입장에서 답할 공유 질문 하나로 바꿔.',
       'rejected_follow_up가 있으면 rejection_code의 문제를 고쳐 새 후보를 만들고 같은 문장을 반복하지 마.',
+      '- rejection_code가 duplicate_question이면 rejected_follow_up와 recent_shared_questions 모두와 다른 문장으로 다시 만들어.',
       '변환 규칙:',
       '- 장소, 시간, 행동, 비교 기준, 선택지를 그대로 유지해.',
       '- 구체성, 열린 질문인지 선택 질문인지도 유지해.',
@@ -691,22 +707,9 @@ function normalizeDirectQuestionFollowUpText(value: string): string {
   return `${withoutTerminalPunctuation}?`;
 }
 
-function buildDirectQuestionFollowUpKey(questionText: string): string {
-  let hash = 2166136261;
-  for (const character of questionText.normalize('NFKC')) {
-    hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, 16777619);
-  }
-  const suffix = (hash >>> 0)
-    .toString(36)
-    .padStart(8, '0')
-    .slice(-8);
-  return `direct_follow_up_generated_${suffix}`;
-}
-
 function buildProactiveSuggestionPrompt(
   context: ProactiveSuggestionContext,
-  rejectedText: string | null,
+  options?: ProactiveSuggestionGenerationOptions,
 ): string {
   const data: Record<string, unknown> = {
     local_date: context.localDate,
@@ -724,30 +727,40 @@ function buildProactiveSuggestionPrompt(
         sunset_local_time: context.weather.sunsetLocalTime,
       },
   };
-  if (rejectedText !== null) {
-    data.rejected_suggestion = rejectedText;
+  if (
+    options?.rejectionCode !== null
+    && options?.rejectionCode !== undefined
+  ) {
+    data.rejected_suggestion = {
+      text: options.rejectedText,
+      rejection_code: options.rejectionCode,
+    };
   }
 
   return buildTaskPrompt(
     [
       '목표: 홈에서 작은 캐릭터가 건네는 구체적인 활동 또는 카드 아이디어 하나를 써.',
       '형식:',
-      '- 자연스러운 한국어 반말 35~100자야.',
+      '- 자연스러운 한국어 반말 24~100자야.',
       '- 명령형인 해봐, 가봐, 남겨, 챙겨를 피하고 "하는 건 어때?", "하면 좋겠다", "이면 좋겠다", "가 떠오르네"처럼 부담 없이 제안해.',
       '- 마침표는 쓰지 마. !, ?, ...는 하나만 드물게 쓰고 ?!, !?, 반복 문장부호, 아기 말투는 금지야.',
-      '맥락:',
-      '- confirmed_profile와 최근 질문은 관련성을 은근히 높이는 데만 써. 기억 주인을 밝히거나 개인 사실을 그대로 읊지 마.',
-      '- 시간과 날씨는 부드러운 참고 정보야. 날씨는 틀릴 수 있으니 비, 눈, 더위, 추위, 맑음을 확정해서 말하지 마.',
+      '선택 순서:',
+      '- has_card_today가 true면 카드, 사진, 찍기, 남기기를 언급하지 말고 date_idea만 써.',
+      '- has_card_today가 false이고 near_sunset이 true면 노을과 사진 또는 카드를 함께 언급한 sunset_card를 우선해.',
+      '- 나머지는 맥락에 맞춰 date_idea 또는 card_idea를 골라.',
+      '맥락 규칙:',
+      '- confirmed_profile와 최근 질문은 관련성을 높이는 데만 쓰고 기억 주인이나 개인 사실을 그대로 읊지 마.',
       '- 장소, 동네, 도시, 업체, 경로, 검색 결과를 지어내지 마.',
       '- 사진, 카드, 산책, 노을, 실내, 바깥처럼 구체적인 일상 장면을 선호해.',
       '- "둘의 오늘", "우리의 순간", "기억 한 조각", "추억 한 조각" 같은 억지 추상 표현은 쓰지 마.',
-      'kind:',
-      '- 활동은 date_idea, 일반 사진·카드 아이디어는 card_idea야.',
-      '- sunset_card는 near_sunset이 true이고 has_card_today가 false일 때만 가능해.',
-      '- has_card_today가 true면 카드 만들기, 찍기, 남기기를 언급하지 말고 date_idea만 써.',
-      '- near_sunset이 false면 sunset_card와 곧 노을이 진다는 표현을 쓰지 마.',
-      '- weather가 없거나 unknown이면 날씨에 의존하지 않는 아이디어를 만들어.',
-      '- rejected_suggestion가 있으면 같은 뜻을 바꿔 쓰지 말고 규칙에 맞는 다른 아이디어를 만들어.',
+      '날씨 규칙:',
+      '- weather가 null이면 날씨, 기온, 비, 눈, 더위, 추위, 맑음, 노을을 언급하지 마.',
+      '- condition이 hot이거나 apparent_temperature_c가 32 이상이면 오래 걷기보다 가까운 실내나 그늘에서 할 일을 제안해.',
+      '- condition이 rain_possible 또는 snow_possible이거나 precipitation_possible이 true면 비나 눈을 확정하지 말고 실내 대안을 부드럽게 제안해.',
+      '- 그 밖의 날씨도 확정하지 말고 가능성으로만 표현해.',
+      '재시도:',
+      '- rejected_suggestion가 있으면 rejection_code가 가리키는 문제를 고치고 같은 문장이나 같은 문제를 반복하지 마.',
+      '- rejection_code가 invalid_structure이면 필수 필드와 허용된 kind를 정확히 채운 새 결과를 만들어.',
       '말투 예시:',
       '- "오늘 하늘이 맑을 것 같은데 둘이 가볍게 밖으로 나가 천천히 걸으면 좋겠다"',
       '- "곧 노을 질 시간인데 하늘이 괜찮다면 사진 찍어서 카드로 남겨도 예쁘겠다"',
@@ -755,6 +768,18 @@ function buildProactiveSuggestionPrompt(
     ].join('\n'),
     data,
   );
+}
+
+function serializeDirectQuestionHistory(
+  context: DirectQuestionContext,
+): Array<Record<string, unknown>> {
+  return context.recentCompletedQuestions.map((question) => ({
+    questionText: question.questionText,
+    answers: question.answers.map((answer) => ({
+      ...answer,
+      response_semantics: classifyDirectQuestionResponse(answer.text),
+    })),
+  }));
 }
 
 function serializeFoundationProgress(

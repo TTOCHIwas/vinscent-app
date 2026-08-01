@@ -946,14 +946,12 @@ test('learning tasks use separated policy and bounded generation profiles', asyn
     { memories: [] },
     { feedback_text: '서로 다른 쉼도 함께라면 꽤 잘 어울리네!' },
     {
-      question_key: 'general_small_ritual_ab12cd34',
       question_text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
       category: 'daily_life',
       mood: 'warm',
       rationale: '최근 질문과 겹치지 않아',
     },
     {
-      question_key: 'personalized_shared_weekend_ab12cd34',
       question_text: '함께 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
       category: 'daily_life',
       mood: 'curious',
@@ -1200,7 +1198,6 @@ test('general question prompt contains history metadata but no answer or memory'
       prompt = request.prompt;
       return {
         value: {
-          question_key: 'general_small_ritual_ab12cd34',
           question_text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
           category: 'daily_life',
           mood: 'warm',
@@ -1223,6 +1220,54 @@ test('general question prompt contains history metadata but no answer or memory'
   assert.equal(prompt.includes('current_answers'), false);
 });
 
+test('generated question keys are owned by the server', async () => {
+  const requests: StructuredGenerationRequest[] = [];
+  const outputs = [
+    {
+      question_text: '주말에 함께 가장 하고 싶은 건 뭐야?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '최근 질문과 겹치지 않는 활동을 확인해',
+    },
+    {
+      question_text: '함께 걷다가 발견하고 싶은 장면은 뭐야?',
+      category: 'relationship_strength',
+      mood: null,
+      rationale: '함께 걷는 기억을 조금 더 구체적으로 확인해',
+    },
+  ];
+  const model = new StructuredLearningModel({
+    generateStructured: async (request) => {
+      requests.push(request);
+      return {
+        value: outputs.shift(),
+        usage: {
+          inputTokenCount: 10,
+          outputTokenCount: 5,
+          latencyMs: 20,
+        },
+      };
+    },
+  });
+
+  const general = await model.generateGeneralQuestion(generalQuestionContext);
+  const personalized = await model.generatePersonalizedQuestion(context);
+
+  assert.match(
+    general.value.questionKey,
+    /^general_generated_[a-z0-9]{8}$/,
+  );
+  assert.match(
+    personalized.value.questionKey,
+    /^personalized_generated_[a-z0-9]{8}$/,
+  );
+  for (const request of requests) {
+    const schema = request.schema as { required?: string[] };
+    assert.equal(schema.required?.includes('question_key'), false);
+    assert.equal(request.prompt.includes('question_key는'), false);
+  }
+});
+
 test('Gemini model maps feedback and question outputs', async () => {
   const outputs = [
     {
@@ -1233,14 +1278,12 @@ test('Gemini model maps feedback and question outputs', async () => {
       rationale: 'It explores how each partner feels understood.',
     },
     {
-      question_key: 'general_small_ritual_ab12cd34',
       question_text: '요즘 둘만의 작은 습관으로 만들고 싶은 건 뭐야?',
       category: 'daily_life',
       mood: 'warm',
       rationale: 'Recent questions have not covered shared rituals.',
     },
     {
-      question_key: 'personalized_shared_weekend_ab12cd34',
       question_text: 'What would make this weekend feel balanced for both?',
       category: 'personalized',
       mood: null,
@@ -1274,13 +1317,10 @@ test('Gemini model maps feedback and question outputs', async () => {
     ranking.value.questionKey,
     'foundation_v1_personal_values_02',
   );
-  assert.equal(
-    general.value.questionKey,
-    'general_small_ritual_ab12cd34',
-  );
-  assert.equal(
+  assert.match(general.value.questionKey, /^general_generated_[a-z0-9]{8}$/);
+  assert.match(
     personalized.value.questionKey,
-    'personalized_shared_weekend_ab12cd34',
+    /^personalized_generated_[a-z0-9]{8}$/,
   );
   assert.equal(personalized.value.mood, null);
 });
@@ -1367,6 +1407,7 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
     },
   }, {
     rejectedText: '오늘은 산책해봐',
+    rejectionCode: 'commanding_expression',
   });
 
   assert.equal(direct.value.status, 'answered');
@@ -1378,7 +1419,12 @@ test('Gemini model keeps direct questions and proactive context user-relative', 
   assert.equal(prompts[1]?.includes('near_sunset'), true);
   assert.equal(prompts[1]?.includes('latitude'), false);
   assert.equal(prompts[1]?.includes('longitude'), false);
-  assert.equal(prompts[1]?.includes('"rejected_suggestion":"오늘은 산책해봐"'), true);
+  assert.equal(
+    prompts[1]?.includes(
+      '"rejected_suggestion":{"text":"오늘은 산책해봐","rejection_code":"commanding_expression"}',
+    ),
+    true,
+  );
 });
 
 test('Gemini model keeps an insufficient answer separate from its follow-up', async () => {
@@ -1419,11 +1465,109 @@ test('Gemini model keeps an insufficient answer separate from its follow-up', as
   );
 });
 
+test('direct question prompt treats an explicit unknown response as a factual answer', async () => {
+  let capturedPrompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          answer_status: 'answered',
+          answer_text: '상대방은 아직 잘 모르겠다고 했어',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+
+  const result = await model.answerDirectQuestion({
+    questionText: '상대방이 요즘 가장 소중하게 생각하는 건 뭐야?',
+    confirmedMemories: [],
+    recentCompletedQuestions: [{
+      questionText: '요즘 가장 소중하게 지키고 싶은 건 뭐야?',
+      answers: [
+        { subject: 'me', text: '시간' },
+        { subject: 'partner', text: '몰라' },
+      ],
+    }, {
+      questionText: '요즘 새로 갖고 싶은 취미가 있어?',
+      answers: [
+        { subject: 'me', text: '수영' },
+        { subject: 'partner', text: '딱히 없어' },
+      ],
+    }],
+    recentSharedQuestionTexts: [],
+  });
+
+  assert.equal(result.value.status, 'answered');
+  assert.equal(result.value.followUpQuestion, null);
+  assert.equal(
+    capturedPrompt.includes(
+      'response_semantics가 explicit_unknown 또는 explicit_none인 답변은 그 사실 자체가 명시적인 답이야',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '"text":"몰라","response_semantics":"explicit_unknown"',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '"text":"딱히 없어","response_semantics":"explicit_none"',
+    ),
+    true,
+  );
+});
+
+test('proactive retry prompt includes a structural rejection without rejected text', async () => {
+  let capturedPrompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          suggestion_text: '오늘은 둘이 좋아하는 간식을 하나 골라 천천히 나눠 먹으면 좋겠다',
+          kind: 'date_idea',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+
+  await model.generateProactiveSuggestion({
+    localDate: '2026-07-30',
+    localHour: 20,
+    hasCardToday: false,
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    weather: null,
+  }, {
+    rejectedText: null,
+    rejectionCode: 'invalid_structure',
+  });
+
+  assert.equal(
+    capturedPrompt.includes(
+      '"rejected_suggestion":{"text":null,"rejection_code":"invalid_structure"}',
+    ),
+    true,
+  );
+});
+
 test('compact-model prompts include explicit Korean style examples', async () => {
   const prompts: string[] = [];
   const outputs = [
     {
-      question_key: 'personalized_shared_rest_ab12cd34',
       question_text: '함께 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
       category: 'daily_life',
       mood: null,
@@ -1487,6 +1631,93 @@ test('compact-model prompts include explicit Korean style examples', async () =>
       true,
     );
   }
+});
+
+test('compact-model prompts state critical semantic decisions explicitly', async () => {
+  const prompts: string[] = [];
+  const outputs = [
+    { memories: [] },
+    { feedback_text: '오늘 밤 메뉴판 앞에서 행복한 고민이 시작되겠네!' },
+    {
+      answer_status: 'insufficient',
+      answer_text: '서로 다른 기록이 있어서 지금은 잘 모르겠어',
+    },
+    {
+      question_text: '여행을 간다면 국내와 해외 중 어디가 더 좋아?',
+    },
+    {
+      suggestion_text: '오늘은 둘이 좋아하는 간식을 하나 골라 천천히 나눠 먹으면 좋겠다',
+      kind: 'date_idea',
+    },
+  ];
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      prompts.push(prompt);
+      return {
+        value: outputs.shift(),
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 10,
+        },
+      };
+    },
+  });
+  const directContext = {
+    questionText: '상대방은 여행 전에 계획을 세우는 편이야?',
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    recentSharedQuestionTexts: ['여행을 간다면 국내와 해외 중 어디가 더 좋아?'],
+  };
+
+  await model.extractMemoryCandidates(context);
+  await model.generateCoupleFeedback(context);
+  await model.answerDirectQuestion(directContext);
+  await model.generateDirectQuestionFollowUp(directContext, {
+    rejectedText: '여행을 간다면 국내와 해외 중 어디가 더 좋아?',
+    rejectionCode: 'duplicate_question',
+  });
+  await model.generateProactiveSuggestion({
+    localDate: '2026-07-30',
+    localHour: 20,
+    hasCardToday: false,
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    weather: null,
+  }, {
+    rejectedText: '오늘은 산책해봐',
+    rejectionCode: 'too_short',
+  });
+
+  assert.equal(prompts[0]?.includes('explicit 예:'), true);
+  assert.equal(prompts[0]?.includes('repeated_pattern 예:'), true);
+  assert.equal(
+    prompts[1]?.includes('떡볶이') && prompts[1]?.includes('치킨'),
+    true,
+  );
+  assert.equal(
+    prompts[2]?.includes('서로 충돌하면 하나를 고르지 말고 insufficient'),
+    true,
+  );
+  assert.equal(
+    prompts[3]?.includes('rejection_code가 duplicate_question이면'),
+    true,
+  );
+  assert.equal(
+    prompts[4]?.includes('weather가 null이면 날씨'),
+    true,
+  );
+  assert.equal(
+    prompts[4]?.includes('condition이 hot')
+      && prompts[4]?.includes('실내나 그늘'),
+    true,
+  );
+  assert.equal(
+    prompts[4]?.includes(
+      '"rejection_code":"too_short"',
+    ),
+    true,
+  );
 });
 
 test('follow-up parsing reports the invalid field and preserves model usage', async () => {

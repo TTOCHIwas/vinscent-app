@@ -11,6 +11,7 @@ import type {
   PersonalizedQuestionCandidate,
   ProactiveSuggestionCandidate,
   ProactiveSuggestionContext,
+  ProactiveSuggestionValidationCode,
 } from '../domain/learning-contract.ts';
 
 export interface FoundationQuestionRecommendation {
@@ -82,6 +83,11 @@ export interface CoupleFeedbackGenerationOptions {
 
 export interface ProactiveSuggestionGenerationOptions {
   rejectedText: string | null;
+  rejectionCode:
+    | ProactiveSuggestionValidationCode
+    | 'candidate_validation_failed'
+    | 'invalid_structure'
+    | null;
 }
 
 export interface DirectQuestionFollowUpGenerationOptions {
