@@ -14,7 +14,7 @@ export async function writeEvaluationReport(
 ): Promise<void> {
   const normalizedPath = outputPath.trim();
   if (normalizedPath.length === 0) {
-    throw new TypeError('Cloudflare evaluation output path is required');
+    throw new TypeError('Model evaluation output path is required');
   }
 
   await mkdir(path.dirname(normalizedPath), { recursive: true });
