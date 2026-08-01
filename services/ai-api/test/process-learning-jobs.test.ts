@@ -354,7 +354,7 @@ test('processor handles every learning job and restores IDs only at persistence'
         jobId: 'job-personalized',
         promptVersion: 'personalized-question-v4',
       },
-      { jobId: 'job-direct', promptVersion: 'direct-question-v7' },
+      { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
   );
 });
@@ -410,6 +410,57 @@ test('direct question handler persists a structured follow-up proposal', async (
       mood: 'light',
       rationale: '쉬는 날의 선호를 확인할 근거가 아직 부족해',
     },
+  });
+});
+
+test('direct question handler treats a related unknown response as an answer', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-explicit-unknown', 'answer_user_question'),
+  ]);
+  repository.directContext = {
+    questionText: '상대방이 요즘 가장 소중하게 생각하는 건 뭐야?',
+    confirmedMemories: [],
+    recentCompletedQuestions: [{
+      questionText: '요즘 가장 소중하게 지키고 싶은 건 뭐야?',
+      answers: [
+        { subject: 'me', text: '시간' },
+        { subject: 'partner', text: '몰라' },
+      ],
+    }],
+    recentSharedQuestionTexts: [],
+  };
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직 확인된 내용이 없어서 잘 모르겠어',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      followUpCalls += 1;
+      throw new Error('explicit responses do not need a follow-up');
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'workers-ai-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(followUpCalls, 0);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'answered',
+    answer_text: '상대방도 아직 잘 모르겠다고 했어',
+    follow_up_generation_status: 'not_applicable',
+    follow_up_error_code: null,
+    follow_up_question: null,
   });
 });
 
@@ -475,6 +526,11 @@ test('direct question handler generates a follow-up without replacing the first 
   const repository = new FakeRepository([
     job('job-direct-missing-follow-up', 'answer_user_question'),
   ]);
+  repository.directContext = {
+    ...directQuestionContext,
+    questionText:
+      '상대방은 여행지에서 아침에 일찍 움직이는 걸 좋아할까, 늦게 쉬는 걸 좋아할까?',
+  };
   let answerCalls = 0;
   let followUpCalls = 0;
   const model = modelWith({
@@ -534,6 +590,10 @@ test('direct question handler regenerates an asymmetric follow-up once', async (
   const repository = new FakeRepository([
     job('job-direct-follow-up-regeneration', 'answer_user_question'),
   ]);
+  repository.directContext = {
+    ...directQuestionContext,
+    questionText: '상대방은 해외여행을 선호할까, 국내여행을 선호할까?',
+  };
   const rejectedOptions: unknown[] = [];
   let followUpCalls = 0;
   const model = modelWith({
@@ -605,6 +665,62 @@ test('direct question handler regenerates an asymmetric follow-up once', async (
     outputTokenCount: 30,
     latencyMs: 360,
   });
+});
+
+test('direct question follow-up retry does not echo foreign-script output', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-follow-up-foreign-script', 'answer_user_question'),
+  ]);
+  repository.directContext = {
+    ...directQuestionContext,
+    questionText: '상대방은 해외여행을 선호할까, 국내여행을 선호할까?',
+  };
+  const rejectedOptions: unknown[] = [];
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직은 여행 범위 취향을 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp(_context, options) {
+      rejectedOptions.push(options);
+      followUpCalls += 1;
+      if (followUpCalls === 1) {
+        return result({
+          questionKey: 'direct_follow_up_travel_scope_ab12cd34',
+          text: '여행は 해외와 국내 중 어디가 더 좋아?',
+          category: 'travel',
+          mood: null,
+          rationale: '여행 범위 선호를 확인할 근거가 부족해',
+        });
+      }
+      return result({
+        questionKey: 'direct_follow_up_travel_scope_cd34ef56',
+        text: '여행을 간다면 해외와 국내 중 어디가 더 좋아?',
+        category: 'travel',
+        mood: null,
+        rationale: '여행 범위 선호를 확인할 근거가 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'qwen-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(rejectedOptions, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: null, rejectionCode: 'foreign_script' },
+  ]);
 });
 
 test('direct question handler keeps the first answer when follow-up repair fails', async () => {
@@ -697,7 +813,7 @@ test('direct question handler records an invalid generated follow-up', async () 
   });
 });
 
-test('direct question handler records a duplicate without regenerating it', async () => {
+test('direct question handler regenerates a duplicate follow-up once', async () => {
   const repository = new FakeRepository([
     job('job-direct-duplicate-follow-up', 'answer_user_question'),
   ]);
@@ -706,6 +822,7 @@ test('direct question handler records a duplicate without regenerating it', asyn
     recentSharedQuestionTexts: ['요즘 함께 자주 하고 싶은 건 뭐야?'],
   };
   let followUpCalls = 0;
+  const rejectedOptions: unknown[] = [];
   const model = modelWith({
     async answerDirectQuestion() {
       return result({
@@ -714,8 +831,18 @@ test('direct question handler records a duplicate without regenerating it', asyn
         followUpQuestion: null,
       });
     },
-    async generateDirectQuestionFollowUp() {
+    async generateDirectQuestionFollowUp(_context, options) {
       followUpCalls += 1;
+      rejectedOptions.push(options);
+      if (followUpCalls === 2) {
+        return result({
+          questionKey: 'direct_follow_up_recent_activity_cd34ef56',
+          text: '쉬는 날 함께 새로 해보고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '최근 선호를 다른 장면에서 확인해',
+        });
+      }
       return result({
         questionKey: 'direct_follow_up_recent_topic_ab12cd34',
         text: '요즘 함께 자주 하고 싶은 건 뭐야?',
@@ -736,13 +863,86 @@ test('direct question handler records a duplicate without regenerating it', asyn
   const summary = await processor.processBatch(1);
 
   assert.equal(summary.succeeded, 1);
-  assert.equal(followUpCalls, 1);
+  assert.equal(followUpCalls, 2);
+  assert.deepEqual(rejectedOptions, [
+    {
+      rejectedText: null,
+      rejectionCode: null,
+    },
+    {
+      rejectedText: '요즘 함께 자주 하고 싶은 건 뭐야?',
+      rejectionCode: 'duplicate_question',
+    },
+  ]);
   assert.deepEqual(repository.successes[0]?.output, {
     answer_status: 'insufficient',
     answer_text: '아직은 최근 취향을 더 확인해야 해',
+    follow_up_generation_status: 'generated',
+    follow_up_error_code: null,
+    follow_up_question: {
+      question_key: 'direct_follow_up_recent_activity_cd34ef56',
+      question_text: '쉬는 날 함께 새로 해보고 싶은 건 뭐야?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '최근 선호를 다른 장면에서 확인해',
+    },
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 60,
+    outputTokenCount: 30,
+    latencyMs: 360,
+  });
+});
+
+test('direct question handler skips follow-up generation when an equivalent shared question already exists', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-existing-follow-up', 'answer_user_question'),
+  ]);
+  repository.directContext = {
+    ...directQuestionContext,
+    questionText:
+      '상대방은 여행지에서 아침 일찍 움직이는 걸 좋아할까, 느긋하게 쉬는 걸 좋아할까?',
+    recentSharedQuestionTexts: [
+      '여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?',
+    ],
+  };
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직은 여행지에서의 생활 리듬을 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp() {
+      followUpCalls += 1;
+      throw new Error('equivalent question must skip model generation');
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'workers-ai-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(followUpCalls, 0);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 여행지에서의 생활 리듬을 알기 어려워',
     follow_up_generation_status: 'duplicate',
     follow_up_error_code: 'duplicate_question',
     follow_up_question: null,
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 20,
+    outputTokenCount: 10,
+    latencyMs: 120,
   });
 });
 
@@ -888,6 +1088,34 @@ test('processor regenerates shared feedback once after a contract violation', as
     outputTokenCount: 20,
     latencyMs: 240,
   });
+});
+
+test('shared feedback retry does not echo foreign-script output', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-foreign-script', 'generate_feedback'),
+  ]);
+  const rejectedFeedbacks: Array<string | null> = [];
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      rejectedFeedbacks.push(options?.rejectedText ?? null);
+      if (rejectedFeedbacks.length === 1) {
+        return result({ text: '오늘은 둘의気分이 조금 다른가 봐...' });
+      }
+      return result({ text: '오늘은 둘의 마음이 조금 다른 방향을 보는 날인가 봐...' });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'qwen-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(rejectedFeedbacks, [null, null]);
 });
 
 test('processor stops after one invalid shared feedback regeneration', async () => {

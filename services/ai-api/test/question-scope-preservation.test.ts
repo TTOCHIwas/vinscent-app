@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import {
+  DirectQuestionFollowUpValidationError,
+  validateDirectQuestionFollowUp,
+} from '../src/domain/learning-contract.ts';
 import { preservesQuestionScope } from '../src/domain/question-scope-preservation.ts';
 
 const preservedCases = [
@@ -57,5 +61,28 @@ test('핵심어가 하나뿐인 짧은 질문에는 범위 보존 휴리스틱�
   assert.equal(
     preservesQuestionScope('상대방은 커피를 좋아해?', '둘이 마시고 싶은 건 뭐야?'),
     true,
+  );
+});
+
+test('공용 후속 질문 계약은 범위가 달라진 후보를 scope_drift로 구분한다', () => {
+  assert.throws(
+    () => validateDirectQuestionFollowUp(
+      {
+        questionText: '상대방은 해외여행을 선호할까, 국내여행을 선호할까?',
+        confirmedMemories: [],
+        recentCompletedQuestions: [],
+        recentSharedQuestionTexts: [],
+      },
+      {
+        questionKey: 'direct_follow_up_travel_scope_ab12cd34',
+        text: '둘이 함께 가보고 싶은 여행지는 어디야?',
+        category: 'travel',
+        mood: null,
+        rationale: '여행 선호를 함께 확인해',
+      },
+    ),
+    (error: unknown) =>
+      error instanceof DirectQuestionFollowUpValidationError
+      && error.code === 'scope_drift',
   );
 });

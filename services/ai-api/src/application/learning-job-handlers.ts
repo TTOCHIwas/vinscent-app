@@ -16,6 +16,12 @@ import {
   resolveDirectQuestionRefusal,
 } from '../domain/direct-question-policy.ts';
 import {
+  reconcileDirectQuestionAnswer,
+} from '../domain/direct-question-evidence.ts';
+import {
+  areQuestionsNearDuplicate,
+} from '../domain/question-duplicate-detector.ts';
+import {
   LearningJobHandlerRegistry,
   type LearningJobExecution,
   type LearningJobHandler,
@@ -32,6 +38,10 @@ import {
   type LearningModelPort,
   type LearningModelUsage,
 } from './learning-model-port.ts';
+import {
+  koreanOutputRejectionCode,
+  rejectedModelTextForRetry,
+} from './model-output-retry.ts';
 
 interface DefaultLearningJobHandlerOptions {
   repository: LearningJobRepository;
@@ -134,7 +144,12 @@ class GenerateFeedbackHandler implements LearningJobHandler {
           if (attempt === 1) {
             throw error;
           }
-          rejectedText = result.value.text;
+          const rejectionCode = koreanOutputRejectionCode(error)
+            ?? 'candidate_validation_failed';
+          rejectedText = rejectedModelTextForRetry(
+            result.value.text,
+            rejectionCode,
+          );
         }
       }
 
@@ -259,7 +274,7 @@ class AnswerUserQuestionHandler implements LearningJobHandler {
   async prepare(job: ClaimedLearningJob): Promise<PreparedLearningJob> {
     const context = await this.#repository.loadDirectQuestionContext(job.jobId);
 
-    return modelJob('direct-question-v7', async () => {
+    return modelJob('direct-question-v9', async () => {
       const result = await generateDirectQuestionAnswer(
         this.#model,
         context,
@@ -317,16 +332,31 @@ async function generateDirectQuestionAnswer(
   }
 
   const firstResult = await model.answerDirectQuestion(context);
-  const firstAnswer = {
+  const firstAnswer = reconcileDirectQuestionAnswer(context, {
     ...firstResult.value,
     followUpQuestion: null,
-  };
+  });
   validateDirectQuestionAnswer(context, firstAnswer);
   if (firstAnswer.status !== 'insufficient') {
     return {
       answer: firstAnswer,
       followUpGenerationStatus: 'not_applicable',
       followUpErrorCode: null,
+      usage: firstResult.usage,
+    };
+  }
+
+  const hasEquivalentSharedQuestion = context.recentSharedQuestionTexts.some(
+    (questionText) => areQuestionsNearDuplicate(
+      context.questionText,
+      questionText,
+    ),
+  );
+  if (hasEquivalentSharedQuestion) {
+    return {
+      answer: firstAnswer,
+      followUpGenerationStatus: 'duplicate',
+      followUpErrorCode: 'duplicate_question',
       usage: firstResult.usage,
     };
   }
@@ -373,23 +403,20 @@ async function generateDirectQuestionAnswer(
           instanceof DirectQuestionFollowUpValidationError
         ? error.code
         : 'candidate_validation_failed';
-      if (validationCode === 'duplicate_question') {
-        return {
-          answer: firstAnswer,
-          followUpGenerationStatus: 'duplicate',
-          followUpErrorCode: validationCode,
-          usage,
-        };
-      }
       if (attempt === 1) {
         return {
           answer: firstAnswer,
-          followUpGenerationStatus: 'candidate_invalid',
+          followUpGenerationStatus: validationCode === 'duplicate_question'
+            ? 'duplicate'
+            : 'candidate_invalid',
           followUpErrorCode: validationCode,
           usage,
         };
       }
-      rejectedText = followUpResult.value.text;
+      rejectedText = rejectedModelTextForRetry(
+        followUpResult.value.text,
+        validationCode,
+      );
       rejectionCode = validationCode;
     }
   }
