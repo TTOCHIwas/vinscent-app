@@ -73,11 +73,11 @@ export default function PrivacyPage() {
         <h2 id="privacy-ai-location">AI와 위치 정보 처리</h2>
         <ul>
           <li>
-            AI 기능에 동의한 경우 질문·답변과 사용자가 확인한 기억을 Google
-            Gemini에 필요한 범위에서 전달합니다.
+            AI 기능에 동의한 경우 질문·답변과 사용자가 확인한 기억을
+            Cloudflare Workers AI에 필요한 범위에서 전달합니다.
           </li>
           <li>
-            Gemini에는 실제 사용자 ID와 닉네임 대신
+            Workers AI에는 실제 사용자 ID와 닉네임 대신
             <code>partner_a</code>, <code>partner_b</code> 구분값을
             전달합니다.
           </li>
@@ -115,10 +115,12 @@ export default function PrivacyPage() {
             </dd>
           </div>
           <div>
-            <dt>Google Gemini</dt>
+            <dt>Cloudflare Workers AI</dt>
             <dd>
               질문, 답변, 확인된 기억과 최근 문맥을 받아 기억 후보, 피드백,
-              질문과 추천을 생성합니다.
+              질문과 추천을 생성합니다. Cloudflare는 명시적인 동의 없이
+              이 입력과 생성 결과를 AI 모델 학습이나 서비스 개선에
+              사용하지 않습니다.
             </dd>
           </div>
           <div>

@@ -7,7 +7,6 @@ export const policyDecisionKeys = Object.freeze([
   "public_contact_email",
   "effective_date",
   "minimum_age",
-  "gemini_billing",
   "weather_provider",
   "diagnostic_retention",
   "safety_report_retention",

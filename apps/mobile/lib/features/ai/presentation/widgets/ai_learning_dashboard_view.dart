@@ -351,7 +351,7 @@ Future<void> _showConsentSheet(BuildContext context, WidgetRef ref) async {
               const Text('AI 학습 안내', style: AppTextStyles.pageTitle),
               const SizedBox(height: 16),
               Text(
-                '두 사람이 모두 동의하면 질문과 답변을 Google Gemini로 분석해 개인과 커플의 기억 후보를 만듭니다. 기억은 확인한 뒤에만 활성화되며 언제든 학습을 중지할 수 있습니다.',
+                '두 사람이 모두 동의하면 질문과 답변을 Cloudflare Workers AI로 분석해 개인과 커플의 기억 후보를 만듭니다. 기억은 확인한 뒤에만 활성화되며 언제든 학습을 중지할 수 있습니다.',
                 style: AppTextStyles.homeBody.copyWith(
                   color: AppColors.textMuted,
                 ),
