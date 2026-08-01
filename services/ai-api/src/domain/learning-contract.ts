@@ -1,4 +1,9 @@
 import { hasSharedMemoryEvidence } from './memory-evidence.ts';
+import {
+  KoreanOutputPolicyError,
+  normalizeAndValidateKoreanOutput,
+  type KoreanOutputPolicyErrorCode,
+} from './korean-output-policy.ts';
 
 export type LearningStage =
   | 'collecting'
@@ -260,7 +265,8 @@ export type DirectQuestionFollowUpValidationCode =
   | 'invalid_metadata'
   | 'blocked_topic'
   | 'asymmetric_question'
-  | 'duplicate_question';
+  | 'duplicate_question'
+  | KoreanOutputPolicyErrorCode;
 
 export class DirectQuestionFollowUpValidationError extends Error {
   readonly code: DirectQuestionFollowUpValidationCode;
@@ -881,7 +887,10 @@ export function validateDirectQuestionFollowUp(
   try {
     requireNonBlank(candidate.text, 'generated question', 300);
     validateKoreanCharacterText(candidate.text, 'generated question');
-  } catch {
+  } catch (error) {
+    if (error instanceof KoreanOutputPolicyError) {
+      throw new DirectQuestionFollowUpValidationError(error.code);
+    }
     throw new DirectQuestionFollowUpValidationError('invalid_question');
   }
   try {
@@ -928,18 +937,11 @@ export function validateDirectQuestionFollowUp(
   }
 }
 
-const foreignLetterPattern =
-  /(?![\p{Script=Hangul}\p{Script=Latin}])\p{Letter}/u;
 const politeSpeechEndingPattern =
   /(?:습니다|ㅂ니다|입니다|됩니다|합니다|드립니다|바랍니다|십시오|습니까|입니까|인가요|해요|돼요|이에요|예요|어요|아요|네요|군요|죠|나요|까요|세요)(?=$|[\s.!?…])/u;
 
 function validateKoreanCharacterText(value: string, label: string): void {
-  if (!/\p{Script=Hangul}/u.test(value)) {
-    throw new Error(`${label} must contain Korean text`);
-  }
-  if (foreignLetterPattern.test(value)) {
-    throw new Error(`${label} cannot contain a foreign script`);
-  }
+  normalizeAndValidateKoreanOutput(value, label);
   if (politeSpeechEndingPattern.test(value)) {
     throw new Error(`${label} must use casual speech`);
   }

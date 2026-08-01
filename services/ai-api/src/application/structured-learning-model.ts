@@ -965,7 +965,7 @@ function requireDirectString(
   if (typeof value !== 'string') {
     throwInvalidOutput(validationDetail);
   }
-  const normalized = value.trim();
+  const normalized = value.trim().normalize('NFC');
   if (normalized.length === 0 || normalized.length > maximum) {
     throwInvalidOutput(validationDetail);
   }
