@@ -37,13 +37,12 @@
 
 ### 생성형 AI
 
-- Gemini API 추가 서비스 약관은 API Client가 만 18세 미만을 대상으로
-  하거나 만 18세 미만이 접근할 가능성이 있는 형태로 제공되는 것을
-  금지한다.
-- 결제가 연결되지 않은 Gemini API의 무료 서비스는 입력과 생성 결과를
-  Google 제품 개선에 사용할 수 있고 사람 검토가 포함될 수 있다.
-- Cloud Billing이 활성화된 프로젝트의 유료 서비스는 입력과 결과를 제품
-  개선에 사용하지 않으며 별도의 데이터 처리 조건이 적용된다.
+- 운영 AI 공급자는 Cloudflare Workers AI이고 기본 모델은
+  `@cf/qwen/qwen3-30b-a3b-fp8`이다.
+- Cloudflare는 Workers AI 고객 콘텐츠를 명시적인 동의 없이 AI 모델
+  학습이나 Cloudflare·제3자 서비스 개선에 사용하지 않는다고 밝힌다.
+- 입력과 생성 결과는 별도 R2, KV, Durable Objects 또는 Vectorize 저장소에
+  연결하지 않으며, 단짠의 검증된 결과만 Supabase 기능별 테이블에 저장한다.
 - 개인정보보호위원회의 2026년 작성지침은 AI의 의도된 용례, 이용자가
   입력한 정보와 생성 결과의 수집·저장 여부, 모델 학습 활용 여부,
   학습 활용 거부 절차, 부적절한 결과의 신고·이의제기 경로를 실제 처리
@@ -59,9 +58,9 @@
 
 | 항목 | 현재 상태 | 근거 |
 |---|---|---|
-| AI 처리자 안내 | 동의 화면에 Google Gemini와 질문·답변 분석 목적이 표시됨 | `apps/mobile/lib/features/ai/presentation/widgets/ai_learning_dashboard_view.dart` |
+| AI 처리자 안내 | 동의 화면에 Cloudflare Workers AI와 질문·답변 분석 목적이 표시됨 | `apps/mobile/lib/features/ai/presentation/widgets/ai_learning_dashboard_view.dart` |
 | 서비스 이용 연령 | 앱과 Database가 서울 기준 날짜로 만 14세 이상을 검증함 | `apps/mobile/lib/core/date/app_age_policy.dart`, `20260730000000_enforce_profile_minimum_age.sql` |
-| Gemini 과금 상태 | 저장소에서 Cloud Billing 활성화 여부를 검증할 수 없음 | 운영 설정 확인 필요 |
+| AI 공급자 | Cloudflare Workers AI와 Qwen3 비사고 모드로 운영 경로가 구성됨 | Edge Function 공통 AI 조립 모듈과 런타임 매니페스트 |
 | 날씨 엔드포인트 | 무료 일반 엔드포인트 `https://api.open-meteo.com/v1/forecast` 사용 | `services/ai-api/src/infrastructure/open-meteo-forecast-client.ts` |
 | 앱 내부 계정 삭제 | 설정에서 계정과 관련 공유 데이터를 삭제하는 흐름이 구현됨 | 계정 삭제 기능 및 서버 삭제 함수 |
 | 외부 계정 삭제 | 공개 요청 URL이 없음 | 정책 웹 미배포 |
@@ -86,22 +85,21 @@
 2. 고객지원 및 개인정보 문의에 사용할 공개 이메일
 3. 정책 시행일
 4. 만 14세 이상 이용 기준을 공개 약관과 개인정보처리방침에 반영할 문구
-5. Gemini를 대체할 AI 공급자와 모델, 처리 조건
-6. Open-Meteo 상업용 구독 또는 다른 상업 이용 가능 날씨 제공자 선택
-7. AI 실행·알림 발송 진단 기록의 보관기간
-8. 처리 완료된 신고 기록의 보관기간
-9. UGC 보호 범위와 신고 운영 절차
-10. 신고를 받을 운영 채널과 실제 수신 주소
-11. 신고 검토 목표 시간과 운영 담당자
-12. 외부 계정 삭제 요청의 본인 확인 방법
-13. 외부 계정 삭제 요청의 처리 기한과 완료 통지 방법
+5. Open-Meteo 상업용 구독 또는 다른 상업 이용 가능 날씨 제공자 선택
+6. AI 실행·알림 발송 진단 기록의 보관기간
+7. 처리 완료된 신고 기록의 보관기간
+8. UGC 보호 범위와 신고 운영 절차
+9. 신고를 받을 운영 채널과 실제 수신 주소
+10. 신고 검토 목표 시간과 운영 담당자
+11. 외부 계정 삭제 요청의 본인 확인 방법
+12. 외부 계정 삭제 요청의 처리 기한과 완료 통지 방법
 
 현재 구현을 가장 적게 변경하면서 공식 약관을 충족하는 기본안은 다음과
 같다.
 
 - 서비스 가입과 이용은 만 14세 이상으로 제한한다.
-- 만 18세 미만 접근을 금지하는 Gemini API는 출시 전에 교체하고, 새
-  공급자의 연령·상업 이용·데이터 처리 조건을 공개 정책과 일치시킨다.
+- Cloudflare Workers AI의 계정·요금제·데이터 처리 조건을 공개 정책과
+  실제 Supabase secret 구성에 일치시킨다.
 - Open-Meteo 상업용 고객 엔드포인트와 API 키를 사용한다.
 - AI 실행·알림 발송 진단 기록은 90일 후 삭제한다.
 - 처리 완료된 신고 기록은 계정이 유지되는 동안 정해진 기간만 보관하고,
@@ -149,13 +147,40 @@
 - 계정 삭제 안내로 이동하는 경로
 - 실제 운영 가능한 응답 기준
 
+### 4.1 배포 구조
+
+정책 웹은 서버 런타임을 사용하지 않는 Next.js 정적 출력으로 배포한다.
+Cloudflare Pages에는 빌드 결과인 `out` 디렉터리만 공개하며 API 키, Supabase
+서비스 역할 키와 같은 런타임 비밀값을 등록하지 않는다.
+
+현재 모노레포를 Cloudflare Pages Git 연동으로 배포할 때 설정은 다음과 같다.
+
+| 항목 | 값 |
+|---|---|
+| Production branch | `main` |
+| Root directory | `apps/policy-web` |
+| Build command | `npm run build:release` |
+| Build output directory | `out` |
+| `NODE_VERSION` | `22.19.0` |
+
+`apps/policy-web`을 별도 저장소로 분리하면 Root directory만 비워 두고 나머지
+값은 유지한다. 최초 `pages.dev` 주소를 앱이나 스토어에 등록한 뒤 커스텀
+도메인으로 변경하는 경우, 이미 배포된 앱을 위해 이전 주소를 유지하거나 새
+주소로 리다이렉트한다.
+
+Cloudflare Pages Git 연동과 정적 요청 과금 기준은 다음 공식 문서를 따른다.
+
+- https://developers.cloudflare.com/pages/configuration/git-integration/
+- https://developers.cloudflare.com/pages/functions/pricing/
+- https://developers.cloudflare.com/pages/configuration/custom-domains/
+
 ## 5. 배포 승인 조건
 
 다음 조건을 모두 충족한 경우에만 정책 웹을 배포한다.
 
 - 위 운영 결정이 모두 확정됨
 - 공개 문서와 `privacy-data-map.md`가 일치함
-- Gemini와 날씨 API의 운영 계약이 실제 배포 설정과 일치함
+- Cloudflare Workers AI와 날씨 API의 운영 계약이 실제 배포 설정과 일치함
 - 앱 내부 계정 삭제 결과와 외부 안내 문구가 일치함
 - 정책 URL이 모바일과 데스크톱에서 읽기 가능함
 - 정책 페이지에 임시 문구나 미확정 값이 없음
@@ -192,8 +217,10 @@
   https://support.google.com/googleplay/android-developer/answer/113477
 - Google Play 계정 삭제 요구사항:
   https://support.google.com/googleplay/android-developer/answer/13327111
-- Gemini API 추가 서비스 약관:
-  https://ai.google.dev/gemini-api/terms
+- Cloudflare Workers AI 데이터 사용:
+  https://developers.cloudflare.com/workers-ai/platform/data-usage/
+- Cloudflare Workers AI 가격:
+  https://developers.cloudflare.com/workers-ai/platform/pricing/
 - Open-Meteo 이용 조건:
   https://open-meteo.com/en/terms
 - Supabase 프로젝트 리전:

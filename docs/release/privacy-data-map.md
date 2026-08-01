@@ -33,7 +33,7 @@
 | Supabase | 위 표의 서버 저장 데이터와 인증 토큰 | 인증, Database, Storage, Realtime, Edge Functions | RLS, 서버 전용 RPC, 비공개 Storage bucket |
 | Kakao | 카카오 로그인 요청과 OAuth/OIDC 토큰 | 카카오 계정 로그인 | 앱은 사용자 프로필 API를 별도로 조회하지 않고 토큰을 Supabase 세션 교환에 사용 |
 | Apple | Apple 로그인 요청, 인증 코드, ID 토큰 | Apple 계정 로그인과 계정 삭제 시 권한 철회 | nonce 검증 흐름, 삭제 시 재인증 및 Apple 토큰 철회 |
-| Google Gemini API | 질문, 답변, 확인된 기억, 최근 질문 문맥 | 기억 후보·피드백·질문·직접 답변·선제 추천 생성 | 이름과 실제 사용자 ID를 `partner_a`, `partner_b`로 치환, 구조화 출력 검증, 민감 주제 차단 |
+| Cloudflare Workers AI | 질문, 답변, 확인된 기억, 최근 질문 문맥 | Qwen3 기반 기억 후보·피드백·질문·직접 답변·선제 추천 생성 | 이름과 실제 사용자 ID를 `partner_a`, `partner_b`로 치환, 비사고 모드, 구조화 출력 검증, 민감 주제 차단 |
 | Firebase Installations·Cloud Messaging | 앱 시작 시 생성되는 Firebase 설치 식별자와 SDK가 처리하는 앱·OS·기기 환경 정보, 알림 허용 후 등록하는 FCM·APNs 토큰, 알림 제목·본문·라우팅 데이터 | Android·iOS 앱 설치 식별과 푸시 전달 | 앱 서버의 알림 토큰 등록은 알림 권한 상태를 확인하고, 권한 철회 또는 토큰 무효화 시 해당 기기 토큰을 비활성화하며 전송 결과를 기록 |
 | Open-Meteo | 소수 둘째 자리로 반올림한 위도·경도 | 현재 날씨와 일몰 맥락 조회 | 저정밀 위치, 짧은 타임아웃, 실패 시 위치 없는 추천으로 전환 |
 
@@ -52,7 +52,8 @@
 
 ## 4. AI 처리 경계
 
-- Gemini에는 실제 사용자 ID와 닉네임 대신 `partner_a`, `partner_b`를 전달한다.
+- Workers AI에는 실제 사용자 ID와 닉네임 대신 `partner_a`, `partner_b`를 전달한다.
+- Cloudflare는 명시적인 동의 없이 고객 입력과 생성 결과를 모델 학습이나 서비스 개선에 사용하지 않는다고 밝히고 있다.
 - 질문·답변 본문과 사용자가 확인한 기억은 기능 제공에 필요한 범위에서 전달한다.
 - 24개 기초 질문 완료 전에는 확인된 개인화 프로필을 피드백에 사용하지 않는다.
 - AI 실행 로그에는 프롬프트 원문을 저장하지 않는다.
@@ -146,7 +147,7 @@
 - `supabase/functions/delete-account/`
 - `supabase/functions/_shared/push.ts`
 - `services/ai-api/src/domain/learning-contract.ts`
-- `services/ai-api/src/infrastructure/gemini-structured-generation-client.ts`
+- `services/ai-api/src/infrastructure/cloudflare-workers-ai-structured-generation-client.ts`
 - `services/ai-api/src/infrastructure/open-meteo-forecast-client.ts`
 - `supabase/migrations/20260720001000_add_ai_consent_memory_and_jobs.sql`
 - `supabase/migrations/20260724002000_add_ai_direct_questions.sql`

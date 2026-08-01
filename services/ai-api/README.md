@@ -3,8 +3,9 @@
 This service owns the model-independent learning boundary for Vinscent.
 
 `LearningModelPort` keeps application and domain code independent from a model
-provider. The deployed `process-ai-learning-jobs` Edge Function currently
-connects `StructuredLearningModel` to a Gemini structured-generation adapter.
+provider. The deployed AI Edge Functions connect `StructuredLearningModel` to
+Cloudflare Workers AI with Qwen3 in non-thinking mode. The Gemini adapter stays
+available for provider comparison and regression evaluation.
 Replacing the provider must not change prompts, job repositories, or domain
 contracts. Provider adapters translate native failures into
 `StructuredGenerationError`; the shared learning model then exposes only

@@ -1,15 +1,16 @@
 # AI Learning Worker Setup
 
 AI 학습 작업은 `process-ai-learning-jobs` Edge Function이 소량의 작업을
-claim한 뒤 Gemini structured output으로 처리한다. API 키와 원문 답변은
-모바일 앱으로 전달하지 않는다.
+claim한 뒤 Cloudflare Workers AI의 Qwen3 structured output으로 처리한다.
+API 토큰과 원문 답변은 모바일 앱으로 전달하지 않는다.
 
 ## Secrets
 
 저장소 루트에서 다음 시크릿을 설정한다.
 
 ```powershell
-npx supabase secrets set GEMINI_API_KEY=<gemini-api-key>
+npx supabase secrets set CLOUDFLARE_ACCOUNT_ID=<cloudflare-account-id>
+npx supabase secrets set CLOUDFLARE_WORKERS_AI_API_TOKEN=<workers-ai-api-token>
 npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 ```
 
@@ -19,9 +20,8 @@ npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 
 선택 설정은 다음과 같다.
 
-- `GEMINI_MODEL`: 기본값 `gemini-3.1-flash-lite`
-- `GEMINI_GENERATE_CONTENT_ENDPOINT`: Gemini `generateContent` 전체 주소 교체용
-- `GEMINI_TIMEOUT_MS`: 기본값 `30000`
+- `CLOUDFLARE_WORKERS_AI_MODEL`: 기본값 `@cf/qwen/qwen3-30b-a3b-fp8`
+- `CLOUDFLARE_WORKERS_AI_TIMEOUT_MS`: 학습 작업 호출 제한 시간, 기본값 `30000`
 - `AI_WORKER_MAX_BATCH_SIZE`: 기본값 `3`, 허용 범위 `1~5`
 
 ## Deploy
@@ -63,6 +63,8 @@ claim과 lease가 같은 작업의 중복 처리를 막는다.
 원문 질문과 답변은 실행 로그에 저장하지 않으며, 로그에는 작업 종류,
 모델, 토큰 수, 지연 시간, 제한된 오류 코드, HTTP 상태, 공급자 상태와
 재시도 대기 시간만 남긴다. 공급자 오류 메시지와 응답 본문은 저장하지 않는다.
+Cloudflare Workers AI는 명시적인 동의 없이 고객 입력과 생성 결과를 모델
+학습이나 Cloudflare·제3자 서비스 개선에 사용하지 않는다고 밝히고 있다.
 
 ## Feature Entitlements
 

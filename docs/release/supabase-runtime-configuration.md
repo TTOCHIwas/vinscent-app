@@ -67,7 +67,8 @@ Supabase 공식 문서에 따르면 운영 secrets는 Dashboard 또는 CLI로
 매니페스트의 `optional`은 코드가 시작될 수 있다는 뜻이지, 상용 출시
 요건이 끝났다는 뜻은 아니다.
 
-- `GEMINI_API_KEY`: 유료 Gemini API와 Cloud Billing 사용 여부를 확정한다.
+- `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKERS_AI_API_TOKEN`: Workers AI
+  운영 계정과 토큰 권한을 확인하고 일일 사용량 경보를 구성한다.
 - `WEATHER_FORECAST_ENDPOINT`, `OPEN_METEO_API_KEY`: 상업적 사용이 가능한
   날씨 계약과 endpoint를 확정한다.
 - Apple 자격 증명 4종: 실제 Apple 계정에서 토큰 철회 통합 테스트를 한다.

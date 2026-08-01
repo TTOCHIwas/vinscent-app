@@ -70,7 +70,7 @@ Environment는 배포 branch를 `main`으로 제한하고 다음 secret을 등�
 
 Supabase URL·anon key와 Kakao Native App Key는 최종 앱에 포함되는 클라이언트
 설정이지만, 워크플로 로그에 노출되지 않도록 Environment secret으로
-관리한다. service role key, Gemini API key와 같은 서버 비밀키는 모바일
+관리한다. service role key, Workers AI API token과 같은 서버 비밀키는 모바일
 빌드에 넣지 않는다.
 
 공개 정책 웹을 배포한 뒤 같은 Environment의 variable에 다음 값을
