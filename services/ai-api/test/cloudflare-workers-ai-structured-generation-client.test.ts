@@ -125,6 +125,44 @@ test('Cloudflare client separates system policy and applies task generation sett
   assert.equal(body.max_tokens, 128);
 });
 
+test('Cloudflare client disables Qwen thinking for structured generation', async () => {
+  let capturedInit: RequestInit | undefined;
+  const client = new CloudflareWorkersAiStructuredGenerationClient({
+    accountId,
+    apiToken: 'test-api-token',
+    model: '@cf/qwen/qwen3-30b-a3b-fp8',
+    fetcher: async (_input, init) => {
+      capturedInit = init;
+      return Response.json({
+        result: {
+          response: { feedback_text: '오늘 답도 둘답다!' },
+        },
+        success: true,
+        errors: [],
+        messages: [],
+      });
+    },
+  });
+
+  await client.generateStructured({
+    systemInstruction: '사용자에게 보이는 문장은 한국어로 작성해.',
+    prompt: '현재 답변을 보고 한마디를 작성해.',
+    schema: { type: 'object' },
+  });
+
+  const body = JSON.parse(String(capturedInit?.body));
+  assert.deepEqual(body.messages, [
+    {
+      role: 'system',
+      content: '사용자에게 보이는 문장은 한국어로 작성해.\n/no_think',
+    },
+    {
+      role: 'user',
+      content: '현재 답변을 보고 한마디를 작성해.',
+    },
+  ]);
+});
+
 test('Cloudflare client parses a JSON string response', async () => {
   const client = new CloudflareWorkersAiStructuredGenerationClient({
     accountId,
