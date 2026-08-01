@@ -16,6 +16,7 @@ const maximumRetryAfterMs = 86_400_000;
 const maximumProviderErrorDetailLength = 500;
 const accountIdPattern = /^[a-f0-9]{32}$/i;
 const modelPattern = /^@cf\/[a-z0-9._-]+\/[a-z0-9._-]+$/i;
+const qwen3ModelPattern = /^@cf\/qwen\/qwen3(?:-|$)/i;
 
 interface CloudflareWorkersAiStructuredGenerationClientOptions {
   accountId: string;
@@ -34,6 +35,7 @@ export class CloudflareWorkersAiStructuredGenerationClient
   readonly #endpoint: string;
   readonly #timeoutMs: number;
   readonly #maxTokens: number;
+  readonly #systemInstructionSuffix: string | null;
   readonly #fetcher: typeof fetch;
   readonly #now: () => number;
 
@@ -54,6 +56,9 @@ export class CloudflareWorkersAiStructuredGenerationClient
       options.maxTokens ?? defaultMaxTokens,
       'max tokens',
     );
+    this.#systemInstructionSuffix = qwen3ModelPattern.test(model)
+      ? '/no_think'
+      : null;
     this.#fetcher = options.fetcher ?? fetch;
     this.#now = options.now ?? Date.now;
   }
@@ -65,9 +70,9 @@ export class CloudflareWorkersAiStructuredGenerationClient
     if (prompt.length === 0) {
       throw new TypeError('Cloudflare Workers AI prompt is required');
     }
-    const systemInstruction = optionalText(
-      request.systemInstruction,
-      'system instruction',
+    const systemInstruction = appendInstructionSuffix(
+      optionalText(request.systemInstruction, 'system instruction'),
+      this.#systemInstructionSuffix,
     );
     const temperature = optionalTemperature(request.temperature);
     const maxTokens = request.maxOutputTokens === undefined
@@ -200,6 +205,16 @@ export class CloudflareWorkersAiStructuredGenerationClient
       clearTimeout(timeout);
     }
   }
+}
+
+function appendInstructionSuffix(
+  instruction: string | null,
+  suffix: string | null,
+): string | null {
+  if (suffix === null) {
+    return instruction;
+  }
+  return instruction === null ? suffix : `${instruction}\n${suffix}`;
 }
 
 function optionalText(value: string | undefined, name: string): string | null {
