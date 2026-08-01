@@ -1,4 +1,5 @@
 import {
+  ProactiveSuggestionValidationError,
   validateProactiveSuggestion,
   type PersonalizationMemoryContext,
   type PersonalizationRecentQuestionContext,
@@ -6,10 +7,12 @@ import {
   type ProactiveSuggestionContext,
   type ProactiveWeatherContext,
 } from '../domain/learning-contract.ts';
-import type {
-  LearningModelResult,
-  ProactiveSuggestionGenerationOptions,
+import {
+  LearningModelError,
+  type LearningModelResult,
+  type ProactiveSuggestionGenerationOptions,
 } from './learning-model-port.ts';
+import { rejectedModelTextForRetry } from './model-output-retry.ts';
 
 export interface ProactiveSuggestionBaseContext {
   localDate: string;
@@ -159,24 +162,49 @@ export class GenerateProactiveSuggestionUseCase {
     contextDate: string,
   ): Promise<ProactiveSuggestionCandidate> {
     let rejectedText: string | null = null;
+    let rejectionCode: ProactiveSuggestionGenerationOptions['rejectionCode'] =
+      null;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       if (attempt > 0) {
         await this.#claimGeneration(userId, contextDate);
       }
-      const result = await this.#model.generateProactiveSuggestion(
-        context,
-        { rejectedText },
-      );
+      let result: LearningModelResult<ProactiveSuggestionCandidate>;
+      try {
+        result = await this.#model.generateProactiveSuggestion(
+          context,
+          { rejectedText, rejectionCode },
+        );
+      } catch (error) {
+        if (
+          !(error instanceof LearningModelError)
+          || error.code !== 'model_invalid_output'
+        ) {
+          throw error;
+        }
+        if (attempt === 1) {
+          return buildProactiveSuggestionFallback(context);
+        }
+        rejectedText = null;
+        rejectionCode = 'invalid_structure';
+        continue;
+      }
 
       try {
         validateProactiveSuggestion(context, result.value);
         return result.value;
       } catch (error) {
+        const validationCode = error instanceof ProactiveSuggestionValidationError
+          ? error.code
+          : 'candidate_validation_failed';
         if (attempt === 1) {
-          throw error;
+          return buildProactiveSuggestionFallback(context);
         }
-        rejectedText = result.value.text;
+        rejectedText = rejectedModelTextForRetry(
+          result.value.text,
+          validationCode,
+        );
+        rejectionCode = validationCode;
       }
     }
 
@@ -209,6 +237,88 @@ export class GenerateProactiveSuggestionUseCase {
       return null;
     }
   }
+}
+
+function buildProactiveSuggestionFallback(
+  context: ProactiveSuggestionContext,
+): ProactiveSuggestionCandidate {
+  const candidate = resolveProactiveSuggestionFallback(context);
+  validateProactiveSuggestion(context, candidate);
+  return candidate;
+}
+
+function resolveProactiveSuggestionFallback(
+  context: ProactiveSuggestionContext,
+): ProactiveSuggestionCandidate {
+  const weather = context.weather;
+
+  if (context.hasCardToday) {
+    if (weather?.condition === 'hot' ||
+      (weather?.apparentTemperatureC ?? -Infinity) >= 32) {
+      return {
+        text: '밖에서 오래 보내기 부담스러울 수 있으니 가까운 실내에서 함께 쉬는 건 어때?',
+        kind: 'date_idea',
+      };
+    }
+    if (weather?.precipitationPossible === true) {
+      return {
+        text: '날씨가 달라질 수 있으니 가까운 실내에서 함께 느긋하게 보내면 좋겠다',
+        kind: 'date_idea',
+      };
+    }
+    if (weather?.condition === 'cold') {
+      return {
+        text: '쌀쌀하게 느껴질 수 있는 날엔 가까운 실내에서 따뜻한 차를 함께 마시는 건 어때?',
+        kind: 'date_idea',
+      };
+    }
+    return {
+      text: '오늘은 둘이 좋아하는 간식을 천천히 나눠 먹으며 쉬는 건 어때?',
+      kind: 'date_idea',
+    };
+  }
+
+  if (weather?.nearSunset === true) {
+    return {
+      text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진 한 장 찍어서 카드로 남겨도 예쁘겠다',
+      kind: 'sunset_card',
+    };
+  }
+  if (weather?.condition === 'hot' ||
+    (weather?.apparentTemperatureC ?? -Infinity) >= 32) {
+    return {
+      text: '밖에서 오래 보내기 부담스러울 수 있으니 가까운 실내에서 함께 쉬는 건 어때?',
+      kind: 'date_idea',
+    };
+  }
+  if (weather?.condition === 'rain_possible') {
+    return {
+      text: '비 소식은 달라질 수 있으니 가까운 실내에서 함께 느긋하게 보내면 좋겠다',
+      kind: 'date_idea',
+    };
+  }
+  if (weather?.condition === 'snow_possible') {
+    return {
+      text: '눈 소식은 달라질 수 있으니 가까운 실내에서 따뜻하게 쉬면 좋겠다',
+      kind: 'date_idea',
+    };
+  }
+  if (weather?.precipitationPossible === true) {
+    return {
+      text: '날씨가 달라질 수 있으니 가까운 실내에서 함께 느긋하게 보내면 좋겠다',
+      kind: 'date_idea',
+    };
+  }
+  if (weather?.condition === 'cold') {
+    return {
+      text: '쌀쌀하게 느껴질 수 있는 날엔 가까운 실내에서 따뜻한 차를 함께 마시는 건 어때?',
+      kind: 'date_idea',
+    };
+  }
+  return {
+    text: '오늘 함께한 작은 장면 하나를 사진이나 카드로 남겨도 예쁘겠다',
+    kind: 'card_idea',
+  };
 }
 
 function clampToLocalDate(

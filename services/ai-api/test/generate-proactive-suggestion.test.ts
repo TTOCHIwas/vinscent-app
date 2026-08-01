@@ -6,6 +6,7 @@ import {
   type ProactiveSuggestionBaseContext,
   type ProactiveSuggestionContextSource,
 } from '../src/application/generate-proactive-suggestion.ts';
+import { LearningModelError } from '../src/application/learning-model-port.ts';
 import type {
   ProactiveSuggestionContext,
   ProactiveSuggestionCandidate,
@@ -29,7 +30,7 @@ test('proactive suggestion uses the server context date and clamps its lifetime'
       async generateProactiveSuggestion(context) {
         seenContexts.push(context);
         return modelResult({
-          text: '날씨가 괜찮아 보이면 가까운 곳을 천천히 걸으며 사진을 남기면 좋겠다',
+          text: '가까운 곳을 천천히 걸으며 둘이 본 장면을 사진으로 남기면 좋겠다',
           kind: 'card_idea',
         });
       },
@@ -86,7 +87,7 @@ test('proactive suggestion treats weather failure as optional context', async ()
 });
 
 test('proactive suggestion retries one contract-invalid model response', async () => {
-  const rejectedTexts: Array<string | null> = [];
+  const rejectedOptions: unknown[] = [];
   let quotaClaimCount = 0;
   const outputs: ProactiveSuggestionCandidate[] = [
     {
@@ -108,7 +109,7 @@ test('proactive suggestion retries one contract-invalid model response', async (
     },
     model: {
       async generateProactiveSuggestion(_context, options) {
-        rejectedTexts.push(options?.rejectedText ?? null);
+        rejectedOptions.push(options);
         return modelResult(outputs.shift()!);
       },
     },
@@ -123,8 +124,45 @@ test('proactive suggestion retries one contract-invalid model response', async (
   });
 
   assert.equal(result.suggestionId, 'suggestion-retried');
-  assert.deepEqual(rejectedTexts, [null, '오늘은 산책해봐']);
+  assert.deepEqual(rejectedOptions, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: '오늘은 산책해봐', rejectionCode: 'too_short' },
+  ]);
   assert.equal(quotaClaimCount, 2);
+});
+
+test('proactive retry does not echo foreign-script output', async () => {
+  const rejectedOptions: unknown[] = [];
+  let modelCallCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: quotaAlwaysAllows(),
+    model: {
+      async generateProactiveSuggestion(_context, options) {
+        rejectedOptions.push(options);
+        modelCallCount += 1;
+        if (modelCallCount === 1) {
+          return modelResult({
+            text: '오늘気分에 맞는 간식을 하나 골라 둘이 천천히 나눠 먹으면 좋겠다',
+            kind: 'date_idea',
+          });
+        }
+        return modelResult({
+          text: '오늘 기분에 맞는 간식을 하나 골라 둘이 천천히 나눠 먹으면 좋겠다',
+          kind: 'date_idea',
+        });
+      },
+    },
+    weatherClient: null,
+  });
+
+  const result = await useCase.execute({ userId: 'user-1', coordinates: null });
+
+  assert.equal(result.kind, 'date_idea');
+  assert.deepEqual(rejectedOptions, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: null, rejectionCode: 'foreign_script' },
+  ]);
 });
 
 test('proactive suggestion does not retry without another model allowance', async () => {
@@ -162,7 +200,7 @@ test('proactive suggestion does not retry without another model allowance', asyn
   assert.equal(modelCallCount, 1);
 });
 
-test('proactive suggestion stops after two contract-invalid responses', async () => {
+test('proactive suggestion falls back after two contract-invalid responses', async () => {
   let generationCount = 0;
   const useCase = new GenerateProactiveSuggestionUseCase({
     contextSource: sourceWith(baseContext),
@@ -179,11 +217,128 @@ test('proactive suggestion stops after two contract-invalid responses', async ()
     weatherClient: null,
   });
 
+  const result = await useCase.execute({ userId: 'user-1', coordinates: null });
+
+  assert.equal(generationCount, 2);
+  assert.equal(result.kind, 'card_idea');
+  assert.equal(
+    result.text,
+    '오늘 함께한 작은 장면 하나를 사진이나 카드로 남겨도 예쁘겠다',
+  );
+});
+
+test('proactive suggestion retries one structurally invalid model response', async () => {
+  const seenOptions: unknown[] = [];
+  let quotaClaimCount = 0;
+  let modelCallCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: {
+      async claimGeneration() {
+        quotaClaimCount += 1;
+        return true;
+      },
+    },
+    model: {
+      async generateProactiveSuggestion(_context, options) {
+        seenOptions.push(options);
+        modelCallCount += 1;
+        if (modelCallCount === 1) {
+          throw new LearningModelError({
+            code: 'model_invalid_output',
+            retryable: false,
+          });
+        }
+        return modelResult({
+          text: '오늘은 둘이 좋아하는 간식을 하나 골라 천천히 나눠 먹으면 좋겠다',
+          kind: 'date_idea',
+        });
+      },
+    },
+    weatherClient: null,
+  });
+
+  const result = await useCase.execute({ userId: 'user-1', coordinates: null });
+
+  assert.equal(result.kind, 'date_idea');
+  assert.equal(modelCallCount, 2);
+  assert.equal(quotaClaimCount, 2);
+  assert.deepEqual(seenOptions, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: null, rejectionCode: 'invalid_structure' },
+  ]);
+});
+
+test('proactive suggestion falls back after two structurally invalid responses', async () => {
+  let modelCallCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: quotaAlwaysAllows(),
+    model: {
+      async generateProactiveSuggestion() {
+        modelCallCount += 1;
+        throw new LearningModelError({
+          code: 'model_invalid_output',
+          retryable: false,
+        });
+      },
+    },
+    weatherClient: null,
+  });
+
+  const result = await useCase.execute({ userId: 'user-1', coordinates: null });
+
+  assert.equal(modelCallCount, 2);
+  assert.equal(result.kind, 'card_idea');
+  assert.equal(
+    result.text,
+    '오늘 함께한 작은 장면 하나를 사진이나 카드로 남겨도 예쁘겠다',
+  );
+});
+
+test('proactive suggestion preserves non-output model failures', async () => {
+  const expectedError = new LearningModelError({
+    code: 'model_unavailable',
+    retryable: true,
+  });
+  let modelCallCount = 0;
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: quotaAlwaysAllows(),
+    model: {
+      async generateProactiveSuggestion() {
+        modelCallCount += 1;
+        throw expectedError;
+      },
+    },
+    weatherClient: null,
+  });
+
   await assert.rejects(
     () => useCase.execute({ userId: 'user-1', coordinates: null }),
-    /proactive suggestion must contain at least 35 characters/,
+    (error: unknown) => error === expectedError,
   );
-  assert.equal(generationCount, 2);
+  assert.equal(modelCallCount, 1);
+});
+
+test('proactive suggestion accepts a natural 29 character response', async () => {
+  const useCase = new GenerateProactiveSuggestionUseCase({
+    contextSource: sourceWith(baseContext),
+    quota: quotaAlwaysAllows(),
+    model: {
+      async generateProactiveSuggestion() {
+        return modelResult({
+          text: '밖에서 함께 걸으면서 둘만의 시간을 보내는 건 어때?',
+          kind: 'date_idea',
+        });
+      },
+    },
+    weatherClient: null,
+  });
+
+  const result = await useCase.execute({ userId: 'user-1', coordinates: null });
+
+  assert.equal(result.text, '밖에서 함께 걸으면서 둘만의 시간을 보내는 건 어때?');
 });
 
 test('proactive suggestion does not call providers after the daily limit', async () => {
