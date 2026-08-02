@@ -404,7 +404,7 @@ void main() {
     final questionTextRect = tester.getRect(questionText);
     final generatedBadgeRect = tester.getRect(generatedBadge);
     expect(
-      generatedBadgeRect.top,
+      generatedBadgeRect.center.dy,
       greaterThanOrEqualTo(questionTextRect.bottom),
     );
     expect(

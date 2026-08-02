@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
+import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
@@ -46,7 +47,7 @@ void main() {
       expect(find.text('05월 31일'), findsOneWidget);
       expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
       expect(find.text('today question'), findsOneWidget);
-      expect(find.text('캐릭터'), findsOneWidget);
+      expect(find.byType(CharacterPlaceholder), findsOneWidget);
       expect(find.text('답변하기'), findsNothing);
       expect(find.text('내 답변'), findsOneWidget);
       expect(find.text('이곳을 눌러서 답변을 입력해주세요'), findsOneWidget);
@@ -1016,7 +1017,7 @@ void main() {
 
       expect(find.text('05월 31일'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('캐릭터'), findsOneWidget);
+      expect(find.byType(CharacterPlaceholder), findsOneWidget);
       expect(find.text('답변 입력'), findsOneWidget);
       expect(find.text('0 / 500'), findsOneWidget);
       final decoration = tester

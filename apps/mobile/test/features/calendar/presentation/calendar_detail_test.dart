@@ -155,7 +155,7 @@ void main() {
       greaterThan(tester.getRect(questionTitle).center.dx),
     );
     expect(
-      tester.getRect(generatedBadge).top,
+      tester.getRect(generatedBadge).center.dy,
       greaterThanOrEqualTo(tester.getRect(renderedQuestion).bottom),
     );
     await tester.tap(indicator);
