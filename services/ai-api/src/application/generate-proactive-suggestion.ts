@@ -43,11 +43,17 @@ export interface ProactiveSuggestionModel {
   ): Promise<LearningModelResult<ProactiveSuggestionCandidate>>;
 }
 
+export interface ProactiveSuggestionWeatherRequest {
+  latitude: number;
+  longitude: number;
+  now: Date;
+  localDate: string;
+  timezone: string;
+}
+
 export interface ProactiveSuggestionWeatherClient {
   fetchContext(
-    latitude: number,
-    longitude: number,
-    now?: Date,
+    request: ProactiveSuggestionWeatherRequest,
   ): Promise<ProactiveWeatherContext>;
 }
 
@@ -115,7 +121,11 @@ export class GenerateProactiveSuggestionUseCase {
       throw new RangeError('current time must be valid');
     }
 
-    const weather = await this.#loadWeather(input.coordinates, generatedAt);
+    const weather = await this.#loadWeather(
+      input.coordinates,
+      generatedAt,
+      baseContext,
+    );
     const context: ProactiveSuggestionContext = {
       localDate: baseContext.localDate,
       localHour: baseContext.localHour,
@@ -222,17 +232,20 @@ export class GenerateProactiveSuggestionUseCase {
   async #loadWeather(
     coordinates: ProactiveSuggestionCoordinates | null,
     now: Date,
+    baseContext: ProactiveSuggestionBaseContext,
   ): Promise<ProactiveWeatherContext | null> {
     if (coordinates === null || this.#weatherClient === null) {
       return null;
     }
 
     try {
-      return await this.#weatherClient.fetchContext(
-        coordinates.latitude,
-        coordinates.longitude,
+      return await this.#weatherClient.fetchContext({
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
         now,
-      );
+        localDate: baseContext.localDate,
+        timezone: baseContext.timezone,
+      });
     } catch {
       return null;
     }
