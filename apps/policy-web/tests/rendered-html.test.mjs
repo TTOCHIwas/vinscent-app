@@ -69,7 +69,10 @@ test("publishes the verified privacy processing draft without invented contacts"
   assert.match(html, /Cloudflare Workers AI/);
   assert.match(html, /Firebase 설치 식별자/);
   assert.match(html, /Firebase Installations·Cloud Messaging/);
-  assert.match(html, /Open-Meteo/);
+  assert.match(html, /MET Norway/);
+  assert.match(html, /Data from MET Norway/);
+  assert.match(html, /href="https:\/\/api\.met\.no\/"/);
+  assert.doesNotMatch(html, /Open-Meteo/);
   assert.match(html, /만 14세 이상/);
   assert.match(html, /mailto:vinscent0929@gmail\.com/);
   assert.doesNotMatch(html, /support@example\.com|example\.com/);
