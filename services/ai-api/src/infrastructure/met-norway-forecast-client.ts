@@ -88,7 +88,7 @@ export class MetNorwayForecastClient
         sunriseUrl,
         request.now,
         defaultSunriseTtlMs,
-      ),
+      ).catch(() => null),
     ]);
 
     return parseContext(forecast, sunrise, request);
@@ -384,7 +384,11 @@ function estimateApparentTemperature(
     );
   }
 
-  if (temperatureC >= 26.7 && relativeHumidity !== null) {
+  if (
+    temperatureC >= 26.7
+    && relativeHumidity !== null
+    && relativeHumidity >= 40
+  ) {
     const temperatureF = temperatureC * 9 / 5 + 32;
     const heatIndexF = -42.379
       + 2.04901523 * temperatureF
@@ -406,6 +410,9 @@ function estimateApparentTemperature(
 }
 
 function parseSunset(value: unknown): Date | null {
+  if (value === null) {
+    return null;
+  }
   const sunset = requireRecord(value).properties;
   const properties = requireRecord(sunset);
   if (properties.sunset === null || properties.sunset === undefined) {
