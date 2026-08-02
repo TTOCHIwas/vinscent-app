@@ -36,12 +36,15 @@
 
 필수 설정:
 
-- `SAFETY_MODERATION_WEBHOOK_URL`: HTTPS 운영 수신기 주소
+- `SAFETY_MODERATION_DISCORD_WEBHOOK_URL`: 비공개 안전 신고 채널의 Discord
+  웹훅 주소. 기존 일반 HTTPS 수신기를 사용하는 환경에서는
+  `SAFETY_MODERATION_WEBHOOK_URL`로 대체할 수 있다.
 - `SAFETY_MODERATION_WORKER_SECRET`: Cron 호출 전용 비밀값
 
 선택 설정:
 
 - `SAFETY_MODERATION_WEBHOOK_BEARER_TOKEN`: 수신기 인증용 Bearer 토큰
+  일반 HTTPS 수신기에서만 사용한다.
 - `SAFETY_MODERATION_WORKER_MAX_BATCH_SIZE`: 호출당 최대 처리량, 기본값 20,
   허용 범위 1~100
 
@@ -50,13 +53,15 @@
 독립적으로 회전할 수 있는 전용 값을 권장한다.
 
 ```powershell
-npx supabase secrets set SAFETY_MODERATION_WEBHOOK_URL=<https-receiver>
+npx supabase secrets set SAFETY_MODERATION_DISCORD_WEBHOOK_URL=<discord-webhook-url>
 npx supabase secrets set SAFETY_MODERATION_WORKER_SECRET=<long-random-secret>
-npx supabase secrets set SAFETY_MODERATION_WEBHOOK_BEARER_TOKEN=<receiver-token>
 ```
 
-수신기 인증이 필요하지 않으면 마지막 명령은 생략한다. 웹훅 URL과 토큰은
-저장소, SQL 결과, 로그에 남기지 않는다.
+Discord URL이 등록되어 있으면 일반 HTTPS 수신기보다 우선한다. 일반
+수신기를 유지할 때만 `SAFETY_MODERATION_WEBHOOK_URL`과 필요에 따라
+`SAFETY_MODERATION_WEBHOOK_BEARER_TOKEN`을 등록한다. 웹훅 URL과 토큰은
+저장소, SQL 결과, 로그에 남기지 않는다. Discord 알림에는 신고 원문과
+사용자 식별자를 넣지 않고 신고 ID와 최소 분류 메타데이터만 보낸다.
 
 ## 배포
 

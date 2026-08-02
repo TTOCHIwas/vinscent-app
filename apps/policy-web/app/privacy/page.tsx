@@ -141,6 +141,14 @@ export default function PrivacyPage() {
               <a href="https://api.met.no/">Data from MET Norway</a>입니다.
             </dd>
           </div>
+          <div>
+            <dt>Discord</dt>
+            <dd>
+              새 신고를 놓치지 않도록 비공개 운영 채널에 신고 ID, 대상
+              종류, 사유, 접수 시각과 상세 설명·콘텐츠 보관본의 존재 여부만
+              전달합니다. 신고 원문과 사용자 식별자는 전달하지 않습니다.
+            </dd>
+          </div>
         </dl>
         <p>
           각 처리자의 이전 국가·리전, 이전 방법과 보유 기간은 실제 운영

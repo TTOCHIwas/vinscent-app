@@ -75,7 +75,12 @@ Supabase 공식 문서에 따르면 운영 secrets는 Dashboard 또는 CLI로
   endpoint를 바꿔야 할 때만 등록한다. 기본값을 사용할 때는 생략한다.
 - MET Norway는 API 키가 필요하지 않는다. Locationforecast와 Sunrise
   호출은 서버 프록시에서 좌표를 반올림하고 제공자 캐시 지침을 따른다.
-- Apple 자격 증명 4종: 실제 Apple 계정에서 토큰 철회 통합 테스트를 한다.
+- Apple 자격 증명 4종: Android 출시에는 필요하지 않다. Sign in with
+  Apple을 제공하는 iOS 출시 전에는 네 값을 모두 등록하고 실제 Apple
+  계정에서 토큰 철회 통합 테스트를 한다.
+- `SAFETY_MODERATION_DISCORD_WEBHOOK_URL`: 비공개 안전 신고 채널 전용
+  Discord 웹훅을 등록한다. 기존 일반 HTTPS 수신기의
+  `SAFETY_MODERATION_WEBHOOK_URL`은 호환 경로로만 유지한다.
 - FCM 자격 증명 3종: Android와 iOS에서 foreground, background, terminated
   상태의 수신을 각각 검증한다.
 - 모든 `*_WEBHOOK_SECRET`: Dashboard 웹훅 또는 스케줄러 헤더와 함수
