@@ -44,40 +44,40 @@
     },
     {
       "name": "APPLE_SIGN_IN_CLIENT_ID",
-      "availability": "required",
+      "availability": "optional",
       "provisioning": "supabase_secret",
       "sensitivity": "configuration",
-      "description": "Apple Sign in with Apple client identifier used for token revocation.",
+      "description": "Apple client identifier required for token revocation before iOS release.",
       "functions": [
         "delete-account"
       ]
     },
     {
       "name": "APPLE_SIGN_IN_KEY_ID",
-      "availability": "required",
+      "availability": "optional",
       "provisioning": "supabase_secret",
       "sensitivity": "configuration",
-      "description": "Apple private key identifier used to sign token revocation requests.",
+      "description": "Apple private key identifier required for token revocation before iOS release.",
       "functions": [
         "delete-account"
       ]
     },
     {
       "name": "APPLE_SIGN_IN_PRIVATE_KEY",
-      "availability": "required",
+      "availability": "optional",
       "provisioning": "supabase_secret",
       "sensitivity": "secret",
-      "description": "Apple private key used to sign token revocation requests.",
+      "description": "Apple private key required for token revocation before iOS release.",
       "functions": [
         "delete-account"
       ]
     },
     {
       "name": "APPLE_SIGN_IN_TEAM_ID",
-      "availability": "required",
+      "availability": "optional",
       "provisioning": "supabase_secret",
       "sensitivity": "configuration",
-      "description": "Apple Developer team identifier used for token revocation.",
+      "description": "Apple Developer team identifier required for token revocation before iOS release.",
       "functions": [
         "delete-account"
       ]
