@@ -30,6 +30,8 @@ export interface EvaluationCaseResult {
   inputTokenCount: number | null;
   outputTokenCount: number | null;
   latencyMs: number;
+  providerAttemptCount: number;
+  completionReason: string | null;
   output: unknown;
   error: EvaluationError | null;
 }
@@ -63,6 +65,7 @@ export async function runEvaluationCase(
       'generation',
       error,
       readErrorUsage(error),
+      readErrorDiagnostics(error),
       null,
     );
   }
@@ -75,6 +78,7 @@ export async function runEvaluationCase(
       'validation',
       error,
       result.usage,
+      result.diagnostics ?? null,
       result.value,
     );
   }
@@ -86,6 +90,8 @@ export async function runEvaluationCase(
     inputTokenCount: result.usage.inputTokenCount,
     outputTokenCount: result.usage.outputTokenCount,
     latencyMs: result.usage.latencyMs,
+    providerAttemptCount: result.diagnostics?.providerAttemptCount ?? 1,
+    completionReason: result.diagnostics?.completionReason ?? null,
     output: result.value,
     error: null,
   };
@@ -338,6 +344,7 @@ function failedResult(
   failurePhase: 'generation' | 'validation',
   error: unknown,
   usage: LearningModelUsage,
+  diagnostics: LearningModelError['diagnostics'],
   output: unknown,
 ): EvaluationCaseResult {
   return {
@@ -347,6 +354,8 @@ function failedResult(
     inputTokenCount: usage.inputTokenCount,
     outputTokenCount: usage.outputTokenCount,
     latencyMs: usage.latencyMs,
+    providerAttemptCount: diagnostics?.providerAttemptCount ?? 1,
+    completionReason: diagnostics?.completionReason ?? null,
     output,
     error: serializeError(error),
   };
@@ -367,6 +376,12 @@ function serializeError(error: unknown): EvaluationError {
 
 function readErrorUsage(error: unknown): LearningModelUsage {
   return error instanceof LearningModelError ? error.usage : emptyUsage;
+}
+
+function readErrorDiagnostics(
+  error: unknown,
+): LearningModelError['diagnostics'] {
+  return error instanceof LearningModelError ? error.diagnostics : null;
 }
 
 function readErrorCode(error: unknown): string | null {

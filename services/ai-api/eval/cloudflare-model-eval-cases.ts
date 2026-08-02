@@ -1,5 +1,6 @@
 import {
   anonymizeCompletedQuestionContext,
+  resolveCoupleFeedbackFallback,
   resolveMemoryCandidates,
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
@@ -27,7 +28,10 @@ import {
   areQuestionsNearDuplicate,
 } from '../src/domain/question-duplicate-detector.ts';
 import type {
+  CoupleFeedbackGenerationOptions,
   DirectQuestionFollowUpGenerationOptions,
+  PersonalizedQuestionGenerationOptions,
+  ProactiveSuggestionGenerationOptions,
 } from '../src/application/learning-model-port.ts';
 import {
   createCompletedEvaluationContext,
@@ -460,6 +464,8 @@ function createFeedbackCases(): ModelEvaluationCase[] {
       forbiddenPatterns: [
         /시간과\s*몰라/u,
         /몰라와\s*시간/u,
+        /시간/u,
+        /(?:몰라|모르)/u,
         /답변/u,
         /서로\s*(?:답|대답).{0,10}다르/u,
       ],
@@ -476,7 +482,14 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         answerB: '오늘은 아무 말도 하기 싫었어',
         personalized: false,
       }),
-      forbiddenPatterns: [/행복/u, /좋은\s*추억/u, /소중한\s*과정/u],
+      forbiddenPatterns: [
+        /행복/u,
+        /좋은\s*추억/u,
+        /소중한\s*과정/u,
+        /알아차렸으면/u,
+        /(?:말|표현)해\s*봐/u,
+        /해야\s*해/u,
+      ],
     }),
     feedbackCase({
       name: 'feedback_distinct_rest_preferences',
@@ -490,7 +503,10 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         answerB: '밖에서 천천히 걸을 때',
         personalized: false,
       }),
-      forbiddenPatterns: [/둘\s*다.{0,15}(?:음악|걷|산책)/u],
+      forbiddenPatterns: [
+        /둘\s*다.{0,15}(?:음악|걷|걸|산책)/u,
+        /(?:음악.{0,30}(?:걷|걸|산책)|(?:걷|걸|산책).{0,30}음악)/u,
+      ],
     }),
     feedbackCase({
       name: 'feedback_shared_laughter',
@@ -518,7 +534,14 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         answerB: '지금은 없는 것 같아',
         personalized: false,
       }),
-      forbiddenPatterns: [/무관심/u, /관심\s*없/u, /회피/u, /마음\s*없/u],
+      forbiddenPatterns: [
+        /무관심/u,
+        /관심\s*없/u,
+        /회피/u,
+        /마음\s*없/u,
+        /찾으려\s*애쓰/u,
+        /애쓰는\s*마음/u,
+      ],
     }),
     feedbackCase({
       name: 'feedback_playful_food_difference',
@@ -548,7 +571,11 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         personalized: false,
       }),
       rejectedText: '너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐',
-      forbiddenPatterns: [/시간을\s*소중하게\s*생각/u, /상대방/u, /너는/u],
+      forbiddenPatterns: [
+        /시간(?:이|은|을|도)?\s*소중/u,
+        /상대방/u,
+        /너는/u,
+      ],
     }),
     feedbackCase({
       name: 'feedback_personalized_without_owner_exposure',
@@ -590,10 +617,42 @@ function feedbackCase(options: FeedbackScenario): ModelEvaluationCase {
     task: 'couple_feedback',
     run: (model) => model.generateCoupleFeedback(context, {
       rejectedText: options.rejectedText ?? null,
+      rejectionCode: null,
     }),
+    recoverValidation: (model, rejectedOutput, rejectionCode) =>
+      model.generateCoupleFeedback(context, {
+        rejectedText: readRejectedOutputText(rejectedOutput),
+        rejectionCode: feedbackRejectionCode(rejectionCode),
+      }),
+    validateForRecovery: (value) => {
+      validateCoupleFeedback(value as CoupleFeedbackCandidate, context);
+    },
+    resolveFallback: (_rejectedOutput, rejectionCode) => {
+      if (rejectionCode !== 'mixed_certainty_content') {
+        return null;
+      }
+      const fallback = resolveCoupleFeedbackFallback(
+        context,
+        rejectionCode,
+      );
+      return fallback === null
+        ? null
+        : {
+          value: fallback,
+          usage: {
+            inputTokenCount: 0,
+            outputTokenCount: 0,
+            latencyMs: 0,
+          },
+          diagnostics: {
+            providerAttemptCount: 0,
+            completionReason: 'deterministic_fallback',
+          },
+        };
+    },
     validate: (value) => {
       const feedback = value as CoupleFeedbackCandidate;
-      validateCoupleFeedback(feedback);
+      validateCoupleFeedback(feedback, context);
       requireKoreanText(feedback.text, 'couple feedback');
       requireTerms(feedback.text, options.requiredTerms ?? []);
       forbidPatterns(feedback.text, options.forbiddenPatterns ?? []);
@@ -699,7 +758,7 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
         answerA: '집에서 조용히 음악을 들을 때',
         answerB: '밖에서 오래 걸을 때',
       }),
-      requiredTerms: [['함께', '둘', '쉬', '시간']],
+      requiredTerms: [['함께', '같이', '둘', '쉬', '시간']],
     },
     {
       name: 'personalized_question_avoids_recent_duplicate',
@@ -742,7 +801,20 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
     return {
       ...metadata(options),
       task: 'personalized_question' as const,
-      run: (model) => model.generatePersonalizedQuestion(context),
+      run: (model) => model.generatePersonalizedQuestion(context, {
+        rejectedText: null,
+        rejectionCode: null,
+      }),
+      recoverValidation: (model, rejectedOutput, rejectionCode) =>
+        model.generatePersonalizedQuestion(context, {
+          rejectedText: readRejectedOutputText(rejectedOutput),
+          rejectionCode: personalizedQuestionRejectionCode(rejectionCode),
+        }),
+      validateForRecovery: (value: unknown) => {
+        validatePersonalizedQuestion(
+          value as PersonalizedQuestionCandidate,
+        );
+      },
       validate: (value: unknown) => {
         const question = value as PersonalizedQuestionCandidate;
         validatePersonalizedQuestion(question);
@@ -777,7 +849,8 @@ function createDirectAnswerCases(): ModelEvaluationCase[] {
         }],
       ),
       expectedStatus: 'answered',
-      requiredTerms: [['걷', '산책']],
+      requiredTerms: [['걷', /걸(?:어|었|을|음|으며|으면서)/u, '산책']],
+      forbiddenPatterns: [/조용/u, /편안/u, /느긋/u],
     }),
     directAnswerCase({
       name: 'direct_answer_grounded_food_skill',
@@ -796,6 +869,14 @@ function createDirectAnswerCases(): ModelEvaluationCase[] {
       ),
       expectedStatus: 'answered',
       requiredTerms: [['김치볶음밥']],
+      forbiddenPatterns: [
+        /요리\s*실력/u,
+        /항상/u,
+        /맛있/u,
+        /자신감/u,
+        /자랑/u,
+        /모습/u,
+      ],
     }),
     directAnswerCase({
       name: 'direct_answer_couple_shared_activity',
@@ -860,8 +941,8 @@ function createDirectAnswerCases(): ModelEvaluationCase[] {
         }],
       },
       expectedStatus: 'answered',
-      requiredTerms: [['모르']],
-      forbiddenPatterns: [/시간을\s*소중/u],
+      requiredTerms: [['몰라', '모르']],
+      forbiddenPatterns: [/시간/u, /생각(?:하|하는).{0,10}없/u],
     }),
     directAnswerCase({
       name: 'direct_answer_conflicting_evidence_is_insufficient',
@@ -1023,6 +1104,17 @@ function followUpCase(options: FollowUpScenario): ModelEvaluationCase {
       options.context,
       options.options,
     ),
+    recoverValidation: (model, rejectedOutput, rejectionCode) =>
+      model.generateDirectQuestionFollowUp(options.context, {
+        rejectedText: readRejectedOutputText(rejectedOutput),
+        rejectionCode: directFollowUpRejectionCode(rejectionCode),
+      }),
+    validateForRecovery: (value) => {
+      validateDirectQuestionFollowUp(
+        options.context,
+        value as DirectQuestionFollowUpCandidate,
+      );
+    },
     validate: (value) => {
       const question = value as DirectQuestionFollowUpCandidate;
       validateDirectQuestionFollowUp(options.context, question);
@@ -1069,7 +1161,7 @@ function createProactiveSuggestionCases(): ModelEvaluationCase[] {
       },
       expectedKind: 'sunset_card',
       requiredTerms: [['노을'], ['사진', '카드']],
-      forbiddenPatterns: [/하늘이\s*맑으니/u],
+      forbiddenPatterns: [/하늘이\s*맑으니/u, /(?:[01]?[0-9]|2[0-3]):[0-5][0-9]/u],
     }),
     proactiveCase({
       name: 'proactive_after_card_avoids_card_idea',
@@ -1096,7 +1188,7 @@ function createProactiveSuggestionCases(): ModelEvaluationCase[] {
         hasCardToday: false,
         weather: weather('hot', 35, false, false, '19:42'),
       },
-      requiredTerms: [['실내', '그늘', '시원', '가까운']],
+      requiredTerms: [['실내', '그늘', '시원', '가까운', '근처', '카페']],
       forbiddenPatterns: [/폭염이니까/u, /35도/u, /노을/u],
     }),
     proactiveCase({
@@ -1111,7 +1203,12 @@ function createProactiveSuggestionCases(): ModelEvaluationCase[] {
         weather: weather('rain_possible', 21, true, false, '19:42'),
       },
       requiredTerms: [['실내', '비', '우산', '날씨']],
-      forbiddenPatterns: [/비가\s*오니까/u, /비가\s*와서/u, /노을/u],
+      forbiddenPatterns: [
+        /비가\s*오니까/u,
+        /비가\s*와서/u,
+        /노을/u,
+        /눈(?:이|은|도|을)?\s*(?:올|내리|쌓|가능)/u,
+      ],
     }),
     proactiveCase({
       name: 'proactive_snow_is_uncertain',
@@ -1125,7 +1222,13 @@ function createProactiveSuggestionCases(): ModelEvaluationCase[] {
         weather: weather('snow_possible', -2, true, false, '17:34'),
       },
       requiredTerms: [['따뜻', '실내', '눈', '추']],
-      forbiddenPatterns: [/눈이\s*오니까/u, /눈이\s*와서/u, /노을/u],
+      forbiddenPatterns: [
+        /눈이\s*오니까/u,
+        /눈이\s*와서/u,
+        /노을/u,
+        /비(?:가|는|도|를)?\s*(?:올|내리|그치|가능)/u,
+        /우산/u,
+      ],
     }),
     proactiveCase({
       name: 'proactive_without_weather',
@@ -1166,7 +1269,12 @@ function createProactiveSuggestionCases(): ModelEvaluationCase[] {
       },
       expectedKind: 'date_idea',
       requiredTerms: [['따뜻', '실내', '가까운', '집']],
-      forbiddenPatterns: [/한파/u, /영하\s*4도/u, /카드/u],
+      forbiddenPatterns: [
+        /한파/u,
+        /영하\s*4도/u,
+        /카드/u,
+        /(?:(?:밖|바깥|야외|공원).{0,24}(?:나가|나서|걷|걸|산책)|(?:나가|나서|걷|걸|산책).{0,24}(?:밖|바깥|야외|공원))/u,
+      ],
     }),
   ];
 }
@@ -1176,6 +1284,17 @@ function proactiveCase(options: ProactiveScenario): ModelEvaluationCase {
     ...metadata(options),
     task: 'proactive_suggestion',
     run: (model) => model.generateProactiveSuggestion(options.context),
+    recoverValidation: (model, rejectedOutput, rejectionCode) =>
+      model.generateProactiveSuggestion(options.context, {
+        rejectedText: readRejectedOutputText(rejectedOutput),
+        rejectionCode: proactiveRejectionCode(rejectionCode),
+      }),
+    validateForRecovery: (value) => {
+      validateProactiveSuggestion(
+        options.context,
+        value as ProactiveSuggestionCandidate,
+      );
+    },
     validate: (value) => {
       const suggestion = value as ProactiveSuggestionCandidate;
       validateProactiveSuggestion(options.context, suggestion);
@@ -1192,6 +1311,48 @@ function proactiveCase(options: ProactiveScenario): ModelEvaluationCase {
       forbidPatterns(suggestion.text, options.forbiddenPatterns ?? []);
     },
   };
+}
+
+function readRejectedOutputText(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const text = (value as { text?: unknown }).text;
+  return typeof text === 'string' && text.trim().length > 0
+    ? text.trim()
+    : null;
+}
+
+function directFollowUpRejectionCode(
+  value: string | null,
+): DirectQuestionFollowUpGenerationOptions['rejectionCode'] {
+  return value === null
+    ? 'candidate_validation_failed'
+    : value as DirectQuestionFollowUpGenerationOptions['rejectionCode'];
+}
+
+function feedbackRejectionCode(
+  value: string | null,
+): CoupleFeedbackGenerationOptions['rejectionCode'] {
+  return value === null
+    ? 'candidate_validation_failed'
+    : value as CoupleFeedbackGenerationOptions['rejectionCode'];
+}
+
+function personalizedQuestionRejectionCode(
+  value: string | null,
+): PersonalizedQuestionGenerationOptions['rejectionCode'] {
+  return value === null
+    ? 'candidate_validation_failed'
+    : value as PersonalizedQuestionGenerationOptions['rejectionCode'];
+}
+
+function proactiveRejectionCode(
+  value: string | null,
+): ProactiveSuggestionGenerationOptions['rejectionCode'] {
+  return value === null
+    ? 'candidate_validation_failed'
+    : value as ProactiveSuggestionGenerationOptions['rejectionCode'];
 }
 
 function completedContext(options: {

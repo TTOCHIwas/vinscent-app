@@ -4,8 +4,9 @@ This service owns the model-independent learning boundary for Vinscent.
 
 `LearningModelPort` keeps application and domain code independent from a model
 provider. The deployed AI Edge Functions connect `StructuredLearningModel` to
-Cloudflare Workers AI with Qwen3 in non-thinking mode. The Gemini adapter stays
-available for provider comparison and regression evaluation.
+Cloudflare Workers AI with Mistral Small 3.1 24B. Qwen, Gemini, Groq, and
+OpenAI adapters stay available for provider comparison and regression
+evaluation.
 Replacing the provider must not change prompts, job repositories, or domain
 contracts. Provider adapters translate native failures into
 `StructuredGenerationError`; the shared learning model then exposes only
@@ -40,3 +41,14 @@ state belong in a separate boundary.
 ```sh
 npm test
 ```
+
+## Candidate model evaluation
+
+The candidate evaluator runs the same anonymized service scenarios through
+Cloudflare Workers AI, Groq, and the OpenAI Responses API without changing the
+deployed provider. It defaults to one smoke case for each of the eight AI
+tasks. Models that pass the smoke suite can then run the complete 47-case
+suite.
+
+See [AI candidate model evaluation](../../docs/release/ai-candidate-model-evaluation.md)
+for credentials, pacing, commands, and acceptance rules.

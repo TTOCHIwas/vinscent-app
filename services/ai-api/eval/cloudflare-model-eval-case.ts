@@ -24,5 +24,18 @@ export interface ModelEvaluationCase {
   source: ModelEvaluationSource;
   expectation: string;
   run(model: LearningModelPort): Promise<LearningModelResult<unknown>>;
+  recoverValidation?(
+    model: LearningModelPort,
+    rejectedOutput: unknown,
+    rejectionCode: string | null,
+  ): Promise<LearningModelResult<unknown>>;
+  resolveFallback?(
+    rejectedOutput: unknown,
+    rejectionCode: string | null,
+  ):
+    | LearningModelResult<unknown>
+    | null
+    | Promise<LearningModelResult<unknown> | null>;
+  validateForRecovery?(value: unknown): void;
   validate(value: unknown): void;
 }

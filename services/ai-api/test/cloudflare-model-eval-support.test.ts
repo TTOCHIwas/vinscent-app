@@ -214,6 +214,8 @@ test('evaluation preserves model diagnostics and usage on generation failure', a
     inputTokenCount: 41,
     outputTokenCount: 9,
     latencyMs: 275,
+    providerAttemptCount: 1,
+    completionReason: null,
     output: null,
     error: {
       name: 'LearningModelError',
@@ -254,6 +256,8 @@ test('evaluation preserves synthetic output and usage on validation failure', as
     inputTokenCount: 52,
     outputTokenCount: 11,
     latencyMs: 310,
+    providerAttemptCount: 1,
+    completionReason: null,
     output,
     error: {
       name: 'Error',
