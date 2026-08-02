@@ -1,6 +1,7 @@
 abstract final class AppIcons {
   static const add = 'assets/icons/add_black.svg';
   static const alarm = 'assets/icons/alarm_black.svg';
+  static const appIcon = 'assets/icons/app_icon.svg';
   static const back = 'assets/icons/back_black.svg';
   static const bookmark = 'assets/icons/bookmark_black.svg';
   static const calendar = 'assets/icons/calendar_black.svg';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_text_styles.dart';
+import '../../assets/app_icons.dart';
 
 class CharacterPlaceholder extends StatelessWidget {
   const CharacterPlaceholder({super.key, this.label = '캐릭터', this.size = 140});
@@ -11,12 +11,16 @@ class CharacterPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      alignment: Alignment.center,
-      color: AppColors.wireframePlaceholder,
-      child: Text(label, style: AppTextStyles.homeCharacterLabel),
+      child: SvgPicture.asset(
+        AppIcons.appIcon,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        semanticsLabel: label,
+      ),
     );
   }
 }
