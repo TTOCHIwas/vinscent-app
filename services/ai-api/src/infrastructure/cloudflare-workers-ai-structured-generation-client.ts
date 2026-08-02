@@ -354,16 +354,37 @@ function readStructuredValue(
   usage: LearningModelUsage,
 ): unknown {
   const result = asRecord(asRecord(payload)?.result);
-  const response = result?.response;
-  if (typeof response === 'string') {
+  if (result === null) {
+    throw invalidOutputError(undefined, usage);
+  }
+
+  if ('response' in result) {
+    return parseStructuredContent(result.response, usage);
+  }
+
+  const choices = result.choices;
+  const firstChoice = Array.isArray(choices) ? asRecord(choices[0]) : null;
+  const message = asRecord(firstChoice?.message);
+  if (message !== null && 'content' in message) {
+    return parseStructuredContent(message.content, usage);
+  }
+
+  throw invalidOutputError(undefined, usage);
+}
+
+function parseStructuredContent(
+  content: unknown,
+  usage: LearningModelUsage,
+): unknown {
+  if (typeof content === 'string') {
     try {
-      return JSON.parse(response);
+      return JSON.parse(content);
     } catch (error) {
       throw invalidOutputError(error, usage);
     }
   }
-  if (typeof response === 'object' && response !== null) {
-    return response;
+  if (typeof content === 'object' && content !== null) {
+    return content;
   }
   throw invalidOutputError(undefined, usage);
 }

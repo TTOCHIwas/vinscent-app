@@ -188,6 +188,49 @@ test('Cloudflare client parses a JSON string response', async () => {
   });
 });
 
+test('Cloudflare client parses an OpenAI-compatible chat response', async () => {
+  const client = new CloudflareWorkersAiStructuredGenerationClient({
+    accountId,
+    apiToken: 'test-api-token',
+    model: '@cf/zai-org/glm-4.7-flash',
+    now: () => 1_000,
+    fetcher: async () => Response.json({
+      result: {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: '{"feedback_text":"오늘 답도 둘답다!"}',
+          },
+          finish_reason: 'stop',
+        }],
+        usage: {
+          prompt_tokens: 21,
+          completion_tokens: 8,
+        },
+      },
+      success: true,
+      errors: [],
+      messages: [],
+    }),
+  });
+
+  const result = await client.generateStructured({
+    prompt: '한 줄 피드백을 만들어줘',
+    schema: { type: 'object' },
+  });
+
+  assert.deepEqual(result, {
+    value: {
+      feedback_text: '오늘 답도 둘답다!',
+    },
+    usage: {
+      inputTokenCount: 21,
+      outputTokenCount: 8,
+      latencyMs: 0,
+    },
+  });
+});
+
 test('Cloudflare client classifies daily allocation exhaustion as rate limited', async () => {
   const clockValues = [1_000, 1_275];
   let requestCount = 0;
