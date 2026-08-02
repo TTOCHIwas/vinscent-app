@@ -6,14 +6,16 @@ JSON Schema, 도메인 검증, 한국어 말투가 같은 입력에서 유지되
 
 ## 평가 대상
 
-- 운영 후보: `@cf/qwen/qwen3-30b-a3b-fp8`
+- 초기 운영 후보: `@cf/qwen/qwen3-30b-a3b-fp8`
 - 비교 후보: `@cf/meta/llama-3.3-70b-instruct-fp8-fast`
 - 기존 기준선: `gemini-3.1-flash-lite`
 
-Qwen3와 Llama는 Cloudflare Workers AI 모델 카탈로그에 포함된다. 운영 기본
-모델은 공통 Edge Function 조립 모듈에서 Qwen3로 고정하고, 환경변수로만
-대체할 수 있다. Qwen3는 구조화 생성에서 추론문이 JSON 앞에 섞이지 않도록
-시스템 지시에 `/no_think`를 추가한다.
+이 문서의 2026년 8월 1일 결과는 초기 Cloudflare 전환 평가 기록이다. 이후
+확장된 후보 평가에서 Mistral Small 3.1 24B를 베타 운영 모델로 선택했다.
+현재 운영 기본값은 공통 Edge Function 조립 모듈에서 Mistral로 고정하고,
+환경변수로 대체할 수 있다. Qwen3를 다시 평가하거나 명시적으로 선택하면
+구조화 생성에서 추론문이 JSON 앞에 섞이지 않도록 시스템 지시에
+`/no_think`를 추가한다.
 
 ## 평가 범위
 
@@ -153,12 +155,30 @@ Qwen3는 직접 질문의 명시적 `모름`, 근거 충돌, 노을 카드 추�
 보완했고 AI 서비스 전체 테스트 `154/154`가 통과했다. Llama 70B는 원점수가
 조금 높지만 공식 지원 언어에 한국어가 포함되지 않고 실제 다른 문자 출력이
 발생했으므로 한국어 만 14세 이상 서비스의 기본 모델로 선택하지 않는다.
-운영 기본값은 Qwen3이며 Gemini 어댑터는 비교와 회귀 평가용으로만 유지한다.
+이 평가 시점의 운영 기본값은 Qwen3였다. 현재 베타 운영 모델 결정은 아래의
+후속 평가와 `ai-candidate-model-evaluation.md`를 기준으로 한다. Gemini
+어댑터는 비교와 회귀 평가용으로 유지한다.
 
 Cloudflare는 JSON Mode에서 스키마 준수를 보장하지 않는다고 명시한다.
 따라서 운영에서도 도메인 검증을 유지하며, Cloudflare가 파손된 JSON을
 반환한 경우에만 즉시 한 번 재시도한다. 속도 제한, 타임아웃과 공급자
 장애는 즉시 반복 호출하지 않고 기존 작업 큐의 백오프 정책으로 처리한다.
+
+## 2026-08-02 베타 운영 모델 결정
+
+동일한 47개 합성 사례와 운영 검증 경계로 최종 비교한 결과는 다음과 같다.
+
+| 모델 | 첫 응답 통과 | 모델 재시도 포함 | 안전 대체 포함 | 총 지연 |
+|---|---:|---:|---:|---:|
+| Mistral Small 3.1 24B | 44 / 47 | 45 / 47 | 46 / 47 | 약 96.9초 |
+| GPT-5 nano low | 37 / 47 | 40 / 47 | 42 / 47 | 약 321.0초 |
+
+Mistral은 별도 3회 안정성 평가에서도 첫 응답 131/141, 모델 재시도 포함
+134/141을 기록했다. 베타에서는 한국어 계약 통과율, 지연 시간, 현재
+Cloudflare 운영 경계 재사용 가능성을 함께 고려해
+`@cf/mistralai/mistral-small-3.1-24b-instruct`를 기본 모델로 선택한다.
+모델 출력은 계속 도메인 검증과 안전 대체 경계를 통과해야 하며, 환경변수
+재정의 기능과 다른 공급자 어댑터는 회귀 평가와 장애 대응을 위해 유지한다.
 
 ## 공식 근거
 
@@ -166,6 +186,8 @@ Cloudflare는 JSON Mode에서 스키마 준수를 보장하지 않는다고 명�
   https://developers.cloudflare.com/workers-ai/get-started/rest-api/
 - Qwen3 30B-A3B FP8 모델 카드:
   https://developers.cloudflare.com/workers-ai/models/qwen3-30b-a3b-fp8/
+- Mistral Small 3.1 24B 모델 카드:
+  https://developers.cloudflare.com/ai/models/%40cf/mistralai/mistral-small-3.1-24b-instruct/
 - Workers AI JSON Mode:
   https://developers.cloudflare.com/workers-ai/features/json-mode/
 - Workers AI 오류 코드:

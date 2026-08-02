@@ -11,7 +11,8 @@ import {
   type EnvironmentReader,
 } from './environment.ts';
 
-export const defaultAiModelName = '@cf/qwen/qwen3-30b-a3b-fp8';
+export const defaultAiModelName =
+  '@cf/mistralai/mistral-small-3.1-24b-instruct';
 
 interface CreateAiLearningModelOptions {
   readEnvironment?: EnvironmentReader;

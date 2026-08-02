@@ -38,7 +38,7 @@
 ### 생성형 AI
 
 - 운영 AI 공급자는 Cloudflare Workers AI이고 기본 모델은
-  `@cf/qwen/qwen3-30b-a3b-fp8`이다.
+  `@cf/mistralai/mistral-small-3.1-24b-instruct`이다.
 - Cloudflare는 Workers AI 고객 콘텐츠를 명시적인 동의 없이 AI 모델
   학습이나 Cloudflare·제3자 서비스 개선에 사용하지 않는다고 밝힌다.
 - 입력과 생성 결과는 별도 R2, KV, Durable Objects 또는 Vectorize 저장소에
@@ -60,7 +60,7 @@
 |---|---|---|
 | AI 처리자 안내 | 동의 화면에 Cloudflare Workers AI와 질문·답변 분석 목적이 표시됨 | `apps/mobile/lib/features/ai/presentation/widgets/ai_learning_dashboard_view.dart` |
 | 서비스 이용 연령 | 앱과 Database가 서울 기준 날짜로 만 14세 이상을 검증함 | `apps/mobile/lib/core/date/app_age_policy.dart`, `20260730000000_enforce_profile_minimum_age.sql` |
-| AI 공급자 | Cloudflare Workers AI와 Qwen3 비사고 모드로 운영 경로가 구성됨 | Edge Function 공통 AI 조립 모듈과 런타임 매니페스트 |
+| AI 공급자 | Cloudflare Workers AI와 Mistral Small 3.1 24B로 운영 경로가 구성됨 | Edge Function 공통 AI 조립 모듈과 런타임 매니페스트 |
 | 날씨 엔드포인트 | 무료 일반 엔드포인트 `https://api.open-meteo.com/v1/forecast` 사용 | `services/ai-api/src/infrastructure/open-meteo-forecast-client.ts` |
 | 앱 내부 계정 삭제 | 설정에서 계정과 관련 공유 데이터를 삭제하는 흐름이 구현됨 | 계정 삭제 기능 및 서버 삭제 함수 |
 | 외부 계정 삭제 | 공개 요청 URL이 없음 | 정책 웹 미배포 |

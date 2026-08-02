@@ -1,7 +1,8 @@
 # AI Learning Worker Setup
 
 AI 학습 작업은 `process-ai-learning-jobs` Edge Function이 소량의 작업을
-claim한 뒤 Cloudflare Workers AI의 Qwen3 structured output으로 처리한다.
+claim한 뒤 Cloudflare Workers AI의 Mistral Small 3.1 24B structured
+output으로 처리한다.
 API 토큰과 원문 답변은 모바일 앱으로 전달하지 않는다.
 
 ## Secrets
@@ -20,7 +21,8 @@ npx supabase secrets set AI_WORKER_SECRET=<long-random-secret>
 
 선택 설정은 다음과 같다.
 
-- `CLOUDFLARE_WORKERS_AI_MODEL`: 기본값 `@cf/qwen/qwen3-30b-a3b-fp8`
+- `CLOUDFLARE_WORKERS_AI_MODEL`: 기본값
+  `@cf/mistralai/mistral-small-3.1-24b-instruct`
 - `CLOUDFLARE_WORKERS_AI_TIMEOUT_MS`: 학습 작업 호출 제한 시간, 기본값 `30000`
 - `AI_WORKER_MAX_BATCH_SIZE`: 기본값 `3`, 허용 범위 `1~5`
 
