@@ -1,6 +1,7 @@
 import { hasSharedMemoryEvidence } from './memory-evidence.ts';
 import { areQuestionsNearDuplicate } from './question-duplicate-detector.ts';
 import { preservesQuestionScope } from './question-scope-preservation.ts';
+import { classifyDirectQuestionResponse } from './direct-question-evidence.ts';
 import {
   KoreanOutputPolicyError,
   normalizeAndValidateKoreanOutput,
@@ -204,12 +205,40 @@ export interface CoupleFeedbackCandidate {
   text: string;
 }
 
+export type CoupleFeedbackValidationCode =
+  | 'invalid_punctuation'
+  | 'answer_owner'
+  | 'blocked_topic'
+  | 'mixed_certainty_content';
+
+export class CoupleFeedbackValidationError extends Error {
+  readonly code: CoupleFeedbackValidationCode;
+
+  constructor(code: CoupleFeedbackValidationCode, message: string) {
+    super(message);
+    this.name = 'CoupleFeedbackValidationError';
+    this.code = code;
+  }
+}
+
 export interface PersonalizedQuestionCandidate {
   questionKey: string;
   text: string;
   category: string;
   mood: string | null;
   rationale: string;
+}
+
+export type PersonalizedQuestionValidationCode = 'meta_language';
+
+export class PersonalizedQuestionValidationError extends Error {
+  readonly code: PersonalizedQuestionValidationCode;
+
+  constructor(code: PersonalizedQuestionValidationCode) {
+    super(code);
+    this.name = 'PersonalizedQuestionValidationError';
+    this.code = code;
+  }
 }
 
 export interface GeneralQuestionContext {
@@ -267,6 +296,7 @@ export type DirectQuestionFollowUpValidationCode =
   | 'invalid_metadata'
   | 'blocked_topic'
   | 'asymmetric_question'
+  | 'unnatural_question'
   | 'scope_drift'
   | 'duplicate_question'
   | KoreanOutputPolicyErrorCode;
@@ -328,6 +358,8 @@ export type ProactiveSuggestionValidationCode =
   | 'excessive_punctuation'
   | 'commanding_expression'
   | 'forced_abstract_expression'
+  | 'unnatural_expression'
+  | 'raw_context_value'
   | 'weather_without_context'
   | 'weather_overstatement'
   | 'blocked_topic'
@@ -751,6 +783,7 @@ export function validateQuestionRecommendation(
 
 export function validateCoupleFeedback(
   candidate: CoupleFeedbackCandidate,
+  context?: AnonymizedCompletedQuestionContext,
 ): void {
   requireNonBlank(candidate.text, 'couple feedback', 80);
   validateKoreanCharacterText(candidate.text, 'couple feedback');
@@ -760,18 +793,117 @@ export function validateCoupleFeedback(
     ? candidate.text.slice(0, -1)
     : candidate.text;
   if (/[.!?]/u.test(reactionBody)) {
-    throw new Error(
+    throw new CoupleFeedbackValidationError(
+      'invalid_punctuation',
       'couple feedback punctuation allowed endings are !, ?, ..., or none',
     );
   }
   if (
     feedbackAnswerOwnerPatterns.some((pattern) => pattern.test(candidate.text))
   ) {
-    throw new Error('couple feedback cannot identify an answer owner');
+    throw new CoupleFeedbackValidationError(
+      'answer_owner',
+      'couple feedback cannot identify an answer owner',
+    );
   }
   if (containsBlockedAiTopic(candidate.text)) {
-    throw new Error('couple feedback contains a blocked topic');
+    throw new CoupleFeedbackValidationError(
+      'blocked_topic',
+      'couple feedback contains a blocked topic',
+    );
   }
+  if (context !== undefined) {
+    validateMixedCertaintyFeedback(context, candidate.text);
+  }
+}
+
+const mixedCertaintyFeedbackStopTerms = new Set([
+  '가장',
+  '그냥',
+  '아직',
+  '오늘',
+  '요즘',
+  '이제',
+  '정말',
+  '제일',
+  '좋아',
+  '좋아해',
+  '싶어',
+  '원해',
+  '함께',
+  '서로',
+]);
+
+function validateMixedCertaintyFeedback(
+  context: AnonymizedCompletedQuestionContext,
+  feedbackText: string,
+): void {
+  const answerSemantics = context.answers.map((answer) => ({
+    text: answer.text,
+    semantics: classifyDirectQuestionResponse(answer.text),
+  }));
+  const hasExplicitUncertainty = answerSemantics.some(
+    ({ semantics }) => semantics !== 'substantive',
+  );
+  const substantiveAnswers = answerSemantics.filter(
+    ({ semantics }) => semantics === 'substantive',
+  );
+  if (!hasExplicitUncertainty || substantiveAnswers.length === 0) {
+    return;
+  }
+
+  const repeatsUncertainty = /(?:몰라|모르|없어|없다|없음|없는\s*것)/u
+    .test(feedbackText);
+  const repeatsSubstantiveTerm = substantiveAnswers.some(({ text }) =>
+    feedbackContentTerms(text).some((term) => feedbackText.includes(term))
+  );
+  if (repeatsUncertainty || repeatsSubstantiveTerm) {
+    throw new CoupleFeedbackValidationError(
+      'mixed_certainty_content',
+      'couple feedback cannot repeat mixed certainty answer content',
+    );
+  }
+}
+
+export function resolveCoupleFeedbackFallback(
+  context: AnonymizedCompletedQuestionContext,
+  rejectionCode: CoupleFeedbackValidationCode,
+): CoupleFeedbackCandidate | null {
+  if (
+    rejectionCode !== 'mixed_certainty_content'
+    || !hasMixedCertaintyAnswers(context)
+  ) {
+    return null;
+  }
+
+  return {
+    text: '같은 질문도 답이 바로 떠오르는 날과 천천히 생각나는 날이 있나 봐...',
+  };
+}
+
+function hasMixedCertaintyAnswers(
+  context: AnonymizedCompletedQuestionContext,
+): boolean {
+  const semantics = context.answers.map((answer) =>
+    classifyDirectQuestionResponse(answer.text)
+  );
+  return semantics.some((value) => value !== 'substantive')
+    && semantics.some((value) => value === 'substantive');
+}
+
+function feedbackContentTerms(value: string): string[] {
+  return value
+    .normalize('NFC')
+    .replace(/[^\p{Script=Hangul}\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .split(/\s+/u)
+    .map((term) => term.replace(
+      /(?:에게서|한테서|으로|에서|에게|한테|까지|부터|처럼|보다|이랑|하고|은|는|이|가|을|를|도|에|로|와|과|랑)$/u,
+      '',
+    ))
+    .filter((term) =>
+      term.length >= 2 && !mixedCertaintyFeedbackStopTerms.has(term)
+    );
 }
 
 const feedbackAnswerOwnerPatterns = [
@@ -789,6 +921,13 @@ export function validatePersonalizedQuestion(
   candidate: PersonalizedQuestionCandidate,
 ): void {
   validateGeneratedQuestion(candidate);
+
+  if (
+    /(?:패턴|경향|성향)[^?]{0,24}(?:맞는지|확인|파악|분석|알아보)/u.test(candidate.text)
+    || /(?:확인|파악|분석|탐색)(?:해\s*보)?려면/u.test(candidate.text)
+  ) {
+    throw new PersonalizedQuestionValidationError('meta_language');
+  }
 }
 
 export function validateGeneralQuestion(
@@ -911,7 +1050,8 @@ export function validateProactiveSuggestion(
     );
   }
   if (
-    /(해\s*봐|가\s*봐|남겨|챙겨)(?:[!?….\s]|$)/u.test(candidate.text)
+    /(?:해\s*봐|가\s*봐)(?:[!?….\s]|$)|(?:남겨|챙겨)(?:\s*(?:봐|줘|두자|보자))?(?:[!?….]|$)/u
+      .test(candidate.text)
   ) {
     throw new ProactiveSuggestionValidationError(
       'commanding_expression',
@@ -926,6 +1066,23 @@ export function validateProactiveSuggestion(
     throw new ProactiveSuggestionValidationError(
       'forced_abstract_expression',
       'proactive suggestion uses a forced abstract expression',
+    );
+  }
+  if (
+    /노을(?:이|은)?\s*(?:막\s*)?(?:뜨(?:는|고|면|기)|떠오르(?:는|고|면|기))/u
+      .test(candidate.text)
+  ) {
+    throw new ProactiveSuggestionValidationError(
+      'unnatural_expression',
+      'proactive suggestion uses an unnatural expression',
+    );
+  }
+  if (/(?:^|[^0-9])(?:[01]?[0-9]|2[0-3]):[0-5][0-9](?:[^0-9]|$)/u.test(
+    candidate.text,
+  )) {
+    throw new ProactiveSuggestionValidationError(
+      'raw_context_value',
+      'proactive suggestion exposes a raw context value',
     );
   }
   if (
@@ -976,6 +1133,9 @@ function validateGeneratedQuestion(
   requireNonBlank(candidate.questionKey, 'generated question key', 120);
   requireNonBlank(candidate.text, 'generated question', 300);
   validateKoreanCharacterText(candidate.text, 'generated question');
+  if (!candidate.text.trimEnd().endsWith('?')) {
+    throw new Error('generated question must end with a question mark');
+  }
   requireNonBlank(candidate.category, 'generated question category', 100);
   requireNonBlank(candidate.rationale, 'generated question rationale', 500);
 
@@ -1042,6 +1202,15 @@ export function validateDirectQuestionFollowUp(
   ) {
     throw new DirectQuestionFollowUpValidationError('asymmetric_question');
   }
+  if (/(?:선호하는\s*)?(?:쪽|편)이\s*더\s*많/u.test(candidate.text)) {
+    throw new DirectQuestionFollowUpValidationError('unnatural_question');
+  }
+  if (
+    /여행지(?:에서|에서는)[^?]{0,24}(?:해외여행|국내여행)/u
+      .test(candidate.text)
+  ) {
+    throw new DirectQuestionFollowUpValidationError('unnatural_question');
+  }
   const isDuplicate = context.recentSharedQuestionTexts.some(
     (questionText) => areQuestionsNearDuplicate(questionText, candidate.text),
   );
@@ -1064,7 +1233,7 @@ function validateKoreanCharacterText(value: string, label: string): void {
 }
 
 const directFollowUpAsymmetricPatterns = [
-  /(?:^|\s)(?:너는|넌|네가|니가|당신은)(?=$|\s|[!?,'"‘’“”])/u,
+  /(?:^|\s)(?:너는|넌|너가|네가|니가|당신은)(?=$|\s|[!?,'"‘’“”])/u,
   /(?:^|\s)(?:상대|상대방|파트너)(?:은|는|이|가)(?=$|\s)/u,
   /파트너\s*[ab]/iu,
   /partner[_\s-]?[ab]/iu,

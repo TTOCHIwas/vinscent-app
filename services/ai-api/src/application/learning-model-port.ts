@@ -1,6 +1,7 @@
 import type {
   AnonymizedCompletedQuestionContext,
   CoupleFeedbackCandidate,
+  CoupleFeedbackValidationCode,
   DirectQuestionAnswer,
   DirectQuestionContext,
   DirectQuestionFollowUpCandidate,
@@ -9,10 +10,14 @@ import type {
   GeneralQuestionContext,
   ModelMemoryCandidate,
   PersonalizedQuestionCandidate,
+  PersonalizedQuestionValidationCode,
   ProactiveSuggestionCandidate,
   ProactiveSuggestionContext,
   ProactiveSuggestionValidationCode,
 } from '../domain/learning-contract.ts';
+import type {
+  KoreanOutputPolicyErrorCode,
+} from '../domain/korean-output-policy.ts';
 
 export interface FoundationQuestionRecommendation {
   questionKey: string;
@@ -25,9 +30,15 @@ export interface LearningModelUsage {
   latencyMs: number;
 }
 
+export interface LearningModelDiagnostics {
+  providerAttemptCount: number;
+  completionReason: string | null;
+}
+
 export interface LearningModelResult<T> {
   value: T;
   usage: LearningModelUsage;
+  diagnostics?: LearningModelDiagnostics;
 }
 
 export type LearningModelErrorCode =
@@ -50,6 +61,7 @@ export class LearningModelError extends Error {
   readonly diagnosticDetail: string | null;
   readonly retryAfterMs: number | null;
   readonly usage: LearningModelUsage;
+  readonly diagnostics: LearningModelDiagnostics | null;
 
   constructor(params: {
     code: LearningModelErrorCode;
@@ -59,6 +71,7 @@ export class LearningModelError extends Error {
     diagnosticDetail?: string | null;
     retryAfterMs?: number | null;
     usage?: LearningModelUsage;
+    diagnostics?: LearningModelDiagnostics | null;
     cause?: unknown;
   }) {
     super(params.code, { cause: params.cause });
@@ -74,11 +87,26 @@ export class LearningModelError extends Error {
       outputTokenCount: null,
       latencyMs: 0,
     };
+    this.diagnostics = params.diagnostics ?? null;
   }
 }
 
 export interface CoupleFeedbackGenerationOptions {
   rejectedText: string | null;
+  rejectionCode:
+    | CoupleFeedbackValidationCode
+    | KoreanOutputPolicyErrorCode
+    | 'candidate_validation_failed'
+    | null;
+}
+
+export interface PersonalizedQuestionGenerationOptions {
+  rejectedText: string | null;
+  rejectionCode:
+    | PersonalizedQuestionValidationCode
+    | KoreanOutputPolicyErrorCode
+    | 'candidate_validation_failed'
+    | null;
 }
 
 export interface ProactiveSuggestionGenerationOptions {
@@ -119,6 +147,7 @@ export interface LearningModelPort {
 
   generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,
+    options?: PersonalizedQuestionGenerationOptions,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>>;
 
   answerDirectQuestion(

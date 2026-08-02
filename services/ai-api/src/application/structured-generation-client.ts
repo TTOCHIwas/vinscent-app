@@ -1,4 +1,5 @@
 import type {
+  LearningModelDiagnostics,
   LearningModelUsage,
 } from './learning-model-port.ts';
 
@@ -13,6 +14,7 @@ export interface StructuredGenerationRequest {
 export interface StructuredGenerationResult {
   value: unknown;
   usage: LearningModelUsage;
+  diagnostics?: LearningModelDiagnostics;
 }
 
 export type StructuredGenerationErrorCode =
@@ -35,6 +37,7 @@ export class StructuredGenerationError extends Error {
   readonly diagnosticDetail: string | null;
   readonly retryAfterMs: number | null;
   readonly usage: LearningModelUsage;
+  readonly diagnostics: LearningModelDiagnostics | null;
 
   constructor(params: {
     code: StructuredGenerationErrorCode;
@@ -44,6 +47,7 @@ export class StructuredGenerationError extends Error {
     diagnosticDetail?: string | null;
     retryAfterMs?: number | null;
     usage?: LearningModelUsage;
+    diagnostics?: LearningModelDiagnostics | null;
     cause?: unknown;
   }) {
     super(`structured_generation_${params.code}`, { cause: params.cause });
@@ -59,6 +63,7 @@ export class StructuredGenerationError extends Error {
       outputTokenCount: null,
       latencyMs: 0,
     };
+    this.diagnostics = params.diagnostics ?? null;
   }
 }
 

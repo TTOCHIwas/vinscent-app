@@ -1,6 +1,9 @@
 import {
   anonymizeCompletedQuestionContext,
+  CoupleFeedbackValidationError,
   DirectQuestionFollowUpValidationError,
+  PersonalizedQuestionValidationError,
+  resolveCoupleFeedbackFallback,
   resolveMemoryCandidates,
   type DirectQuestionAnswer,
   type DirectQuestionContext,
@@ -34,9 +37,11 @@ import {
 } from './learning-job-repository.ts';
 import {
   LearningModelError,
+  type CoupleFeedbackGenerationOptions,
   type LearningModelErrorCode,
   type LearningModelPort,
   type LearningModelUsage,
+  type PersonalizedQuestionGenerationOptions,
 } from './learning-model-port.ts';
 import {
   koreanOutputRejectionCode,
@@ -121,31 +126,46 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('feedback-v5', async () => {
+    return modelJob('feedback-v7', async () => {
       let rejectedText: string | null = null;
+      let rejectionCode: CoupleFeedbackGenerationOptions['rejectionCode'] =
+        null;
       let combinedUsage: LearningModelUsage | null = null;
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const result = await this.#model.generateCoupleFeedback(
           context,
-          { rejectedText },
+          { rejectedText, rejectionCode },
         );
         combinedUsage = combinedUsage === null
           ? result.usage
           : combineUsage(combinedUsage, result.usage);
 
         try {
-          validateCoupleFeedback(result.value);
+          validateCoupleFeedback(result.value, context);
           return {
             output: { feedback_text: result.value.text },
             usage: combinedUsage,
           };
         } catch (error) {
+          const currentRejectionCode = coupleFeedbackRejectionCode(error);
           if (attempt === 1) {
+            if (currentRejectionCode === 'mixed_certainty_content') {
+              const fallback = resolveCoupleFeedbackFallback(
+                context,
+                currentRejectionCode,
+              );
+              if (fallback !== null) {
+                validateCoupleFeedback(fallback, context);
+                return {
+                  output: { feedback_text: fallback.text },
+                  usage: combinedUsage,
+                };
+              }
+            }
             throw error;
           }
-          const rejectionCode = koreanOutputRejectionCode(error)
-            ?? 'candidate_validation_failed';
+          rejectionCode = currentRejectionCode;
           rejectedText = rejectedModelTextForRetry(
             result.value.text,
             rejectionCode,
@@ -244,21 +264,66 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v4', async () => {
-      const result = await this.#model.generatePersonalizedQuestion(context);
-      validatePersonalizedQuestion(result.value);
-      return {
-        output: {
-          question_key: result.value.questionKey,
-          question_text: result.value.text,
-          category: result.value.category,
-          mood: result.value.mood,
-          rationale: result.value.rationale,
-        },
-        usage: result.usage,
-      };
+    return modelJob('personalized-question-v5', async () => {
+      let rejectedText: string | null = null;
+      let rejectionCode:
+        PersonalizedQuestionGenerationOptions['rejectionCode'] = null;
+      let combinedUsage: LearningModelUsage | null = null;
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await this.#model.generatePersonalizedQuestion(
+          context,
+          { rejectedText, rejectionCode },
+        );
+        combinedUsage = combinedUsage === null
+          ? result.usage
+          : combineUsage(combinedUsage, result.usage);
+
+        try {
+          validatePersonalizedQuestion(result.value);
+          return {
+            output: {
+              question_key: result.value.questionKey,
+              question_text: result.value.text,
+              category: result.value.category,
+              mood: result.value.mood,
+              rationale: result.value.rationale,
+            },
+            usage: combinedUsage,
+          };
+        } catch (error) {
+          if (attempt === 1) {
+            throw error;
+          }
+          rejectionCode = personalizedQuestionRejectionCode(error);
+          rejectedText = rejectedModelTextForRetry(
+            result.value.text,
+            rejectionCode,
+          );
+        }
+      }
+
+      throw new Error('personalized question generation exhausted');
     });
   }
+}
+
+function coupleFeedbackRejectionCode(
+  error: unknown,
+): CoupleFeedbackGenerationOptions['rejectionCode'] {
+  if (error instanceof CoupleFeedbackValidationError) {
+    return error.code;
+  }
+  return koreanOutputRejectionCode(error) ?? 'candidate_validation_failed';
+}
+
+function personalizedQuestionRejectionCode(
+  error: unknown,
+): PersonalizedQuestionGenerationOptions['rejectionCode'] {
+  if (error instanceof PersonalizedQuestionValidationError) {
+    return error.code;
+  }
+  return koreanOutputRejectionCode(error) ?? 'candidate_validation_failed';
 }
 
 class AnswerUserQuestionHandler implements LearningJobHandler {

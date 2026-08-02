@@ -876,7 +876,9 @@ test('feedback prompt requests a shared character reaction instead of an answer 
     generateStructured: async ({ prompt }) => {
       prompts.push(prompt);
       return {
-        value: { feedback_text: '소중한 걸 고르는 데도 시간이 조금 필요한가 봐!' },
+        value: {
+          feedback_text: '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+        },
         usage: {
           inputTokenCount: null,
           outputTokenCount: null,
@@ -889,6 +891,7 @@ test('feedback prompt requests a shared character reaction instead of an answer 
   await model.generateCoupleFeedback(context);
   await model.generateCoupleFeedback(context, {
     rejectedText: '너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐',
+    rejectionCode: 'mixed_certainty_content',
   });
   const capturedPrompt = prompts[0] ?? '';
   const retryPrompt = prompts[1] ?? '';
@@ -925,13 +928,91 @@ test('feedback prompt requests a shared character reaction instead of an answer 
     true,
   );
   assert.equal(
-    capturedPrompt.includes('소중한 걸 고르는 데도 시간이 조금 필요한가 봐!'),
+    capturedPrompt.includes(
+      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+    ),
     true,
+  );
+  assert.equal(
+    capturedPrompt.includes('소중한 걸 고르는 데도 시간이 조금 필요한가 봐!'),
+    false,
   );
   assert.equal(capturedPrompt.includes('"rejected_feedback":'), false);
   assert.equal(retryPrompt.includes('"rejected_feedback":'), true);
   assert.equal(
     retryPrompt.includes('너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐'),
+    true,
+  );
+  assert.equal(
+    retryPrompt.includes('mixed_certainty_content'),
+    true,
+  );
+  assert.equal(
+    retryPrompt.includes('거절된 답변의 핵심어를 다시 쓰지 마'),
+    true,
+  );
+});
+
+test('feedback prompt labels explicit uncertainty and hides raw sunset time', async () => {
+  const prompts: string[] = [];
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      prompts.push(prompt);
+      return prompts.length === 1
+        ? {
+            value: { feedback_text: '아직 빈칸인 마음도 있나 봐...' },
+            usage: {
+              inputTokenCount: null,
+              outputTokenCount: null,
+              latencyMs: 0,
+            },
+          }
+        : {
+            value: {
+              suggestion_text: '곧 노을 질 시간인데 사진 한 장 남겨 두면 어때?',
+              kind: 'sunset_card',
+            },
+            usage: {
+              inputTokenCount: null,
+              outputTokenCount: null,
+              latencyMs: 0,
+            },
+          };
+    },
+  });
+
+  await model.generateCoupleFeedback({
+    ...context,
+    answers: [
+      { answerId: 'answer-a', participantKey: 'partner_a', text: '몰라' },
+      { answerId: 'answer-b', participantKey: 'partner_b', text: '시간' },
+    ],
+  });
+  await model.generateProactiveSuggestion({
+    localDate: '2026-08-02',
+    localHour: 19,
+    hasCardToday: false,
+    confirmedMemories: [],
+    recentCompletedQuestions: [],
+    weather: {
+      condition: 'clear',
+      apparentTemperatureC: 24,
+      precipitationPossible: false,
+      nearSunset: true,
+      sunsetLocalTime: '19:42',
+    },
+  });
+
+  assert.equal(
+    prompts[0]?.includes('"response_semantics":"explicit_unknown"'),
+    true,
+  );
+  assert.equal(
+    prompts[0]?.includes('두 답의 핵심 단어를 한마디에 반복하지 마'),
+    true,
+  );
+  assert.equal(
+    prompts[1]?.includes('숫자 시각을 문장에 그대로 쓰지 마'),
     true,
   );
 });
@@ -1041,14 +1122,14 @@ test('learning tasks use separated policy and bounded generation profiles', asyn
       maxOutputTokens,
     })),
     [
-      { temperature: 0, maxOutputTokens: 128 },
+      { temperature: 0, maxOutputTokens: 256 },
       { temperature: 0, maxOutputTokens: 768 },
       { temperature: 0.4, maxOutputTokens: 256 },
       { temperature: 0.3, maxOutputTokens: 384 },
       { temperature: 0.3, maxOutputTokens: 384 },
       { temperature: 0.2, maxOutputTokens: 512 },
       { temperature: 0.2, maxOutputTokens: 384 },
-      { temperature: 0.4, maxOutputTokens: 256 },
+      { temperature: 0.4, maxOutputTokens: 512 },
     ],
   );
 });
@@ -1218,6 +1299,14 @@ test('general question prompt contains history metadata but no answer or memory'
   assert.equal(prompt.includes('Quiet time at home matters to me.'), false);
   assert.equal(prompt.includes('confirmed_profile'), false);
   assert.equal(prompt.includes('current_answers'), false);
+  assert.equal(
+    prompt.includes('질문을 만들어 달라는 메타 질문은 만들지 마'),
+    true,
+  );
+  assert.equal(
+    prompt.includes('question_text는 반드시 물음표로 끝나야 해'),
+    true,
+  );
 });
 
 test('generated question keys are owned by the server', async () => {
@@ -1610,15 +1699,27 @@ test('compact-model prompts include explicit Korean style examples', async () =>
     true,
   );
   assert.equal(
+    prompts[0]?.includes('question_text는 반드시 물음표로 끝나야 해'),
+    true,
+  );
+  assert.equal(
     prompts[1]?.includes(
       'insufficient 예: "아직 확인된 내용이 없어서 잘 모르겠어"',
     ),
     true,
   );
   assert.equal(
+    prompts[1]?.includes('근거 하나로 충분하면 한 문장으로 끝내'),
+    true,
+  );
+  assert.equal(
     prompts[2]?.includes(
       '질문 끝맺음 예: "뭐야?", "어디가 더 좋아?", "어떤 모습이야?"',
     ),
+    true,
+  );
+  assert.equal(
+    prompts[2]?.includes('해외여행이 좋아, 국내여행이 좋아?'),
     true,
   );
   for (const prompt of prompts) {
@@ -1631,6 +1732,41 @@ test('compact-model prompts include explicit Korean style examples', async () =>
       true,
     );
   }
+});
+
+test('personalized question retry explains how to replace analysis language', async () => {
+  let capturedPrompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          question_text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+
+  await model.generatePersonalizedQuestion(context, {
+    rejectedText:
+      '서로의 평소 패턴이 어떻게 맞는지 확인해보려면 어떤 방식이 좋을까?',
+    rejectionCode: 'meta_language',
+  });
+
+  assert.equal(capturedPrompt.includes('meta_language'), true);
+  assert.equal(capturedPrompt.includes('rejected_question'), true);
+  assert.equal(
+    capturedPrompt.includes('분석과 설문을 떠올리게 하는 단어를 모두 빼고'),
+    true,
+  );
 });
 
 test('compact-model prompts state critical semantic decisions explicitly', async () => {
@@ -1696,7 +1832,31 @@ test('compact-model prompts state critical semantic decisions explicitly', async
     true,
   );
   assert.equal(
+    prompts[1]?.includes(
+      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+    ),
+    true,
+  );
+  assert.equal(
+    prompts[1]?.includes('소중한 걸 고르는 데도 시간이 조금 필요한가 봐!'),
+    false,
+  );
+  assert.equal(
+    prompts[1]?.includes(
+      '구체적인 답을 불확실한 답의 이유나 해결책으로 연결하지 마',
+    ),
+    true,
+  );
+  assert.equal(
     prompts[2]?.includes('서로 충돌하면 하나를 고르지 말고 insufficient'),
+    true,
+  );
+  assert.equal(
+    prompts[2]?.includes(
+      '여행 전에 일정을 꼼꼼히 정하는 걸 좋아해',
+    ) && prompts[2]?.includes(
+      '이번에는 아무 계획 없이 떠나는 게 좋았어',
+    ),
     true,
   );
   assert.equal(
@@ -1704,7 +1864,29 @@ test('compact-model prompts state critical semantic decisions explicitly', async
     true,
   );
   assert.equal(
+    prompts[1]?.includes('억지 비유나 번역투 표현을 만들지 마'),
+    true,
+  );
+  assert.equal(
+    prompts[1]?.includes('금지 단어: 너, 너는, 너와, 네가, 니가'),
+    true,
+  );
+  assert.equal(
+    prompts[3]?.includes('너가, 네가, 니가처럼 답변 주인을 직접 부르는 주어는 쓰지 마'),
+    true,
+  );
+  assert.equal(
     prompts[4]?.includes('weather가 null이면 날씨'),
+    true,
+  );
+  assert.equal(
+    prompts[4]?.includes(
+      'weather가 null이면 날씨 관련 단어가 하나도 없는지 확인해',
+    ),
+    true,
+  );
+  assert.equal(
+    prompts[4]?.includes('노을은 뜬다고 표현하지 말고 노을 질 시간이라고 써'),
     true,
   );
   assert.equal(
@@ -1718,6 +1900,32 @@ test('compact-model prompts state critical semantic decisions explicitly', async
     ),
     true,
   );
+});
+
+test('structured model preserves provider-neutral generation diagnostics', async () => {
+  const model = new StructuredLearningModel({
+    generateStructured: async () => ({
+      value: {
+        feedback_text: '오늘 답도 둘답다!',
+      },
+      usage: {
+        inputTokenCount: 20,
+        outputTokenCount: 10,
+        latencyMs: 100,
+      },
+      diagnostics: {
+        providerAttemptCount: 2,
+        completionReason: 'stop',
+      },
+    }),
+  });
+
+  const result = await model.generateCoupleFeedback(context);
+
+  assert.deepEqual(result.diagnostics, {
+    providerAttemptCount: 2,
+    completionReason: 'stop',
+  });
 });
 
 test('follow-up parsing reports the invalid field and preserves model usage', async () => {
@@ -1816,6 +2024,10 @@ test('Gemini model generates a follow-up from a minimal dedicated schema', async
   );
   assert.equal(
     capturedPrompt.includes('더 넓거나 추상적인 주제로 바꾸지 마'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('여행 종류 선택지 앞에 "여행지에서"를 덧붙이지 마'),
     true,
   );
   assert.equal(

@@ -3,11 +3,14 @@ import test from 'node:test';
 
 import {
   anonymizeCompletedQuestionContext,
+  CoupleFeedbackValidationError,
   deriveLearningStage,
+  PersonalizedQuestionValidationError,
   ProactiveSuggestionValidationError,
   resolveMemoryCandidates,
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
+  validateDirectQuestionFollowUp,
   validateMemoryCandidates,
   validatePersonalizedQuestion,
   validateProactiveSuggestion,
@@ -232,6 +235,22 @@ test('근거가 부족할 때만 대칭적인 공용 질문 후보를 허용한�
         status: 'insufficient',
         text: '아직은 확실히 알기 어려워',
         followUpQuestion: {
+          questionKey: 'direct_follow_up_cooking_ab12cd34',
+          text: '너가 가장 잘하는 요리는 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '직접 만들기 좋아하는 요리를 확인하기 위해서야',
+        },
+      }),
+    /symmetric/i,
+  );
+
+  assert.throws(
+    () =>
+      validateDirectQuestionAnswer(directQuestionContext, {
+        status: 'insufficient',
+        text: '아직은 확실히 알기 어려워',
+        followUpQuestion: {
           questionKey: 'direct_follow_up_recent_topic_ab12cd34',
           text: '요즘 함께 자주 하고 싶은 건 뭐야?',
           category: 'daily_life',
@@ -285,6 +304,57 @@ test('공용 후속 질문은 한국어 표현만 바꾼 의미 중복을 거부
       '여행지에서 가장 기대하는 순간은 언제야?',
     ),
   }));
+
+  assert.throws(
+    () => validateDirectQuestionAnswer({
+      ...directQuestionContext,
+      questionText: '상대방은 해외여행을 선호할까, 국내여행을 선호할까?',
+      recentSharedQuestionTexts: [],
+    }, {
+      status: 'insufficient',
+      text: '아직 확인된 내용이 없어서 잘 모르겠어',
+      followUpQuestion: candidate(
+        '해외여행을 선호하는 쪽이 더 많아, 국내여행을 선호하는 쪽이 더 많아?',
+      ),
+    }),
+    /unnatural_question/i,
+  );
+
+  const travelTypeContext: DirectQuestionContext = {
+    ...directQuestionContext,
+    questionText: '상대방은 해외여행을 선호할까, 국내여행을 선호할까?',
+    recentSharedQuestionTexts: [],
+  };
+  assert.throws(
+    () => validateDirectQuestionFollowUp(
+      travelTypeContext,
+      candidate('여행지에서 해외여행이 좋아, 국내여행이 좋아?'),
+    ),
+    /unnatural_question/i,
+  );
+  assert.doesNotThrow(() => validateDirectQuestionFollowUp(
+    travelTypeContext,
+    candidate('해외여행이 좋아, 국내여행이 좋아?'),
+  ));
+});
+
+test('생성 질문은 실제 질문 형식으로 끝나야 한다', () => {
+  const candidate = {
+    questionKey: 'personalized_generated_ab12cd34',
+    text: '다음에 편하게 말할 수 있는 일상 패턴 하나를 알려줘',
+    category: 'daily_life',
+    mood: null,
+    rationale: '아직 확인하지 않은 일상 패턴을 알아보기 위해서야',
+  };
+
+  assert.throws(
+    () => validatePersonalizedQuestion(candidate),
+    /question mark/i,
+  );
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    ...candidate,
+    text: '평소에 가장 편안한 일상은 어떤 모습이야?',
+  }));
 });
 
 test('proactive suggestions enforce card, weather, and tone boundaries', () => {
@@ -308,6 +378,30 @@ test('proactive suggestions enforce card, weather, and tone boundaries', () => {
       text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진을 카드로 남겨도 예쁘겠다',
       kind: 'sunset_card',
     })
+  );
+  assert.doesNotThrow(() =>
+    validateProactiveSuggestion(proactiveContext, {
+      text: '노을 질 시간에 천천히 걸으며 예쁜 하늘을 사진으로 남겨 카드로 만들어보는 건 어때?',
+      kind: 'sunset_card',
+    })
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(proactiveContext, {
+      text: '곧 노을 질 시간이니 예쁜 하늘 사진을 한 장 찍어서 카드로 남겨!',
+      kind: 'sunset_card',
+    }),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'commanding_expression',
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(proactiveContext, {
+      text: '노을 질 시간이라 가볍게 밖으로 나가 천천히 걷고 사진도 남겨 보자',
+      kind: 'sunset_card',
+    }),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'commanding_expression',
   );
   assert.throws(
     () => validateProactiveSuggestion(proactiveContext, {
@@ -338,6 +432,24 @@ test('proactive suggestions enforce card, weather, and tone boundaries', () => {
       text: '둘의 오늘을 기억 한 조각으로 남기면 좋겠다',
       kind: 'card_idea',
     })
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(proactiveContext, {
+      text: '노을이 막 뜨는 시간에 같이 사진을 찍어 카드로 남기는 건 어때?',
+      kind: 'sunset_card',
+    }),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'unnatural_expression',
+  );
+  assert.throws(
+    () => validateProactiveSuggestion(proactiveContext, {
+      text: '19:42 무렵 노을을 보며 사진 한 장 남겨 두면 어때?',
+      kind: 'sunset_card',
+    }),
+    (error: unknown) =>
+      error instanceof ProactiveSuggestionValidationError
+      && error.code === 'raw_context_value',
   );
   assert.throws(
     () => validateProactiveSuggestion(
@@ -779,6 +891,52 @@ test('한 줄 피드백은 커플 공유 반응 형식을 지켜야 한다', () 
     }),
     /answer owner/i,
   );
+
+  const mixedCertaintyContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '요즘 가장 소중하게 지키고 싶은 건 뭐야?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-a', text: '몰라' },
+      { answerId: 'answer-b', userId: 'user-b', text: '시간' },
+    ],
+  });
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '둘 다 모르는 게 아니라 그냥 시간이 필요한 걸 말하는 분위기네!',
+    }, mixedCertaintyContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'mixed_certainty_content',
+  );
+  assert.doesNotThrow(() => validateCoupleFeedback({
+    text: '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+  }, mixedCertaintyContext));
+});
+
+test('개인화 질문은 사용자에게 분석 과정을 요구하지 않는다', () => {
+  assert.throws(
+    () => validatePersonalizedQuestion({
+      questionKey: 'personalized_generated_meta_ab12cd34',
+      text: '다음 주말에 서로의 평소 패턴이 어떻게 맞는지 확인해보려면 어떤 방식이 좋을까?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '두 사람의 일상 패턴을 확인하기 위해',
+    }),
+    (error: unknown) =>
+      error instanceof PersonalizedQuestionValidationError
+      && error.code === 'meta_language',
+  );
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_weekend_ab12cd34',
+    text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
+  }));
 });
 
 test('고정 질문 추천은 남은 커리큘럼 후보 안에서만 선택한다', () => {

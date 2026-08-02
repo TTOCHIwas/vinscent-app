@@ -7,6 +7,7 @@ import {
   type LearningModelPort,
   type LearningModelResult,
   type LearningModelUsage,
+  type PersonalizedQuestionGenerationOptions,
   type ProactiveSuggestionGenerationOptions,
 } from './learning-model-port.ts';
 import {
@@ -82,13 +83,13 @@ type GenerationProfile = Required<Pick<
 >>;
 
 const generationProfiles = {
-  ranking: { temperature: 0, maxOutputTokens: 128 },
+  ranking: { temperature: 0, maxOutputTokens: 256 },
   memory: { temperature: 0, maxOutputTokens: 768 },
   feedback: { temperature: 0.4, maxOutputTokens: 256 },
   question: { temperature: 0.3, maxOutputTokens: 384 },
   directAnswer: { temperature: 0.2, maxOutputTokens: 512 },
   followUp: { temperature: 0.2, maxOutputTokens: 384 },
-  proactive: { temperature: 0.4, maxOutputTokens: 256 },
+  proactive: { temperature: 0.4, maxOutputTokens: 512 },
 } as const satisfies Record<string, GenerationProfile>;
 
 const feedbackSchema = objectSchema({
@@ -172,7 +173,7 @@ export class StructuredLearningModel implements LearningModelPort {
     options?: CoupleFeedbackGenerationOptions,
   ): Promise<LearningModelResult<CoupleFeedbackCandidate>> {
     const result = await this.#generateStructured(buildStructuredRequest(
-      buildFeedbackPrompt(context, options?.rejectedText ?? null),
+      buildFeedbackPrompt(context, options),
       feedbackSchema,
       generationProfiles.feedback,
     ));
@@ -205,9 +206,10 @@ export class StructuredLearningModel implements LearningModelPort {
 
   async generatePersonalizedQuestion(
     context: AnonymizedCompletedQuestionContext,
+    options?: PersonalizedQuestionGenerationOptions,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
     const result = await this.#generateStructured(buildStructuredRequest(
-      buildPersonalizedQuestionPrompt(context),
+      buildPersonalizedQuestionPrompt(context, options),
       generatedQuestionSchema,
       generationProfiles.question,
     ));
@@ -270,7 +272,7 @@ export class StructuredLearningModel implements LearningModelPort {
         rationale: directQuestionFollowUpRationale,
       });
     } catch (error) {
-      throw attachParsingUsage(error, result.usage);
+      throw attachParsingUsage(error, result.usage, result.diagnostics);
     }
   }
 
@@ -422,6 +424,8 @@ function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
       '- 사생활이나 민감 정보를 요구하지 않고 서로를 조금 더 알아갈 수 있어야 해.',
       '- 진단, 관계 평가, 숨은 의도, 성격 단정을 묻지 마.',
       '- 고정 질문과 같은 친근한 반말을 사용해.',
+      '- 질문을 만들어 달라는 메타 질문은 만들지 마.',
+      '- question_text는 반드시 물음표로 끝나야 해.',
       '- rationale에는 최근 질문과 겹치지 않는 이유만 짧게 써.',
     ].join('\n'),
     {
@@ -536,18 +540,27 @@ function buildMemoryExtractionPrompt(
 
 function buildFeedbackPrompt(
   context: AnonymizedCompletedQuestionContext,
-  rejectedText: string | null,
+  options?: CoupleFeedbackGenerationOptions,
 ): string {
+  const rejectedText = options?.rejectedText ?? null;
+  const rejectionCode = options?.rejectionCode ?? null;
   const data: Record<string, unknown> = {
     current_question: {
       text: context.question.text,
       domain: context.question.domain,
     },
-    current_answers: context.answers,
+    current_answers: context.answers.map((answer) => ({
+      ...answer,
+      response_semantics: classifyDirectQuestionResponse(answer.text),
+    })),
   };
 
   if (rejectedText !== null) {
     data.rejected_feedback = rejectedText;
+  }
+  if (rejectionCode !== null) {
+    data.rejection_code = rejectionCode;
+    data.retry_correction = feedbackRetryCorrection(rejectionCode);
   }
 
   if (context.foundationProgress.personalizationEnabled) {
@@ -574,27 +587,71 @@ function buildFeedbackPrompt(
       ...compactVisibleKoreanRules,
       '내용:',
       '- 두 답변의 의미를 모두 살펴. "몰라", "없어", "글쎄"도 의미 있는 답변이야.',
-      '- 답변을 요약하거나 차이를 그대로 읽어주지 마. 핵심 단어를 새 표현에 쓰는 건 괜찮아.',
+      '- 답변을 요약하거나 차이를 그대로 읽어주지 마. 핵심 단어를 쓰더라도 답을 되읽거나 한 답변을 다른 답변의 이유로 해석하지 마.',
+      '- "몰라", "없어", "글쎄"와 구체적인 답이 함께 있으면 구체적인 답을 불확실한 답의 이유나 해결책으로 연결하지 마.',
+      '- 한 답만 explicit_unknown 또는 explicit_none이면 두 답의 핵심 단어를 한마디에 반복하지 마. 불확실한 답과 구체적인 답을 직접 설명하지 말고 답하기 쉬운 정도가 달랐던 장면에만 반응해.',
       '- 작은 장면이나 가벼운 말맛을 하나 더해. 장난스러운 일상에는 가벼운 말맛, 다정한 답에는 따뜻한 연결, 무거운 답에는 농담 없는 차분한 관찰이 어울려.',
+      '- 일상에서 실제로 쓰는 단어를 사용해. 억지 비유나 번역투 표현을 만들지 마.',
+      '- 금지 단어: 너, 너는, 너와, 네가, 니가, 상대방, 한 사람, 다른 사람.',
       '- 누가 어떤 답을 썼는지 드러내지 마. 너, 네가, 상대방, 한 사람, 다른 사람, partner_a, partner_b를 쓰지 말고 답변 주인이 바뀌어도 자연스러워야 해.',
       '- 불확실한 답을 무관심, 회피, 성격, 감정, 숨은 의도로 바꾸지 마.',
       '- 무거운 답을 억지로 긍정적으로 바꾸지 마. 과장하지 말고 필요하면 ...으로 부드럽게 받아줘.',
       '- 존댓말, 아기 말투, 놀림, 과장, 억지 감동, 조언, 평가는 피하고 평범한 답을 관계의 큰 교훈으로 만들지 마.',
       '예시:',
-      '- 질문 "요즘 네가 가장 소중하게 지키고 싶은 건 뭐야?", 답변 "몰라"와 "시간" -> "소중한 걸 고르는 데도 시간이 조금 필요한가 봐!"',
+      '- 질문 "요즘 네가 가장 소중하게 지키고 싶은 건 뭐야?", 답변 "몰라"와 "시간" -> "소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐..."',
       '- 답변 "회사에서 버티기 힘들어"와 "아무 말도 하기 싫어" -> "오늘은 둘의 하루가 평소보다 조금 무거운 날인가 봐..."',
       '- 답변 "떡볶이"와 "치킨" -> "오늘 밤 메뉴판 앞에서 행복한 고민이 시작되겠네!"',
       '- 나쁜 예: "서로 답변이 시간과 몰라로 달라", "너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐", "서로를 알아가는 소중한 과정이네"',
+      '- 어색한 예: "거리 걸음에 빠지든", "시간을 잡고 싶어도 아직은 미정인 기분이네"',
       '- rejected_feedback가 있으면 표현만 바꾸지 말고 규칙에 맞는 다른 관점의 한마디를 만들어.',
+      '- rejection_code와 retry_correction이 있으면 거절 원인을 먼저 고친 완전히 다른 문장을 만들어.',
       '- confirmed_profile가 있으면 승인된 개인·커플 기억과 최근 답변만 은근히 활용하고 기억 주인은 드러내지 마.',
     ].join('\n'),
     data,
   );
 }
 
+function feedbackRetryCorrection(
+  code: NonNullable<CoupleFeedbackGenerationOptions['rejectionCode']>,
+): string {
+  if (code === 'mixed_certainty_content') {
+    return '거절된 답변의 핵심어를 다시 쓰지 마. 누가 무엇이라 답했는지 설명하지 말고, 같은 질문에도 답이 떠오르는 속도가 다를 수 있는 장면에만 반응해.';
+  }
+  if (code === 'answer_owner') {
+    return '답변 주인을 가리키는 단어를 모두 빼고 두 사람에게 똑같이 보이는 문장으로 바꿔.';
+  }
+  if (code === 'invalid_punctuation') {
+    return '문장 안의 마침표를 빼고 끝에만 허용된 기호 하나를 사용해.';
+  }
+  if (code === 'blocked_topic') {
+    return '민감하거나 금지된 주제를 모두 빼고 현재 답변의 일상적인 분위기에만 반응해.';
+  }
+  return '거절된 문장을 반복하지 말고 모든 형식과 내용 규칙을 다시 적용해.';
+}
+
 function buildPersonalizedQuestionPrompt(
   context: AnonymizedCompletedQuestionContext,
+  options?: PersonalizedQuestionGenerationOptions,
 ): string {
+  const data: Record<string, unknown> = {
+    current_question: {
+      text: context.question.text,
+      domain: context.question.domain,
+    },
+    current_answers: context.answers,
+    confirmed_profile: context.confirmedMemories,
+    recent_completed_questions: context.recentCompletedQuestions,
+  };
+  if (options?.rejectedText !== null && options?.rejectedText !== undefined) {
+    data.rejected_question = options.rejectedText;
+  }
+  if (options?.rejectionCode !== null && options?.rejectionCode !== undefined) {
+    data.rejection_code = options.rejectionCode;
+    data.retry_correction = personalizedQuestionRetryCorrection(
+      options.rejectionCode,
+    );
+  }
+
   return buildTaskPrompt(
     [
       '목표: 아직 확인되지 않았거나 불확실한 일상·관계 패턴을 알아볼 한국어 질문 하나를 만들어.',
@@ -602,20 +659,26 @@ function buildPersonalizedQuestionPrompt(
       '두 사람이 같은 입장에서 편하게 답할 수 있는 중립적이고 열린 질문이어야 해.',
       '민감 주제, 진단, 관계 평가, 숨은 의도, 성격 단정은 묻지 마.',
       '고정 질문과 같은 친근한 반말을 사용해.',
+      '- 사용자에게 패턴, 경향, 성향을 확인하거나 파악하는 방법을 묻지 마. 구체적인 상황, 장면, 선택을 바로 물어.',
+      '- 나쁜 예: "서로의 평소 패턴이 어떻게 맞는지 확인해보려면 어떤 방식이 좋을까?"',
+      '- 좋은 예: "다음 주말에 둘이 같이 해보고 싶은 건 뭐야?"',
       ...compactVisibleKoreanRules,
       '끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"',
+      'question_text는 반드시 물음표로 끝나야 해.',
       'rationale에는 어떤 빈 정보를 확인하는지만 짧게 써.',
+      '- rejected_question가 있으면 표현만 바꾸지 말고 retry_correction을 반영한 다른 질문을 만들어.',
     ].join('\n'),
-    {
-      current_question: {
-        text: context.question.text,
-        domain: context.question.domain,
-      },
-      current_answers: context.answers,
-      confirmed_profile: context.confirmedMemories,
-      recent_completed_questions: context.recentCompletedQuestions,
-    },
+    data,
   );
+}
+
+function personalizedQuestionRetryCorrection(
+  code: NonNullable<PersonalizedQuestionGenerationOptions['rejectionCode']>,
+): string {
+  if (code === 'meta_language') {
+    return '분석과 설문을 떠올리게 하는 단어를 모두 빼고, 둘이 실제로 있을 법한 구체적인 장면을 바로 물어.';
+  }
+  return '거절된 질문을 반복하지 말고 질문 형식과 안전 규칙을 다시 적용해.';
 }
 
 function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
@@ -632,10 +695,13 @@ function buildDirectQuestionPrompt(context: DirectQuestionContext): string {
       '- response_semantics가 explicit_unknown 또는 explicit_none인 답변은 그 사실 자체가 명시적인 답이야. 질문과 관련되면 반드시 answered로 전달하고 다른 취향이나 의도를 추론하지 마.',
       '- response_semantics가 substantive인 답변만 구체적인 선호나 경험의 근거로 사용해.',
       '- confirmed_profile와 recent_completed_questions가 서로 충돌하면 하나를 고르지 말고 insufficient로 해.',
+      '- 충돌 예: 확인된 기억이 "여행 전에 일정을 꼼꼼히 정하는 걸 좋아해"인데 최근 답이 "이번에는 아무 계획 없이 떠나는 게 좋았어"라면 과거 기억을 우선하지 말고 insufficient로 해.',
       '- 근거가 부족하면 추측하지 말고 자연스럽게 모른다고 말해.',
       '답변:',
-      '- 한국어 반말 2~4개의 짧은 문장, 전체 400자 이내야.',
+      '- 한국어 반말 1~3개의 짧은 문장, 전체 400자 이내야.',
       ...compactVisibleKoreanRules,
+      '- 근거에 적힌 사실만 말하고 빈도, 감정, 자신감, 행동, 평가는 새로 만들지 마.',
+      '- 근거 하나로 충분하면 한 문장으로 끝내.',
       '- answered 예: "쉬는 날에는 새로운 동네를 천천히 걷는 걸 좋아해"',
       '- insufficient 예: "아직 확인된 내용이 없어서 잘 모르겠어"',
       '- 공유 질문을 덧붙이지 마. 후속 질문은 별도 작업에서 만들어.',
@@ -675,8 +741,13 @@ function buildDirectQuestionFollowUpPrompt(
       '- 장소, 시간, 행동, 비교 기준, 선택지를 그대로 유지해.',
       '- 구체성, 열린 질문인지 선택 질문인지도 유지해.',
       '- 두 사람이 각자 답할 수 있도록 비대칭인 주어와 관점만 바꿔.',
+      '- 너가, 네가, 니가처럼 답변 주인을 직접 부르는 주어는 쓰지 마. 주어 없이 두 사람 모두 같은 입장에서 읽히게 써.',
       '- 더 넓거나 추상적인 주제로 바꾸지 마. 선택지를 추가하거나 의미를 재해석하지 마.',
       '- 예: "상대방은 여행지에서 아침 일찍 움직이는 걸 좋아할까, 늦게 쉬는 걸 좋아할까?" -> "여행지에서는 아침 일찍 움직이는 게 좋아, 느긋하게 쉬는 게 좋아?"',
+      '- 선택 질문 예: "상대방은 해외여행을 선호할까, 국내여행을 선호할까?" -> "해외여행이 좋아, 국내여행이 좋아?"',
+      '- 여행 종류 선택지 앞에 "여행지에서"를 덧붙이지 마. 해외여행과 국내여행을 바로 물어.',
+      '- "선호하는 쪽이 더 많아"처럼 두 사람을 집단 수로 비교하는 표현은 쓰지 마.',
+      '- rejection_code가 unnatural_question이면 중복된 장소·범위 표현을 빼고 선택지를 바로 물어.',
       '보호 규칙:',
       '- 누가 요청했는지, 비공개 질문에서 왔는지, 한 사람이 상대를 몰랐다는 사실을 드러내지 마.',
       '- 한 사람이 상대를 추측하게 하거나 답변 주인을 특정하거나 압박하는 질문은 만들지 마.',
@@ -758,6 +829,12 @@ function buildProactiveSuggestionPrompt(
       '- condition이 hot이거나 apparent_temperature_c가 32 이상이면 오래 걷기보다 가까운 실내나 그늘에서 할 일을 제안해.',
       '- condition이 rain_possible 또는 snow_possible이거나 precipitation_possible이 true면 비나 눈을 확정하지 말고 실내 대안을 부드럽게 제안해.',
       '- 그 밖의 날씨도 확정하지 말고 가능성으로만 표현해.',
+      '- 노을은 뜬다고 표현하지 말고 노을 질 시간이라고 써.',
+      '- sunset_local_time은 노을 시간대 판단에만 사용하고 숫자 시각을 문장에 그대로 쓰지 마.',
+      '출력 전 확인:',
+      '- weather가 null이면 날씨 관련 단어가 하나도 없는지 확인해.',
+      '- has_card_today가 true이면 카드와 사진 관련 단어가 하나도 없는지 확인해.',
+      '- 문장이 조사나 연결어에서 끊기지 않고 자연스럽게 끝나는지 확인해.',
       '재시도:',
       '- rejected_suggestion가 있으면 rejection_code가 가리키는 문제를 고치고 같은 문장이나 같은 문제를 반복하지 마.',
       '- rejection_code가 invalid_structure이면 필수 필드와 허용된 kind를 정확히 채운 새 결과를 만들어.',
@@ -936,7 +1013,13 @@ function withUsage<T>(
   result: StructuredGenerationResult,
   value: T,
 ): LearningModelResult<T> {
-  return { value, usage: result.usage };
+  return {
+    value,
+    usage: result.usage,
+    ...(result.diagnostics === undefined
+      ? {}
+      : { diagnostics: result.diagnostics }),
+  };
 }
 
 function objectSchema(
@@ -1032,6 +1115,7 @@ function throwInvalidOutput(validationDetail: string | null = null): never {
 function attachParsingUsage(
   error: unknown,
   usage: LearningModelUsage,
+  diagnostics: StructuredGenerationResult['diagnostics'],
 ): unknown {
   if (
     !(error instanceof LearningModelError)
@@ -1048,6 +1132,7 @@ function attachParsingUsage(
     diagnosticDetail: error.diagnosticDetail,
     retryAfterMs: error.retryAfterMs,
     usage,
+    diagnostics: diagnostics ?? null,
     cause: error,
   });
 }
@@ -1078,6 +1163,7 @@ function translateStructuredGenerationError(error: unknown): unknown {
       diagnosticDetail: error.diagnosticDetail,
       retryAfterMs: error.retryAfterMs,
       usage: error.usage,
+      diagnostics: error.diagnostics,
       cause: error,
     });
   }

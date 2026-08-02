@@ -347,12 +347,12 @@ test('processor handles every learning job and restores IDs only at persistence'
     })),
     [
       { jobId: 'job-memory', promptVersion: 'memory-v8' },
-      { jobId: 'job-feedback', promptVersion: 'feedback-v5' },
+      { jobId: 'job-feedback', promptVersion: 'feedback-v7' },
       { jobId: 'job-rank', promptVersion: 'question-ranking-v3' },
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
       {
         jobId: 'job-personalized',
-        promptVersion: 'personalized-question-v4',
+        promptVersion: 'personalized-question-v5',
       },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
@@ -655,6 +655,87 @@ test('direct question handler regenerates an asymmetric follow-up once', async (
     follow_up_question: {
       question_key: 'direct_follow_up_travel_scope_cd34ef56',
       question_text: '여행을 간다면 해외여행과 국내여행 중 어느 쪽이 더 좋아?',
+      category: 'travel',
+      mood: null,
+      rationale: '여행 범위 선호를 확인할 근거가 부족해',
+    },
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 60,
+    outputTokenCount: 30,
+    latencyMs: 360,
+  });
+});
+
+test('direct question handler regenerates an unnatural travel follow-up once', async () => {
+  const repository = new FakeRepository([
+    job('job-direct-follow-up-unnatural-travel', 'answer_user_question'),
+  ]);
+  repository.directContext = {
+    ...directQuestionContext,
+    questionText: '상대방은 해외여행을 선호할까, 국내여행을 선호할까?',
+  };
+  const rejectedOptions: unknown[] = [];
+  let followUpCalls = 0;
+  const model = modelWith({
+    async answerDirectQuestion() {
+      return result({
+        status: 'insufficient',
+        text: '아직은 해외여행과 국내여행 중 어느 쪽을 좋아하는지 알기 어려워',
+        followUpQuestion: null,
+      });
+    },
+    async generateDirectQuestionFollowUp(_context, options) {
+      rejectedOptions.push(options);
+      followUpCalls += 1;
+      if (followUpCalls === 1) {
+        return result({
+          questionKey: 'direct_follow_up_travel_scope_ab12cd34',
+          text: '여행지에서 해외여행이 좋아, 국내여행이 좋아?',
+          category: 'travel',
+          mood: null,
+          rationale: '여행 범위 선호를 확인할 근거가 부족해',
+        });
+      }
+      return result({
+        questionKey: 'direct_follow_up_travel_scope_cd34ef56',
+        text: '해외여행이 좋아, 국내여행이 좋아?',
+        category: 'travel',
+        mood: null,
+        rationale: '여행 범위 선호를 확인할 근거가 부족해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'google',
+    modelName: 'gemini-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.equal(followUpCalls, 2);
+  assert.deepEqual(rejectedOptions, [
+    {
+      rejectedText: null,
+      rejectionCode: null,
+    },
+    {
+      rejectedText: '여행지에서 해외여행이 좋아, 국내여행이 좋아?',
+      rejectionCode: 'unnatural_question',
+    },
+  ]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    answer_status: 'insufficient',
+    answer_text: '아직은 해외여행과 국내여행 중 어느 쪽을 좋아하는지 알기 어려워',
+    follow_up_generation_status: 'generated',
+    follow_up_error_code: null,
+    follow_up_question: {
+      question_key: 'direct_follow_up_travel_scope_cd34ef56',
+      question_text: '해외여행이 좋아, 국내여행이 좋아?',
       category: 'travel',
       mood: null,
       rationale: '여행 범위 선호를 확인할 근거가 부족해',
@@ -1090,6 +1171,161 @@ test('processor regenerates shared feedback once after a contract violation', as
   });
 });
 
+test('processor regenerates feedback that interprets mixed-certainty answers', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-mixed-certainty', 'generate_feedback'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '요즘 가장 소중하게 지키고 싶은 건 뭐야?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-real-a', text: '몰라' },
+      { answerId: 'answer-b', userId: 'user-real-b', text: '시간' },
+    ],
+  };
+  const retryOptions: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      retryOptions.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      return result({
+        text: retryOptions.length === 1
+          ? '둘 다 모르는 게 아니라 그냥 시간이 필요한 걸 말하는 분위기네!'
+          : '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'openai',
+    modelName: 'gpt-5-nano',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(retryOptions, [
+    { rejectedText: null, rejectionCode: null },
+    {
+      rejectedText: '둘 다 모르는 게 아니라 그냥 시간이 필요한 걸 말하는 분위기네!',
+      rejectionCode: 'mixed_certainty_content',
+    },
+  ]);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+  });
+});
+
+test('processor uses a safe fallback after repeated mixed-certainty feedback violations', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-mixed-certainty-fallback', 'generate_feedback'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '요즘 가장 소중하게 지키고 싶은 건 뭐야?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-real-a', text: '몰라' },
+      { answerId: 'answer-b', userId: 'user-real-b', text: '시간' },
+    ],
+  };
+  let calls = 0;
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      calls += 1;
+      return result({
+        text: calls === 1
+          ? '몰라도 괜찮지 오늘은 시간이 주인인 날 같아...'
+          : '몰라도 괜찮지 오늘은 시간이 먼저인 날 같아!',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'openai',
+    modelName: 'gpt-5-nano',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '같은 질문도 답이 바로 떠오르는 날과 천천히 생각나는 날이 있나 봐...',
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 40,
+    outputTokenCount: 20,
+    latencyMs: 240,
+  });
+});
+
+test('processor regenerates a personalized question that exposes analysis language', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-meta-language', 'generate_personalized_question'),
+  ]);
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const rejectedQuestion =
+    '다음 주말에 서로의 평소 패턴이 어떻게 맞는지 확인해보려면 어떤 방식이 좋을까?';
+  const model = modelWith({
+    async generatePersonalizedQuestion(_context, options) {
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      const text = optionsSeen.length === 1
+        ? rejectedQuestion
+        : '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?';
+      return result({
+        questionKey: 'personalized_generated_weekend_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'openai',
+    modelName: 'gpt-5-nano',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: rejectedQuestion, rejectionCode: 'meta_language' },
+  ]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    question_key: 'personalized_generated_weekend_ab12cd34',
+    question_text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
+  });
+});
+
 test('shared feedback retry does not echo foreign-script output', async () => {
   const repository = new FakeRepository([
     job('job-feedback-foreign-script', 'generate_feedback'),
@@ -1265,6 +1501,7 @@ class FakeRepository implements LearningJobRepository {
     retryable: boolean;
   }> = [];
   contextError: Error | null = null;
+  completedContext: CompletedQuestionContext = completedContext;
 
   constructor(jobs: ClaimedLearningJob[]) {
     this.#jobs = jobs;
@@ -1279,7 +1516,7 @@ class FakeRepository implements LearningJobRepository {
     if (this.contextError) {
       throw this.contextError;
     }
-    return completedContext;
+    return this.completedContext;
   }
 
   async loadGeneralQuestionContext(jobId: string) {
