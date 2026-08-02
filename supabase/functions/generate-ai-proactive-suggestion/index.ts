@@ -1,9 +1,10 @@
 import {
   GenerateProactiveSuggestionUseCase,
+  type ProactiveSuggestionWeatherClient,
 } from '../../../services/ai-api/src/application/generate-proactive-suggestion.ts';
 import {
-  OpenMeteoForecastClient,
-} from '../../../services/ai-api/src/infrastructure/open-meteo-forecast-client.ts';
+  MetNorwayForecastClient,
+} from '../../../services/ai-api/src/infrastructure/met-norway-forecast-client.ts';
 import {
   SupabaseAccessTokenAuthenticator,
   SupabaseProactiveSuggestionContextSource,
@@ -15,6 +16,7 @@ import {
 import { createAiLearningModel } from '../_shared/ai_learning_model.ts';
 import {
   optionalEnv,
+  requiredEnv,
 } from '../_shared/environment.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 
@@ -37,11 +39,12 @@ Deno.serve(createProactiveSuggestionHttpHandler({
   generator,
 }));
 
-function createWeatherClient(): OpenMeteoForecastClient | null {
+function createWeatherClient(): ProactiveSuggestionWeatherClient | null {
   try {
-    return new OpenMeteoForecastClient({
-      endpoint: optionalEnv('WEATHER_FORECAST_ENDPOINT'),
-      apiKey: optionalEnv('OPEN_METEO_API_KEY'),
+    return new MetNorwayForecastClient({
+      forecastEndpoint: optionalEnv('MET_NORWAY_FORECAST_ENDPOINT'),
+      sunriseEndpoint: optionalEnv('MET_NORWAY_SUNRISE_ENDPOINT'),
+      userAgent: requiredEnv('MET_NORWAY_USER_AGENT'),
       timeoutMs: proactiveWeatherTimeoutMs,
     });
   } catch {

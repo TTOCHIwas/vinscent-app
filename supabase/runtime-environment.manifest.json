@@ -192,11 +192,31 @@
       ]
     },
     {
-      "name": "OPEN_METEO_API_KEY",
+      "name": "MET_NORWAY_FORECAST_ENDPOINT",
       "availability": "optional",
       "provisioning": "supabase_secret",
-      "sensitivity": "secret",
-      "description": "Optional Open-Meteo customer API key for proactive weather context.",
+      "sensitivity": "configuration",
+      "description": "Optional MET Norway Locationforecast endpoint override.",
+      "functions": [
+        "generate-ai-proactive-suggestion"
+      ]
+    },
+    {
+      "name": "MET_NORWAY_SUNRISE_ENDPOINT",
+      "availability": "optional",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Optional MET Norway Sunrise endpoint override.",
+      "functions": [
+        "generate-ai-proactive-suggestion"
+      ]
+    },
+    {
+      "name": "MET_NORWAY_USER_AGENT",
+      "availability": "required",
+      "provisioning": "supabase_secret",
+      "sensitivity": "configuration",
+      "description": "Identifying app name and public contact for MET Norway requests.",
       "functions": [
         "generate-ai-proactive-suggestion"
       ]
@@ -359,16 +379,6 @@
         "send-couple-disconnect-notification",
         "send-recording-notification",
         "send-story-loop-notification"
-      ]
-    },
-    {
-      "name": "WEATHER_FORECAST_ENDPOINT",
-      "availability": "optional",
-      "provisioning": "supabase_secret",
-      "sensitivity": "configuration",
-      "description": "Optional weather forecast endpoint override for proactive suggestions.",
-      "functions": [
-        "generate-ai-proactive-suggestion"
       ]
     }
   ]
