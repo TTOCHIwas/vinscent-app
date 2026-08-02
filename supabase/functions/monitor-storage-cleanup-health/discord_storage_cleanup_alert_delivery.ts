@@ -1,4 +1,8 @@
 import {
+  DiscordWebhookClient,
+  DiscordWebhookRequestError,
+} from '../_shared/discord_webhook.ts';
+import {
   type ClaimedStorageCleanupAlert,
   type StorageCleanupAlertDelivery,
   StorageCleanupAlertDeliveryError,
@@ -25,66 +29,18 @@ const issueLabels: Record<StorageCleanupIssueCode, string> = {
 
 export class DiscordStorageCleanupAlertDelivery
   implements StorageCleanupAlertDelivery {
-  readonly #endpoint: URL;
-  readonly #timeoutMs: number;
-  readonly #fetch: typeof fetch;
+  readonly #client: DiscordWebhookClient;
 
   constructor(options: DiscordStorageCleanupAlertDeliveryOptions) {
-    this.#endpoint = parseDiscordWebhookEndpoint(options.endpoint);
-    this.#timeoutMs = options.timeoutMs ?? 10_000;
-    if (
-      !Number.isInteger(this.#timeoutMs) ||
-      this.#timeoutMs < 1 ||
-      this.#timeoutMs > 30_000
-    ) {
-      throw new RangeError(
-        'Discord webhook timeout must be between 1 and 30000 milliseconds',
-      );
-    }
-    this.#fetch = options.fetchImpl ?? fetch;
+    this.#client = new DiscordWebhookClient(options);
   }
 
   async deliver(alert: ClaimedStorageCleanupAlert): Promise<void> {
-    let response: Response;
     try {
-      response = await this.#fetch(this.#endpoint, {
-        method: 'POST',
-        redirect: 'error',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify(buildDiscordPayload(alert)),
-        signal: AbortSignal.timeout(this.#timeoutMs),
-      });
-    } catch {
-      throw new StorageCleanupAlertDeliveryError(
-        'discord_webhook_unavailable',
-        { retryable: true },
-      );
+      await this.#client.send(buildDiscordPayload(alert));
+    } catch (error) {
+      throw storageCleanupDeliveryError(error);
     }
-
-    if (response.ok) {
-      return;
-    }
-    if (response.status === 429) {
-      throw new StorageCleanupAlertDeliveryError(
-        'discord_webhook_rate_limited',
-        {
-          retryable: true,
-          retryAfterSeconds: readRetryAfterSeconds(response),
-        },
-      );
-    }
-    if (response.status >= 500) {
-      throw new StorageCleanupAlertDeliveryError(
-        'discord_webhook_unavailable',
-        { retryable: true },
-      );
-    }
-    throw new StorageCleanupAlertDeliveryError(
-      'discord_webhook_rejected',
-      { retryable: false },
-    );
   }
 }
 
@@ -146,33 +102,19 @@ function buildDiscordPayload(alert: ClaimedStorageCleanupAlert) {
   };
 }
 
-function parseDiscordWebhookEndpoint(value: string): URL {
-  const endpoint = new URL(value);
-  if (endpoint.protocol !== 'https:') {
-    throw new TypeError('Discord webhook endpoint must use HTTPS');
+function storageCleanupDeliveryError(error: unknown) {
+  if (!(error instanceof DiscordWebhookRequestError)) {
+    return new StorageCleanupAlertDeliveryError(
+      'discord_webhook_unavailable',
+      { retryable: true },
+    );
   }
-  if (
-    endpoint.hostname !== 'discord.com' &&
-    endpoint.hostname !== 'discordapp.com'
-  ) {
-    throw new TypeError('Discord webhook endpoint host is invalid');
-  }
-  if (
-    !/^\/api(?:\/v\d+)?\/webhooks\/\d+\/[A-Za-z0-9._-]+\/?$/.test(
-      endpoint.pathname,
-    )
-  ) {
-    throw new TypeError('Discord webhook endpoint path is invalid');
-  }
-  endpoint.hostname = 'discord.com';
-  endpoint.searchParams.set('wait', 'true');
-  return endpoint;
-}
 
-function readRetryAfterSeconds(response: Response): number | undefined {
-  const value = Number(response.headers.get('retry-after'));
-  if (!Number.isFinite(value) || value <= 0) {
-    return undefined;
-  }
-  return Math.min(Math.max(Math.ceil(value), 1), 3600);
+  return new StorageCleanupAlertDeliveryError(
+    `discord_webhook_${error.kind}`,
+    {
+      retryable: error.kind !== 'rejected',
+      retryAfterSeconds: error.retryAfterSeconds,
+    },
+  );
 }
