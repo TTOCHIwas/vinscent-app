@@ -87,8 +87,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             선제 추천을 만들 때만 기기의 저정밀 현재 위치를 한 번
-            조회합니다. 좌표는 소수 둘째 자리로 반올림해 Open-Meteo에
-            전달하며 단짠 데이터베이스에는 저장하지 않습니다.
+            조회합니다. 좌표는 소수 둘째 자리로 반올림해 단짠 서버에서
+            MET Norway로 전달하며 단짠 데이터베이스에는 저장하지
+            않습니다.
           </li>
           <li>
             AI가 만든 문구에는 앱 안에서 AI 표시와 신고할 수 있는 경로를
@@ -132,10 +133,12 @@ export default function PrivacyPage() {
             </dd>
           </div>
           <div>
-            <dt>Open-Meteo</dt>
+            <dt>MET Norway</dt>
             <dd>
               반올림한 저정밀 좌표를 받아 현재 날씨와 일몰 맥락을
-              제공합니다.
+              제공합니다. 날씨 데이터 출처는
+              {" "}
+              <a href="https://api.met.no/">Data from MET Norway</a>입니다.
             </dd>
           </div>
         </dl>

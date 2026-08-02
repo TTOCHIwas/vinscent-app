@@ -69,8 +69,12 @@ Supabase 공식 문서에 따르면 운영 secrets는 Dashboard 또는 CLI로
 
 - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKERS_AI_API_TOKEN`: Workers AI
   운영 계정과 토큰 권한을 확인하고 일일 사용량 경보를 구성한다.
-- `WEATHER_FORECAST_ENDPOINT`, `OPEN_METEO_API_KEY`: 상업적 사용이 가능한
-  날씨 계약과 endpoint를 확정한다.
+- `MET_NORWAY_USER_AGENT`: 서비스명·버전과 공개 연락처를 포함한 식별값을
+  등록한다. 예: `Danjjan/1.0 vinscent0929@gmail.com`.
+- `MET_NORWAY_FORECAST_ENDPOINT`, `MET_NORWAY_SUNRISE_ENDPOINT`: 공식
+  endpoint를 바꿔야 할 때만 등록한다. 기본값을 사용할 때는 생략한다.
+- MET Norway는 API 키가 필요하지 않는다. Locationforecast와 Sunrise
+  호출은 서버 프록시에서 좌표를 반올림하고 제공자 캐시 지침을 따른다.
 - Apple 자격 증명 4종: 실제 Apple 계정에서 토큰 철회 통합 테스트를 한다.
 - FCM 자격 증명 3종: Android와 iOS에서 foreground, background, terminated
   상태의 수신을 각각 검증한다.
@@ -115,3 +119,7 @@ secret 값을 등록하거나 Database Webhook·Cron을 바꾸지 않으며, 실
   https://supabase.com/docs/reference/cli/supabase-secrets
 - Vault를 이용한 예약 Edge Function 호출:
   https://supabase.com/docs/guides/functions/schedule-functions
+- MET Norway API 이용 조건:
+  https://api.met.no/doc/TermsOfService
+- MET Norway 데이터 라이선스:
+  https://api.met.no/doc/License

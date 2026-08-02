@@ -63,9 +63,10 @@
 
 ### 날씨 API
 
-- Open-Meteo는 일반 무료 API를 비상업적 이용 대상으로 제공한다.
-- 상업적 서비스는 구독과 API 키가 적용되는 고객용 엔드포인트를 사용해야
-  한다.
+- MET Norway Locationforecast와 Sunrise API를 서버 프록시에서 사용한다.
+- 데이터는 NLOD 2.0과 CC BY 4.0 조건으로 제공되며 출처를 표시한다.
+- 식별 가능한 User-Agent, 응답 캐시 헤더 준수와 불필요한 반복 요청 방지가
+  이용 조건이다. 별도 API 키는 필요하지 않지만 서비스 수준 보장은 없다.
 
 ## 2. 현재 코드에서 확인된 상태
 
@@ -74,7 +75,7 @@
 | AI 처리자 안내 | 동의 화면에 Cloudflare Workers AI와 질문·답변 분석 목적이 표시됨 | `apps/mobile/lib/features/ai/presentation/widgets/ai_learning_dashboard_view.dart` |
 | 서비스 이용 연령 | 앱과 Database가 서울 기준 날짜로 만 14세 이상을 검증함 | `apps/mobile/lib/core/date/app_age_policy.dart`, `20260730000000_enforce_profile_minimum_age.sql` |
 | AI 공급자 | Cloudflare Workers AI와 Mistral Small 3.1 24B로 운영 경로가 구성됨 | Edge Function 공통 AI 조립 모듈과 런타임 매니페스트 |
-| 날씨 엔드포인트 | 무료 일반 엔드포인트 `https://api.open-meteo.com/v1/forecast` 사용 | `services/ai-api/src/infrastructure/open-meteo-forecast-client.ts` |
+| 날씨 엔드포인트 | MET Norway Locationforecast·Sunrise 공식 HTTPS endpoint와 제공자 캐시 계약 사용 | `services/ai-api/src/infrastructure/met-norway-forecast-client.ts` |
 | 앱 내부 계정 삭제 | 설정에서 계정과 관련 공유 데이터를 삭제하는 흐름이 구현됨 | 계정 삭제 기능 및 서버 삭제 함수 |
 | 외부 계정 삭제 | 정책 웹에 공개 이메일 요청 경로가 구현됐지만 URL은 아직 미배포 | 본인 확인·처리 기한 확정 필요 |
 | 앱 내부 정책 링크 | 설정에 개인정보처리방침·이용약관 링크가 구현됐으며 공개 기본 URL 주입이 필요함 | `POLICY_BASE_URL` |
@@ -97,13 +98,12 @@
 
 1. 개인정보처리자에 표시할 정확한 법적 이름
 2. 정책 시행일
-3. Open-Meteo 상업용 구독 또는 다른 상업 이용 가능 날씨 제공자 선택
-4. AI 실행·알림 발송 진단 기록의 보관기간
-5. 처리 완료된 신고 기록의 보관기간
-6. 신고를 받을 운영 채널과 실제 수신 주소
-7. 신고 검토 목표 시간과 운영 담당자
-8. 외부 계정 삭제 요청의 본인 확인 방법
-9. 외부 계정 삭제 요청의 처리 기한과 완료 통지 방법
+3. AI 실행·알림 발송 진단 기록의 보관기간
+4. 처리 완료된 신고 기록의 보관기간
+5. 신고를 받을 운영 채널과 실제 수신 주소
+6. 신고 검토 목표 시간과 운영 담당자
+7. 외부 계정 삭제 요청의 본인 확인 방법
+8. 외부 계정 삭제 요청의 처리 기한과 완료 통지 방법
 
 현재 구현을 가장 적게 변경하면서 공식 약관을 충족하는 기본안은 다음과
 같다.
@@ -111,7 +111,8 @@
 - 서비스 가입과 이용은 만 14세 이상으로 제한한다.
 - Cloudflare Workers AI의 계정·요금제·데이터 처리 조건을 공개 정책과
   실제 Supabase secret 구성에 일치시킨다.
-- Open-Meteo 상업용 고객 엔드포인트와 API 키를 사용한다.
+- MET Norway 요청은 단짠을 식별하는 User-Agent를 사용하고, 좌표를 소수
+  둘째 자리로 줄여 서버 프록시에서 전달하며 출처와 라이선스를 표시한다.
 - AI 실행·알림 발송 진단 기록은 90일 후 삭제한다.
 - 처리 완료된 신고 기록은 계정이 유지되는 동안 정해진 기간만 보관하고,
   계정 삭제 시 현재 구현처럼 함께 삭제한다.
@@ -238,7 +239,13 @@ Cloudflare Pages Git 연동과 정적 요청 과금 기준은 다음 공식 문�
   https://developers.cloudflare.com/workers-ai/platform/data-usage/
 - Cloudflare Workers AI 가격:
   https://developers.cloudflare.com/workers-ai/platform/pricing/
-- Open-Meteo 이용 조건:
-  https://open-meteo.com/en/terms
+- MET Norway API 이용 조건:
+  https://api.met.no/doc/TermsOfService
+- MET Norway 데이터 라이선스:
+  https://api.met.no/doc/License
+- MET Norway Locationforecast 문서:
+  https://api.met.no/weatherapi/locationforecast/2.0/documentation
+- MET Norway Sunrise 문서:
+  https://api.met.no/weatherapi/sunrise/3.0/documentation
 - Supabase 프로젝트 리전:
   https://supabase.com/docs/guides/platform/regions

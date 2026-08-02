@@ -3,7 +3,6 @@
   "unresolvedDecisions": [
     "legal_operator_name",
     "effective_date",
-    "weather_provider",
     "diagnostic_retention",
     "safety_report_retention",
     "moderation_channel",

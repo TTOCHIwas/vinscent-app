@@ -40,7 +40,7 @@
 | Play Console 질문 | 현재 답변 후보 | 제출 전 조건 |
 |---|---|---|
 | 앱이 사용자 데이터를 수집하거나 공유하는가 | `예` | 아래 수집 유형을 모두 입력 |
-| 모든 사용자 데이터가 전송 중 암호화되는가 | `예` 후보 | 릴리스의 Supabase URL, Cloudflare Workers AI endpoint, Open-Meteo endpoint가 모두 HTTPS인지 확인하고 SDK 전송 조건 검토 |
+| 모든 사용자 데이터가 전송 중 암호화되는가 | `예` 후보 | 릴리스의 Supabase URL, Cloudflare Workers AI endpoint, MET Norway endpoint가 모두 HTTPS인지 확인하고 SDK 전송 조건 검토 |
 | 사용자가 데이터 삭제를 요청할 수 있는가 | `예` 후보 | 앱 내부 계정 삭제와 공개 웹 삭제 요청 경로가 모두 실제로 동작해야 함 |
 | 앱에서 계정을 생성할 수 있는가 | `예` | 카카오·Apple 로그인 후 단짠 계정과 프로필이 생성됨 |
 | 독립 보안 검토를 완료했는가 | `아니요` | MASA 등 공인 검토를 실제 완료한 경우에만 변경 |
@@ -54,7 +54,7 @@ Google Play 제출 전에는 앱 또는 개발자명이 표시되고 삭제 요�
 ## 3. 데이터 유형별 답변 후보
 
 `공유`는 아래 표에서 일괄 확정하지 않는다. Supabase, Google, Firebase,
-Open-Meteo 등 외부 처리자의 계약상 역할을 5절에서 확인한 뒤 최종
+MET Norway 등 외부 처리자의 계약상 역할을 5절에서 확인한 뒤 최종
 답변한다.
 
 | Google Play 데이터 유형 | 단짠의 실제 데이터 | 수집 | 일시적 처리 | 필수 또는 선택 | 목적 |
@@ -128,7 +128,7 @@ Google Play의 `공유` 답변은 아래 확인이 모두 끝난 뒤 확정한�
 | Supabase | 계정, 커플 콘텐츠, AI·알림·안전 데이터 | 서비스 제공자 후보 | 계약 주체, DPA, 처리 리전과 보관 조건 |
 | Cloudflare Workers AI | 질문·답변, 확인된 기억, 최근 문맥 | 서비스 제공자 후보 | Self-Serve Subscription Agreement, 데이터 사용·보관·학습 제외 조건 |
 | Firebase Installations·Cloud Messaging | Firebase 설치 식별자, SDK 앱·OS·기기 환경 정보, FCM 토큰, 알림 내용과 라우팅 데이터 | 서비스 제공자 후보 | Firebase 적용 약관과 데이터 처리·보관·삭제 조건 |
-| Open-Meteo | 소수 둘째 자리로 줄인 위도·경도 | 서비스 제공자 또는 명시적 사용자 동의 예외 검토 | 상업 이용 계약·요금제, 처리·보관 조건 |
+| MET Norway | 소수 둘째 자리로 줄인 위도·경도 | 서비스 제공자 또는 명시적 사용자 동의 예외 검토 | 이용약관, NLOD 2.0·CC BY 4.0 라이선스, 출처 표시와 처리 조건 |
 | Kakao·Apple | 로그인 요청, OAuth/OIDC 토큰과 인증 코드 | 사용자 시작 인증 흐름 | 각 로그인 약관과 앱 공개 설명 |
 | 연결된 상대방 | 사용자가 올린 카드·답변·녹음·일정 | 사용자가 시작하고 예상하는 전송 후보 | 작성 화면과 공개 정책의 커플 공유 설명 |
 
@@ -140,13 +140,14 @@ Google Play의 `공유` 답변은 아래 확인이 모두 끝난 뒤 확정한�
 
 ### 전송 중 암호화
 
-코드에 고정된 Cloudflare Workers AI, Open-Meteo, FCM, Apple endpoint는 HTTPS다.
+코드에 고정된 Cloudflare Workers AI, MET Norway, FCM, Apple endpoint는 HTTPS다.
 Android 릴리스 CI는 `POLICY_BASE_URL`도 HTTPS만 허용한다. 다음 값은
 환경에서 주입되므로 릴리스별로 별도 확인한다.
 
 - `SUPABASE_URL`
 - `CLOUDFLARE_ACCOUNT_ID`로 조합되는 Workers AI 공식 REST endpoint
-- `OPEN_METEO_ENDPOINT`
+- 선택적으로 재정의하는 `MET_NORWAY_FORECAST_ENDPOINT`,
+  `MET_NORWAY_SUNRISE_ENDPOINT`
 
 XML namespace의 `http://schemas.android.com`은 네트워크 전송 endpoint가
 아니므로 암호화 판단 대상이 아니다.
@@ -168,7 +169,7 @@ XML namespace의 `http://schemas.android.com`은 네트워크 전송 endpoint가
 - [ ] 공개 `/privacy`와 `/account-deletion` 배포 및 실제 요청 접수 확인
 - [ ] 외부 처리자별 서비스 제공자 여부와 국외 이전 조건 확인
 - [ ] Cloudflare Workers AI 요금제와 데이터 보관·학습 이용 조건 확인
-- [ ] Open-Meteo 상업 이용 계약과 데이터 처리 조건 확인
+- [x] MET Norway 이용약관·데이터 라이선스와 출처 표시 조건 확인
 - [ ] AI·알림 진단 및 신고 기록 보관기간 확정
 - [ ] 릴리스 환경의 모든 사용자 데이터 endpoint가 HTTPS인지 확인
 - [ ] 알림 권한 거절 시 단짠 서버에 FCM 토큰이 등록되지 않는지 Android 실기기에서 확인

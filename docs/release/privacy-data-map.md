@@ -19,7 +19,7 @@
 | AI 동의 및 학습 | AI 동의 상태, 기억 후보, 근거 답변 ID, 신뢰도, 확인·거절 결정, 개인화 상태 | 단계별 개인화와 사용자 검토 | Supabase Database |
 | AI 질문과 결과 | 직접 질문, AI 답변, 한마디, 추천 질문, 선제 추천 노출 횟수 | AI 질문·피드백·추천 제공과 중복·쿼터 제어 | Supabase Database, 일부 기기 캐시 |
 | AI 실행 진단 | 작업 종류, 모델, 프롬프트 버전, 입력 답변 ID, 토큰 수, 지연 시간, 상태와 오류 코드 | 작업 재시도, 장애 분석, 비용·품질 관찰 | Supabase Database |
-| 위치 및 날씨 | 사용 시점의 저정밀 현재 위도·경도, 날씨 결과 | 개인화 완료 사용자의 일회성 선제 추천 | 요청 중 메모리, Open-Meteo 요청 |
+| 위치 및 날씨 | 사용 시점의 저정밀 현재 위도·경도, 날씨 결과 | 개인화 완료 사용자의 일회성 선제 추천 | 요청 중 메모리, MET Norway 요청 |
 | 알림과 설치 식별자 | Firebase 설치 식별자, FCM·APNs 토큰, 플랫폼, 앱·OS·기기 환경 정보, 활성 상태, 알림 선호, 발송·성공·실패 기록 | 푸시 알림 등록·발송, 사용자 설정 적용, 재시도와 장애 분석 | Firebase Installations·Cloud Messaging, Supabase Database |
 | 안전 이용 동의 | 정책 종류, 정책 버전, 동의 시각 | 공유 콘텐츠 작성 전 현재 안전 이용 약속 동의 확인, 정책 변경 시 재동의 | Supabase Database |
 | 신고·차단·검토 | 신고자·대상 사용자, 신고 대상, 사유, 선택적 상세 설명, 처리 상태, 검토자·검토 시각·결정 이력, 제한된 콘텐츠 스냅샷, 차단 관계, 모더레이션 알림 시도·상태·오류 | UGC·AI 안전 신고 검토와 감사, 운영 알림 재시도, 동일 사용자 재연결 제한 | Supabase Database |
@@ -35,7 +35,7 @@
 | Apple | Apple 로그인 요청, 인증 코드, ID 토큰 | Apple 계정 로그인과 계정 삭제 시 권한 철회 | nonce 검증 흐름, 삭제 시 재인증 및 Apple 토큰 철회 |
 | Cloudflare Workers AI | 질문, 답변, 확인된 기억, 최근 질문 문맥 | Mistral Small 3.1 24B 기반 기억 후보·피드백·질문·직접 답변·선제 추천 생성 | 이름과 실제 사용자 ID를 `partner_a`, `partner_b`로 치환, 구조화 출력 검증, 민감 주제 차단 |
 | Firebase Installations·Cloud Messaging | 앱 시작 시 생성되는 Firebase 설치 식별자와 SDK가 처리하는 앱·OS·기기 환경 정보, 알림 허용 후 등록하는 FCM·APNs 토큰, 알림 제목·본문·라우팅 데이터 | Android·iOS 앱 설치 식별과 푸시 전달 | 앱 서버의 알림 토큰 등록은 알림 권한 상태를 확인하고, 권한 철회 또는 토큰 무효화 시 해당 기기 토큰을 비활성화하며 전송 결과를 기록 |
-| Open-Meteo | 소수 둘째 자리로 반올림한 위도·경도 | 현재 날씨와 일몰 맥락 조회 | 저정밀 위치, 짧은 타임아웃, 실패 시 위치 없는 추천으로 전환 |
+| MET Norway | 소수 둘째 자리로 반올림한 위도·경도 | 현재 날씨와 일몰 맥락 조회 | 서버 프록시, 저정밀 위치, 짧은 타임아웃, 제공자 캐시 지침 준수, 실패 시 위치 없는 추천으로 전환 |
 
 현재 의존성에는 광고 SDK와 사용자 행동 분석 SDK가 없다.
 `profiles.avatar_url` 필드는 스키마와 읽기 모델에만 존재하며 현재 앱에는
@@ -46,7 +46,9 @@
 - Android는 `ACCESS_COARSE_LOCATION`만 요청한다.
 - 앱은 `LocationAccuracy.low`로 현재 위치를 한 번 조회한다.
 - 위도·경도는 선제 추천 Edge Function 요청 본문으로 전달된다.
-- Open-Meteo 전송 전 소수 둘째 자리로 반올림한다.
+- MET Norway 전송 전 소수 둘째 자리로 반올림한다.
+- Locationforecast와 Sunrise 응답은 제공자의 만료·재검증 헤더에 따라
+  실행 중인 Edge Function 인스턴스의 메모리에만 캐시한다.
 - 좌표는 Supabase 테이블에 저장하지 않는다.
 - 선제 추천 결과와 일일 생성·노출 횟수만 기기 및 서버에 제한적으로 남는다.
 
@@ -148,7 +150,7 @@
 - `supabase/functions/_shared/push.ts`
 - `services/ai-api/src/domain/learning-contract.ts`
 - `services/ai-api/src/infrastructure/cloudflare-workers-ai-structured-generation-client.ts`
-- `services/ai-api/src/infrastructure/open-meteo-forecast-client.ts`
+- `services/ai-api/src/infrastructure/met-norway-forecast-client.ts`
 - `supabase/migrations/20260720001000_add_ai_consent_memory_and_jobs.sql`
 - `supabase/migrations/20260724002000_add_ai_direct_questions.sql`
 - `supabase/migrations/20260726000000_add_couple_calendar_events.sql`
