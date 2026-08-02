@@ -11,7 +11,7 @@ import {
 
 const accountId = '0123456789abcdef0123456789abcdef';
 
-test('AI Edge Functions share the Qwen production model by default', () => {
+test('AI Edge Functions share the Mistral production model by default', () => {
   const runtime = createAiLearningModel({
     readEnvironment: environmentReader({
       CLOUDFLARE_ACCOUNT_ID: accountId,
@@ -19,7 +19,10 @@ test('AI Edge Functions share the Qwen production model by default', () => {
     }),
   });
 
-  assert.equal(defaultAiModelName, '@cf/qwen/qwen3-30b-a3b-fp8');
+  assert.equal(
+    defaultAiModelName,
+    '@cf/mistralai/mistral-small-3.1-24b-instruct',
+  );
   assert.equal(runtime.provider, 'cloudflare');
   assert.equal(runtime.modelName, defaultAiModelName);
   assert.equal(runtime.model instanceof StructuredLearningModel, true);
