@@ -24,3 +24,24 @@ test('declares manual authentication for the account deletion function', async (
   assert.match(handler, /authenticator\.authenticate\(/);
   assert.match(handler, /return jsonResponse\(\{ error: 'unauthorized' \}, 401\)/);
 });
+
+test('keeps Apple revocation credentials optional for Android release', async () => {
+  const manifest = JSON.parse(
+    await readFile(
+      new URL('../../runtime-environment.manifest.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const entries = new Map(
+    manifest.entries.map((entry: { name: string }) => [entry.name, entry]),
+  );
+
+  for (const name of [
+    'APPLE_SIGN_IN_CLIENT_ID',
+    'APPLE_SIGN_IN_KEY_ID',
+    'APPLE_SIGN_IN_PRIVATE_KEY',
+    'APPLE_SIGN_IN_TEAM_ID',
+  ]) {
+    assert.equal(entries.get(name)?.availability, 'optional');
+  }
+});
