@@ -2,13 +2,10 @@
   "status": "draft",
   "unresolvedDecisions": [
     "legal_operator_name",
-    "public_contact_email",
     "effective_date",
-    "minimum_age",
     "weather_provider",
     "diagnostic_retention",
     "safety_report_retention",
-    "ugc_prefilter_provider_and_scope",
     "moderation_channel",
     "moderation_sla_and_owner",
     "external_deletion_verification",

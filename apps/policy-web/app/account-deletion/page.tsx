@@ -14,7 +14,7 @@ export default function AccountDeletionPage() {
     >
       <PolicyDraftNotice
         id="deletion-status"
-        detail="앱 안의 계정 삭제는 구현되어 있습니다. 앱을 사용할 수 없는 이용자를 위한 외부 접수 방법은 공개 이메일과 본인 확인 절차가 확정된 뒤 연결합니다."
+        detail="앱 안의 계정 삭제와 외부 이메일 접수 경로는 준비되어 있습니다. 본인 확인의 세부 절차와 처리 기한은 운영 기준을 확정한 뒤 최종 안내에 반영합니다."
       />
 
       <section className="policy-section" aria-labelledby="deletion-in-app">
@@ -64,10 +64,15 @@ export default function AccountDeletionPage() {
       <section className="policy-section" aria-labelledby="deletion-web">
         <h2 id="deletion-web">앱을 사용할 수 없는 경우</h2>
         <p>
-          외부 삭제 요청에 사용할 공개 이메일과 본인 확인 절차가 아직
-          확정되지 않아 이 페이지는 아직 삭제 접수 창구로 사용할 수
-          없습니다. 요청 경로가 준비되기 전에는 이 문서를 공개 배포하지
-          않습니다.
+          앱에 로그인할 수 없다면
+          {" "}
+          <a href="mailto:vinscent0929@gmail.com?subject=%EB%8B%A8%EC%A7%A0%20%EA%B3%84%EC%A0%95%20%EC%82%AD%EC%A0%9C%20%EC%9A%94%EC%B2%AD">
+            vinscent0929@gmail.com
+          </a>
+          으로 계정 삭제 요청을 보낼 수 있습니다. 단짠에서 사용한 로그인
+          방식과 닉네임을 함께 적어 주세요. 계정 소유자 확인에 필요한 추가
+          절차는 답장으로 안내하며, 확인이 끝난 뒤 계정과 관련 데이터를
+          삭제합니다.
         </p>
       </section>
 

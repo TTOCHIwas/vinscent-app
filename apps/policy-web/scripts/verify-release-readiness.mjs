@@ -10,7 +10,6 @@ export const policyDecisionKeys = Object.freeze([
   "weather_provider",
   "diagnostic_retention",
   "safety_report_retention",
-  "ugc_prefilter_provider_and_scope",
   "moderation_channel",
   "moderation_sla_and_owner",
   "external_deletion_verification",

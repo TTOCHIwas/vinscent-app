@@ -27,10 +27,10 @@ function readyPolicyPages() {
 test("blocks the current policy draft from release builds", () => {
   const errors = verifyPolicyReleaseReadiness(policyWebDirectory);
 
-  assert.equal(policyDecisionKeys.length, 12);
-  assert.ok(policyDecisionKeys.includes("ugc_prefilter_provider_and_scope"));
+  assert.equal(policyDecisionKeys.length, 11);
+  assert.ok(!policyDecisionKeys.includes("ugc_prefilter_provider_and_scope"));
   assert.deepEqual(errors, [
-    "Policy release remains draft with 12 unresolved decisions",
+    "Policy release remains draft with 9 unresolved decisions",
   ]);
 });
 

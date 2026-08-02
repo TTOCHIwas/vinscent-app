@@ -15,7 +15,7 @@ export default function SupportPage() {
     >
       <PolicyDraftNotice
         id="support-status"
-        detail="고객지원에 사용할 공개 이메일과 운영 응답 기준이 확정된 뒤 실제 문의 경로를 연결합니다."
+        detail="공개 고객지원 이메일은 연결되어 있습니다. 운영 응답 기준은 확정한 뒤 최종 안내에 반영합니다."
       />
 
       <section className="policy-section" aria-labelledby="support-in-app">
@@ -40,9 +40,12 @@ export default function SupportPage() {
           필요합니다.
         </p>
         <p>
-          공개 이메일이 아직 확정되지 않아 현재 이 페이지에서는 문의를
-          접수하지 않습니다. 실제 문의 경로가 연결되기 전에는 이 문서를
-          공개 배포하지 않습니다.
+          <a href="mailto:vinscent0929@gmail.com?subject=%EB%8B%A8%EC%A7%A0%20%EA%B3%A0%EA%B0%9D%EC%A7%80%EC%9B%90%20%EB%AC%B8%EC%9D%98">
+            vinscent0929@gmail.com
+          </a>
+          으로 문의할 수 있습니다. 문제를 확인할 수 있도록 이용한 기기와
+          OS, 발생한 화면과 시각을 함께 적어 주세요. 비밀번호, 인증 코드와
+          API 키는 보내지 마세요.
         </p>
       </section>
 

@@ -70,6 +70,8 @@ test("publishes the verified privacy processing draft without invented contacts"
   assert.match(html, /Firebase 설치 식별자/);
   assert.match(html, /Firebase Installations·Cloud Messaging/);
   assert.match(html, /Open-Meteo/);
+  assert.match(html, /만 14세 이상/);
+  assert.match(html, /mailto:vinscent0929@gmail\.com/);
   assert.doesNotMatch(html, /support@example\.com|example\.com/);
 });
 
@@ -80,6 +82,7 @@ test("publishes the verified service terms draft", async () => {
   assert.match(html, /AI 기능/);
   assert.match(html, /신고와 차단/);
   assert.match(html, /서비스 변경과 종료/);
+  assert.match(html, /만 14세 이상/);
   assert.doesNotMatch(html, /support@example\.com|example\.com/);
 });
 
@@ -89,18 +92,21 @@ test("documents the implemented in-app account deletion boundary", async () => {
   assert.match(html, /삭제되는 정보/);
   assert.match(html, /카드, 녹음, 답변, 캐릭터, 일정과 AI 데이터/);
   assert.match(html, /앱을 사용할 수 없는 경우/);
-  assert.match(html, /아직 삭제 접수 창구로 사용할 수 없습니다/);
-  assert.doesNotMatch(html, /mailto:|support@example\.com|example\.com/);
+  assert.match(html, /mailto:vinscent0929@gmail\.com/);
+  assert.match(html, /계정 삭제 요청/);
+  assert.doesNotMatch(html, /아직 삭제 접수 창구로 사용할 수 없습니다/);
+  assert.doesNotMatch(html, /support@example\.com|example\.com/);
 });
 
-test("publishes a support draft without inventing a contact address", async () => {
+test("publishes the verified public support contact", async () => {
   const html = await render("/support");
   assert.match(html, /앱에서 바로 확인할 수 있어요/);
   assert.match(html, /문의가 필요한 문제/);
   assert.match(html, /계정과 데이터 삭제/);
   assert.match(html, /href="\/account-deletion"/);
-  assert.match(html, /현재 이 페이지에서는 문의를 접수하지 않습니다/);
-  assert.doesNotMatch(html, /mailto:|support@example\.com|example\.com/);
+  assert.match(html, /mailto:vinscent0929@gmail\.com/);
+  assert.doesNotMatch(html, /현재 이 페이지에서는 문의를 접수하지 않습니다/);
+  assert.doesNotMatch(html, /support@example\.com|example\.com/);
 });
 
 test("publishes the current UGC safety promise", async () => {

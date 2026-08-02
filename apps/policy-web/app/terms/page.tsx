@@ -29,6 +29,7 @@ export default function TermsPage() {
       <section className="policy-section" aria-labelledby="terms-account">
         <h2 id="terms-account">계정과 커플 연결</h2>
         <ul>
+          <li>단짠은 만 14세 이상인 이용자만 가입하고 이용할 수 있습니다.</li>
           <li>지원되는 소셜 로그인으로 본인 계정을 만들고 이용합니다.</li>
           <li>
             초대 코드를 통해 한 명의 상대방과 연결되며, 연결된 두 사람만
@@ -116,8 +117,8 @@ export default function TermsPage() {
           안내합니다.
         </p>
         <p>
-          최종 약관에는 운영자 정보, 시행일, 이용 연령, 문의 방법과 법률상
-          필요한 책임·분쟁 처리 조항을 확정해 추가합니다.
+          최종 약관에는 운영자 정보, 시행일과 법률상 필요한 책임·분쟁 처리
+          조항을 확정해 추가합니다.
         </p>
       </section>
     </DocumentShell>
