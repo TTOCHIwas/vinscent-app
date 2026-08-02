@@ -1,7 +1,5 @@
 import {
-  optionalEnv,
   optionalPositiveIntegerEnv,
-  requiredEnv,
 } from '../_shared/environment.ts';
 import { createServiceRoleClient } from '../_shared/supabase.ts';
 import {
@@ -10,16 +8,13 @@ import {
 } from '../_shared/webhook.ts';
 import { SafetyModerationAlertProcessor } from './process_safety_moderation_alerts.ts';
 import { SupabaseSafetyModerationAlertRepository } from './safety_moderation_alert_repository.ts';
-import { SafetyModerationWebhookDelivery } from './safety_moderation_webhook_delivery.ts';
+import { createSafetyModerationAlertDelivery } from './safety_moderation_delivery_composition.ts';
 import { createSafetyModerationWorkerHttpHandler } from './safety_moderation_worker_http_handler.ts';
 
 const repository = new SupabaseSafetyModerationAlertRepository(
   createServiceRoleClient(),
 );
-const delivery = new SafetyModerationWebhookDelivery({
-  endpoint: requiredEnv('SAFETY_MODERATION_WEBHOOK_URL'),
-  bearerToken: optionalEnv('SAFETY_MODERATION_WEBHOOK_BEARER_TOKEN'),
-});
+const delivery = createSafetyModerationAlertDelivery();
 const processor = new SafetyModerationAlertProcessor({
   repository,
   delivery,

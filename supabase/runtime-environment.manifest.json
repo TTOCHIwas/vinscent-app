@@ -242,6 +242,17 @@
       ]
     },
     {
+      "name": "SAFETY_MODERATION_DISCORD_WEBHOOK_URL",
+      "availability": "fallback",
+      "fallbackTo": "SAFETY_MODERATION_WEBHOOK_URL",
+      "provisioning": "supabase_secret",
+      "sensitivity": "secret",
+      "description": "Preferred Discord webhook endpoint for private safety moderation alerts.",
+      "functions": [
+        "process-safety-moderation-alerts"
+      ]
+    },
+    {
       "name": "SAFETY_MODERATION_WEBHOOK_BEARER_TOKEN",
       "availability": "optional",
       "provisioning": "supabase_secret",
@@ -253,7 +264,7 @@
     },
     {
       "name": "SAFETY_MODERATION_WEBHOOK_URL",
-      "availability": "required",
+      "availability": "optional",
       "provisioning": "supabase_secret",
       "sensitivity": "secret",
       "description": "HTTPS receiver endpoint for minimal safety moderation alert envelopes.",
