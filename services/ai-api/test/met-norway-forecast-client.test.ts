@@ -87,6 +87,58 @@ test('MET Norway client derives uncertain precipitation from global amount and s
   assert.equal(context.sunsetLocalTime, null);
 });
 
+test('MET Norway client preserves forecast context when Sunrise is unavailable', async () => {
+  const client = new MetNorwayForecastClient({
+    userAgent: 'Danjjan/1.0 vinscent0929@gmail.com',
+    fetchImpl: async (input) => {
+      const url = new URL(input.toString());
+      if (url.pathname.includes('/sunrise/')) {
+        return new Response(null, { status: 503 });
+      }
+      return jsonResponse(forecastPayload({
+        airTemperature: 24,
+        cloudAreaFraction: 10,
+        relativeHumidity: 50,
+        windSpeed: 1,
+        symbolCode: 'clearsky_day',
+        precipitationAmount: 0,
+      }));
+    },
+  });
+
+  const context = await client.fetchContext(request);
+
+  assert.equal(context.condition, 'clear');
+  assert.equal(context.nearSunset, false);
+  assert.equal(context.sunsetLocalTime, null);
+});
+
+test('MET Norway client does not understate dry high temperatures', async () => {
+  const client = new MetNorwayForecastClient({
+    userAgent: 'Danjjan/1.0 vinscent0929@gmail.com',
+    fetchImpl: async (input) => {
+      const url = new URL(input.toString());
+      return jsonResponse(
+        url.pathname.includes('/sunrise/')
+          ? sunrisePayload(null)
+          : forecastPayload({
+            airTemperature: 34,
+            cloudAreaFraction: 10,
+            relativeHumidity: 10,
+            windSpeed: 1,
+            symbolCode: 'clearsky_day',
+            precipitationAmount: 0,
+          }),
+      );
+    },
+  });
+
+  const context = await client.fetchContext(request);
+
+  assert.equal(context.condition, 'hot');
+  assert.equal(context.apparentTemperatureC, 34);
+});
+
 test('MET Norway client caches provider payloads and conditionally revalidates expired entries', async () => {
   let callCount = 0;
   const conditionalHeaders: Array<string | null> = [];
