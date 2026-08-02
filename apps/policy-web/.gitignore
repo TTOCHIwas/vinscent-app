@@ -15,8 +15,12 @@
 
 # next.js
 /.next/
-/.vinext/
 /out/
+
+# legacy build output
+/.vinext/
+/dist/
+/.wrangler/
 
 # misc
 .DS_Store
@@ -31,12 +35,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
+# deployment tooling
 .vercel
 
 # typescript
 next-env.d.ts
-/dist/
-/.wrangler/
-/outputs/
-/work/
