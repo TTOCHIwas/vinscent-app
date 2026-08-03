@@ -159,7 +159,6 @@ jobs:
         run: |
           flutter build appbundle \
             --release \
-            --no-pub \
             --build-number "$BUILD_NUMBER" \
             --dart-define=SUPABASE_URL="$DANJJAN_SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$DANJJAN_SUPABASE_ANON_KEY" \
@@ -419,7 +418,6 @@ jobs:
             -delete
           flutter build appbundle \
             --release \
-            --no-pub \
             --analyze-size \
             --target-platform android-arm64 \
             --build-number "$BUILD_NUMBER" \

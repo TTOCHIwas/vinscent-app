@@ -67,6 +67,19 @@ void main() {
     expect(source, contains(r'"$value" == *[[:space:]]*'));
   });
 
+  test('release builds regenerate plugins after running tests', () {
+    final source = workflow.readAsStringSync();
+    final releaseBuilds = RegExp(
+      r'flutter build appbundle \\\r?\n(?:(?!^\s*- name:)[\s\S])*?(?=^\s*- name:)',
+      multiLine: true,
+    ).allMatches(source);
+
+    expect(releaseBuilds, hasLength(2));
+    for (final build in releaseBuilds) {
+      expect(build.group(0), isNot(contains('--no-pub')));
+    }
+  });
+
   test('release evidence remains bound to the triggering source commit', () {
     final source = workflow.readAsStringSync();
     const verifierCommand =
