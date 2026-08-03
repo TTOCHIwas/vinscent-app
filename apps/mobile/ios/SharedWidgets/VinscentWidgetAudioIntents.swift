@@ -24,8 +24,8 @@ struct ToggleVinscentWidgetRecordingIntent: AudioRecordingIntent {
       throw VinscentWidgetIntentError.appProcessRequired
     #else
       try await VinscentWidgetAudioController.shared.toggleRecording()
-      return .result()
     #endif
+    return .result()
   }
 }
 
@@ -44,7 +44,7 @@ struct ToggleVinscentWidgetPlaybackIntent: AudioPlaybackIntent {
       throw VinscentWidgetIntentError.appProcessRequired
     #else
       try await VinscentWidgetAudioController.shared.togglePlayback()
-      return .result()
     #endif
+    return .result()
   }
 }
