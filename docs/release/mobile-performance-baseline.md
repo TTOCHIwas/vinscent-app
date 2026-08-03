@@ -38,7 +38,7 @@ Apple 기준에 따라 단발 사용자 입력에 반응하는 동기 메인 스
 | Android | 실제 주 사용 중급 사양 휴대전화 |
 | Android | 최근 Android 버전 휴대전화 또는 태블릿 |
 | Android | Android 15 이상 16KB page size 에뮬레이터 또는 실제 기기 |
-| iOS | Runner 최저 지원 iOS 13 기기 또는 시뮬레이터 |
+| iOS | Runner 최저 지원 iOS 15 기기 또는 시뮬레이터 |
 | iOS | 위젯 최저 지원 iOS 18 이상 실제 iPhone |
 | iOS | 큰 글자와 넓은 화면 검증용 iPad 또는 큰 화면 시뮬레이터 |
 
