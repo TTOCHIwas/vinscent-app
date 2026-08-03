@@ -7,13 +7,15 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 
 ## 1. 공통 출시 차단 조건
 
-- [ ] 법적 운영자명과 정책 시행일 확정
+- [x] 법적 운영자명 `조준희` 확정
+- [x] 정책 시행일 `2026년 8월 3일` 확정
 - [x] 공개 고객지원·개인정보 문의 이메일 확정
 - [x] 서비스 최저 이용 연령을 만 14세 이상으로 확정
 - [ ] Cloudflare Workers AI 요금제와 데이터 처리 조건 확정
 - [x] MET Norway 날씨 API 이용·출처 표시 조건과 엔드포인트 확정
-- [ ] AI·알림 진단 로그와 신고 기록 보관기간 확정
-- [ ] 신고 운영 채널, 담당자, 검토 목표 시간 확정
+- [x] AI·알림 상세 진단 90일, 검토 완료 신고 기록 1년 보관 확정
+- [x] 비공개 Discord 신고 채널, 담당자 `조준희`, 최초 검토 목표 7일 확정
+- [x] 외부 계정 삭제의 등록 이메일 코드 확인과 확인 후 10일 이내 처리 확정
 - [ ] 모더레이션 알림 워커 배포·Cron 연결 후 실제 신고 수신과 재시도 검증
 - [ ] `/privacy`, `/terms`, `/safety`, `/account-deletion`, `/support` 공개 배포
 - [ ] 앱 설정에서 개인정보처리방침, 이용약관과 고객지원 URL 연결
@@ -34,7 +36,7 @@ Play Console, App Store Connect에서 완료해야 하는 항목을 한곳에 �
 - [ ] `docs/release/mobile-performance-baseline.md`의 실기기 검증 통과
 - [ ] `docs/release/mobile-release-qa.md`의 출시 후보 QA 통과
 
-정책 웹 공개 조건과 미확정 운영 정보는
+정책 웹 공개 조건과 확정된 운영 기준은
 `docs/release/policy-web-release-gates.md`를 따른다.
 
 ### 스토어 URL 계약
