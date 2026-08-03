@@ -103,6 +103,9 @@ create temporary table captured_new_invite (
   invite_code text not null
 );
 
+grant select, insert on table captured_reconnect_invite,
+  captured_new_invite to authenticated;
+
 select ok(
   to_regprocedure(
     'public.create_couple_archive_reconnect_invite(uuid)'
@@ -161,6 +164,9 @@ select is(
   'pending',
   'the invitation owner enters a waiting state without reading shared data'
 );
+
+reset role;
+
 select is(
   private.is_readable_couple_member(
     '29100000-0000-0000-0000-000000000001',
@@ -169,8 +175,6 @@ select is(
   false,
   'creating a reconnect invitation does not reveal the hidden archive'
 );
-
-reset role;
 
 select set_config(
   'request.jwt.claim.sub',

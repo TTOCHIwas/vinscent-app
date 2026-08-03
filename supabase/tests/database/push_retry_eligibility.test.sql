@@ -138,7 +138,7 @@ values (
   '55000000-0000-0000-0000-000000000031',
   '25000000-0000-0000-0000-000000000031',
   '함께할 일정',
-  current_date + 1,
+  current_date + 2,
   'none',
   '15000000-0000-0000-0000-000000000031',
   '15000000-0000-0000-0000-000000000031'
@@ -167,14 +167,14 @@ select is(
     md5(
       '55000000-0000-0000-0000-000000000031'
       || ':15000000-0000-0000-0000-000000000032:'
-      || (current_date + 1)::text
+      || (current_date + 2)::text
     )::uuid,
     '15000000-0000-0000-0000-000000000032',
     jsonb_build_object(
       'event_id',
       '55000000-0000-0000-0000-000000000031',
       'event_date',
-      (current_date + 1)::text
+      (current_date + 2)::text
     )
   ),
   true,
@@ -188,7 +188,7 @@ from public.claim_push_notification_dispatch(
   requested_source_id => md5(
     '55000000-0000-0000-0000-000000000031'
     || ':15000000-0000-0000-0000-000000000032:'
-    || (current_date + 1)::text
+    || (current_date + 2)::text
   )::uuid,
   requested_receiver_user_id => '15000000-0000-0000-0000-000000000032',
   requested_title => 'Vinscent',
@@ -197,7 +197,7 @@ from public.claim_push_notification_dispatch(
     'event_id',
     '55000000-0000-0000-0000-000000000031',
     'event_date',
-    (current_date + 1)::text
+    (current_date + 2)::text
   ),
   requested_preference_column => null,
   requested_max_attempts => 1
@@ -238,14 +238,14 @@ select is(
     md5(
       '55000000-0000-0000-0000-000000000031'
       || ':15000000-0000-0000-0000-000000000032:'
-      || (current_date + 1)::text
+      || (current_date + 2)::text
     )::uuid,
     '15000000-0000-0000-0000-000000000032',
     jsonb_build_object(
       'event_id',
       '55000000-0000-0000-0000-000000000031',
       'event_date',
-      (current_date + 1)::text
+      (current_date + 2)::text
     )
   ),
   false,
@@ -261,14 +261,14 @@ select is(
     md5(
       '55000000-0000-0000-0000-000000000031'
       || ':15000000-0000-0000-0000-000000000032:'
-      || (current_date + 1)::text
+      || (current_date + 2)::text
     )::uuid,
     '15000000-0000-0000-0000-000000000032',
     jsonb_build_object(
       'event_id',
       '55000000-0000-0000-0000-000000000031',
       'event_date',
-      (current_date + 1)::text
+      (current_date + 2)::text
     )
   ),
   false,

@@ -146,7 +146,7 @@ values (
   '28000000-0000-0000-0000-000000000001',
   '58000000-0000-0000-0000-000000000001',
   current_date - 2,
-  'completed',
+  'pending',
   '38000000-0000-0000-0000-000000000001'
 );
 
@@ -169,6 +169,10 @@ values
     '18000000-0000-0000-0000-000000000002',
     '상대방이 작성한 답변'
   );
+
+update public.daily_questions
+set status = 'completed'
+where id = '68000000-0000-0000-0000-000000000001';
 
 insert into public.couple_recordings (
   id,
@@ -271,6 +275,9 @@ create temporary table captured_ugc_safety_reports (
   report_id uuid not null
 );
 
+grant select, insert on table captured_ugc_safety_reports
+  to authenticated;
+
 select set_config(
   'request.jwt.claim.sub',
   '18000000-0000-0000-0000-000000000001',
@@ -361,7 +368,7 @@ select is(
   '18000000-0000-0000-0000-000000000002'::uuid,
   'a story card report is attributed to its author'
 );
-select like(
+select ok(
   (
     select content_snapshot
     from public.safety_reports
@@ -370,7 +377,7 @@ select like(
       from captured_ugc_safety_reports
       where name = 'story-card'
     )
-  ),
+  ) like
   'date=%; preview_path=%',
   'the story card snapshot is resolved by the server'
 );
@@ -429,7 +436,7 @@ select is(
   '18000000-0000-0000-0000-000000000002'::uuid,
   'a recording report is attributed to its sender'
 );
-select like(
+select ok(
   (
     select content_snapshot
     from public.safety_reports
@@ -438,7 +445,7 @@ select like(
       from captured_ugc_safety_reports
       where name = 'recording'
     )
-  ),
+  ) like
   'duration_ms=7000; storage_path=%',
   'the recording snapshot contains server metadata'
 );
@@ -465,7 +472,7 @@ select is(
   '18000000-0000-0000-0000-000000000002'::uuid,
   'a slot report is attributed to its latest editor'
 );
-select like(
+select ok(
   (
     select content_snapshot
     from public.safety_reports
@@ -474,7 +481,7 @@ select like(
       from captured_ugc_safety_reports
       where name = 'recording-slot'
     )
-  ),
+  ) like
   'slot_title=상대방이 만든 슬롯; duration_ms=7000;%',
   'the slot snapshot contains its title and recording metadata'
 );
@@ -533,7 +540,7 @@ select is(
   '18000000-0000-0000-0000-000000000002'::uuid,
   'a character report is attributed to its latest editor'
 );
-select like(
+select ok(
   (
     select content_snapshot
     from public.safety_reports
@@ -542,7 +549,7 @@ select like(
       from captured_ugc_safety_reports
       where name = 'character'
     )
-  ),
+  ) like
   'image_path=%; drawing_data_path=%',
   'the character snapshot contains server artifact metadata'
 );

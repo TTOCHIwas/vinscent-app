@@ -181,6 +181,9 @@ select is(
   0::bigint,
   'the blocker no longer receives the blocked couple context'
 );
+
+reset role;
+
 select is(
   private.is_readable_couple_member(
     '29000000-0000-0000-0000-000000000001',
@@ -189,15 +192,16 @@ select is(
   false,
   'the blocker cannot read couple-scoped rows'
 );
-select is(
-  (
-    select count(*)
-    from public.couples
-    where id = '29000000-0000-0000-0000-000000000001'
+
+select ok(
+  not has_table_privilege(
+    'authenticated',
+    'public.couples',
+    'SELECT'
   ),
-  0::bigint,
-  'couple row RLS does not expose hidden archive metadata'
+  'clients cannot query hidden archive metadata directly'
 );
+
 select is(
   private.is_current_user_character_storage_object(
     'couple-characters',
@@ -215,8 +219,6 @@ select is(
   'the blocker cannot bypass the archive through recording storage'
 );
 
-reset role;
-
 select set_config(
   'request.jwt.claim.sub',
   '19000000-0000-0000-0000-000000000002',
@@ -229,6 +231,9 @@ select is(
   0::bigint,
   'the blocked partner no longer receives the couple context'
 );
+
+reset role;
+
 select is(
   private.is_readable_couple_member(
     '29000000-0000-0000-0000-000000000001',
@@ -237,6 +242,9 @@ select is(
   false,
   'the blocked partner cannot read couple-scoped rows'
 );
+
+set local role authenticated;
+
 select is(
   (select count(*) from public.list_blocked_users()),
   0::bigint,
@@ -309,6 +317,9 @@ select is(
   0::bigint,
   'unblocking does not automatically restore the blocker relationship'
 );
+
+reset role;
+
 select is(
   private.is_readable_couple_member(
     '29000000-0000-0000-0000-000000000001',
@@ -317,6 +328,9 @@ select is(
   false,
   'unblocking does not automatically restore shared data access'
 );
+
+set local role authenticated;
+
 select results_eq(
   $$
     select couple_id, partner_user_id, partner_display_name

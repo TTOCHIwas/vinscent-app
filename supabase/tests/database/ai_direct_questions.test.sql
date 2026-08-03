@@ -174,8 +174,8 @@ set local role authenticated;
 
 select is(
   public.get_my_ai_user_questions()->>'remaining_count',
-  '100',
-  'a personalized member starts with the configured test allowance'
+  '3',
+  'a personalized member starts with the release allowance'
 );
 select throws_ok(
   $$
@@ -234,11 +234,6 @@ select is(
 );
 
 reset role;
-
-update public.ai_user_question_daily_usage
-set submission_count = 98
-where couple_id = '26000000-0000-0000-0000-000000000001'
-  and user_id = '16000000-0000-0000-0000-000000000001';
 
 select set_config(
   'request.jwt.claim.sub',

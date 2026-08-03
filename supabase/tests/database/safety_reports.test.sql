@@ -89,6 +89,9 @@ create temporary table captured_safety_reports (
   report_id uuid not null
 );
 
+grant select, insert on table captured_safety_reports
+  to authenticated;
+
 select ok(
   to_regclass('public.safety_reports') is not null,
   'safety reports have private storage'

@@ -138,6 +138,9 @@ where user_id = '18000000-0000-0000-0000-000000000001'
   and policy_type = 'ugc_safety_policy'
   and policy_version = 'ugc-safety-v1';
 
+grant select on table captured_policy_acceptance
+  to authenticated;
+
 select is(
   (
     select count(*)

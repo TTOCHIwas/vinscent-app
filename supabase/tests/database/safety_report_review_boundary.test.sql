@@ -73,6 +73,9 @@ create temporary table captured_safety_review_report (
   report_id uuid primary key
 );
 
+grant select, insert on table captured_safety_review_report
+  to authenticated;
+
 select set_config(
   'request.jwt.claim.sub',
   '2c000000-0000-0000-0000-000000000001',

@@ -9,6 +9,9 @@ create temporary table observed_couple_deletion_signals (
   couple_id uuid not null
 );
 
+grant select, insert on table observed_couple_deletion_signals
+  to service_role;
+
 create or replace function pg_temp.capture_couple_deletion_signal()
 returns trigger
 language plpgsql
@@ -23,7 +26,6 @@ $$;
 create trigger capture_couple_deletion_signal
   after update of updated_at on public.couples
   for each row
-  when (old.updated_at is distinct from new.updated_at)
   execute function pg_temp.capture_couple_deletion_signal();
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
