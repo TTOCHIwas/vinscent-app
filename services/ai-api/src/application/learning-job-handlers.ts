@@ -310,7 +310,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
 
 function coupleFeedbackRejectionCode(
   error: unknown,
-): CoupleFeedbackGenerationOptions['rejectionCode'] {
+): NonNullable<CoupleFeedbackGenerationOptions['rejectionCode']> {
   if (error instanceof CoupleFeedbackValidationError) {
     return error.code;
   }
@@ -319,7 +319,7 @@ function coupleFeedbackRejectionCode(
 
 function personalizedQuestionRejectionCode(
   error: unknown,
-): PersonalizedQuestionGenerationOptions['rejectionCode'] {
+): NonNullable<PersonalizedQuestionGenerationOptions['rejectionCode']> {
   if (error instanceof PersonalizedQuestionValidationError) {
     return error.code;
   }
