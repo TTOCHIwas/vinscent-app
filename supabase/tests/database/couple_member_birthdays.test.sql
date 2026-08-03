@@ -98,14 +98,16 @@ select results_eq(
   'user A sees only the two birthday values with relative roles'
 );
 
-select throws_ok(
+select results_eq(
   $$
-    select *
+    select id
     from public.profiles
+    order by id
   $$,
-  '42501',
-  'permission denied for table profiles',
-  'the RPC does not widen direct profile table access'
+  $$
+    values ('18000000-0000-0000-0000-000000000001'::uuid)
+  $$,
+  'direct profile access remains limited to the current user row'
 );
 
 reset role;

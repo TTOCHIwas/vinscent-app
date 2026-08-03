@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(7);
+select plan(8);
 
 insert into auth.users (
   id,
@@ -52,6 +52,24 @@ select ok(
       and not tgisinternal
   ),
   'profiles enforce minimum age on writes'
+);
+select ok(
+  has_table_privilege(
+    'authenticated',
+    'public.profiles',
+    'SELECT'
+  )
+    and has_table_privilege(
+      'authenticated',
+      'public.profiles',
+      'INSERT'
+    )
+    and has_table_privilege(
+      'authenticated',
+      'public.profiles',
+      'UPDATE'
+    ),
+  'authenticated clients can use the profile repository write path'
 );
 
 select set_config(
