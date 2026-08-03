@@ -59,3 +59,11 @@ test('remote resource audit never selects raw trigger or Cron definitions', asyn
     /\bjobs\.command\s+as\b/i,
   );
 });
+
+test('remote resource audit covers operational retention Cron', async () => {
+  const auditSql = await readFile(auditSqlUrl, 'utf8');
+
+  assert.match(auditSql, /'purge-expired-operational-records'/);
+  assert.match(auditSql, /'17 18 \* \* \*'/);
+  assert.match(auditSql, /'private\.purge_expired_operational_records'/);
+});

@@ -93,18 +93,25 @@ secret에 등록하고, 대응하는 Database Webhook 또는 Cron 헤더를 즉�
 뒤 이전 값을 폐기한다. 비밀값 자체는 명령 출력, SQL 결과, 문서에 남기지
 않는다.
 
-Database Webhook과 예약 호출의 생성 자체는 아직 Dashboard 운영
-설정이다. 현재 매니페스트는 함수가 요구하는 계약을 고정하지만, 원격
-웹훅 리소스를 자동 생성하지는 않는다. 이를 마이그레이션으로 옮길 때는
-비밀값을 SQL이나 함수 정의에 평문으로 넣지 않고 Supabase Vault 기반
+Database Webhook과 Edge Function 예약 호출의 생성 자체는 아직 Dashboard
+운영 설정이다. 현재 매니페스트는 함수가 요구하는 계약을 고정하지만,
+원격 웹훅 리소스를 자동 생성하지는 않는다. 이를 마이그레이션으로 옮길
+때는 비밀값을 SQL이나 함수 정의에 평문으로 넣지 않고 Supabase Vault 기반
 호출로 설계한다.
+
+운영 기록 정리는 Edge Function이 아니라 Database 함수
+`private.purge_expired_operational_records`를 직접 실행한다.
+`20260803000000_enforce_operational_data_retention.sql`이
+`purge-expired-operational-records` Cron을 매일 `17 18 * * *`에 생성하며,
+이는 한국 시간 03:17이다. 외부 네트워크 요청과 secret이 없고 함수 실행
+권한은 클라이언트 역할에서 제거돼 있다.
 
 원격 리소스의 현재 상태는 Supabase SQL Editor에서
 `supabase/snippets/audit_edge_runtime_resources.sql`을 실행해 확인한다.
 이 쿼리는 웹훅 정의와 Cron 명령 원문을 반환하지 않으므로 저장된 비밀값을
-노출하지 않는다. 두 결과의 `audit_status`가 모두 `ready`여야 하며,
-archive purge는 운영 주기를 확정하기 전까지
-`cadence_decision_required`로 표시된다.
+노출하지 않는다. Database Webhook, Edge Function Cron, Database 직접 Cron의
+세 결과에서 `audit_status`가 모두 `ready`여야 하며, archive purge는 운영
+주기를 확정하기 전까지 `cadence_decision_required`로 표시된다.
 
 `supabase/.temp`에는 원격 카탈로그 캐시가 저장되며 운영 설정 일부가
 포함될 수 있다. 이 경로는 Git에서 무시되지만 외부 공유 파일이나 빌드

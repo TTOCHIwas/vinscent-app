@@ -220,3 +220,63 @@ select
   end as audit_status
 from schedule_summary
 order by function_name;
+
+with expected_database_schedules (
+  job_name,
+  expected_schedule,
+  expected_function_call
+) as (
+  values (
+    'purge-expired-operational-records',
+    '17 18 * * *',
+    'private.purge_expired_operational_records'
+  )
+),
+schedule_summary as (
+  select
+    expected.job_name,
+    expected.expected_schedule,
+    expected.expected_function_call,
+    count(jobs.jobid)::integer as matching_job_count,
+    coalesce(bool_or(jobs.active), false) as has_active_job,
+    coalesce(
+      bool_or(jobs.schedule = expected.expected_schedule),
+      false
+    ) as cadence_matches,
+    coalesce(
+      bool_or(
+        position(
+          lower(expected.expected_function_call)
+          in lower(jobs.command)
+        ) > 0
+      ),
+      false
+    ) as function_matches,
+    array_remove(array_agg(distinct jobs.schedule), null)
+      as configured_schedules
+  from expected_database_schedules as expected
+  left join cron.job as jobs
+    on jobs.jobname = expected.job_name
+  group by
+    expected.job_name,
+    expected.expected_schedule,
+    expected.expected_function_call
+)
+select
+  'database_cron_schedule' as resource_type,
+  job_name as resource_name,
+  matching_job_count,
+  has_active_job,
+  function_matches,
+  expected_schedule,
+  configured_schedules,
+  case
+    when matching_job_count = 0 then 'missing'
+    when matching_job_count > 1 then 'duplicate'
+    when not has_active_job then 'inactive'
+    when not function_matches then 'function_mismatch'
+    when not cadence_matches then 'cadence_mismatch'
+    else 'ready'
+  end as audit_status
+from schedule_summary
+order by job_name;
