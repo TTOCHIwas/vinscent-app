@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DocumentShell } from "../_components/document-shell";
-import { PolicyDraftNotice } from "../_components/policy-draft-notice";
+import { policyRelease } from "../policy-release";
 
 export const metadata: Metadata = {
   title: "고객지원",
@@ -11,13 +11,9 @@ export default function SupportPage() {
   return (
     <DocumentShell
       title="고객지원"
-      description="단짠을 이용하며 확인할 수 있는 도움말과 문의 경로를 안내하는 초안입니다."
+      description="단짠을 이용하며 확인할 수 있는 도움말과 문의 경로를 안내합니다."
+      documentMeta={`시행일 ${policyRelease.effectiveDate}`}
     >
-      <PolicyDraftNotice
-        id="support-status"
-        detail="공개 고객지원 이메일은 연결되어 있습니다. 운영 응답 기준은 확정한 뒤 최종 안내에 반영합니다."
-      />
-
       <section className="policy-section" aria-labelledby="support-in-app">
         <h2 id="support-in-app">앱에서 바로 확인할 수 있어요</h2>
         <ul>
@@ -32,6 +28,18 @@ export default function SupportPage() {
         </ul>
       </section>
 
+      <section className="policy-section" aria-labelledby="support-safety">
+        <h2 id="support-safety">안전 신고는 우선 확인해요</h2>
+        <p>
+          앱에서 접수된 신고는 대표자 {policyRelease.operatorName}가 비공개
+          신고 채널에서 확인합니다. 접수 후
+          {" "}
+          {policyRelease.moderationInitialReviewDays}일 이내 최초 검토를 운영
+          목표로 하며, 신체 안전이나 긴급한 위험이 의심되는 신고는 먼저
+          확인합니다.
+        </p>
+      </section>
+
       <section className="policy-section" aria-labelledby="support-contact">
         <h2 id="support-contact">문의가 필요한 문제</h2>
         <p>
@@ -40,8 +48,10 @@ export default function SupportPage() {
           필요합니다.
         </p>
         <p>
-          <a href="mailto:vinscent0929@gmail.com?subject=%EB%8B%A8%EC%A7%A0%20%EA%B3%A0%EA%B0%9D%EC%A7%80%EC%9B%90%20%EB%AC%B8%EC%9D%98">
-            vinscent0929@gmail.com
+          <a
+            href={`mailto:${policyRelease.publicContactEmail}?subject=%EB%8B%A8%EC%A7%A0%20%EA%B3%A0%EA%B0%9D%EC%A7%80%EC%9B%90%20%EB%AC%B8%EC%9D%98`}
+          >
+            {policyRelease.publicContactEmail}
           </a>
           으로 문의할 수 있습니다. 문제를 확인할 수 있도록 이용한 기기와
           OS, 발생한 화면과 시각을 함께 적어 주세요. 비밀번호, 인증 코드와
@@ -54,7 +64,11 @@ export default function SupportPage() {
         <p>
           앱을 사용할 수 있다면 설정의 계정 메뉴에서 계정과 관련 공유
           데이터를 직접 삭제할 수 있습니다. 앱을 사용할 수 없는 경우의
-          절차와 처리 범위는 계정 삭제 안내에서 확인할 수 있습니다.
+          본인 확인 절차와 처리 범위는 계정 삭제 안내에서 확인할 수
+          있습니다. 외부 요청은 본인 확인 완료일부터
+          {" "}
+          {policyRelease.externalDeletionCompletionDays}일 이내에 처리 결과를
+          알립니다.
         </p>
         <p>
           <Link href="/account-deletion">계정 삭제 안내 보기</Link>

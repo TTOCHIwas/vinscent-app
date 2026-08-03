@@ -24,15 +24,13 @@ function readyPolicyPages() {
   };
 }
 
-test("blocks the current policy draft from release builds", () => {
+test("accepts the current finalized policy release", () => {
   const errors = verifyPolicyReleaseReadiness(policyWebDirectory);
 
   assert.equal(policyDecisionKeys.length, 10);
   assert.ok(!policyDecisionKeys.includes("weather_provider"));
   assert.ok(!policyDecisionKeys.includes("ugc_prefilter_provider_and_scope"));
-  assert.deepEqual(errors, [
-    "Policy release remains draft with 7 unresolved decisions",
-  ]);
+  assert.deepEqual(errors, []);
 });
 
 test("accepts a ready release without unresolved decisions or draft markers", () => {
@@ -42,6 +40,26 @@ test("accepts a ready release without unresolved decisions or draft markers", ()
       unresolvedDecisions: [],
     },
     pageSources: readyPolicyPages(),
+  });
+
+  assert.deepEqual(errors, []);
+});
+
+test("accepts public contacts sourced from the shared release config", () => {
+  const pages = readyPolicyPages();
+  pages["app/account-deletion/page.tsx"] =
+    "mailto:${policyRelease.publicContactEmail}";
+  pages["app/support/page.tsx"] =
+    "mailto:${policyRelease.publicContactEmail}";
+
+  const errors = validatePolicyReleaseState({
+    state: {
+      status: "ready",
+      unresolvedDecisions: [],
+    },
+    pageSources: pages,
+    releaseConfigSource:
+      'publicContactEmail: "help@danjjan.kr"',
   });
 
   assert.deepEqual(errors, []);

@@ -53,5 +53,7 @@ Cloudflare Pages의 Custom domains에서 연결할 수 있다. 앱과 스토어�
 서비스 역할 키를 Pages 환경 변수 또는 클라이언트 산출물에 추가하지 않는다.
 
 공개 문서는 `docs/release/privacy-data-map.md`와 실제 서비스 동작을 기준으로
-작성한다. 현재 `draft` 상태에서는 `build:release` 실패가 정상이며, 공개 연락처와
-운영 결정이 확정되기 전에는 출시 배포를 우회하지 않는다.
+작성한다. 현재 정책 문서는 운영 결정을 반영한 `ready` 상태이며,
+`build:release` 검증을 통과한 정적 산출물만 공개한다. 실제 공개 URL 배포와
+스토어 등록 완료 여부는 `docs/release/store-submission-checklist.md`에서 별도로
+관리한다.

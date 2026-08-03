@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   },
   description: "단짠의 정책 문서와 계정 관리 안내입니다.",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
   icons: {
     icon: "/favicon.svg",

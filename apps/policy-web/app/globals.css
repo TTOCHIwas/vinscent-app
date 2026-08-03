@@ -159,13 +159,21 @@ a:focus-visible {
 }
 
 .policy-home__header > p:last-child,
-.document__header > p:last-child {
+.document__description {
   margin: 20px 0 0;
   color: var(--muted);
   font-size: 18px;
   line-height: 1.72;
   word-break: keep-all;
   overflow-wrap: break-word;
+}
+
+.document__meta {
+  margin: 18px 0 0;
+  color: var(--placeholder);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
 }
 
 .release-status {
@@ -261,32 +269,6 @@ a:focus-visible {
 
 .document__body {
   padding-top: 48px;
-}
-
-.publication-notice {
-  padding: 28px;
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.publication-notice h2 {
-  margin: 0;
-  font-size: 21px;
-  line-height: 1.4;
-}
-
-.publication-notice p {
-  max-width: 680px;
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.75;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-}
-
-.publication-notice p + p {
-  margin-top: 8px;
 }
 
 .document-version {
@@ -425,7 +407,7 @@ a:focus-visible {
   }
 
   .policy-home__header > p:last-child,
-  .document__header > p:last-child {
+  .document__description {
     font-size: 16px;
   }
 
@@ -469,10 +451,6 @@ a:focus-visible {
 
   .document__body {
     padding-top: 36px;
-  }
-
-  .publication-notice {
-    padding: 22px 20px;
   }
 
   .document-version {

@@ -33,8 +33,14 @@ const draftMarkers = Object.freeze([
 const publicContactPattern =
   /mailto:[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 
+const publicEmailPattern =
+  /[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
 const placeholderContactPattern =
   /(?:support@)?example\.(?:com|net|org)|example\.test/i;
+
+const sharedPublicContactPattern =
+  /mailto:\$\{policyRelease\.publicContactEmail\}/;
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -49,7 +55,11 @@ function readPolicyPageSources(rootDirectory) {
   );
 }
 
-export function validatePolicyReleaseState({ state, pageSources }) {
+export function validatePolicyReleaseState({
+  state,
+  pageSources,
+  releaseConfigSource = "",
+}) {
   const errors = [];
   const knownDecisions = new Set(policyDecisionKeys);
 
@@ -112,9 +122,15 @@ export function validatePolicyReleaseState({ state, pageSources }) {
       if (source === undefined) {
         continue;
       }
+
+      const hasLiteralContact = publicContactPattern.test(source);
+      const hasSharedContact =
+        sharedPublicContactPattern.test(source) &&
+        publicEmailPattern.test(releaseConfigSource);
+      const contactSource = hasLiteralContact ? source : releaseConfigSource;
       if (
-        !publicContactPattern.test(source) ||
-        placeholderContactPattern.test(source)
+        (!hasLiteralContact && !hasSharedContact) ||
+        placeholderContactPattern.test(contactSource)
       ) {
         errors.push(
           `${relativePath} does not include a non-placeholder public mailto contact`,
@@ -131,7 +147,15 @@ export function verifyPolicyReleaseReadiness(rootDirectory) {
     path.join(rootDirectory, "policy-release-state.json"),
   );
   const pageSources = readPolicyPageSources(rootDirectory);
-  return validatePolicyReleaseState({ state, pageSources });
+  const releaseConfigSource = readFileSync(
+    path.join(rootDirectory, "app", "policy-release.ts"),
+    "utf8",
+  );
+  return validatePolicyReleaseState({
+    state,
+    pageSources,
+    releaseConfigSource,
+  });
 }
 
 function run() {

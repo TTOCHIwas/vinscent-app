@@ -1,12 +1,4 @@
 {
-  "status": "draft",
-  "unresolvedDecisions": [
-    "legal_operator_name",
-    "effective_date",
-    "diagnostic_retention",
-    "safety_report_retention",
-    "moderation_sla_and_owner",
-    "external_deletion_verification",
-    "external_deletion_sla_and_confirmation"
-  ]
+  "status": "ready",
+  "unresolvedDecisions": []
 }

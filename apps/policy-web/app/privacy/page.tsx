@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DocumentShell } from "../_components/document-shell";
-import { PolicyDraftNotice } from "../_components/policy-draft-notice";
+import { policyRelease } from "../policy-release";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침",
@@ -10,12 +10,26 @@ export default function PrivacyPage() {
   return (
     <DocumentShell
       title="개인정보처리방침"
-      description="단짠이 어떤 정보를 왜 처리하고, 언제 지우는지 실제 서비스 동작을 기준으로 정리한 초안입니다."
+      description="단짠이 어떤 정보를 왜 처리하고, 언제 지우는지 실제 서비스 동작을 기준으로 안내합니다."
+      documentMeta={`시행일 ${policyRelease.effectiveDate}`}
     >
-      <PolicyDraftNotice
-        id="privacy-status"
-        detail="아래 내용은 앱 코드, 데이터베이스와 서버 기능에서 확인된 현재 처리 흐름입니다."
-      />
+      <section className="policy-section" aria-labelledby="privacy-operator">
+        <h2 id="privacy-operator">운영자와 문의처</h2>
+        <dl className="policy-definition-list">
+          <div>
+            <dt>서비스 운영자</dt>
+            <dd>대표자 {policyRelease.operatorName}</dd>
+          </div>
+          <div>
+            <dt>개인정보 문의</dt>
+            <dd>
+              <a href={`mailto:${policyRelease.publicContactEmail}`}>
+                {policyRelease.publicContactEmail}
+              </a>
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <section className="policy-section" aria-labelledby="privacy-data">
         <h2 id="privacy-data">현재 처리하는 정보</h2>
@@ -105,7 +119,8 @@ export default function PrivacyPage() {
             <dt>Supabase</dt>
             <dd>
               인증, Database, 비공개 Storage, 실시간 동기화와 서버 기능을
-              제공합니다.
+              제공합니다. 단짠의 주 Database와 Storage 리전은 일본
+              도쿄입니다.
             </dd>
           </div>
           <div>
@@ -151,8 +166,10 @@ export default function PrivacyPage() {
           </div>
         </dl>
         <p>
-          각 처리자의 이전 국가·리전, 이전 방법과 보유 기간은 실제 운영
-          계약을 확인한 뒤 최종본에 표시합니다.
+          외부 서비스에는 기능을 사용할 때 HTTPS로 필요한 정보만
+          전달합니다. 단짠이 보유하는 결과와 진단 기록은 아래 보관 기준을
+          따르며, 각 처리자는 해당 서비스 계약과 법령에 따라 정보를
+          처리합니다.
         </p>
       </section>
 
@@ -180,11 +197,22 @@ export default function PrivacyPage() {
             계정을 삭제하면 사용자가 속한 커플의 공유 데이터와 계정을
             삭제하고 기기의 관련 캐시·임시 파일·위젯 데이터도 정리합니다.
           </li>
+          <li>
+            AI 실행의 입력 답변 ID, 토큰 수, 지연 시간과 오류 상세 및 알림
+            발송 진단은 생성 후 {policyRelease.diagnosticRetentionDays}일이
+            지나면 삭제합니다. 기억·피드백·질문처럼 계속 제공되는 결과가
+            참조하는 실행은 작업 종류, 모델, 프롬프트 버전, 처리·안전 상태의
+            최소 출처 정보만 결과의 수명 동안 유지합니다.
+          </li>
+          <li>
+            미처리 신고는 검토가 끝날 때까지 보관합니다. 검토가 끝난 신고와
+            검토·운영 알림 기록은 검토일부터
+            {" "}
+            {policyRelease.reviewedSafetyReportRetention} 동안 보관한 뒤
+            삭제하며, 신고자가 계정을 먼저 삭제하면 현재 계정 삭제 흐름에
+            따라 함께 삭제합니다.
+          </li>
         </ul>
-        <p>
-          AI 실행, 알림 발송 진단과 신고 검토 기록의 구체적인 보관기간은
-          운영 기준이 확정된 뒤 최종본에 표시합니다.
-        </p>
       </section>
 
       <section className="policy-section" aria-labelledby="privacy-rights">
@@ -207,10 +235,15 @@ export default function PrivacyPage() {
         <p>
           개인정보 문의나 권리 행사가 필요하면
           {" "}
-          <a href="mailto:vinscent0929@gmail.com">vinscent0929@gmail.com</a>
-          으로 연락할 수 있습니다. 앱을 사용할 수 없는 경우의 계정 삭제
-          본인 확인 절차와 처리 기한은 운영 기준이 확정된 뒤 최종본에
-          표시합니다.
+          <a href={`mailto:${policyRelease.publicContactEmail}`}>
+            {policyRelease.publicContactEmail}
+          </a>
+          으로 연락할 수 있습니다. 앱을 사용할 수 없는 경우에는 로그인
+          방식, 닉네임과 등록 이메일을 적어 계정 삭제를 요청할 수 있습니다.
+          운영자가 등록 이메일로 보낸 일회용 확인 코드를 확인한 뒤
+          {" "}
+          {policyRelease.externalDeletionCompletionDays}일 이내에 처리 결과를
+          같은 문의 주소로 알립니다.
         </p>
       </section>
 

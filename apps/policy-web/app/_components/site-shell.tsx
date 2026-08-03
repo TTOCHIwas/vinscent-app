@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { policyRelease } from "../policy-release";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -32,6 +33,7 @@ export function SiteShell({ children }: SiteShellProps) {
       <footer className="site-footer">
         <div className="site-footer__inner">
           <strong>단짠</strong>
+          <span>대표자 {policyRelease.operatorName}</span>
           <span>정책 및 지원</span>
         </div>
       </footer>

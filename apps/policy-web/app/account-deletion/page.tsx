@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DocumentShell } from "../_components/document-shell";
-import { PolicyDraftNotice } from "../_components/policy-draft-notice";
+import { policyRelease } from "../policy-release";
 
 export const metadata: Metadata = {
   title: "계정 삭제 안내",
@@ -10,13 +10,9 @@ export default function AccountDeletionPage() {
   return (
     <DocumentShell
       title="계정 삭제 안내"
-      description="단짠 계정과 관련 공유 데이터를 삭제하는 현재 절차와 결과를 안내하는 초안입니다."
+      description="단짠 계정과 관련 공유 데이터를 삭제하는 절차와 결과를 안내합니다."
+      documentMeta={`시행일 ${policyRelease.effectiveDate}`}
     >
-      <PolicyDraftNotice
-        id="deletion-status"
-        detail="앱 안의 계정 삭제와 외부 이메일 접수 경로는 준비되어 있습니다. 본인 확인의 세부 절차와 처리 기한은 운영 기준을 확정한 뒤 최종 안내에 반영합니다."
-      />
-
       <section className="policy-section" aria-labelledby="deletion-in-app">
         <h2 id="deletion-in-app">앱에서 바로 삭제하기</h2>
         <ol>
@@ -56,8 +52,13 @@ export default function AccountDeletionPage() {
           없습니다.
         </p>
         <p>
-          법령 또는 안전 운영상 별도 보관이 필요한 기록과 구체적인 처리
-          완료 기간은 운영 기준이 확정된 뒤 최종 안내에 표시합니다.
+          정상 이용 중 AI 실행과 알림 발송의 상세 진단은 생성 후
+          {" "}
+          {policyRelease.diagnosticRetentionDays}일 동안 보관할 수 있습니다.
+          미처리 신고는 검토가 끝날 때까지, 검토가 끝난 신고와 관련 기록은
+          검토일부터 {policyRelease.reviewedSafetyReportRetention} 동안
+          보관할 수 있습니다. 이 기간이 지나기 전이라도 계정을 삭제하면
+          현재 계정 삭제 흐름에 따라 함께 삭제됩니다.
         </p>
       </section>
 
@@ -66,13 +67,18 @@ export default function AccountDeletionPage() {
         <p>
           앱에 로그인할 수 없다면
           {" "}
-          <a href="mailto:vinscent0929@gmail.com?subject=%EB%8B%A8%EC%A7%A0%20%EA%B3%84%EC%A0%95%20%EC%82%AD%EC%A0%9C%20%EC%9A%94%EC%B2%AD">
-            vinscent0929@gmail.com
+          <a
+            href={`mailto:${policyRelease.publicContactEmail}?subject=%EB%8B%A8%EC%A7%A0%20%EA%B3%84%EC%A0%95%20%EC%82%AD%EC%A0%9C%20%EC%9A%94%EC%B2%AD`}
+          >
+            {policyRelease.publicContactEmail}
           </a>
           으로 계정 삭제 요청을 보낼 수 있습니다. 단짠에서 사용한 로그인
-          방식과 닉네임을 함께 적어 주세요. 계정 소유자 확인에 필요한 추가
-          절차는 답장으로 안내하며, 확인이 끝난 뒤 계정과 관련 데이터를
-          삭제합니다.
+          방식, 닉네임과 계정에 등록된 이메일을 함께 적어 주세요. 운영자가
+          등록 이메일로 일회용 확인 코드를 보내고, 요청자가 같은 문의
+          대화에서 코드를 확인하면 본인 확인이 완료됩니다. 확인 완료일부터
+          {" "}
+          {policyRelease.externalDeletionCompletionDays}일 이내에 계정과 관련
+          데이터를 삭제하고 처리 결과를 같은 문의 대화로 알립니다.
         </p>
       </section>
 

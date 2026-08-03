@@ -5,12 +5,14 @@ import { SiteShell } from "./site-shell";
 type DocumentShellProps = {
   title: string;
   description: string;
+  documentMeta?: string;
   children: ReactNode;
 };
 
 export function DocumentShell({
   title,
   description,
+  documentMeta,
   children,
 }: DocumentShellProps) {
   return (
@@ -22,7 +24,10 @@ export function DocumentShell({
         <header className="document__header">
           <p className="document__eyebrow">단짠</p>
           <h1>{title}</h1>
-          <p>{description}</p>
+          <p className="document__description">{description}</p>
+          {documentMeta === undefined ? null : (
+            <p className="document__meta">{documentMeta}</p>
+          )}
         </header>
         <div className="document__body">{children}</div>
       </article>

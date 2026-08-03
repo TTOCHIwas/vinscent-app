@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteShell } from "./_components/site-shell";
 import { policyDocuments } from "./policy-documents";
+import { policyRelease } from "./policy-release";
 
 export default function Home() {
   return (
@@ -16,8 +17,8 @@ export default function Home() {
         </header>
 
         <div className="release-status" role="status">
-          <strong>공개 문서를 검토하고 있습니다</strong>
-          <span>운영 정보가 확정된 뒤 최종 문서가 게시됩니다.</span>
+          <strong>현재 적용 중인 문서입니다</strong>
+          <span>시행일 {policyRelease.effectiveDate}</span>
         </div>
 
         <nav className="document-list" aria-label="정책 및 지원 문서">

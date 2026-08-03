@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DocumentShell } from "../_components/document-shell";
+import { policyRelease } from "../policy-release";
 
 export const metadata: Metadata = {
   title: "안전 이용 약속",
@@ -10,6 +11,7 @@ export default function SafetyPage() {
     <DocumentShell
       title="안전 이용 약속"
       description="두 사람이 안심하고 기록을 나누기 위해 함께 지켜야 할 기준을 안내합니다."
+      documentMeta={`시행일 ${policyRelease.effectiveDate}`}
     >
       <p className="document-version">
         현재 적용 버전 <strong>ugc-safety-v1</strong>
@@ -59,6 +61,20 @@ export default function SafetyPage() {
           기능 또는 계정 이용을 제한할 수 있습니다. 모든 신고가 같은 조치로
           이어지는 것은 아니며, 허위 신고나 신고 기능의 반복적인 악용도
           제한될 수 있습니다.
+        </p>
+        <p>
+          대표자 {policyRelease.operatorName}가 비공개 신고 채널을 확인하며,
+          접수 후 {policyRelease.moderationInitialReviewDays}일 이내에 최초
+          검토하는 것을 운영 목표로 합니다. 신체 안전이나 긴급한 위험이
+          의심되는 신고는 먼저 확인합니다.
+        </p>
+        <p>
+          미처리 신고는 검토가 끝날 때까지 보관합니다. 검토가 끝난 신고와
+          관련 검토·운영 알림 기록은 검토일부터
+          {" "}
+          {policyRelease.reviewedSafetyReportRetention} 동안 보관한 뒤
+          삭제합니다. 신고자가 계정을 먼저 삭제하면 현재 계정 삭제 흐름에
+          따라 함께 삭제될 수 있습니다.
         </p>
       </section>
 

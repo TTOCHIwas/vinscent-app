@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DocumentShell } from "../_components/document-shell";
-import { PolicyDraftNotice } from "../_components/policy-draft-notice";
+import { policyRelease } from "../policy-release";
 
 export const metadata: Metadata = {
   title: "서비스 이용약관",
@@ -10,13 +10,9 @@ export default function TermsPage() {
   return (
     <DocumentShell
       title="서비스 이용약관"
-      description="단짠의 계정, 커플 공유 기능과 안전한 이용 기준을 실제 서비스 동작에 맞춰 정리한 초안입니다."
+      description="단짠의 계정, 커플 공유 기능과 안전한 이용 기준을 실제 서비스 동작에 맞춰 안내합니다."
+      documentMeta={`시행일 ${policyRelease.effectiveDate}`}
     >
-      <PolicyDraftNotice
-        id="terms-status"
-        detail="아래 내용은 현재 구현된 서비스 기능과 이용자 보호 경계를 설명합니다. 최종 계약 조항은 운영 정보와 법률 검토를 마친 뒤 확정합니다."
-      />
-
       <section className="policy-section" aria-labelledby="terms-service">
         <h2 id="terms-service">서비스의 목적</h2>
         <p>
@@ -116,9 +112,18 @@ export default function TermsPage() {
           변경이 생기면 적용 전에 앱 또는 공개 정책 페이지를 통해
           안내합니다.
         </p>
+      </section>
+
+      <section className="policy-section" aria-labelledby="terms-operator">
+        <h2 id="terms-operator">운영자와 문의처</h2>
         <p>
-          최종 약관에는 운영자 정보, 시행일과 법률상 필요한 책임·분쟁 처리
-          조항을 확정해 추가합니다.
+          단짠은 대표자 {policyRelease.operatorName}가 운영합니다. 서비스
+          이용이나 약관에 관한 문의는
+          {" "}
+          <a href={`mailto:${policyRelease.publicContactEmail}`}>
+            {policyRelease.publicContactEmail}
+          </a>
+          으로 보낼 수 있습니다.
         </p>
       </section>
     </DocumentShell>
