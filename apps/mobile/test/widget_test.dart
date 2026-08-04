@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vinscent/app/app.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/auth/presentation/login_screen.dart';
@@ -14,6 +15,9 @@ void main() {
 
     expect(find.text('카카오 로그인'), findsOneWidget);
     expect(find.text('Apple로 로그인'), findsOneWidget);
+    expect(find.byType(SvgPicture), findsOneWidget);
+    expect(find.text('단짠'), findsOneWidget);
+    expect(find.text('로고'), findsNothing);
   });
 
   testWidgets('keeps the app in light mode when the system is dark', (

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../core/assets/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../application/social_login_controller.dart';
@@ -88,18 +90,19 @@ class _LogoMark extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.logoBackground,
-            borderRadius: BorderRadius.circular(0),
+        SizedBox.square(
+          dimension: 80,
+          child: SvgPicture.asset(
+            AppIcons.appIcon,
+            fit: BoxFit.contain,
+            semanticsLabel: '단짠 앱 아이콘',
           ),
-          child: const SizedBox(width: 80, height: 80),
         ),
         const SizedBox(height: 12),
         const SizedBox(
           width: 80,
           child: Text(
-            '로고',
+            '단짠',
             textAlign: TextAlign.center,
             style: AppTextStyles.logoLabel,
           ),
