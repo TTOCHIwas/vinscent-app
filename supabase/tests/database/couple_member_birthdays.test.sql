@@ -87,15 +87,15 @@ set local role authenticated;
 
 select results_eq(
   $$
-    select member_role, birth_date
+    select member_role, display_name, birth_date
     from public.get_active_couple_member_birthdays()
   $$,
   $$
     values
-      ('self'::text, '1990-07-28'::date),
-      ('partner'::text, '1992-02-29'::date)
+      ('self'::text, '생일A'::text, '1990-07-28'::date),
+      ('partner'::text, '생일B'::text, '1992-02-29'::date)
   $$,
-  'user A sees only the two birthday values with relative roles'
+  'user A sees both birthday labels and dates with relative roles'
 );
 
 select results_eq(
@@ -120,15 +120,15 @@ set local role authenticated;
 
 select results_eq(
   $$
-    select member_role, birth_date
+    select member_role, display_name, birth_date
     from public.get_active_couple_member_birthdays()
   $$,
   $$
     values
-      ('self'::text, '1992-02-29'::date),
-      ('partner'::text, '1990-07-28'::date)
+      ('self'::text, '생일B'::text, '1992-02-29'::date),
+      ('partner'::text, '생일A'::text, '1990-07-28'::date)
   $$,
-  'user B receives the same dates with roles reversed'
+  'user B receives the same member data with roles reversed'
 );
 
 reset role;

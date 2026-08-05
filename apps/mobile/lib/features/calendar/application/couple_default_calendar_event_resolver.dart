@@ -49,7 +49,7 @@ class CoupleDefaultCalendarEventResolver {
         if (_occursOnDate(birthday.birthDate, normalizedDate))
           CoupleDefaultCalendarEventOccurrence(
             kind: CoupleDefaultCalendarEventKind.birthday,
-            label: _birthdayLabel(birthday.role),
+            label: _birthdayLabel(birthday),
             date: normalizedDate,
           ),
     ];
@@ -74,10 +74,10 @@ class CoupleDefaultCalendarEventResolver {
     return birthDate.month == date.month && occurrenceDay == date.day;
   }
 
-  String _birthdayLabel(CoupleMemberRole role) {
-    return switch (role) {
+  String _birthdayLabel(CoupleMemberBirthday birthday) {
+    return switch (birthday.role) {
       CoupleMemberRole.self => '내 생일',
-      CoupleMemberRole.partner => '상대방 생일',
+      CoupleMemberRole.partner => '${birthday.displayName} 생일',
     };
   }
 

@@ -1,7 +1,6 @@
-import 'package:characters/characters.dart';
-
 import '../../../core/date/app_age_policy.dart';
 import '../../../core/date/app_date_policy.dart';
+import '../../profile/application/profile_display_name_policy.dart';
 
 enum OnboardingStep { nickname, birthDate }
 
@@ -20,11 +19,11 @@ class OnboardingState {
   final bool isSubmitting;
   final String? errorMessage;
 
-  String get trimmedNickname => nickname.trim();
+  String get trimmedNickname => normalizeProfileDisplayName(nickname);
 
-  int get nicknameLength => trimmedNickname.characters.length;
+  int get nicknameLength => profileDisplayNameLength(nickname);
 
-  bool get isNicknameValid => nicknameLength >= 2 && nicknameLength <= 8;
+  bool get isNicknameValid => isValidProfileDisplayName(nickname);
 
   bool get isBirthDateValid => isBirthDateValidOn(currentAppDate());
 

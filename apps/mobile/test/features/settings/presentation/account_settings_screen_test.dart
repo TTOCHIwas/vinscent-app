@@ -6,6 +6,8 @@ import 'package:vinscent/features/account/application/account_deletion_providers
 import 'package:vinscent/features/account/application/account_deletion_service.dart';
 import 'package:vinscent/features/account/application/account_local_data_cleanup.dart';
 import 'package:vinscent/features/account/data/account_deletion_repository.dart';
+import 'package:vinscent/features/profile/application/profile_controller.dart';
+import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/settings/presentation/account_settings_screen.dart';
 
 void main() {
@@ -14,6 +16,11 @@ void main() {
 
     expect(find.text('로그아웃'), findsOneWidget);
     expect(find.text('계정 삭제'), findsOneWidget);
+    expect(
+      find.byKey(const Key('account-settings-display-name-action')),
+      findsOneWidget,
+    );
+    expect(find.text('또치'), findsOneWidget);
   });
 
   testWidgets('계정 삭제 전에 공유 데이터 범위와 복구 불가를 알린다', (tester) async {
@@ -62,6 +69,9 @@ Future<void> _pumpAccountSettings(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => _profile,
+        ),
         accountCurrentUserIdProvider.overrideWithValue('user-a'),
         accountDeletionExecutorProvider.overrideWithValue(
           executor ?? _FakeAccountDeletionExecutor(),
@@ -72,6 +82,15 @@ Future<void> _pumpAccountSettings(
   );
   await tester.pumpAndSettle();
 }
+
+final _profile = UserProfile(
+  id: 'user-a',
+  displayName: '또치',
+  birthDate: DateTime(2000),
+  onboardingCompletedAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 class _FakeAccountDeletionExecutor implements AccountDeletionExecutor {
   final userIds = <String>[];

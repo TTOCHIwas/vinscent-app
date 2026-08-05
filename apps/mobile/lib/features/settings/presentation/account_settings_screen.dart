@@ -6,6 +6,7 @@ import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../account/application/account_deletion_controller.dart';
 import '../../account/data/account_deletion_repository.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../profile/application/profile_controller.dart';
 import 'widgets/settings_group.dart';
 import 'widgets/settings_page_layout.dart';
 
@@ -23,6 +24,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final deletionState = ref.watch(accountDeletionControllerProvider);
+    final profile = ref.watch(profileControllerProvider);
 
     return SettingsPageLayout(
       title: '계정',
@@ -30,6 +32,26 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
+          SettingsGroup(
+            label: '프로필',
+            children: [
+              SettingsActionRow(
+                key: const Key('account-settings-display-name-action'),
+                title: '닉네임',
+                subtitle: profile.maybeWhen(
+                  data: (profile) => profile?.displayName ?? '프로필을 확인해 주세요',
+                  loading: () => '불러오는 중',
+                  orElse: () => '프로필을 불러오지 못했어요',
+                ),
+                enabled:
+                    profile.asData?.value != null &&
+                    !_isSigningOut &&
+                    !deletionState.isDeleting,
+                onTap: () => context.push('/settings/account/nickname'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
           SettingsGroup(
             label: '계정 관리',
             children: [

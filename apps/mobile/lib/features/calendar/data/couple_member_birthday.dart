@@ -14,15 +14,21 @@ enum CoupleMemberRole {
 }
 
 class CoupleMemberBirthday {
-  const CoupleMemberBirthday({required this.role, required this.birthDate});
+  const CoupleMemberBirthday({
+    required this.role,
+    required this.displayName,
+    required this.birthDate,
+  });
 
   factory CoupleMemberBirthday.fromJson(Map<String, dynamic> json) {
     return CoupleMemberBirthday(
       role: CoupleMemberRole.fromJson(json['member_role'] as String),
+      displayName: json['display_name'] as String,
       birthDate: calendarDateOnly(DateTime.parse(json['birth_date'] as String)),
     );
   }
 
   final CoupleMemberRole role;
+  final String displayName;
   final DateTime birthDate;
 }

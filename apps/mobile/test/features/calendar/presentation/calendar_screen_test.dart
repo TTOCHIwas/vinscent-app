@@ -259,6 +259,7 @@ void main() {
       memberBirthdays: [
         CoupleMemberBirthday(
           role: CoupleMemberRole.self,
+          displayName: '또치',
           birthDate: DateTime(1990, 5, 10),
         ),
       ],

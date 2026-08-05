@@ -93,6 +93,7 @@ void main() {
       memberBirthdayRepository: _BirthdayRepository([
         CoupleMemberBirthday(
           role: CoupleMemberRole.self,
+          displayName: '또치',
           birthDate: DateTime(1990, 7, 28),
         ),
       ]),

@@ -31,6 +31,7 @@ import '../features/settings/presentation/account_settings_screen.dart';
 import '../features/settings/presentation/blocked_users_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
+import '../features/settings/presentation/profile_display_name_settings_screen.dart';
 import '../features/settings/presentation/relationship_start_date_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/safety/application/ugc_safety_policy_controller.dart';
@@ -320,6 +321,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'account',
                 name: 'accountSettings',
                 builder: (context, state) => const AccountSettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'nickname',
+                    name: 'profileDisplayNameSettings',
+                    builder: (context, state) =>
+                        const ProfileDisplayNameSettingsScreen(),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'blocked-users',

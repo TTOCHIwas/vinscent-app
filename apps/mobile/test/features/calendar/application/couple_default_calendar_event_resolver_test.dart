@@ -7,10 +7,12 @@ void main() {
   final birthdays = [
     CoupleMemberBirthday(
       role: CoupleMemberRole.self,
+      displayName: '또치',
       birthDate: DateTime(1990, 7, 28),
     ),
     CoupleMemberBirthday(
       role: CoupleMemberRole.partner,
+      displayName: '초코',
       birthDate: DateTime(1992, 2, 29),
     ),
   ];
@@ -32,7 +34,7 @@ void main() {
       birthdays: birthdays,
     );
 
-    expect(occurrences.map((occurrence) => occurrence.label), ['상대방 생일']);
+    expect(occurrences.map((occurrence) => occurrence.label), ['초코 생일']);
   });
 
   test('keeps relationship anniversaries ahead of birthdays', () {

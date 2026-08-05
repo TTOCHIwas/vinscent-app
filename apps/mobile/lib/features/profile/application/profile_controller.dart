@@ -32,4 +32,12 @@ class ProfileController extends AsyncNotifier<UserProfile?> {
     state = AsyncValue.data(profile);
     return profile;
   }
+
+  Future<UserProfile> updateDisplayName(String displayName) async {
+    final profile = await ref
+        .read(profileRepositoryProvider)
+        .updateDisplayName(displayName);
+    state = AsyncValue.data(profile);
+    return profile;
+  }
 }

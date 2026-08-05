@@ -15,6 +15,8 @@ abstract interface class ProfileRepository {
     required String displayName,
     required DateTime birthDate,
   });
+
+  Future<UserProfile> updateDisplayName(String displayName);
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
@@ -72,6 +74,27 @@ class SupabaseProfileRepository implements ProfileRepository {
         .select()
         .single();
 
+    return UserProfile.fromJson(data);
+  }
+
+  @override
+  Future<UserProfile> updateDisplayName(String displayName) async {
+    if (!AppConfig.isSupabaseConfigured) {
+      throw const ProfileRepositoryException('Supabase config is missing.');
+    }
+
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) {
+      throw const ProfileRepositoryException('Authenticated user is missing.');
+    }
+
+    final data = await client
+        .from('profiles')
+        .update({'display_name': displayName.trim()})
+        .eq('id', user.id)
+        .select()
+        .single();
     return UserProfile.fromJson(data);
   }
 
