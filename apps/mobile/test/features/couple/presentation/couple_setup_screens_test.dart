@@ -174,6 +174,23 @@ void main() {
     expect(find.byKey(const Key('app-date-picker-year')), findsOneWidget);
   });
 
+  testWidgets('confirms before leaving incomplete relationship setup', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: RelationshipStartDateScreen()),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('이전'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppConfirmationSheet), findsOneWidget);
+    expect(find.text('커플 연결 설정을 그만둘까?'), findsOneWidget);
+    expect(find.text('연결 취소'), findsOneWidget);
+  });
+
   testWidgets('centers the waiting character on a tablet', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1024, 768));
     addTearDown(() => tester.binding.setSurfaceSize(null));

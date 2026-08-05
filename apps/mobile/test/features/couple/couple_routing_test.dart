@@ -64,6 +64,51 @@ void main() {
     expect(find.byType(RelationshipStartDateScreen), findsOneWidget);
   });
 
+  testWidgets(
+    'cancels incomplete connection from the relationship date back action',
+    (tester) async {
+      final repository = _RelationshipSetupRepository(
+        activeCoupleWithoutDate(userAId: 'partner-id', userBId: _profile.id),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWithBuild(
+            (ref, notifier) => AuthStatus.authenticated,
+          ),
+          profileControllerProvider.overrideWithBuild(
+            (ref, notifier) async => _profile,
+          ),
+          ugcSafetyPolicyControllerProvider.overrideWithBuild(
+            (ref, notifier) async => acceptedUgcSafetyPolicyStatus(),
+          ),
+          coupleRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const VinscentApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('이전'));
+      await tester.pumpAndSettle();
+      expect(find.text('커플 연결 설정을 그만둘까?'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repository.wasInitialSetupCancelled, isTrue);
+      expect(find.byType(CoupleEntryScreen), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      await tester.pump();
+    },
+  );
+
   testWidgets('keeps the inviter waiting while initial setup is incomplete', (
     tester,
   ) async {
@@ -198,8 +243,9 @@ final _activeCouple = activeCouple(relationshipStartDate: DateTime(2026));
 class _RelationshipSetupRepository implements CoupleRepository {
   _RelationshipSetupRepository(this._couple);
 
-  Couple _couple;
+  Couple? _couple;
   DateTime? savedDate;
+  bool wasInitialSetupCancelled = false;
 
   @override
   Future<Couple?> fetchCurrentCouple() async => _couple;
@@ -207,17 +253,24 @@ class _RelationshipSetupRepository implements CoupleRepository {
   @override
   Future<Couple> updateRelationshipStartDate(DateTime date) async {
     savedDate = date;
+    final couple = _couple!;
     _couple = activeCouple(
-      userAId: _couple.userAId,
-      userBId: _couple.userBId!,
+      userAId: couple.userAId,
+      userBId: couple.userBId!,
       relationshipStartDate: date,
       characterSetupStatus: CoupleCharacterSetupStatus.pending,
     );
-    return _couple;
+    return _couple!;
   }
 
   @override
   Future<Couple?> cancelInvite() async => null;
+
+  @override
+  Future<void> cancelInitialSetup() async {
+    wasInitialSetupCancelled = true;
+    _couple = null;
+  }
 
   @override
   Future<Couple> createInvite() => throw UnsupportedError('Not used');

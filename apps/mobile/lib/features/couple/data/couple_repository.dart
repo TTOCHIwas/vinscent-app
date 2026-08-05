@@ -18,6 +18,8 @@ abstract interface class CoupleRepository {
 
   Future<Couple?> cancelInvite();
 
+  Future<void> cancelInitialSetup();
+
   Future<Couple> updateRelationshipStartDate(DateTime date);
 
   Future<Couple> useDefaultCharacter();
@@ -78,6 +80,19 @@ class SupabaseCoupleRepository implements CoupleRepository {
     try {
       await Supabase.instance.client.rpc('cancel_couple_invite');
       return fetchCurrentCouple();
+    } on PostgrestException catch (error) {
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  @override
+  Future<void> cancelInitialSetup() async {
+    if (!AppConfig.isSupabaseConfigured) {
+      throw const CoupleRepositoryException(CoupleFailureReason.configMissing);
+    }
+
+    try {
+      await Supabase.instance.client.rpc('cancel_initial_couple_setup');
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
     }
@@ -193,8 +208,12 @@ class SupabaseCoupleRepository implements CoupleRepository {
       'active_couple_required' => CoupleFailureReason.activeCoupleRequired,
       'initial_setup_owner_required' =>
         CoupleFailureReason.initialSetupOwnerRequired,
+      'initial_setup_cancel_not_available' =>
+        CoupleFailureReason.initialSetupCancelNotAvailable,
       'relationship_date_required' =>
         CoupleFailureReason.relationshipDateRequired,
+      'relationship_date_conflicts_with_existing_records' =>
+        CoupleFailureReason.relationshipDateConflict,
       'invite_code_generation_failed' =>
         CoupleFailureReason.codeGenerationFailed,
       _ => CoupleFailureReason.unknown,

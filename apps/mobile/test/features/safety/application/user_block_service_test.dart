@@ -160,6 +160,9 @@ class _FakeCoupleRepository implements CoupleRepository {
   Future<Couple?> cancelInvite() => throw UnimplementedError();
 
   @override
+  Future<void> cancelInitialSetup() => throw UnimplementedError();
+
+  @override
   Future<Couple> createInvite() => throw UnimplementedError();
 
   @override

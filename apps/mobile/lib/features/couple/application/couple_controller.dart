@@ -78,6 +78,11 @@ class CoupleController extends AsyncNotifier<Couple?> {
     _setCouple(couple);
   }
 
+  Future<void> cancelInitialSetup() async {
+    await ref.read(coupleRepositoryProvider).cancelInitialSetup();
+    _setCouple(null);
+  }
+
   Future<Couple> updateRelationshipStartDate(DateTime date) async {
     final couple = await ref
         .read(coupleRepositoryProvider)

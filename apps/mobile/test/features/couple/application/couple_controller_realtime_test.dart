@@ -89,6 +89,23 @@ void main() {
     expect(container.read(coupleControllerProvider).requireValue, isNull);
   });
 
+  test('clears the local couple after cancelling initial setup', () async {
+    final repository = _FakeCoupleRepository()
+      ..currentCouple = activeCoupleWithoutDate();
+    final changeSource = _FakeCoupleChangeSource();
+    final container = _createContainer(repository, changeSource);
+    addTearDown(container.dispose);
+    addTearDown(changeSource.close);
+
+    await container.read(coupleControllerProvider.future);
+    await container
+        .read(coupleControllerProvider.notifier)
+        .cancelInitialSetup();
+
+    expect(repository.initialSetupCancelCount, 1);
+    expect(container.read(coupleControllerProvider).requireValue, isNull);
+  });
+
   test('preserves the archived couple when deletion actually fails', () async {
     final repository = _FakeCoupleRepository()
       ..currentCouple = archivedReadOnlyCouple()
@@ -157,6 +174,7 @@ class _FakeCoupleChangeSource implements CoupleChangeSource {
 class _FakeCoupleRepository implements CoupleRepository {
   Couple? currentCouple;
   Object? deleteError;
+  int initialSetupCancelCount = 0;
 
   @override
   Future<Couple?> fetchCurrentCouple() async => currentCouple;
@@ -172,6 +190,12 @@ class _FakeCoupleRepository implements CoupleRepository {
 
   @override
   Future<Couple?> cancelInvite() => throw UnimplementedError();
+
+  @override
+  Future<void> cancelInitialSetup() async {
+    initialSetupCancelCount += 1;
+    currentCouple = null;
+  }
 
   @override
   Future<Couple> updateRelationshipStartDate(DateTime date) =>

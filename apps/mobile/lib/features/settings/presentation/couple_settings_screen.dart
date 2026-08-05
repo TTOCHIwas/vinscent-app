@@ -74,7 +74,10 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
             currentUserId: currentUserId,
           );
           return _ActiveCoupleSettingsContent(
+            relationshipStartDate: couple.relationshipStartDate,
             isProcessing: _isProcessing,
+            onRelationshipStartDatePressed: () =>
+                context.push('/settings/couple/relationship-date'),
             onDisconnectPressed: _disconnectCouple,
             onBlockPartnerPressed: _blockPartner,
             onReportPartnerPressed: partnerUserId == null
@@ -252,13 +255,17 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
 
 class _ActiveCoupleSettingsContent extends StatelessWidget {
   const _ActiveCoupleSettingsContent({
+    required this.relationshipStartDate,
     required this.isProcessing,
+    required this.onRelationshipStartDatePressed,
     required this.onDisconnectPressed,
     required this.onBlockPartnerPressed,
     required this.onReportPartnerPressed,
   });
 
+  final DateTime? relationshipStartDate;
   final bool isProcessing;
+  final VoidCallback onRelationshipStartDatePressed;
   final VoidCallback onDisconnectPressed;
   final VoidCallback onBlockPartnerPressed;
   final VoidCallback? onReportPartnerPressed;
@@ -268,15 +275,23 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        const SettingsGroup(
+        SettingsGroup(
           label: '연결 상태',
           children: [
-            SettingsStatusRow(
+            const SettingsStatusRow(
               icon: AppIcons.heart,
               title: '커플로 연결되어 있어요',
               subtitle: '카드와 답변, 녹음과 캐릭터를 함께 편집할 수 있어요',
               showCompleted: true,
             ),
+            if (relationshipStartDate case final relationshipStartDate?)
+              SettingsActionRow(
+                key: const Key('couple-settings-relationship-date-action'),
+                title: '만난 날',
+                subtitle: _formatDate(relationshipStartDate),
+                enabled: !isProcessing,
+                onTap: onRelationshipStartDatePressed,
+              ),
           ],
         ),
         const SizedBox(height: 24),

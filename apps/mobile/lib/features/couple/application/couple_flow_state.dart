@@ -1,4 +1,11 @@
-enum CoupleFlowOperation { idle, creating, joining, cancelling, savingDate }
+enum CoupleFlowOperation {
+  idle,
+  creating,
+  joining,
+  cancelling,
+  cancellingSetup,
+  savingDate,
+}
 
 class CoupleFlowState {
   const CoupleFlowState({

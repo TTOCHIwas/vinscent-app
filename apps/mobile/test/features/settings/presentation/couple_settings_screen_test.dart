@@ -27,6 +27,22 @@ void main() {
       find.byKey(const Key('couple-settings-disconnect-action')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('couple-settings-relationship-date-action')),
+      findsOneWidget,
+    );
+    expect(find.text('2026.05.30'), findsOneWidget);
+  });
+
+  testWidgets('만난 날 행에서 전용 설정 화면으로 이동한다', (tester) async {
+    await _pumpCoupleSettings(tester, couple: activeCouple());
+
+    await tester.tap(
+      find.byKey(const Key('couple-settings-relationship-date-action')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('relationship date settings'), findsOneWidget);
   });
 
   testWidgets('커플 정보를 불러오지 못하면 다시 시도할 수 있다', (tester) async {
@@ -191,6 +207,10 @@ Future<void> _pumpCoupleSettings(
         builder: (context, state) => const CoupleSettingsScreen(),
       ),
       GoRoute(
+        path: '/settings/couple/relationship-date',
+        builder: (context, state) => const Text('relationship date settings'),
+      ),
+      GoRoute(
         path: '/settings',
         builder: (context, state) => const Text('settings'),
       ),
@@ -266,6 +286,9 @@ class _PendingCoupleRepository implements CoupleRepository {
 
   @override
   Future<Couple?> cancelInvite() => throw UnimplementedError();
+
+  @override
+  Future<void> cancelInitialSetup() => throw UnimplementedError();
 
   @override
   Future<Couple> createInvite() => throw UnimplementedError();

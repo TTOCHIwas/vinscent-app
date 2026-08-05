@@ -156,6 +156,9 @@ class _FakeCoupleRepository implements CoupleRepository {
   Future<Couple?> cancelInvite() => throw UnimplementedError();
 
   @override
+  Future<void> cancelInitialSetup() => throw UnimplementedError();
+
+  @override
   Future<Couple> updateRelationshipStartDate(DateTime date) =>
       throw UnimplementedError();
 

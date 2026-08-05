@@ -31,6 +31,7 @@ import '../features/settings/presentation/account_settings_screen.dart';
 import '../features/settings/presentation/blocked_users_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
+import '../features/settings/presentation/relationship_start_date_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/safety/application/ugc_safety_policy_controller.dart';
 import '../features/safety/presentation/ugc_safety_policy_screen.dart';
@@ -306,6 +307,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'couple',
                 name: 'coupleSettings',
                 builder: (context, state) => const CoupleSettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'relationship-date',
+                    name: 'relationshipStartDateSettings',
+                    builder: (context, state) =>
+                        const RelationshipStartDateSettingsScreen(),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'account',

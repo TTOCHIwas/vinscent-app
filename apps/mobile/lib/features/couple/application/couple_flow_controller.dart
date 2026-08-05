@@ -114,6 +114,30 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
     }
   }
 
+  Future<void> cancelInitialSetup() async {
+    if (state.isSubmitting) {
+      return;
+    }
+
+    state = state.copyWith(
+      operation: CoupleFlowOperation.cancellingSetup,
+      clearErrorMessage: true,
+    );
+
+    try {
+      await ref.read(coupleControllerProvider.notifier).cancelInitialSetup();
+      state = state.copyWith(
+        operation: CoupleFlowOperation.idle,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        operation: CoupleFlowOperation.idle,
+        errorMessage: _messageFor(error),
+      );
+    }
+  }
+
   Future<void> saveRelationshipStartDate() async {
     final date = state.relationshipStartDate;
     if (date == null || state.isSubmitting) {
@@ -161,7 +185,11 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.activeCoupleRequired => '커플 연결을 먼저 완료해주세요.',
       CoupleFailureReason.initialSetupOwnerRequired =>
         '초대 코드를 입력한 사용자만 설정할 수 있어요.',
+      CoupleFailureReason.initialSetupCancelNotAvailable =>
+        '이미 설정이 진행되어 연결을 취소할 수 없어요.',
       CoupleFailureReason.relationshipDateRequired => '만난 날짜를 먼저 저장해주세요.',
+      CoupleFailureReason.relationshipDateConflict =>
+        '기존 기록보다 뒤의 날짜로 변경할 수 없어요.',
       CoupleFailureReason.codeGenerationFailed => '초대 코드 생성에 실패했어요.',
       CoupleFailureReason.configMissing => '앱 설정이 아직 완료되지 않았어요.',
       CoupleFailureReason.unknown => '잠시 후 다시 시도해주세요.',
