@@ -18,6 +18,7 @@ const submissionChecklistUrl = new URL(
   '../../docs/release/store-submission-checklist.md',
   import.meta.url,
 );
+const gitignoreUrl = new URL('../../.gitignore', import.meta.url);
 
 async function load(url) {
   return readFile(url, 'utf8');
@@ -76,4 +77,12 @@ test('release documents point to the automated iOS handoff', async () => {
   );
   assert.match(checklist, /check_ios_release_mac\.sh/);
   assert.match(checklist, /iOS release candidate/);
+});
+
+test('Apple private signing assets cannot be added accidentally', async () => {
+  const source = await load(gitignoreUrl);
+
+  assert.match(source, /^\*\.p12$/m);
+  assert.match(source, /^\*\.mobileprovision$/m);
+  assert.match(source, /^AuthKey_\*\.p8$/m);
 });

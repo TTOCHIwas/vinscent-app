@@ -37,6 +37,9 @@ flutter_*.png
 *.jks
 
 # iOS and Xcode
+*.p12
+*.mobileprovision
+AuthKey_*.p8
 **/ios/**/Pods/
 **/ios/**/.symlinks/
 **/ios/**/DerivedData/
