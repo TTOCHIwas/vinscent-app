@@ -294,8 +294,7 @@ class HomeWidgetRecordingCachePolicy {
     if (expected == null) {
       return current == null;
     }
-    return expected != null &&
-        current != null &&
+    return current != null &&
         expected.coupleId == current.coupleId &&
         expected.generation == current.generation;
   }
