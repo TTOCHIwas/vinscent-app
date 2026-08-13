@@ -48,6 +48,20 @@ void main() {
     );
   });
 
+  test('CI runs Android native unit tests', () {
+    final source = workflow.readAsStringSync();
+
+    expect(
+      source,
+      matches(
+        RegExp(
+          r'mobile:[\s\S]*?working-directory:\s+apps/mobile/android[\s\S]*?'
+          r'\.\/gradlew :app:testDebugUnitTest',
+        ),
+      ),
+    );
+  });
+
   test(
     'CI uses least privilege and immutable actions without deployment secrets',
     () {
@@ -84,6 +98,7 @@ const _requiredCommands = <String>[
   'flutter test --no-pub',
   'flutter test integration_test/app_startup_test.dart --no-pub',
   'flutter build apk --debug --no-pub',
+  './gradlew :app:testDebugUnitTest',
   'flutter build ios --simulator --debug --no-codesign --no-pub',
   'node --test "tests/release/*.test.mjs"',
   'node scripts/verify_tracked_secrets.mjs',
