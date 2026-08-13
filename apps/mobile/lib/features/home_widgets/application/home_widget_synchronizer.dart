@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../data/home_widget_asset_validator.dart';
+import '../data/home_widget_recording_cache_repository.dart';
 import '../data/home_widget_snapshot.dart';
 
 abstract interface class HomeWidgetAssetDownloader {
@@ -28,14 +29,19 @@ abstract interface class HomeWidgetStore {
 }
 
 class HomeWidgetSynchronizer {
-  const HomeWidgetSynchronizer({
+  HomeWidgetSynchronizer({
     required HomeWidgetStore store,
     required HomeWidgetAssetDownloader downloader,
+    HomeWidgetRecordingCacheRepository? recordingCacheRepository,
   }) : _store = store,
-       _downloader = downloader;
+       _downloader = downloader,
+       _recordingCacheRepository =
+           recordingCacheRepository ??
+           HomeWidgetRecordingCacheRepository(store: store);
 
   final HomeWidgetStore _store;
   final HomeWidgetAssetDownloader _downloader;
+  final HomeWidgetRecordingCacheRepository _recordingCacheRepository;
 
   Future<void> synchronize(HomeWidgetSnapshot? snapshot) async {
     final updates = await Future.wait([
@@ -45,11 +51,9 @@ class HomeWidgetSynchronizer {
         pathKey: HomeWidgetStorage.characterImagePathKey,
         versionKey: HomeWidgetStorage.characterImageVersionKey,
       ),
-      _synchronizeAsset(
+      _synchronizeRecording(
         update:
             snapshot?.recordingAudio ?? const HomeWidgetAssetUpdate.remove(),
-        pathKey: HomeWidgetStorage.recordingAudioPathKey,
-        versionKey: HomeWidgetStorage.recordingAudioVersionKey,
       ),
       _synchronizeAsset(
         update:
@@ -120,6 +124,52 @@ class HomeWidgetSynchronizer {
     } catch (error) {
       if (kDebugMode) {
         debugPrint('[widget] calendar summary synchronization failed: $error');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> _synchronizeRecording({
+    required HomeWidgetAssetUpdate update,
+  }) async {
+    if (update.type == HomeWidgetAssetUpdateType.preserve) {
+      return true;
+    }
+
+    try {
+      if (update.type == HomeWidgetAssetUpdateType.remove) {
+        await _recordingCacheRepository.clear();
+        return true;
+      }
+
+      final asset = update.asset;
+      if (asset is! HomeWidgetRecordingRemoteAsset) {
+        throw const FormatException('Recording widget asset metadata missing');
+      }
+
+      if (await _recordingCacheRepository.confirmVerifiedRevision(
+        coupleId: asset.coupleId,
+        recordingId: asset.recordingId,
+        revision: asset.revision,
+      )) {
+        return true;
+      }
+
+      final expected = await _recordingCacheRepository.read();
+      final bytes = await _downloader.download(
+        asset.url,
+        maxBytes: asset.maxBytes,
+      );
+      return _recordingCacheRepository.installFetched(
+        coupleId: asset.coupleId,
+        recordingId: asset.recordingId,
+        revision: asset.revision,
+        bytes: bytes,
+        expected: expected,
+      );
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[widget] recording synchronization failed: $error');
       }
       return false;
     }

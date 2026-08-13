@@ -20,12 +20,15 @@ void main() {
     await synchronizer.synchronize(snapshot);
     await synchronizer.synchronize(snapshot);
 
-    expect(downloader.requestedUrls, [
-      'https://example.com/character.png',
-      'https://example.com/recording.m4a',
-      'https://example.com/card.png',
-      'https://example.com/event.webp',
-    ]);
+    expect(
+      downloader.requestedUrls,
+      unorderedEquals([
+        'https://example.com/character.png',
+        'https://example.com/recording.m4a',
+        'https://example.com/card.png',
+        'https://example.com/event.webp',
+      ]),
+    );
     expect(store.refreshedTargets, [
       HomeWidgetStorage.characterTarget,
       HomeWidgetStorage.cardTarget,

@@ -251,6 +251,9 @@ class HomeWidgetRecordingCachePolicy {
     required HomeWidgetRecordingCacheManifest? expected,
     required HomeWidgetRecordingCacheManifest? current,
   }) {
+    if (expected == null) {
+      return current == null;
+    }
     return expected != null &&
         current != null &&
         expected.coupleId == current.coupleId &&

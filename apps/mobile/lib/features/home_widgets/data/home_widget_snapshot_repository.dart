@@ -118,7 +118,7 @@ class HomeWidgetSnapshotAssetLoader {
   }) async {
     final assetUpdatesFuture = Future.wait([
       _fetchCharacterImage(),
-      _fetchRecordingAudio(),
+      _fetchRecordingAudio(coupleId: coupleId),
       _fetchPartnerCardImage(coupleId: coupleId, currentUserId: currentUserId),
     ]);
     final calendarSummaryFuture = _fetchCalendarSummary(
@@ -158,7 +158,9 @@ class HomeWidgetSnapshotAssetLoader {
     }
   }
 
-  Future<HomeWidgetAssetUpdate> _fetchRecordingAudio() async {
+  Future<HomeWidgetAssetUpdate> _fetchRecordingAudio({
+    required String coupleId,
+  }) async {
     try {
       final recording =
           (await _recordingRepository.fetchOverview()).currentRecording;
@@ -167,10 +169,11 @@ class HomeWidgetSnapshotAssetLoader {
       }
 
       return HomeWidgetAssetUpdate.replace(
-        HomeWidgetRemoteAsset(
+        HomeWidgetRecordingRemoteAsset(
           url: recording.audioUrl,
-          version: '${recording.recordingId}:${recording.revision}',
-          extension: 'm4a',
+          coupleId: coupleId,
+          recordingId: recording.recordingId,
+          revision: recording.revision,
           maxBytes: _maximumAudioBytes,
         ),
       );

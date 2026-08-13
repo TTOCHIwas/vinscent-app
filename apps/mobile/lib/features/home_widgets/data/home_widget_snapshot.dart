@@ -53,6 +53,20 @@ class HomeWidgetRemoteAsset {
   final int maxBytes;
 }
 
+class HomeWidgetRecordingRemoteAsset extends HomeWidgetRemoteAsset {
+  const HomeWidgetRecordingRemoteAsset({
+    required super.url,
+    required this.coupleId,
+    required this.recordingId,
+    required this.revision,
+    super.maxBytes = 4 * 1024 * 1024,
+  }) : super(version: '$recordingId:$revision', extension: 'm4a');
+
+  final String coupleId;
+  final String recordingId;
+  final int revision;
+}
+
 enum HomeWidgetCalendarSummaryUpdateType { replace, remove, preserve }
 
 class HomeWidgetCalendarSummaryUpdate {

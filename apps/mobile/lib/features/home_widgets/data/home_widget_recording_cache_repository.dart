@@ -11,7 +11,7 @@ class HomeWidgetRecordingCacheRepository {
     : _store = store;
 
   final HomeWidgetStore _store;
-  Future<void> _pendingMutation = Future<void>.value();
+  static Future<void> _pendingMutation = Future<void>.value();
 
   Future<HomeWidgetRecordingCacheManifest?> read() async {
     final value = await _store.read(
@@ -48,6 +48,88 @@ class HomeWidgetRecordingCacheRepository {
     required Uint8List bytes,
     HomeWidgetRecordingCacheManifest? expected,
   }) {
+    return _installVerified(
+      coupleId: coupleId,
+      recordingId: recordingId,
+      revision: revision,
+      bytes: bytes,
+      expected: expected,
+      requireExpectedMatch: expected != null,
+    );
+  }
+
+  Future<bool> installFetched({
+    required String coupleId,
+    required String recordingId,
+    required int revision,
+    required Uint8List bytes,
+    required HomeWidgetRecordingCacheManifest? expected,
+  }) {
+    return _installVerified(
+      coupleId: coupleId,
+      recordingId: recordingId,
+      revision: revision,
+      bytes: bytes,
+      expected: expected,
+      requireExpectedMatch: true,
+    );
+  }
+
+  Future<bool> confirmVerifiedRevision({
+    required String coupleId,
+    required String recordingId,
+    required int revision,
+  }) {
+    return _serialize(() async {
+      if (coupleId.trim().isEmpty ||
+          recordingId.trim().isEmpty ||
+          revision < 0) {
+        throw const FormatException('Invalid widget recording cache input');
+      }
+
+      final current = await read();
+      final audioPath = current?.audioPath;
+      final fileKey = current?.fileKey;
+      if (current == null ||
+          current.coupleId != coupleId ||
+          current.cachedRecordingId != recordingId ||
+          !HomeWidgetRecordingCachePolicy.canUseCached(current) ||
+          audioPath == null ||
+          fileKey == null ||
+          !await _store.isFileUsable(audioPath, extension: 'm4a')) {
+        return false;
+      }
+      if (current.cachedRevision == revision &&
+          current.freshness == HomeWidgetRecordingCacheFreshness.verified) {
+        return true;
+      }
+
+      final manifest = HomeWidgetRecordingCacheManifest.verified(
+        coupleId: coupleId,
+        recordingId: recordingId,
+        revision: revision,
+        audioPath: audioPath,
+        fileKey: fileKey,
+        generation: current.generation + 1,
+      );
+      await _writeManifest(manifest);
+      await _store.write(HomeWidgetStorage.recordingAudioPathKey, audioPath);
+      await _store.write(
+        HomeWidgetStorage.recordingAudioVersionKey,
+        '$recordingId:$revision',
+      );
+      return true;
+    });
+  }
+
+  Future<bool> _installVerified({
+    required String coupleId,
+    required String recordingId,
+    required int revision,
+    required Uint8List bytes,
+    required HomeWidgetRecordingCacheManifest? expected,
+    required bool requireExpectedMatch,
+  }) {
     return _serialize(() async {
       if (coupleId.trim().isEmpty ||
           recordingId.trim().isEmpty ||
@@ -68,7 +150,7 @@ class HomeWidgetRecordingCacheRepository {
       }
 
       final current = await read();
-      if (expected != null &&
+      if (requireExpectedMatch &&
           !HomeWidgetRecordingCachePolicy.canCommitFetched(
             expected: expected,
             current: current,
