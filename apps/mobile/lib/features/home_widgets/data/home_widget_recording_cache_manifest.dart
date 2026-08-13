@@ -247,6 +247,46 @@ class HomeWidgetRecordingCachePolicy {
     );
   }
 
+  static HomeWidgetRecordingCacheManifest? markRefreshRequired(
+    HomeWidgetRecordingCacheManifest? current,
+  ) {
+    if (current == null ||
+        current.freshness == HomeWidgetRecordingCacheFreshness.required ||
+        current.freshness ==
+            HomeWidgetRecordingCacheFreshness.refreshRequired) {
+      return current;
+    }
+
+    return HomeWidgetRecordingCacheManifest.refreshRequired(
+      coupleId: current.coupleId,
+      cachedRecordingId: current.cachedRecordingId,
+      cachedRevision: current.cachedRevision,
+      audioPath: current.audioPath,
+      fileKey: current.fileKey,
+      generation: current.generation + 1,
+    );
+  }
+
+  static bool canConfirmServerRecording({
+    required HomeWidgetRecordingCacheManifest? manifest,
+    required String coupleId,
+    required String recordingId,
+  }) {
+    if (manifest == null ||
+        !manifest._hasCompleteCache ||
+        manifest.coupleId != coupleId ||
+        manifest.cachedRecordingId != recordingId) {
+      return false;
+    }
+
+    return switch (manifest.freshness) {
+      HomeWidgetRecordingCacheFreshness.verified => true,
+      HomeWidgetRecordingCacheFreshness.required =>
+        manifest.requiredRecordingId == recordingId,
+      HomeWidgetRecordingCacheFreshness.refreshRequired => true,
+    };
+  }
+
   static bool canCommitFetched({
     required HomeWidgetRecordingCacheManifest? expected,
     required HomeWidgetRecordingCacheManifest? current,

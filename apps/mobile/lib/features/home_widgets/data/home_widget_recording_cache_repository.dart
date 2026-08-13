@@ -41,6 +41,18 @@ class HomeWidgetRecordingCacheRepository {
     });
   }
 
+  Future<HomeWidgetRecordingCacheManifest?> markRefreshRequired() {
+    return _serialize(() async {
+      final current = await read();
+      final next = HomeWidgetRecordingCachePolicy.markRefreshRequired(current);
+      if (next == null || identical(next, current)) {
+        return next;
+      }
+      await _writeManifest(next);
+      return next;
+    });
+  }
+
   Future<bool> installVerified({
     required String coupleId,
     required String recordingId,
@@ -91,9 +103,11 @@ class HomeWidgetRecordingCacheRepository {
       final audioPath = current?.audioPath;
       final fileKey = current?.fileKey;
       if (current == null ||
-          current.coupleId != coupleId ||
-          current.cachedRecordingId != recordingId ||
-          !HomeWidgetRecordingCachePolicy.canUseCached(current) ||
+          !HomeWidgetRecordingCachePolicy.canConfirmServerRecording(
+            manifest: current,
+            coupleId: coupleId,
+            recordingId: recordingId,
+          ) ||
           audioPath == null ||
           fileKey == null ||
           !await _store.isFileUsable(audioPath, extension: 'm4a')) {
