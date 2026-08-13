@@ -71,9 +71,16 @@ void main() {
     );
     expect(source, contains(r'"$flutter_binary" analyze --no-pub'));
     expect(source, contains(r'"$flutter_binary" test --no-pub'));
-    expect(source, contains(r'"$flutter_binary" build ipa'));
+    expect(source, contains('build_arguments=('));
+    expect(RegExp(r'^  ipa$', multiLine: true).hasMatch(source), isTrue);
+    expect(
+      source,
+      contains(r'"$flutter_binary" build "${build_arguments[@]}"'),
+    );
     expect(source, contains('--release'));
     expect(source, contains('--export-method app-store'));
+    expect(source, contains('DANJJAN_IOS_EXPORT_OPTIONS_PLIST'));
+    expect(source, contains('--export-options-plist='));
     expect(source, contains(r'--build-number "$build_number"'));
     expect(source, contains('--dart-define="SUPABASE_URL='));
     expect(source, contains('--dart-define="SUPABASE_ANON_KEY='));
@@ -141,7 +148,10 @@ void main() {
     );
     expect(source, contains(r"printf 'xcode_version=%s\n'"));
     expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
-    expect(source, contains(r"printf 'export_method=app-store\n'"));
+    expect(
+      source,
+      contains(r'''printf 'export_method=%s\n' "$export_method"'''),
+    );
     expect(source, contains(r"printf 'team_id=%s\n'"));
     expect(source, contains('runner_application_identifier=%s'));
     expect(source, contains('widget_application_identifier=%s'));
@@ -154,7 +164,7 @@ void main() {
     expect(source, isNot(contains(r'mkdir -p "$evidence_directory"')));
     expect(source, isNot(contains('altool')));
     expect(source, isNot(contains('transporter')));
-    expect(source, isNot(contains('app-store-connect')));
+    expect(source, contains('export_method="app-store-connect"'));
   });
 }
 
