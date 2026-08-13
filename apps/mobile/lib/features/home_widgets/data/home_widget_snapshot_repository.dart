@@ -11,6 +11,7 @@ import '../../couple/data/couple_repository.dart';
 import '../../recordings/data/couple_recording_repository.dart';
 import 'home_widget_calendar_summary_resolver.dart';
 import 'home_widget_partner_card_repository.dart';
+import 'home_widget_recording_snapshot_repository.dart';
 import 'home_widget_snapshot.dart';
 
 final homeWidgetSnapshotRepositoryProvider =
@@ -81,7 +82,7 @@ class SupabaseHomeWidgetSnapshotRepository
 }
 
 class HomeWidgetSnapshotAssetLoader {
-  const HomeWidgetSnapshotAssetLoader({
+  HomeWidgetSnapshotAssetLoader({
     required CoupleCharacterRepository characterRepository,
     required CoupleRecordingRepository recordingRepository,
     required CoupleCalendarEventRepository calendarEventRepository,
@@ -92,7 +93,9 @@ class HomeWidgetSnapshotAssetLoader {
     HomeWidgetCalendarSummaryResolver calendarSummaryResolver =
         const HomeWidgetCalendarSummaryResolver(),
   }) : _characterRepository = characterRepository,
-       _recordingRepository = recordingRepository,
+       _recordingAssetLoader = HomeWidgetRecordingAssetLoader(
+         recordingRepository: recordingRepository,
+       ),
        _calendarEventRepository = calendarEventRepository,
        _memberBirthdayRepository = memberBirthdayRepository,
        _partnerCardRepository = partnerCardRepository,
@@ -100,10 +103,8 @@ class HomeWidgetSnapshotAssetLoader {
        _calendarSummaryResolver = calendarSummaryResolver;
 
   static const _maximumImageBytes = 5 * 1024 * 1024;
-  static const _maximumAudioBytes = 4 * 1024 * 1024;
-
   final CoupleCharacterRepository _characterRepository;
-  final CoupleRecordingRepository _recordingRepository;
+  final HomeWidgetRecordingAssetLoader _recordingAssetLoader;
   final CoupleCalendarEventRepository _calendarEventRepository;
   final CoupleMemberBirthdayRepository _memberBirthdayRepository;
   final HomeWidgetPartnerCardRepository _partnerCardRepository;
@@ -118,7 +119,7 @@ class HomeWidgetSnapshotAssetLoader {
   }) async {
     final assetUpdatesFuture = Future.wait([
       _fetchCharacterImage(),
-      _fetchRecordingAudio(coupleId: coupleId),
+      _recordingAssetLoader.fetch(coupleId: coupleId),
       _fetchPartnerCardImage(coupleId: coupleId, currentUserId: currentUserId),
     ]);
     final calendarSummaryFuture = _fetchCalendarSummary(
@@ -154,31 +155,6 @@ class HomeWidgetSnapshotAssetLoader {
       );
     } catch (error) {
       _logSourceFailure('character', error);
-      return const HomeWidgetAssetUpdate.preserve();
-    }
-  }
-
-  Future<HomeWidgetAssetUpdate> _fetchRecordingAudio({
-    required String coupleId,
-  }) async {
-    try {
-      final recording =
-          (await _recordingRepository.fetchOverview()).currentRecording;
-      if (recording == null) {
-        return const HomeWidgetAssetUpdate.remove();
-      }
-
-      return HomeWidgetAssetUpdate.replace(
-        HomeWidgetRecordingRemoteAsset(
-          url: recording.audioUrl,
-          coupleId: coupleId,
-          recordingId: recording.recordingId,
-          revision: recording.revision,
-          maxBytes: _maximumAudioBytes,
-        ),
-      );
-    } catch (error) {
-      _logSourceFailure('recording', error);
       return const HomeWidgetAssetUpdate.preserve();
     }
   }

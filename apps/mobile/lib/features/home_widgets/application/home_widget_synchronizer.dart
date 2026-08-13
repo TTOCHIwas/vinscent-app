@@ -51,7 +51,7 @@ class HomeWidgetSynchronizer {
         pathKey: HomeWidgetStorage.characterImagePathKey,
         versionKey: HomeWidgetStorage.characterImageVersionKey,
       ),
-      _synchronizeRecording(
+      _synchronizeRecordingAsset(
         update:
             snapshot?.recordingAudio ?? const HomeWidgetAssetUpdate.remove(),
       ),
@@ -76,6 +76,18 @@ class HomeWidgetSynchronizer {
         if (!updates[index]) 'asset-$index',
       for (var index = 0; index < refreshes.length; index++)
         if (!refreshes[index]) 'refresh-$index',
+    ];
+    if (failedOperations.isNotEmpty) {
+      throw HomeWidgetSynchronizationException(failedOperations);
+    }
+  }
+
+  Future<void> synchronizeRecording(HomeWidgetAssetUpdate update) async {
+    final updated = await _synchronizeRecordingAsset(update: update);
+    final refreshed = await _refreshWidget(HomeWidgetStorage.characterTarget);
+    final failedOperations = <String>[
+      if (!updated) 'recording-asset',
+      if (!refreshed) 'recording-refresh',
     ];
     if (failedOperations.isNotEmpty) {
       throw HomeWidgetSynchronizationException(failedOperations);
@@ -129,7 +141,7 @@ class HomeWidgetSynchronizer {
     }
   }
 
-  Future<bool> _synchronizeRecording({
+  Future<bool> _synchronizeRecordingAsset({
     required HomeWidgetAssetUpdate update,
   }) async {
     if (update.type == HomeWidgetAssetUpdateType.preserve) {
