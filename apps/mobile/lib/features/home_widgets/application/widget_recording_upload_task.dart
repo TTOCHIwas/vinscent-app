@@ -52,8 +52,18 @@ abstract interface class WidgetRecordingDraftReader {
   Future<Uint8List> read(String filePath);
 }
 
+class WidgetRecordingUploadReceipt {
+  const WidgetRecordingUploadReceipt({
+    required this.coupleId,
+    required this.recordingId,
+  });
+
+  final String coupleId;
+  final String recordingId;
+}
+
 abstract interface class WidgetRecordingUploadGateway {
-  Future<void> upload(
+  Future<WidgetRecordingUploadReceipt> upload(
     Uint8List bytes, {
     required int durationMs,
     String? recordingId,
@@ -61,7 +71,7 @@ abstract interface class WidgetRecordingUploadGateway {
 }
 
 abstract interface class WidgetRecordingPlaybackCache {
-  Future<void> replace(Uint8List bytes);
+  Future<void> replace(Uint8List bytes, WidgetRecordingUploadReceipt receipt);
 }
 
 class WidgetRecordingUploadTask {
@@ -79,17 +89,20 @@ class WidgetRecordingUploadTask {
 
   Future<void> execute(WidgetRecordingUploadRequest request) async {
     final bytes = await _draftReader.read(request.filePath);
-    await _uploadGateway.upload(
+    final receipt = await _uploadGateway.upload(
       bytes,
       durationMs: request.durationMs,
       recordingId: request.recordingId,
     );
-    await _replacePlaybackCacheBestEffort(bytes);
+    await _replacePlaybackCacheBestEffort(bytes, receipt);
   }
 
-  Future<void> _replacePlaybackCacheBestEffort(Uint8List bytes) async {
+  Future<void> _replacePlaybackCacheBestEffort(
+    Uint8List bytes,
+    WidgetRecordingUploadReceipt receipt,
+  ) async {
     try {
-      await _playbackCache.replace(bytes);
+      await _playbackCache.replace(bytes, receipt);
     } catch (_) {}
   }
 }

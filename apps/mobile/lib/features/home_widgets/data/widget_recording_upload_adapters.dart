@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import '../../couple/data/couple_repository.dart';
 import '../../recordings/data/couple_recording_failure.dart';
 import '../../recordings/data/couple_recording_repository_contract.dart';
+import '../../recordings/data/recording_id_generator.dart';
 import '../application/home_widget_synchronizer.dart';
 import '../application/widget_recording_upload_task.dart';
+import 'home_widget_recording_cache_repository.dart';
 import 'home_widget_snapshot.dart';
 
 class FileWidgetRecordingDraftReader implements WidgetRecordingDraftReader {
@@ -38,7 +40,7 @@ class SupabaseWidgetRecordingUploadGateway
   final CoupleRecordingRepository _recordingRepository;
 
   @override
-  Future<void> upload(
+  Future<WidgetRecordingUploadReceipt> upload(
     Uint8List bytes, {
     required int durationMs,
     String? recordingId,
@@ -50,30 +52,42 @@ class SupabaseWidgetRecordingUploadGateway
       );
     }
 
+    final resolvedRecordingId = recordingId ?? generateRecordingId();
     await _recordingRepository.uploadCurrentRecording(
       coupleId: couple.id,
       audioBytes: bytes,
       durationMs: durationMs,
-      recordingId: recordingId,
+      recordingId: resolvedRecordingId,
       resumeExistingUpload: recordingId != null,
+    );
+    return WidgetRecordingUploadReceipt(
+      coupleId: couple.id,
+      recordingId: resolvedRecordingId,
     );
   }
 }
 
 class HomeWidgetRecordingPlaybackCache implements WidgetRecordingPlaybackCache {
-  const HomeWidgetRecordingPlaybackCache({required HomeWidgetStore store})
-    : _store = store;
+  const HomeWidgetRecordingPlaybackCache({
+    required HomeWidgetRecordingCacheRepository cacheRepository,
+    required HomeWidgetStore store,
+  }) : _cacheRepository = cacheRepository,
+       _store = store;
 
+  final HomeWidgetRecordingCacheRepository _cacheRepository;
   final HomeWidgetStore _store;
 
   @override
-  Future<void> replace(Uint8List bytes) async {
-    await _store.saveFile(
-      key: HomeWidgetStorage.recordingAudioPathKey,
+  Future<void> replace(
+    Uint8List bytes,
+    WidgetRecordingUploadReceipt receipt,
+  ) async {
+    await _cacheRepository.installVerified(
+      coupleId: receipt.coupleId,
+      recordingId: receipt.recordingId,
+      revision: 0,
       bytes: bytes,
-      extension: 'm4a',
     );
-    await _store.remove(HomeWidgetStorage.recordingAudioVersionKey);
     await _store.refreshWidget(HomeWidgetStorage.characterTarget);
   }
 }
