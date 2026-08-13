@@ -54,8 +54,9 @@ apps/mobile/flutterw.cmd build appbundle --release
 
 ### GitHub Actions 릴리스 후보
 
-`.github/workflows/android-release.yml`은 자동 배포가 아니라 명시적으로
-실행하는 릴리스 후보 생성 작업이다. GitHub의 `android-release`
+`.github/workflows/android-release.yml`은 명시적으로 실행하는 릴리스 후보
+생성 작업이다. 실행할 때 선택한 경우에만 검증된 AAB를 Google Play 내부
+테스트 트랙에 배포한다. GitHub의 `android-release`
 Environment는 배포 branch를 `main`으로 제한하고 다음 secret을 등록한다.
 필요하다면 승인자를 지정하고 실행자가 자신의 실행을 단독 승인하지 못하게
 설정한다.
@@ -67,11 +68,24 @@ Environment는 배포 branch를 `main`으로 제한하고 다음 secret을 등�
 - `DANJJAN_SUPABASE_URL`
 - `DANJJAN_SUPABASE_ANON_KEY`
 - `DANJJAN_KAKAO_NATIVE_APP_KEY`
+- `DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
 
 Supabase URL·anon key와 Kakao Native App Key는 최종 앱에 포함되는 클라이언트
 설정이지만, 워크플로 로그에 노출되지 않도록 Environment secret으로
 관리한다. service role key, Workers AI API token과 같은 서버 비밀키는 모바일
-빌드에 넣지 않는다.
+빌드에 넣지 않는다. Google Play 서비스 계정 JSON은 앱에 포함하지 않고
+내부 테스트 배포 단계에서만 임시 파일로 복원한 뒤 항상 제거한다.
+
+Google Play 내부 테스트 자동 배포를 사용하려면 다음 설정이 필요하다.
+
+1. Google Cloud 프로젝트에서 Google Play Android Developer API를 활성화한다.
+2. 배포 전용 서비스 계정을 만들고 JSON 키를 발급한다. Cloud 프로젝트
+   자체의 광범위한 IAM 역할은 부여하지 않는다.
+3. Play Console의 사용자 및 권한에서 서비스 계정 이메일을 초대하고 단짠
+   앱에만 `앱 정보 보기(읽기 전용)`와 `테스트 트랙으로 앱 출시` 권한을
+   부여한다. 프로덕션 출시 권한은 부여하지 않는다.
+4. JSON 파일 전체 내용을 `DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+   Environment secret으로 등록한다.
 
 공개 정책 웹을 배포한 뒤 같은 Environment의 variable에 다음 값을
 등록한다.
@@ -107,6 +121,9 @@ gh secret set DANJJAN_UPLOAD_KEY_PASSWORD --env android-release
 gh secret set DANJJAN_SUPABASE_URL --env android-release
 gh secret set DANJJAN_SUPABASE_ANON_KEY --env android-release
 gh secret set DANJJAN_KAKAO_NATIVE_APP_KEY --env android-release
+Get-Content -Raw "C:\path\to\service-account.json" |
+  gh secret set DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON `
+    --env android-release
 gh variable set DANJJAN_POLICY_BASE_URL --env android-release `
   --body "https://정책-웹-기본-주소"
 gh variable set DANJJAN_PLAY_UPLOAD_CERT_SHA256 --env android-release `
@@ -128,7 +145,10 @@ keytool -list -v `
 Actions의 `Android release candidate`를 실행할 때 branch로 `main`을
 선택하고 `commit_sha_confirmation`에 빌드할 40자 소문자 commit SHA를
 입력한다. `build_number`에는 Play Console에서 아직 사용하지 않은 양의
-값을 입력한다. 선택한 branch, 확인한 commit과 workflow commit이 다르면
+값을 입력한다. `publish_internal`을 선택하면 `release_notes_ko`를 검증해
+완성된 AAB와 mapping 파일을 `internal` 트랙의 완료 상태 릴리스로 게시한다.
+선택하지 않으면 기존과 동일하게 검증 artifact만 생성한다. 선택한 branch,
+확인한 commit과 workflow commit이 다르면
 서명 설정을 읽기 전에 중단한다. 작업은 포맷·분석·테스트를 모두 통과한 뒤
 서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로 보관한다.
 
@@ -174,10 +194,10 @@ cd apps/mobile
 ```
 
 이 정적 검사는 패키징 회귀를 차단하지만 16KB 환경에서 발생하는 런타임
-문제까지 대신하지 않는다. 내부 테스트 전에 Android 15 이상 16KB
-에뮬레이터 또는 실제 기기에서 핵심 흐름을 별도로 확인한다. Play Console
-업로드는 개발자 계정과 테스트 트랙이 준비된 뒤 별도 승인 단계로 추가하며,
-현재 워크플로에서는 수행하지 않는다.
+문제까지 대신하지 않는다. 내부 테스트에서 Android 15 이상 16KB
+에뮬레이터 또는 실제 기기로 핵심 흐름을 별도로 확인한다. 내부 테스트
+자동 배포는 실행 입력과 `android-release` Environment 승인을 모두 통과한
+경우에만 수행한다.
 
 참고:
 
@@ -187,6 +207,9 @@ cd apps/mobile
 - [JDK `jarsigner` 검증](https://docs.oracle.com/en/java/javase/21/docs/specs/man/jarsigner.html)
 - [GitHub Actions secrets](https://docs.github.com/en/actions/concepts/security/secrets)
 - [GitHub Actions artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)
+- [Google Play Android Developer API](https://developers.google.com/android-publisher/api-ref/rest)
+- [Play Console 사용자 권한](https://support.google.com/googleplay/android-developer/answer/10019561)
+- [Google Play 업로드 Action](https://github.com/r0adkll/upload-google-play)
 
 ## 2. iOS Runner capability
 
