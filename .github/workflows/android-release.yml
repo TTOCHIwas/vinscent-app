@@ -11,6 +11,16 @@ on:
         description: Unique positive Android version code
         required: true
         type: string
+      publish_internal:
+        description: Upload the verified bundle to Google Play internal testing
+        required: true
+        default: false
+        type: boolean
+      release_notes_ko:
+        description: Korean internal-test release notes (up to 500 characters)
+        required: false
+        default: 내부 테스트 안정성을 개선했어요
+        type: string
 
 permissions:
   contents: read
@@ -79,6 +89,8 @@ jobs:
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
           DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
           DANJJAN_PLAY_UPLOAD_CERT_SHA256: ${{ vars.DANJJAN_PLAY_UPLOAD_CERT_SHA256 }}
+          DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          PUBLISH_INTERNAL: ${{ inputs.publish_internal }}
         run: |
           set -euo pipefail
           if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
@@ -101,6 +113,11 @@ jobs:
               exit 1
             fi
           done
+
+          if [[ "$PUBLISH_INTERNAL" == "true" && -z "$DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "Missing android-release secret: DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" >&2
+            exit 1
+          fi
 
           validate_https_url() {
             local variable_name="$1"
@@ -129,6 +146,16 @@ jobs:
           fi
       - name: Resolve Flutter dependencies
         run: flutter pub get
+      - name: Resolve release metadata
+        id: release-metadata
+        run: |
+          set -euo pipefail
+          app_version="$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)"
+          if [[ ! "$app_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z]+)*$ ]]; then
+            echo "pubspec version must be a semantic Android version name." >&2
+            exit 1
+          fi
+          printf 'app_version=%s\n' "$app_version" >> "$GITHUB_OUTPUT"
       - name: Verify resolved release source
         run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Check Dart formatting
@@ -456,14 +483,68 @@ jobs:
           path: apps/mobile/build/release-evidence
           if-no-files-found: error
           retention-days: 90
+      - name: Prepare Google Play internal release
+        if: ${{ inputs.publish_internal }}
+        env:
+          DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          RELEASE_NOTES_KO: ${{ inputs.release_notes_ko }}
+        run: |
+          set -euo pipefail
+          credential="$RUNNER_TEMP/danjjan-google-play-service-account.json"
+          notes_dir="$RUNNER_TEMP/danjjan-whats-new"
+
+          printf '%s' "$DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > "$credential"
+          chmod 600 "$credential"
+          jq -e '
+            .type == "service_account" and
+            (.client_email | type == "string" and length > 0) and
+            (.private_key | type == "string" and contains("BEGIN PRIVATE KEY"))
+          ' "$credential" >/dev/null
+
+          if [[ -z "${RELEASE_NOTES_KO//[[:space:]]/}" ]]; then
+            echo "release_notes_ko must not be blank when publishing." >&2
+            exit 1
+          fi
+          notes_length="$(jq -n --arg notes "$RELEASE_NOTES_KO" '$notes | length')"
+          if (( notes_length > 500 )); then
+            echo "release_notes_ko must be 500 characters or fewer." >&2
+            exit 1
+          fi
+
+          mkdir -p "$notes_dir"
+          printf '%s\n' "$RELEASE_NOTES_KO" > "$notes_dir/whatsnew-ko-KR"
+      - name: Publish to Google Play internal testing
+        if: ${{ inputs.publish_internal }}
+        id: play-upload
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJson: ${{ runner.temp }}/danjjan-google-play-service-account.json
+          packageName: com.vinscent.vinscent
+          releaseFiles: apps/mobile/build/release-evidence/danjjan-android-build-${{ inputs.build_number }}.aab
+          tracks: internal
+          status: completed
+          releaseName: 단짠 ${{ steps.release-metadata.outputs.app_version }} (${{ inputs.build_number }})
+          whatsNewDirectory: ${{ runner.temp }}/danjjan-whats-new
+          mappingFile: apps/mobile/build/release-evidence/danjjan-android-build-${{ inputs.build_number }}-mapping.txt
       - name: Summarize release candidate
+        env:
+          PUBLISH_INTERNAL: ${{ inputs.publish_internal }}
         run: |
           {
             echo "### Android release candidate"
             echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Version: \`${{ steps.release-metadata.outputs.app_version }} ($BUILD_NUMBER)\`"
             echo "- Build number: \`$BUILD_NUMBER\`"
             echo "- Artifact digest: \`${{ steps.release-artifact.outputs.artifact-digest }}\`"
+            if [[ "$PUBLISH_INTERNAL" == "true" ]]; then
+              echo "- Google Play track: \`internal\`"
+            else
+              echo "- Google Play upload: skipped"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Remove restored upload key
+      - name: Remove restored private inputs
         if: always()
-        run: rm -f "$RUNNER_TEMP/danjjan-upload-keystore.jks"
+        run: |
+          rm -f "$RUNNER_TEMP/danjjan-upload-keystore.jks"
+          rm -f "$RUNNER_TEMP/danjjan-google-play-service-account.json"
+          rm -rf "$RUNNER_TEMP/danjjan-whats-new"
