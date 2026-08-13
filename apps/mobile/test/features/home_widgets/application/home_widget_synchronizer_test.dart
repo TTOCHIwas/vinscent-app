@@ -150,6 +150,40 @@ void main() {
   );
 
   test(
+    'verifies a refresh-required cache without downloading the same recording',
+    () async {
+      final store = _FakeHomeWidgetStore();
+      final cacheRepository = HomeWidgetRecordingCacheRepository(store: store);
+      await cacheRepository.installVerified(
+        coupleId: 'couple-id',
+        recordingId: 'recording-id',
+        revision: 1,
+        bytes: _m4aBytes,
+      );
+      await cacheRepository.markRefreshRequired();
+      final downloader = _FakeHomeWidgetAssetDownloader();
+      final synchronizer = HomeWidgetSynchronizer(
+        store: store,
+        downloader: downloader,
+        recordingCacheRepository: cacheRepository,
+      );
+
+      await synchronizer.synchronize(
+        HomeWidgetSnapshot(
+          characterImage: const HomeWidgetAssetUpdate.preserve(),
+          recordingAudio: HomeWidgetAssetUpdate.replace(_recordingAsset),
+          partnerCardImage: const HomeWidgetAssetUpdate.preserve(),
+        ),
+      );
+
+      expect(downloader.requestedUrls, isEmpty);
+      final manifest = await cacheRepository.read();
+      expect(manifest?.freshness, HomeWidgetRecordingCacheFreshness.verified);
+      expect(manifest?.cachedRecordingId, 'recording-id');
+    },
+  );
+
+  test(
     'downloads a required recording and publishes a verified manifest',
     () async {
       final store = _FakeHomeWidgetStore();

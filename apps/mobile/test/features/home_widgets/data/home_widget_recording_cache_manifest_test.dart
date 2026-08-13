@@ -62,6 +62,48 @@ void main() {
       expect(HomeWidgetRecordingCachePolicy.canUseCached(manifest), isFalse);
     });
 
+    test('marks a verified cache for a server refresh', () {
+      const current = HomeWidgetRecordingCacheManifest.verified(
+        coupleId: 'couple-a',
+        recordingId: 'recording-a',
+        revision: 2,
+        audioPath: '/cache/recording-a.m4a',
+        fileKey: 'widget_recording_recording-a',
+        generation: 6,
+      );
+
+      final marked = HomeWidgetRecordingCachePolicy.markRefreshRequired(
+        current,
+      );
+
+      expect(
+        marked?.freshness,
+        HomeWidgetRecordingCacheFreshness.refreshRequired,
+      );
+      expect(marked?.cachedRecordingId, 'recording-a');
+      expect(marked?.generation, 7);
+      expect(HomeWidgetRecordingCachePolicy.canUseCached(marked), isFalse);
+    });
+
+    test('keeps a specific required recording during a server refresh', () {
+      const current = HomeWidgetRecordingCacheManifest.required(
+        coupleId: 'couple-a',
+        requiredRecordingId: 'recording-b',
+        cachedRecordingId: 'recording-a',
+        cachedRevision: 2,
+        audioPath: '/cache/recording-a.m4a',
+        fileKey: 'widget_recording_recording-a',
+        generation: 7,
+      );
+
+      final marked = HomeWidgetRecordingCachePolicy.markRefreshRequired(
+        current,
+      );
+
+      expect(marked, same(current));
+      expect(marked?.requiredRecordingId, 'recording-b');
+    });
+
     test(
       'preserves the current file while marking a newer recording required',
       () {

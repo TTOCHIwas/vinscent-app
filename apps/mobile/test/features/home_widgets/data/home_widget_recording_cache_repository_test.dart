@@ -121,6 +121,26 @@ void main() {
       expect(previousFileRemovalIndex, greaterThan(manifestWriteIndex));
     },
   );
+
+  test('marks an installed cache for server verification', () async {
+    final store = _RecordingCacheStore();
+    final repository = HomeWidgetRecordingCacheRepository(store: store);
+    await repository.installVerified(
+      coupleId: 'couple-a',
+      recordingId: 'recording-a',
+      revision: 1,
+      bytes: _m4aBytes,
+    );
+
+    final marked = await repository.markRefreshRequired();
+
+    expect(
+      marked?.freshness,
+      HomeWidgetRecordingCacheFreshness.refreshRequired,
+    );
+    expect(marked?.cachedRecordingId, 'recording-a');
+    expect(store.files, hasLength(1));
+  });
 }
 
 final _m4aBytes = Uint8List.fromList([
