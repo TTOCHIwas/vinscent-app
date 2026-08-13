@@ -25,7 +25,7 @@ void main() {
 
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.byType(KakaoLoginButton), findsOneWidget);
-      expect(find.byType(AppleLoginButton), findsOneWidget);
+      expect(find.byType(AppleLoginButton), findsNothing);
       expect(AppConfig.isSupabaseConfigured, isFalse);
       expect(Firebase.apps, isNotEmpty);
       await FirebaseMessaging.instance.getInitialMessage();
