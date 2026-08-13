@@ -149,6 +149,44 @@ void main() {
     expect(manifest?.requiredRecordingId, 'recording-b');
     expect(manifest?.cachedRecordingId, 'recording-a');
   });
+
+  test('rejects a recording removal fetched before a newer marker', () async {
+    final store = _MemoryHomeWidgetStore();
+    final cacheRepository = HomeWidgetRecordingCacheRepository(store: store);
+    await cacheRepository.installVerified(
+      coupleId: 'couple-id',
+      recordingId: 'recording-a',
+      revision: 1,
+      bytes: _m4aBytes,
+    );
+    final repository = _RecordingSnapshotRepository(
+      update: const HomeWidgetAssetUpdate.remove(),
+      onFetch: () => cacheRepository.markRequired(
+        coupleId: 'couple-id',
+        recordingId: 'recording-b',
+      ),
+    );
+    final service = HomeWidgetRecordingSyncService(
+      snapshotRepository: repository,
+      synchronizer: HomeWidgetSynchronizer(
+        store: store,
+        downloader: _RecordingDownloader(),
+        recordingCacheRepository: cacheRepository,
+      ),
+      maxAttempts: 1,
+      retryDelay: Duration.zero,
+      isSupportedPlatform: true,
+    );
+
+    final synchronized = await service.synchronizeSafely(
+      expectedCoupleId: 'couple-id',
+    );
+
+    expect(synchronized, isFalse);
+    final manifest = await cacheRepository.read();
+    expect(manifest?.requiredRecordingId, 'recording-b');
+    expect(manifest?.cachedRecordingId, 'recording-a');
+  });
 }
 
 const _characterAsset = HomeWidgetRemoteAsset(
