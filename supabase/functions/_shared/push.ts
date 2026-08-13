@@ -1,4 +1,8 @@
-import { createFcmAccessToken, sendFcmMessage } from './fcm.ts';
+import {
+  createFcmAccessToken,
+  type FcmPlatform,
+  sendFcmMessage,
+} from './fcm.ts';
 import {
   claimPushNotificationDispatch,
   completePushNotificationDelivery,
@@ -40,6 +44,7 @@ export type PreferenceColumn = typeof preferenceColumns[number];
 type PushTokenRow = {
   id: string;
   token: string;
+  platform: FcmPlatform;
 };
 
 export type NotificationDispatchResult = {
@@ -147,7 +152,7 @@ export async function sendPushNotification(
       () =>
         params.supabase
           .from('user_push_tokens')
-          .select('id, token')
+          .select('id, token, platform')
           .eq('user_id', params.receiverUserId)
           .eq('is_active', true),
     );
@@ -204,6 +209,8 @@ export async function sendPushNotification(
           body: params.body,
           type: params.notificationType,
           data: params.data,
+          platform: pushToken.platform,
+          backgroundSync: isRecordingBackgroundSync(params),
         });
       } catch (error) {
         return {
@@ -254,6 +261,11 @@ export async function sendPushNotification(
     successCount,
     failureCount,
   };
+}
+
+function isRecordingBackgroundSync(params: SendPushNotificationParams) {
+  return params.notificationType === 'recording_activity' &&
+    params.data.event_type === 'current_recording_updated';
 }
 
 export function isNotificationType(value: string): value is NotificationType {

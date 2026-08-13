@@ -16,6 +16,17 @@ export type FcmErrorSummary = {
 
 const defaultAndroidChannelId = 'vinscent_notifications';
 
+export type FcmPlatform = 'android' | 'ios';
+
+export type FcmMessageParams = {
+  title: string;
+  body: string;
+  type: string;
+  data: Record<string, string>;
+  platform: FcmPlatform;
+  backgroundSync?: boolean;
+};
+
 export async function createFcmAccessToken() {
   const clientEmail = requiredEnv('FCM_CLIENT_EMAIL');
   const privateKey = requiredEnv('FCM_PRIVATE_KEY').replace(/\\n/g, '\n');
@@ -66,12 +77,7 @@ export async function createFcmAccessToken() {
 export async function sendFcmMessage(
   accessToken: string,
   token: string,
-  params: {
-    title: string;
-    body: string;
-    type: string;
-    data: Record<string, string>;
-  },
+  params: FcmMessageParams,
 ): Promise<FcmSendResult> {
   const projectId = requiredEnv('FCM_PROJECT_ID');
   const response = await fetch(
@@ -82,32 +88,7 @@ export async function sendFcmMessage(
         authorization: `Bearer ${accessToken}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({
-        message: {
-          token,
-          notification: {
-            title: params.title,
-            body: params.body,
-          },
-          data: {
-            type: params.type,
-            ...params.data,
-          },
-          android: {
-            priority: 'HIGH',
-            notification: {
-              channel_id: defaultAndroidChannelId,
-            },
-          },
-          apns: {
-            payload: {
-              aps: {
-                sound: 'default',
-              },
-            },
-          },
-        },
-      }),
+      body: JSON.stringify(buildFcmMessage(token, params)),
     },
   );
 
@@ -120,6 +101,56 @@ export async function sendFcmMessage(
     ok: false,
     invalidToken: isInvalidFcmTokenError(errorSummary),
     errorMessage: formatFcmErrorSummary(errorSummary),
+  };
+}
+
+export function buildFcmMessage(token: string, params: FcmMessageParams) {
+  const isAndroidBackgroundSync =
+    params.platform === 'android' && params.backgroundSync === true;
+  const data = {
+    type: params.type,
+    ...params.data,
+    ...(isAndroidBackgroundSync
+      ? {
+        notification_title: params.title,
+        notification_body: params.body,
+      }
+      : {}),
+  };
+
+  return {
+    message: {
+      token,
+      ...(!isAndroidBackgroundSync
+        ? {
+          notification: {
+            title: params.title,
+            body: params.body,
+          },
+        }
+        : {}),
+      data,
+      android: {
+        priority: 'HIGH' as const,
+        ...(!isAndroidBackgroundSync
+          ? {
+            notification: {
+              channel_id: defaultAndroidChannelId,
+            },
+          }
+          : {}),
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            ...(params.backgroundSync === true
+              ? { 'content-available': 1 as const }
+              : {}),
+          },
+        },
+      },
+    },
   };
 }
 
