@@ -14,7 +14,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('카카오 로그인'), findsOneWidget);
-    expect(find.text('Apple로 로그인'), findsOneWidget);
+    expect(find.text('Apple로 로그인'), findsNothing);
     expect(find.byType(SvgPicture), findsOneWidget);
     expect(find.text('단짠'), findsOneWidget);
     expect(find.text('로고'), findsNothing);
