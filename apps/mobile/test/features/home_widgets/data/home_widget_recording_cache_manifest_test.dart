@@ -62,28 +62,31 @@ void main() {
       expect(HomeWidgetRecordingCachePolicy.canUseCached(manifest), isFalse);
     });
 
-    test('preserves the current file while marking a newer recording required', () {
-      const current = HomeWidgetRecordingCacheManifest.verified(
-        coupleId: 'couple-a',
-        recordingId: 'recording-a',
-        revision: 1,
-        audioPath: '/cache/recording-a.m4a',
-        fileKey: 'widget_recording_recording-a',
-        generation: 8,
-      );
+    test(
+      'preserves the current file while marking a newer recording required',
+      () {
+        const current = HomeWidgetRecordingCacheManifest.verified(
+          coupleId: 'couple-a',
+          recordingId: 'recording-a',
+          revision: 1,
+          audioPath: '/cache/recording-a.m4a',
+          fileKey: 'widget_recording_recording-a',
+          generation: 8,
+        );
 
-      final marked = HomeWidgetRecordingCachePolicy.markRequired(
-        current: current,
-        coupleId: 'couple-a',
-        recordingId: 'recording-b',
-      );
+        final marked = HomeWidgetRecordingCachePolicy.markRequired(
+          current: current,
+          coupleId: 'couple-a',
+          recordingId: 'recording-b',
+        );
 
-      expect(marked.requiredRecordingId, 'recording-b');
-      expect(marked.cachedRecordingId, 'recording-a');
-      expect(marked.audioPath, '/cache/recording-a.m4a');
-      expect(marked.generation, 9);
-      expect(HomeWidgetRecordingCachePolicy.canUseCached(marked), isFalse);
-    });
+        expect(marked.requiredRecordingId, 'recording-b');
+        expect(marked.cachedRecordingId, 'recording-a');
+        expect(marked.audioPath, '/cache/recording-a.m4a');
+        expect(marked.generation, 9);
+        expect(HomeWidgetRecordingCachePolicy.canUseCached(marked), isFalse);
+      },
+    );
 
     test('drops a previous couple cache when a new couple marker arrives', () {
       const current = HomeWidgetRecordingCacheManifest.verified(
@@ -108,25 +111,28 @@ void main() {
       expect(HomeWidgetRecordingCachePolicy.canUseCached(marked), isFalse);
     });
 
-    test('rejects a fetch result when a newer marker changed the generation', () {
-      const expected = HomeWidgetRecordingCacheManifest.required(
-        coupleId: 'couple-a',
-        requiredRecordingId: 'recording-a',
-        generation: 10,
-      );
-      const current = HomeWidgetRecordingCacheManifest.required(
-        coupleId: 'couple-a',
-        requiredRecordingId: 'recording-b',
-        generation: 11,
-      );
+    test(
+      'rejects a fetch result when a newer marker changed the generation',
+      () {
+        const expected = HomeWidgetRecordingCacheManifest.required(
+          coupleId: 'couple-a',
+          requiredRecordingId: 'recording-a',
+          generation: 10,
+        );
+        const current = HomeWidgetRecordingCacheManifest.required(
+          coupleId: 'couple-a',
+          requiredRecordingId: 'recording-b',
+          generation: 11,
+        );
 
-      expect(
-        HomeWidgetRecordingCachePolicy.canCommitFetched(
-          expected: expected,
-          current: current,
-        ),
-        isFalse,
-      );
-    });
+        expect(
+          HomeWidgetRecordingCachePolicy.canCommitFetched(
+            expected: expected,
+            current: current,
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 }
