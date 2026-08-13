@@ -175,6 +175,10 @@ class HomeWidgetRecordingCacheRepository {
         HomeWidgetStorage.recordingAudioVersionKey,
         '$recordingId:$revision',
       );
+      if (current?.fileKey case final previousFileKey?
+          when previousFileKey != fileKey) {
+        await _store.remove(previousFileKey);
+      }
       return true;
     });
   }
