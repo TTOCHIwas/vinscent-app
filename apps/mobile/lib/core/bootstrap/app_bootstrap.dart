@@ -13,6 +13,16 @@ class AppBootstrap {
       await KakaoSdk.init(nativeAppKey: AppConfig.kakaoNativeAppKey);
     }
 
+    await _initializeFirebase();
+    await initializeSupabase();
+  }
+
+  static Future<void> initializeBackgroundServices() async {
+    await _initializeFirebase();
+    await initializeSupabase();
+  }
+
+  static Future<void> _initializeFirebase() async {
     if (!_isFirebaseSupported) {
       _debugPushLog('Firebase initialization skipped: unsupported platform');
     } else if (Firebase.apps.isEmpty) {
@@ -22,12 +32,10 @@ class AppBootstrap {
     } else {
       _debugPushLog('Firebase initialization skipped: already initialized');
     }
-
-    await initializeSupabase();
   }
 
   static Future<void> initializeSupabase() async {
-    if (AppConfig.isSupabaseConfigured) {
+    if (AppConfig.isSupabaseConfigured && !Supabase.instance.isInitialized) {
       await Supabase.initialize(
         url: AppConfig.supabaseUrl,
         anonKey: AppConfig.supabaseAnonKey,
