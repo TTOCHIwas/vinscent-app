@@ -200,13 +200,35 @@ class HomeWidgetRecordingCacheRepository {
   Future<void> clear() {
     return _serialize(() async {
       final current = await read();
-      await _store.remove(HomeWidgetStorage.recordingCacheManifestKey);
-      await _store.remove(HomeWidgetStorage.recordingAudioPathKey);
-      await _store.remove(HomeWidgetStorage.recordingAudioVersionKey);
-      if (current != null) {
-        await _removeManagedFile(current);
-      }
+      await _clearStoredCache(current);
     });
+  }
+
+  Future<bool> clearIfUnchanged({
+    required HomeWidgetRecordingCacheManifest? expected,
+  }) {
+    return _serialize(() async {
+      final current = await read();
+      if (!HomeWidgetRecordingCachePolicy.canCommitFetched(
+        expected: expected,
+        current: current,
+      )) {
+        return false;
+      }
+      await _clearStoredCache(current);
+      return true;
+    });
+  }
+
+  Future<void> _clearStoredCache(
+    HomeWidgetRecordingCacheManifest? current,
+  ) async {
+    await _store.remove(HomeWidgetStorage.recordingCacheManifestKey);
+    await _store.remove(HomeWidgetStorage.recordingAudioPathKey);
+    await _store.remove(HomeWidgetStorage.recordingAudioVersionKey);
+    if (current != null) {
+      await _removeManagedFile(current);
+    }
   }
 
   Future<void> _writeManifest(HomeWidgetRecordingCacheManifest manifest) {

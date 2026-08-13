@@ -68,8 +68,12 @@ class HomeWidgetSyncService {
       return;
     }
 
+    final recordingReadFence = await _synchronizer.captureRecordingReadFence();
     final snapshot = await _snapshotRepository.fetchSnapshot();
-    await _synchronizer.synchronize(snapshot);
+    await _synchronizer.synchronize(
+      snapshot,
+      recordingReadFence: recordingReadFence,
+    );
     if (snapshot?.requiresRetry ?? false) {
       throw const HomeWidgetSnapshotIncompleteException();
     }
@@ -126,10 +130,14 @@ class HomeWidgetRecordingSyncService {
       return;
     }
 
+    final recordingReadFence = await _synchronizer.captureRecordingReadFence();
     final update = await _snapshotRepository.fetchRecordingAudio(
       expectedCoupleId: expectedCoupleId,
     );
-    await _synchronizer.synchronizeRecording(update);
+    await _synchronizer.synchronizeRecording(
+      update,
+      recordingReadFence: recordingReadFence,
+    );
     if (update.shouldPreserve) {
       throw const HomeWidgetSnapshotIncompleteException();
     }

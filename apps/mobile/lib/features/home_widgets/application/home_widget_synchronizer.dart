@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../data/home_widget_asset_validator.dart';
+import '../data/home_widget_recording_cache_manifest.dart';
 import '../data/home_widget_recording_cache_repository.dart';
 import '../data/home_widget_snapshot.dart';
 
@@ -43,7 +44,14 @@ class HomeWidgetSynchronizer {
   final HomeWidgetAssetDownloader _downloader;
   final HomeWidgetRecordingCacheRepository _recordingCacheRepository;
 
-  Future<void> synchronize(HomeWidgetSnapshot? snapshot) async {
+  Future<HomeWidgetRecordingReadFence> captureRecordingReadFence() async {
+    return HomeWidgetRecordingReadFence(await _recordingCacheRepository.read());
+  }
+
+  Future<void> synchronize(
+    HomeWidgetSnapshot? snapshot, {
+    HomeWidgetRecordingReadFence? recordingReadFence,
+  }) async {
     final updates = await Future.wait([
       _synchronizeAsset(
         update:
@@ -54,6 +62,7 @@ class HomeWidgetSynchronizer {
       _synchronizeRecordingAsset(
         update:
             snapshot?.recordingAudio ?? const HomeWidgetAssetUpdate.remove(),
+        readFence: recordingReadFence,
       ),
       _synchronizeAsset(
         update:
@@ -82,8 +91,14 @@ class HomeWidgetSynchronizer {
     }
   }
 
-  Future<void> synchronizeRecording(HomeWidgetAssetUpdate update) async {
-    final updated = await _synchronizeRecordingAsset(update: update);
+  Future<void> synchronizeRecording(
+    HomeWidgetAssetUpdate update, {
+    HomeWidgetRecordingReadFence? recordingReadFence,
+  }) async {
+    final updated = await _synchronizeRecordingAsset(
+      update: update,
+      readFence: recordingReadFence,
+    );
     final refreshed = await _refreshWidget(HomeWidgetStorage.characterTarget);
     final failedOperations = <String>[
       if (!updated) 'recording-asset',
@@ -143,6 +158,7 @@ class HomeWidgetSynchronizer {
 
   Future<bool> _synchronizeRecordingAsset({
     required HomeWidgetAssetUpdate update,
+    HomeWidgetRecordingReadFence? readFence,
   }) async {
     if (update.type == HomeWidgetAssetUpdateType.preserve) {
       return true;
@@ -150,8 +166,13 @@ class HomeWidgetSynchronizer {
 
     try {
       if (update.type == HomeWidgetAssetUpdateType.remove) {
-        await _recordingCacheRepository.clear();
-        return true;
+        if (readFence == null) {
+          await _recordingCacheRepository.clear();
+          return true;
+        }
+        return _recordingCacheRepository.clearIfUnchanged(
+          expected: readFence.manifest,
+        );
       }
 
       final asset = update.asset;
@@ -167,7 +188,8 @@ class HomeWidgetSynchronizer {
         return true;
       }
 
-      final expected = await _recordingCacheRepository.read();
+      final expected =
+          readFence?.manifest ?? await _recordingCacheRepository.read();
       final bytes = await _downloader.download(
         asset.url,
         maxBytes: asset.maxBytes,
@@ -254,6 +276,12 @@ class HomeWidgetSynchronizer {
       return false;
     }
   }
+}
+
+class HomeWidgetRecordingReadFence {
+  const HomeWidgetRecordingReadFence(this.manifest);
+
+  final HomeWidgetRecordingCacheManifest? manifest;
 }
 
 class HomeWidgetSynchronizationException implements Exception {
