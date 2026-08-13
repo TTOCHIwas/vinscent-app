@@ -10,6 +10,7 @@ void main() {
       },
       synchronizeRecording: ({required expectedCoupleId}) async {
         events.add('sync:$expectedCoupleId');
+        return true;
       },
     );
 
@@ -34,6 +35,7 @@ void main() {
         },
         synchronizeRecording: ({required expectedCoupleId}) async {
           callCount += 1;
+          return true;
         },
       );
 
@@ -57,4 +59,20 @@ void main() {
       expect(callCount, 0);
     },
   );
+
+  test('reports a targeted synchronization failure to its caller', () async {
+    final coordinator = HomeWidgetRecordingNotificationCoordinator(
+      markRequired: ({required coupleId, required recordingId}) async {},
+      synchronizeRecording: ({required expectedCoupleId}) async => false,
+    );
+
+    final handled = await coordinator.handle({
+      'type': 'recording_activity',
+      'event_type': 'current_recording_updated',
+      'couple_id': 'couple-id',
+      'recording_id': 'recording-id',
+    });
+
+    expect(handled, isFalse);
+  });
 }
