@@ -112,14 +112,31 @@ fi
 "$dart_binary" format --output=none --set-exit-if-changed lib test integration_test
 "$flutter_binary" analyze --no-pub
 "$flutter_binary" test --no-pub
-"$flutter_binary" build ipa \
-  --release \
-  --export-method app-store \
-  --build-number "$build_number" \
-  --dart-define="SUPABASE_URL=$DANJJAN_SUPABASE_URL" \
-  --dart-define="SUPABASE_ANON_KEY=$DANJJAN_SUPABASE_ANON_KEY" \
-  --dart-define="KAKAO_NATIVE_APP_KEY=$DANJJAN_KAKAO_NATIVE_APP_KEY" \
+build_arguments=(
+  ipa
+  --release
+  --build-number "$build_number"
+  --dart-define="SUPABASE_URL=$DANJJAN_SUPABASE_URL"
+  --dart-define="SUPABASE_ANON_KEY=$DANJJAN_SUPABASE_ANON_KEY"
+  --dart-define="KAKAO_NATIVE_APP_KEY=$DANJJAN_KAKAO_NATIVE_APP_KEY"
   --dart-define="POLICY_BASE_URL=$DANJJAN_POLICY_BASE_URL"
+)
+export_method="app-store"
+
+if [[ -n "${DANJJAN_IOS_EXPORT_OPTIONS_PLIST:-}" ]]; then
+  if [[ ! -s "$DANJJAN_IOS_EXPORT_OPTIONS_PLIST" ]]; then
+    echo "DANJJAN_IOS_EXPORT_OPTIONS_PLIST must reference a non-empty file." >&2
+    exit 1
+  fi
+  build_arguments+=(
+    --export-options-plist="$DANJJAN_IOS_EXPORT_OPTIONS_PLIST"
+  )
+  export_method="app-store-connect"
+else
+  build_arguments+=(--export-method app-store)
+fi
+
+"$flutter_binary" build "${build_arguments[@]}"
 
 shopt -s nullglob
 archive_candidates=(build/ios/archive/*.xcarchive)
@@ -319,7 +336,7 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf 'build_number=%s\n' "$build_number"
   printf 'xcode_version=%s\n' "$xcode_version"
   printf 'iphoneos_sdk_version=%s\n' "$iphoneos_sdk_version"
-  printf 'export_method=app-store\n'
+  printf 'export_method=%s\n' "$export_method"
   printf 'runner_bundle_id=%s\n' "$runner_bundle_id"
   printf 'widget_bundle_id=%s\n' "$widget_bundle_id"
   printf 'team_id=%s\n' "$runner_team_id"
