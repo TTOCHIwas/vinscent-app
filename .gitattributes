@@ -1,4 +1,7 @@
 scripts/build_ios_release_candidate.sh text eol=lf
+scripts/check_ios_release_mac.sh text eol=lf
+scripts/cleanup_ios_signing_assets.sh text eol=lf
+scripts/install_ios_signing_assets.sh text eol=lf
 scripts/verify_release_source.sh text eol=lf
 apps/mobile/android/gradlew text eol=lf
 apps/mobile/android/gradlew.bat text eol=crlf

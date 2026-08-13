@@ -64,6 +64,11 @@ jobs:
           flutter-version: "3.41.9"
           channel: stable
           cache: true
+      - name: Resolve Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+      - name: Validate the Mac release environment
+        run: scripts/check_ios_release_mac.sh "$GITHUB_SHA"
       - name: Validate release configuration
         env:
           DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}

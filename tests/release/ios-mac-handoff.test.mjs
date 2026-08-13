@@ -31,6 +31,8 @@ test('Mac preflight validates the fixed iOS release toolchain', async () => {
   assert.match(source, /xcrun --sdk iphoneos --show-sdk-version/);
   assert.match(source, /3\.41\.9/);
   assert.match(source, /pod --version/);
+  assert.match(source, /Podfile\.lock/);
+  assert.match(source, /Pods\/Pods\.xcodeproj/);
   assert.match(source, /Runner\.xcworkspace/);
   assert.match(source, /xcodebuild[^\n]+-list/);
 });

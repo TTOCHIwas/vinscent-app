@@ -52,10 +52,13 @@ test('iOS release verifies the exact main commit and required inputs', async () 
 
 test('iOS release restores signing before the verified release build', async () => {
   const source = await load(workflowUrl);
+  const preflightIndex = source.indexOf('scripts/check_ios_release_mac.sh');
   const installIndex = source.indexOf('scripts/install_ios_signing_assets.sh');
   const buildIndex = source.indexOf('scripts/build_ios_release_candidate.sh');
   const artifactIndex = source.indexOf('actions/upload-artifact@');
 
+  assert.ok(preflightIndex >= 0);
+  assert.ok(installIndex > preflightIndex);
   assert.ok(installIndex >= 0);
   assert.ok(buildIndex > installIndex);
   assert.ok(artifactIndex > buildIndex);
