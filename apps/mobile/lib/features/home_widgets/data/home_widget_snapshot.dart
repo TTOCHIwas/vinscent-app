@@ -107,6 +107,7 @@ class HomeWidgetStorage {
   static const characterImageVersionKey = 'widget_character_image_version';
   static const recordingAudioPathKey = 'widget_recording_audio_path';
   static const recordingAudioVersionKey = 'widget_recording_audio_version';
+  static const recordingCacheManifestKey = 'widget_recording_cache_manifest';
   static const partnerCardImagePathKey = 'widget_partner_card_image_path';
   static const partnerCardImageVersionKey = 'widget_partner_card_image_version';
   static const calendarEventArtworkPathKey =
