@@ -51,7 +51,9 @@ class WidgetRecordingCachePolicyTest {
         cachedRecordingId = "recording-id",
         cachedRevision = 1,
         audioPath = "/cache/recording.m4a",
+        fileKey = "widget_recording_audio_recording-id_r1",
         freshness = freshness,
         requiredRecordingId = requiredRecordingId,
+        generation = 1,
     )
 }

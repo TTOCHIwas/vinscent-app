@@ -63,7 +63,7 @@ final class VinscentWidgetAudioController: NSObject {
       return
     }
     guard VinscentWidgetStateStore.recordingPhase == .idle,
-      let path = VinscentWidgetSnapshot.load().recordingAudioPath
+      let path = VinscentWidgetSnapshot.load().playableRecordingAudioPath
     else {
       return
     }

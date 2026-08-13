@@ -11,6 +11,7 @@ enum VinscentWidgetConstants {
 
   static let characterImagePathKey = "widget_character_image_path"
   static let recordingAudioPathKey = "widget_recording_audio_path"
+  static let recordingCacheManifestKey = "widget_recording_cache_manifest"
   static let partnerCardImagePathKey = "widget_partner_card_image_path"
   static let calendarEventArtworkPathKey =
     "widget_calendar_event_artwork_path"
@@ -43,9 +44,102 @@ enum VinscentWidgetRecordingPhase: String {
   case uploading
 }
 
+private enum VinscentWidgetRecordingCacheFreshness: String {
+  case verified
+  case required
+  case refreshRequired = "refresh_required"
+}
+
+private struct VinscentWidgetRecordingCacheManifest {
+  let cachedRecordingId: String?
+  let cachedRevision: Int?
+  let audioPath: String?
+  let fileKey: String?
+  let freshness: VinscentWidgetRecordingCacheFreshness
+  let requiredRecordingId: String?
+  let generation: Int
+
+  var hasCompleteCache: Bool {
+    cachedRecordingId != nil && cachedRevision != nil &&
+      audioPath != nil && fileKey != nil
+  }
+
+  static func parse(_ raw: String?) -> VinscentWidgetRecordingCacheManifest? {
+    guard let raw,
+      let data = raw.data(using: .utf8),
+      let object = try? JSONSerialization.jsonObject(with: data),
+      let json = object as? [String: Any],
+      json["schemaVersion"] as? Int == 1,
+      nonEmpty(json["coupleId"]) != nil,
+      let generation = json["generation"] as? Int,
+      generation >= 0,
+      let freshnessValue = nonEmpty(json["freshness"]),
+      let freshness = VinscentWidgetRecordingCacheFreshness(
+        rawValue: freshnessValue
+      )
+    else {
+      return nil
+    }
+
+    let cachedRevision = json["cachedRevision"] as? Int
+    if let cachedRevision, cachedRevision < 0 {
+      return nil
+    }
+    let manifest = VinscentWidgetRecordingCacheManifest(
+      cachedRecordingId: nonEmpty(json["cachedRecordingId"]),
+      cachedRevision: cachedRevision,
+      audioPath: nonEmpty(json["audioPath"]),
+      fileKey: nonEmpty(json["fileKey"]),
+      freshness: freshness,
+      requiredRecordingId: nonEmpty(json["requiredRecordingId"]),
+      generation: generation
+    )
+    let hasNoCache = manifest.cachedRecordingId == nil &&
+      manifest.cachedRevision == nil && manifest.audioPath == nil &&
+      manifest.fileKey == nil
+    let isValid: Bool
+    switch freshness {
+    case .verified:
+      isValid = manifest.hasCompleteCache && manifest.requiredRecordingId == nil
+    case .required:
+      isValid = manifest.requiredRecordingId != nil &&
+        (manifest.hasCompleteCache || hasNoCache)
+    case .refreshRequired:
+      isValid = manifest.requiredRecordingId == nil &&
+        (manifest.hasCompleteCache || hasNoCache)
+    }
+    return isValid ? manifest : nil
+  }
+
+  private static func nonEmpty(_ value: Any?) -> String? {
+    guard let value = value as? String else {
+      return nil
+    }
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return normalized.isEmpty ? nil : normalized
+  }
+}
+
+private enum VinscentWidgetRecordingCachePolicy {
+  static func canPlay(_ manifest: VinscentWidgetRecordingCacheManifest?) -> Bool {
+    guard let manifest, manifest.hasCompleteCache else {
+      return false
+    }
+    switch manifest.freshness {
+    case .verified:
+      return true
+    case .required:
+      return manifest.requiredRecordingId == manifest.cachedRecordingId
+    case .refreshRequired:
+      return false
+    }
+  }
+}
+
 struct VinscentWidgetSnapshot {
   let characterImagePath: String?
   let recordingAudioPath: String?
+  let playableRecordingAudioPath: String?
   let partnerCardImagePath: String?
   let calendarEventArtworkPath: String?
   let calendarEventTitle: String?
@@ -58,6 +152,22 @@ struct VinscentWidgetSnapshot {
 
   static func load() -> VinscentWidgetSnapshot {
     let defaults = VinscentWidgetStateStore.defaults
+    let legacyRecordingAudioPath = existingFilePath(
+      defaults?.string(forKey: VinscentWidgetConstants.recordingAudioPathKey)
+    )
+    let rawRecordingManifest = defaults?.string(
+      forKey: VinscentWidgetConstants.recordingCacheManifestKey
+    )
+    let recordingManifest = VinscentWidgetRecordingCacheManifest.parse(
+      rawRecordingManifest
+    )
+    let manifestAudioPath = existingFilePath(recordingManifest?.audioPath)
+    let recordingAudioPath = manifestAudioPath ?? legacyRecordingAudioPath
+    let playableRecordingAudioPath = rawRecordingManifest == nil
+      ? legacyRecordingAudioPath
+      : VinscentWidgetRecordingCachePolicy.canPlay(recordingManifest)
+        ? manifestAudioPath
+        : nil
     let playingStartedAt = date(
       fromMilliseconds: defaults?.double(
         forKey: VinscentWidgetConstants.characterPlayingStartedAtKey
@@ -70,9 +180,8 @@ struct VinscentWidgetSnapshot {
       characterImagePath: existingFilePath(
         defaults?.string(forKey: VinscentWidgetConstants.characterImagePathKey)
       ),
-      recordingAudioPath: existingFilePath(
-        defaults?.string(forKey: VinscentWidgetConstants.recordingAudioPathKey)
-      ),
+      recordingAudioPath: recordingAudioPath,
+      playableRecordingAudioPath: playableRecordingAudioPath,
       partnerCardImagePath: existingFilePath(
         defaults?.string(forKey: VinscentWidgetConstants.partnerCardImagePathKey)
       ),

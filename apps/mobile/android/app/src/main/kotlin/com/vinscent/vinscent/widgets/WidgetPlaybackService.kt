@@ -18,7 +18,6 @@ import android.os.Looper
 import com.vinscent.vinscent.MainActivity
 import com.vinscent.vinscent.R
 import es.antonborri.home_widget.HomeWidgetPlugin
-import java.io.File
 
 class WidgetPlaybackService : Service() {
     private val handler = Handler(Looper.getMainLooper())
@@ -64,8 +63,8 @@ class WidgetPlaybackService : Service() {
 
     private fun startPlayback() {
         val data = HomeWidgetPlugin.getData(this)
-        val audioPath = data.getString(WidgetStorageKeys.RECORDING_AUDIO_PATH, null)
-        if (audioPath.isNullOrBlank() || !File(audioPath).isFile) {
+        val audioPath = WidgetRecordingCacheResolver.playableAudioPath(data)
+        if (audioPath == null) {
             stopSelf()
             return
         }
