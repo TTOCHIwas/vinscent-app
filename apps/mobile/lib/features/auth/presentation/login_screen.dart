@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/assets/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../application/apple_sign_in_availability.dart';
 import '../application/social_login_controller.dart';
 import '../application/social_login_state.dart';
 import '../data/social_auth_failure.dart';
@@ -53,13 +54,14 @@ class LoginScreen extends ConsumerWidget {
                                 .read(socialLoginControllerProvider.notifier)
                                 .signInWithKakao(),
                     ),
-                    AppleLoginButton(
-                      onPressed: loginState.isSigningIn
-                          ? null
-                          : () => ref
-                                .read(socialLoginControllerProvider.notifier)
-                                .signInWithApple(),
-                    ),
+                    if (AppleSignInAvailability.isSupported)
+                      AppleLoginButton(
+                        onPressed: loginState.isSigningIn
+                            ? null
+                            : () => ref
+                                  .read(socialLoginControllerProvider.notifier)
+                                  .signInWithApple(),
+                      ),
                   ],
                 ),
               ),

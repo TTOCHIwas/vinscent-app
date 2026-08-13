@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../application/apple_sign_in_availability.dart';
 import 'social_auth_failure.dart';
 
 final appleAuthClientProvider = Provider<AppleAuthClient>(
@@ -16,7 +16,7 @@ class AppleAuthClient {
   const AppleAuthClient();
 
   Future<AppleLoginTokens> signIn() async {
-    if (!_supportsNativeAppleSignIn) {
+    if (!AppleSignInAvailability.isSupported) {
       throw const SocialAuthFailure(
         SocialAuthFailureReason.unsupportedPlatform,
         message: 'Native Apple sign-in is only enabled on Apple platforms.',
@@ -96,15 +96,6 @@ class AppleAuthClient {
         stackTrace: stackTrace,
       );
     }
-  }
-
-  bool get _supportsNativeAppleSignIn {
-    if (kIsWeb) {
-      return false;
-    }
-
-    return defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS;
   }
 
   String _generateNonce([int length = 32]) {
