@@ -88,7 +88,7 @@ source_verifier="$repository_root/scripts/verify_release_source.sh"
 source_branch="$(git -C "$repository_root" branch --show-current)"
 source_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
 
-if [[ "$source_branch" != "main" ]]; then
+if [[ "$source_branch" != "main" && "${GITHUB_REF:-}" != "refs/heads/main" ]]; then
   echo "iOS release candidates must be built from main." >&2
   exit 1
 fi

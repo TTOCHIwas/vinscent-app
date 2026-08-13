@@ -1,0 +1,221 @@
+name: iOS release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha_confirmation:
+        description: Full main commit SHA to build
+        required: true
+        type: string
+      build_number:
+        description: Unique positive iOS build number
+        required: true
+        type: string
+      publish_testflight:
+        description: Validate and upload the verified IPA to TestFlight
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+env:
+  CI: true
+  FLUTTER_SUPPRESS_ANALYTICS: true
+  BUILD_NUMBER: ${{ inputs.build_number }}
+
+jobs:
+  release:
+    name: Signed iOS IPA
+    runs-on: macos-26
+    timeout-minutes: 75
+    environment: ios-release
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Require an exact main commit
+        env:
+          CONFIRMED_COMMIT_SHA: ${{ inputs.commit_sha_confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "iOS release candidates must be built from main." >&2
+            exit 1
+          fi
+          if [[ ! "$CONFIRMED_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "commit_sha_confirmation must be a full lowercase commit SHA." >&2
+            exit 1
+          fi
+          if [[ "$CONFIRMED_COMMIT_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Confirmed commit does not match the workflow commit." >&2
+            exit 1
+          fi
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+      - name: Validate release configuration
+        env:
+          DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          DANJJAN_IOS_RUNNER_PROFILE_BASE64: ${{ secrets.DANJJAN_IOS_RUNNER_PROFILE_BASE64 }}
+          DANJJAN_IOS_WIDGET_PROFILE_BASE64: ${{ secrets.DANJJAN_IOS_WIDGET_PROFILE_BASE64 }}
+          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
+          DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
+          DANJJAN_APPLE_TEAM_ID: ${{ vars.DANJJAN_APPLE_TEAM_ID }}
+          DANJJAN_ASC_API_PRIVATE_KEY_BASE64: ${{ secrets.DANJJAN_ASC_API_PRIVATE_KEY_BASE64 }}
+          DANJJAN_ASC_API_KEY_ID: ${{ vars.DANJJAN_ASC_API_KEY_ID }}
+          DANJJAN_ASC_API_ISSUER_ID: ${{ vars.DANJJAN_ASC_API_ISSUER_ID }}
+          PUBLISH_TESTFLIGHT: ${{ inputs.publish_testflight }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "build_number must be a positive integer." >&2
+            exit 1
+          fi
+
+          required=(
+            DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64
+            DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
+            DANJJAN_IOS_RUNNER_PROFILE_BASE64
+            DANJJAN_IOS_WIDGET_PROFILE_BASE64
+            DANJJAN_SUPABASE_URL
+            DANJJAN_SUPABASE_ANON_KEY
+            DANJJAN_KAKAO_NATIVE_APP_KEY
+            DANJJAN_POLICY_BASE_URL
+            DANJJAN_APPLE_TEAM_ID
+          )
+          for variable in "${required[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing ios-release configuration: $variable" >&2
+              exit 1
+            fi
+          done
+
+          if [[ ! "$DANJJAN_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "DANJJAN_APPLE_TEAM_ID must be a 10-character Team ID." >&2
+            exit 1
+          fi
+
+          if [[ "$PUBLISH_TESTFLIGHT" == "true" ]]; then
+            upload_required=(
+              DANJJAN_ASC_API_PRIVATE_KEY_BASE64
+              DANJJAN_ASC_API_KEY_ID
+              DANJJAN_ASC_API_ISSUER_ID
+            )
+            for variable in "${upload_required[@]}"; do
+              if [[ -z "${!variable:-}" ]]; then
+                echo "Missing TestFlight configuration: $variable" >&2
+                exit 1
+              fi
+            done
+            if [[ ! "$DANJJAN_ASC_API_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+              echo "DANJJAN_ASC_API_KEY_ID must be a 10-character key ID." >&2
+              exit 1
+            fi
+            if [[ ! "$DANJJAN_ASC_API_ISSUER_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+              echo "DANJJAN_ASC_API_ISSUER_ID must be a UUID." >&2
+              exit 1
+            fi
+          fi
+      - name: Install Apple signing assets
+        env:
+          DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          DANJJAN_IOS_RUNNER_PROFILE_BASE64: ${{ secrets.DANJJAN_IOS_RUNNER_PROFILE_BASE64 }}
+          DANJJAN_IOS_WIDGET_PROFILE_BASE64: ${{ secrets.DANJJAN_IOS_WIDGET_PROFILE_BASE64 }}
+          DANJJAN_APPLE_TEAM_ID: ${{ vars.DANJJAN_APPLE_TEAM_ID }}
+        run: scripts/install_ios_signing_assets.sh
+      - name: Build and verify signed iOS release candidate
+        env:
+          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
+          DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
+          DANJJAN_APPLE_TEAM_ID: ${{ vars.DANJJAN_APPLE_TEAM_ID }}
+        run: scripts/build_ios_release_candidate.sh "$BUILD_NUMBER" "$GITHUB_SHA"
+      - name: Upload iOS release evidence
+        id: release-artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: danjjan-ios-build-${{ inputs.build_number }}
+          path: apps/mobile/build/release-evidence/ios-build-${{ inputs.build_number }}
+          if-no-files-found: error
+          retention-days: 90
+      - name: Restore App Store Connect API key
+        if: ${{ inputs.publish_testflight }}
+        env:
+          DANJJAN_ASC_API_PRIVATE_KEY_BASE64: ${{ secrets.DANJJAN_ASC_API_PRIVATE_KEY_BASE64 }}
+          DANJJAN_ASC_API_KEY_ID: ${{ vars.DANJJAN_ASC_API_KEY_ID }}
+        run: |
+          set -euo pipefail
+          api_key_directory="$HOME/.appstoreconnect/private_keys"
+          api_key_path="$api_key_directory/AuthKey_${DANJJAN_ASC_API_KEY_ID}.p8"
+          mkdir -p "$api_key_directory"
+          if ! printf '%s' "$DANJJAN_ASC_API_PRIVATE_KEY_BASE64" |
+            base64 --decode > "$api_key_path" 2>/dev/null; then
+            printf '%s' "$DANJJAN_ASC_API_PRIVATE_KEY_BASE64" |
+              base64 -D > "$api_key_path"
+          fi
+          chmod 600 "$api_key_path"
+          test -s "$api_key_path"
+          grep -Fq 'BEGIN PRIVATE KEY' "$api_key_path"
+          printf 'DANJJAN_ASC_API_PRIVATE_KEY_PATH=%s\n' "$api_key_path" \
+            >> "$GITHUB_ENV"
+      - name: Validate TestFlight upload
+        if: ${{ inputs.publish_testflight }}
+        env:
+          DANJJAN_ASC_API_KEY_ID: ${{ vars.DANJJAN_ASC_API_KEY_ID }}
+          DANJJAN_ASC_API_ISSUER_ID: ${{ vars.DANJJAN_ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          ipa_path="apps/mobile/build/release-evidence/ios-build-${BUILD_NUMBER}/danjjan-ios-build-${BUILD_NUMBER}.ipa"
+          test -s "$ipa_path"
+          xcrun altool --validate-app \
+            --file "$ipa_path" \
+            --type ios \
+            --apiKey "$DANJJAN_ASC_API_KEY_ID" \
+            --apiIssuer "$DANJJAN_ASC_API_ISSUER_ID"
+      - name: Upload to TestFlight
+        if: ${{ inputs.publish_testflight }}
+        env:
+          DANJJAN_ASC_API_KEY_ID: ${{ vars.DANJJAN_ASC_API_KEY_ID }}
+          DANJJAN_ASC_API_ISSUER_ID: ${{ vars.DANJJAN_ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          ipa_path="apps/mobile/build/release-evidence/ios-build-${BUILD_NUMBER}/danjjan-ios-build-${BUILD_NUMBER}.ipa"
+          xcrun altool --upload-app \
+            --file "$ipa_path" \
+            --type ios \
+            --apiKey "$DANJJAN_ASC_API_KEY_ID" \
+            --apiIssuer "$DANJJAN_ASC_API_ISSUER_ID"
+      - name: Summarize iOS release candidate
+        env:
+          PUBLISH_TESTFLIGHT: ${{ inputs.publish_testflight }}
+        run: |
+          {
+            echo "### iOS release candidate"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Build number: \`$BUILD_NUMBER\`"
+            echo "- Artifact digest: \`${{ steps.release-artifact.outputs.artifact-digest }}\`"
+            if [[ "$PUBLISH_TESTFLIGHT" == "true" ]]; then
+              echo "- TestFlight upload: requested"
+            else
+              echo "- TestFlight upload: skipped"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove restored Apple credentials
+        if: always()
+        run: scripts/cleanup_ios_signing_assets.sh
