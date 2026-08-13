@@ -76,7 +76,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         appleAuthClientProvider.overrideWithValue(
-          _FakeAppleAuthClient(failure: failure),
+          _FakeAppleAuthClient.withFailure(failure),
         ),
         socialSessionRepositoryProvider.overrideWithValue(
           _FakeSocialSessionRepository(),
@@ -94,6 +94,35 @@ void main() {
       SocialAuthFailureReason.unsupportedPlatform,
     );
   });
+
+  test(
+    'signInWithApple creates a Supabase session through repository',
+    () async {
+      const tokens = AppleLoginTokens(
+        idToken: 'apple-id-token',
+        rawNonce: 'apple-raw-nonce',
+        authorizationCode: 'apple-authorization-code',
+      );
+      final repository = _FakeSocialSessionRepository();
+      final appleClient = _FakeAppleAuthClient.withTokens(tokens);
+      final container = ProviderContainer(
+        overrides: [
+          appleAuthClientProvider.overrideWithValue(appleClient),
+          socialSessionRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(socialLoginControllerProvider.notifier)
+          .signInWithApple();
+
+      expect(appleClient.signInCount, 1);
+      expect(repository.appleSignInCount, 1);
+      expect(repository.appleTokens, same(tokens));
+      expect(container.read(socialLoginControllerProvider).failure, isNull);
+    },
+  );
 }
 
 class _FakeKakaoAuthClient implements KakaoAuthClient {
@@ -110,13 +139,23 @@ class _FakeKakaoAuthClient implements KakaoAuthClient {
 }
 
 class _FakeAppleAuthClient implements AppleAuthClient {
-  const _FakeAppleAuthClient({required this.failure});
+  _FakeAppleAuthClient.withFailure(this.failure) : tokens = null;
 
-  final SocialAuthFailure failure;
+  _FakeAppleAuthClient.withTokens(this.tokens) : failure = null;
+
+  final AppleLoginTokens? tokens;
+  final SocialAuthFailure? failure;
+  var signInCount = 0;
 
   @override
   Future<AppleLoginTokens> signIn() async {
-    throw failure;
+    signInCount++;
+    final failure = this.failure;
+    if (failure != null) {
+      throw failure;
+    }
+
+    return tokens!;
   }
 }
 
@@ -127,6 +166,8 @@ class _FakeSocialSessionRepository implements SocialSessionRepository {
   final bool canCreateSession;
 
   var kakaoSignInCount = 0;
+  var appleSignInCount = 0;
+  AppleLoginTokens? appleTokens;
 
   @override
   Future<void> signInWithKakao(KakaoLoginTokens tokens) async {
@@ -134,5 +175,8 @@ class _FakeSocialSessionRepository implements SocialSessionRepository {
   }
 
   @override
-  Future<void> signInWithApple(AppleLoginTokens tokens) async {}
+  Future<void> signInWithApple(AppleLoginTokens tokens) async {
+    appleSignInCount++;
+    appleTokens = tokens;
+  }
 }
