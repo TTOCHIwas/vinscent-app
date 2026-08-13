@@ -12,6 +12,8 @@ void main() {
     expect(source, contains('workflow_dispatch:'));
     expect(source, contains('commit_sha_confirmation:'));
     expect(source, contains('build_number:'));
+    expect(source, contains('publish_internal:'));
+    expect(source, contains('release_notes_ko:'));
     expect(source, contains('environment: android-release'));
     expect(source, isNot(contains('pull_request:')));
     expect(source, isNot(matches(RegExp(r'^\s+push:', multiLine: true))));
@@ -190,6 +192,73 @@ void main() {
     expect(evidenceIndex, greaterThanOrEqualTo(0));
     expect(sizeAnalysisIndex, greaterThan(evidenceIndex));
     expect(uploadIndex, greaterThan(sizeAnalysisIndex));
+  });
+
+  test('internal publishing is explicit and uses verified release evidence', () {
+    final source = workflow.readAsStringSync();
+
+    expect(
+      source,
+      matches(
+        RegExp(
+          r'publish_internal:[\s\S]*?default:\s+false[\s\S]*?type:\s+boolean',
+        ),
+      ),
+    );
+    expect(source, contains('DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'));
+    expect(
+      source,
+      contains(r'if: ${{ inputs.publish_internal }}'),
+    );
+    expect(
+      source,
+      contains(
+        'uses: r0adkll/upload-google-play@'
+        'e738b9dd8f2476ea806d921b64aacd24f34515a5',
+      ),
+    );
+    expect(source, contains('packageName: com.vinscent.vinscent'));
+    expect(source, contains('tracks: internal'));
+    expect(source, contains('status: completed'));
+    expect(source, contains('whatsNewDirectory:'));
+    expect(source, contains('mappingFile:'));
+    expect(
+      source,
+      contains(
+        'releaseFiles: apps/mobile/build/release-evidence/'
+        r'danjjan-android-build-${{ inputs.build_number }}.aab',
+      ),
+    );
+
+    final evidenceIndex = source.indexOf('- name: Upload release evidence');
+    final playIndex = source.indexOf(
+      '- name: Publish to Google Play internal testing',
+    );
+    expect(playIndex, greaterThan(evidenceIndex));
+  });
+
+  test('internal publishing validates credentials and Korean release notes', () {
+    final source = workflow.readAsStringSync();
+
+    expect(source, contains(r'.type == "service_account"'));
+    expect(source, contains(r'.client_email | type == "string"'));
+    expect(source, contains('BEGIN PRIVATE KEY'));
+    expect(source, contains('release_notes_ko must not be blank'));
+    expect(source, contains('release_notes_ko must be 500 characters or fewer'));
+    expect(source, contains('whatsnew-ko-KR'));
+    expect(source, contains('Remove restored private inputs'));
+    expect(source, contains('danjjan-google-play-service-account.json'));
+    expect(
+      source,
+      isNot(
+        matches(
+          RegExp(
+            r'path:\s+.*(?:service-account|whats-new)',
+            multiLine: true,
+          ),
+        ),
+      ),
+    );
   });
 
   test('release workflow uses least privilege and immutable actions', () {
