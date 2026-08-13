@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/home_widgets/application/home_widget_synchronizer.dart';
 import 'package:vinscent/features/home_widgets/data/home_widget_asset_validator.dart';
+import 'package:vinscent/features/home_widgets/data/home_widget_recording_cache_manifest.dart';
+import 'package:vinscent/features/home_widgets/data/home_widget_recording_cache_repository.dart';
 import 'package:vinscent/features/home_widgets/data/home_widget_snapshot.dart';
 
 void main() {
@@ -36,7 +38,7 @@ void main() {
     );
     expect(
       store.values[HomeWidgetStorage.recordingAudioVersionKey],
-      'recording-v1',
+      'recording-id:1',
     );
     expect(
       store.values[HomeWidgetStorage.partnerCardImageVersionKey],
@@ -105,6 +107,78 @@ void main() {
     expect(savedPath, isNot('/missing.png'));
     expect(store.files[savedPath], _pngBytes);
   });
+
+  test(
+    'confirms a locally uploaded recording revision without downloading it',
+    () async {
+      final store = _FakeHomeWidgetStore();
+      final cacheRepository = HomeWidgetRecordingCacheRepository(store: store);
+      await cacheRepository.installVerified(
+        coupleId: 'couple-id',
+        recordingId: 'recording-id',
+        revision: 0,
+        bytes: _m4aBytes,
+      );
+      final downloader = _FakeHomeWidgetAssetDownloader();
+      final synchronizer = HomeWidgetSynchronizer(
+        store: store,
+        downloader: downloader,
+        recordingCacheRepository: cacheRepository,
+      );
+
+      await synchronizer.synchronize(
+        HomeWidgetSnapshot(
+          characterImage: const HomeWidgetAssetUpdate.preserve(),
+          recordingAudio: HomeWidgetAssetUpdate.replace(_recordingAsset),
+          partnerCardImage: const HomeWidgetAssetUpdate.preserve(),
+        ),
+      );
+
+      expect(downloader.requestedUrls, isEmpty);
+      final manifest = HomeWidgetRecordingCacheManifest.tryParse(
+        store.values[HomeWidgetStorage.recordingCacheManifestKey],
+      );
+      expect(manifest?.cachedRevision, 1);
+      expect(
+        store.values[HomeWidgetStorage.recordingAudioVersionKey],
+        'recording-id:1',
+      );
+    },
+  );
+
+  test(
+    'downloads a required recording and publishes a verified manifest',
+    () async {
+      final store = _FakeHomeWidgetStore();
+      final cacheRepository = HomeWidgetRecordingCacheRepository(store: store);
+      await cacheRepository.markRequired(
+        coupleId: 'couple-id',
+        recordingId: 'recording-id',
+      );
+      final downloader = _FakeHomeWidgetAssetDownloader();
+      final synchronizer = HomeWidgetSynchronizer(
+        store: store,
+        downloader: downloader,
+        recordingCacheRepository: cacheRepository,
+      );
+
+      await synchronizer.synchronize(
+        HomeWidgetSnapshot(
+          characterImage: const HomeWidgetAssetUpdate.preserve(),
+          recordingAudio: HomeWidgetAssetUpdate.replace(_recordingAsset),
+          partnerCardImage: const HomeWidgetAssetUpdate.preserve(),
+        ),
+      );
+
+      expect(downloader.requestedUrls, ['https://example.com/recording.m4a']);
+      final manifest = HomeWidgetRecordingCacheManifest.tryParse(
+        store.values[HomeWidgetStorage.recordingCacheManifestKey],
+      );
+      expect(manifest?.freshness, HomeWidgetRecordingCacheFreshness.verified);
+      expect(manifest?.cachedRecordingId, 'recording-id');
+      expect(manifest?.cachedRevision, 1);
+    },
+  );
 
   test('rejects invalid image bytes without caching their version', () async {
     final store = _FakeHomeWidgetStore();
@@ -227,10 +301,11 @@ const _characterAsset = HomeWidgetRemoteAsset(
   version: 'character-v1',
   extension: 'png',
 );
-const _recordingAsset = HomeWidgetRemoteAsset(
+const _recordingAsset = HomeWidgetRecordingRemoteAsset(
   url: 'https://example.com/recording.m4a',
-  version: 'recording-v1',
-  extension: 'm4a',
+  coupleId: 'couple-id',
+  recordingId: 'recording-id',
+  revision: 1,
 );
 const _cardAsset = HomeWidgetRemoteAsset(
   url: 'https://example.com/card.png',
