@@ -16,6 +16,11 @@ Edge Function을 배포한다.
 차단하지 않으며 실제 앱 버전과 빌드 번호를 입력받아 Play·App Store 문구
 제한과 스토어 그래픽 자산 계약을 검증한다.
 
+`.github/workflows/ios-release.yml`은 일반 CI와 분리된 수동 iOS 릴리스
+워크플로다. `ios-release` Environment 승인과 정확한 `main` commit을 요구하고,
+Mac 사전 점검 뒤 서명된 IPA와 검증 증빙을 만든다. 실행자가
+`publish_testflight`를 선택한 경우에만 App Store Connect에 업로드한다.
+
 GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제한하고,
 외부 액션은 전체 커밋 SHA로 고정한다.
 

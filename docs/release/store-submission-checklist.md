@@ -170,7 +170,8 @@ apps/mobile/flutterw.cmd build appbundle --release --analyze-size
 - [ ] TestFlight 내부 tester 설치와 실제 iPhone 검증
 
 capability와 archive 검증은
-`docs/release/mobile-signing-and-capabilities.md`를 따른다.
+`docs/release/mobile-signing-and-capabilities.md`와
+`docs/release/ios-mac-handoff.md`를 따른다.
 
 ### App information과 privacy
 
@@ -200,6 +201,10 @@ App Privacy 세부 답변은
 - [ ] 앱 아이콘과 화면이 실제 출시 build와 일치
 - [ ] version `1.0.0`, build number가 App Store Connect에서 고유함
 - [ ] Xcode 26 이상과 iOS 26 SDK로 Distribution 서명 archive 생성
+- [ ] Mac에서 `Podfile.lock`과 CocoaPods workspace 참조를 생성·검토해 커밋
+- [ ] `scripts/check_ios_release_mac.sh <main-commit-sha>` 통과
+- [ ] GitHub `ios-release` Environment의 승인자, `main` 제한, secret·variable
+  등록 완료
 - [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값과
   Apple Developer Membership의 10자리 `DANJJAN_APPLE_TEAM_ID` 주입
 - [ ] `main`에서 출시할 40자 commit SHA를 명시해
@@ -211,7 +216,8 @@ App Privacy 세부 답변은
   application identifier가 지정한 Apple Team ID에 정확히 일치함
 - [ ] Runner의 production push entitlement 확인
 - [ ] 위젯에는 App Group 이외의 불필요한 entitlement가 없음
-- [ ] archive validation 통과 후 build upload
+- [ ] `iOS release candidate`를 업로드 없이 실행해 서명·archive 검증 통과
+- [ ] 새 build number로 `publish_testflight`를 선택해 build upload 통과
 - [ ] 처리된 build를 TestFlight에서 설치해 최종 smoke test
 
 ## 4. Review 계정과 재현 절차

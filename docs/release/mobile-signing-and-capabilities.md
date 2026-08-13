@@ -213,6 +213,9 @@ cd apps/mobile
 
 ## 2. iOS Runner capability
 
+Mac 방문 전 준비, Apple·Supabase·Firebase 설정값, GitHub secret 등록과
+TestFlight 실행 순서는 `docs/release/ios-mac-handoff.md`를 따른다.
+
 Mac에서 `apps/mobile/ios/Runner.xcworkspace`를 열고 Runner target에 같은
 Development Team을 지정한다. Apple Developer의
 `com.vinscent.vinscent` App ID와 Xcode target 양쪽에 다음 capability가
@@ -305,8 +308,9 @@ with Apple entitlement가 들어가면 실패한다. 서로 같은 잘못된 팀
 
 빌드 번호별 증빙 디렉터리가 이미 있으면 덮어쓰지 않고 실패한다. 검증 중
 실패한 임시 자료는 제거하며, 모든 검사를 통과한 경우에만 최종 증빙
-디렉터리를 만든다. 스크립트는 App Store Connect에 업로드하지 않으므로
-Organizer 또는 Transporter에서 검증 후 사람이 업로드한다.
+디렉터리를 만든다. 로컬 스크립트는 업로드하지 않는다. GitHub Actions의
+`iOS release candidate`는 `publish_testflight`를 선택한 경우에만 검증된 IPA를
+App Store Connect에서 다시 검증한 뒤 TestFlight에 업로드한다.
 
 Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한다.
 
@@ -321,9 +325,10 @@ Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한
 capability 활성화는 Apple 계정 권한이 있는 담당자가 수행한다.
 
 일반 CI의 `iOS native build`는 Xcode 26 환경에서 무서명 시뮬레이터
-컴파일만 검증한다. Apple Distribution 인증서와 Runner·위젯의 App Store
-프로비저닝 프로파일이 준비되기 전에는 GitHub Actions에서 서명된 IPA를
-만들거나 업로드하지 않는다.
+컴파일만 검증한다. 서명·업로드는 일반 CI와 분리된 수동
+`iOS release candidate`에서만 실행한다. 해당 workflow는 `ios-release`
+Environment 승인, 정확한 `main` commit, Apple Distribution 인증서와
+Runner·위젯의 App Store Connect profile을 모두 요구한다.
 
 참고:
 
