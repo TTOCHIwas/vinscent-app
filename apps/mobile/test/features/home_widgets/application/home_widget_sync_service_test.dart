@@ -68,11 +68,40 @@ void main() {
         isSupportedPlatform: true,
       );
 
-      await service.synchronizeSafely(expectedCoupleId: 'couple-id');
+      final synchronized = await service.synchronizeSafely(
+        expectedCoupleId: 'couple-id',
+      );
 
+      expect(synchronized, isTrue);
       expect(repository.expectedCoupleIds, ['couple-id']);
       expect(downloader.requestedUrls, ['https://example.com/recording.m4a']);
       expect(store.refreshedTargets, [HomeWidgetStorage.characterTarget]);
+    },
+  );
+
+  test(
+    'reports failure after targeted recording retries are exhausted',
+    () async {
+      final repository = _RecordingSnapshotRepository(
+        update: const HomeWidgetAssetUpdate.preserve(),
+      );
+      final service = HomeWidgetRecordingSyncService(
+        snapshotRepository: repository,
+        synchronizer: HomeWidgetSynchronizer(
+          store: _MemoryHomeWidgetStore(),
+          downloader: _RecordingDownloader(),
+        ),
+        maxAttempts: 2,
+        retryDelay: Duration.zero,
+        isSupportedPlatform: true,
+      );
+
+      final synchronized = await service.synchronizeSafely(
+        expectedCoupleId: 'couple-id',
+      );
+
+      expect(synchronized, isFalse);
+      expect(repository.expectedCoupleIds, ['couple-id', 'couple-id']);
     },
   );
 }
@@ -119,6 +148,18 @@ class _PngDownloader implements HomeWidgetAssetDownloader {
 
 class _RecordingSnapshotRepository
     implements HomeWidgetRecordingSnapshotRepository {
+  _RecordingSnapshotRepository({
+    this.update = const HomeWidgetAssetUpdate.replace(
+      HomeWidgetRecordingRemoteAsset(
+        url: 'https://example.com/recording.m4a',
+        coupleId: 'couple-id',
+        recordingId: 'recording-id',
+        revision: 1,
+      ),
+    ),
+  });
+
+  final HomeWidgetAssetUpdate update;
   final expectedCoupleIds = <String>[];
 
   @override
@@ -126,14 +167,7 @@ class _RecordingSnapshotRepository
     required String expectedCoupleId,
   }) async {
     expectedCoupleIds.add(expectedCoupleId);
-    return const HomeWidgetAssetUpdate.replace(
-      HomeWidgetRecordingRemoteAsset(
-        url: 'https://example.com/recording.m4a',
-        coupleId: 'couple-id',
-        recordingId: 'recording-id',
-        revision: 1,
-      ),
-    );
+    return update;
   }
 }
 
