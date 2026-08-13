@@ -181,7 +181,7 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
               .reconcileCurrentDeviceToken(),
         );
       }
-      _scheduleWidgetSync();
+      _scheduleWidgetSync(requireRecordingVerification: true);
     }
   }
 
@@ -220,14 +220,33 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
         debugPrint('[widget] initial launch lookup failed: $error');
       }
     }
-    _scheduleWidgetSync();
+    _scheduleWidgetSync(requireRecordingVerification: true);
   }
 
-  void _scheduleWidgetSync() {
+  void _scheduleWidgetSync({bool requireRecordingVerification = false}) {
     if (!_supportsHomeWidgets) {
       return;
     }
+    if (requireRecordingVerification) {
+      unawaited(_verifyRecordingCacheAndScheduleWidgetSync());
+      return;
+    }
     _widgetSyncScheduler.schedule();
+  }
+
+  Future<void> _verifyRecordingCacheAndScheduleWidgetSync() async {
+    try {
+      await ref
+          .read(homeWidgetRecordingCacheRepositoryProvider)
+          .markRefreshRequired();
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[widget] recording cache verification failed: $error');
+      }
+    }
+    if (mounted) {
+      _widgetSyncScheduler.schedule();
+    }
   }
 
   Future<void> _synchronizeRecordingNotification(
