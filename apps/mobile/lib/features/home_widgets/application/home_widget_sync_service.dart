@@ -135,11 +135,11 @@ class HomeWidgetRecordingSyncService {
     }
   }
 
-  Future<void> synchronizeSafely({required String expectedCoupleId}) async {
+  Future<bool> synchronizeSafely({required String expectedCoupleId}) async {
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await synchronize(expectedCoupleId: expectedCoupleId);
-        return;
+        return true;
       } catch (error) {
         if (kDebugMode) {
           debugPrint(
@@ -152,5 +152,6 @@ class HomeWidgetRecordingSyncService {
         }
       }
     }
+    return false;
   }
 }

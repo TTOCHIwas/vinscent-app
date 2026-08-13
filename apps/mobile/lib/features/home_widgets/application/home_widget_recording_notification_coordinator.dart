@@ -31,7 +31,7 @@ typedef MarkHomeWidgetRecordingRequired =
     });
 
 typedef SynchronizeHomeWidgetRecording =
-    Future<void> Function({required String expectedCoupleId});
+    Future<bool> Function({required String expectedCoupleId});
 
 class HomeWidgetRecordingNotification {
   const HomeWidgetRecordingNotification({
@@ -88,8 +88,7 @@ class HomeWidgetRecordingNotificationCoordinator {
       coupleId: notification.coupleId,
       recordingId: notification.recordingId,
     );
-    await _synchronizeRecording(expectedCoupleId: notification.coupleId);
-    return true;
+    return _synchronizeRecording(expectedCoupleId: notification.coupleId);
   }
 
   Future<bool> handleSafely(Map<String, dynamic> data) async {
