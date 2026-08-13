@@ -85,6 +85,42 @@ void main() {
       expect(store.files, isEmpty);
     },
   );
+
+  test(
+    'removes the previous managed file after publishing its replacement',
+    () async {
+      final store = _RecordingCacheStore();
+      final repository = HomeWidgetRecordingCacheRepository(store: store);
+      await repository.installVerified(
+        coupleId: 'couple-a',
+        recordingId: 'recording-a',
+        revision: 1,
+        bytes: _m4aBytes,
+      );
+      final previousManifest = await repository.read();
+      store.events.clear();
+
+      await repository.installVerified(
+        coupleId: 'couple-a',
+        recordingId: 'recording-b',
+        revision: 1,
+        bytes: _m4aBytes,
+      );
+
+      expect(store.files, hasLength(1));
+      expect(store.files.keys.single, contains('recording-b'));
+      final manifestWriteIndex = store.events.indexWhere(
+        (event) => event.startsWith(
+          'write:${HomeWidgetStorage.recordingCacheManifestKey}:',
+        ),
+      );
+      final previousFileRemovalIndex = store.events.indexOf(
+        'remove:${previousManifest!.fileKey}',
+      );
+      expect(manifestWriteIndex, greaterThanOrEqualTo(0));
+      expect(previousFileRemovalIndex, greaterThan(manifestWriteIndex));
+    },
+  );
 }
 
 final _m4aBytes = Uint8List.fromList([
