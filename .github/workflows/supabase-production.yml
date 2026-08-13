@@ -173,6 +173,25 @@ jobs:
           supabase functions deploy
           --project-ref "$SUPABASE_PROJECT_ID"
           --use-api
+      - name: Enforce client JWT verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="$RUNNER_TEMP/generate-ai-proactive-suggestion-jwt.json"
+          http_status="$(
+            curl --silent --show-error \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              --request PATCH \
+              --url "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/functions/generate-ai-proactive-suggestion" \
+              --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              --header 'Content-Type: application/json' \
+              --data '{"verify_jwt":true}'
+          )"
+          if [[ "$http_status" != "200" ]]; then
+            echo "Failed to enforce proactive suggestion JWT verification (HTTP $http_status)." >&2
+            exit 1
+          fi
       - name: Capture release evidence
         shell: bash
         run: |

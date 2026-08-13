@@ -97,6 +97,31 @@ test('Supabase production release uses forward-only deployment commands', async 
   assert.doesNotMatch(source, /supabase secrets (?:set|unset)/);
 });
 
+test('Supabase production release restores client JWT verification', async () => {
+  const source = await loadWorkflow();
+  const deployIndex = source.indexOf(
+    '- name: Deploy all tracked Edge functions',
+  );
+  const jwtRepairIndex = source.indexOf(
+    '- name: Enforce client JWT verification',
+  );
+  const evidenceIndex = source.indexOf('- name: Capture release evidence');
+  const jwtRepairStep = source.slice(jwtRepairIndex, evidenceIndex);
+
+  assert.ok(jwtRepairIndex > deployIndex);
+  assert.ok(evidenceIndex > jwtRepairIndex);
+  assert.match(jwtRepairStep, /--request PATCH/);
+  assert.match(
+    jwtRepairStep,
+    /projects\/\$SUPABASE_PROJECT_ID\/functions\/generate-ai-proactive-suggestion/,
+  );
+  assert.match(
+    jwtRepairStep,
+    /Authorization: Bearer \$SUPABASE_ACCESS_TOKEN/,
+  );
+  assert.match(jwtRepairStep, /\{"verify_jwt":true\}/);
+});
+
 test('Supabase production release verifies Edge secrets before deployment', async () => {
   const source = await loadWorkflow();
   const secretCheckIndex = source.indexOf(
