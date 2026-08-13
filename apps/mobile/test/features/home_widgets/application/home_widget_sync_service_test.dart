@@ -104,6 +104,51 @@ void main() {
       expect(repository.expectedCoupleIds, ['couple-id', 'couple-id']);
     },
   );
+
+  test('rejects a recording snapshot fetched before a newer marker', () async {
+    final store = _MemoryHomeWidgetStore();
+    final cacheRepository = HomeWidgetRecordingCacheRepository(store: store);
+    await cacheRepository.installVerified(
+      coupleId: 'couple-id',
+      recordingId: 'recording-a',
+      revision: 1,
+      bytes: _m4aBytes,
+    );
+    final repository = _RecordingSnapshotRepository(
+      update: const HomeWidgetAssetUpdate.replace(
+        HomeWidgetRecordingRemoteAsset(
+          url: 'https://example.com/recording-a.m4a',
+          coupleId: 'couple-id',
+          recordingId: 'recording-a',
+          revision: 1,
+        ),
+      ),
+      onFetch: () => cacheRepository.markRequired(
+        coupleId: 'couple-id',
+        recordingId: 'recording-b',
+      ),
+    );
+    final service = HomeWidgetRecordingSyncService(
+      snapshotRepository: repository,
+      synchronizer: HomeWidgetSynchronizer(
+        store: store,
+        downloader: _RecordingDownloader(),
+        recordingCacheRepository: cacheRepository,
+      ),
+      maxAttempts: 1,
+      retryDelay: Duration.zero,
+      isSupportedPlatform: true,
+    );
+
+    final synchronized = await service.synchronizeSafely(
+      expectedCoupleId: 'couple-id',
+    );
+
+    expect(synchronized, isFalse);
+    final manifest = await cacheRepository.read();
+    expect(manifest?.requiredRecordingId, 'recording-b');
+    expect(manifest?.cachedRecordingId, 'recording-a');
+  });
 }
 
 const _characterAsset = HomeWidgetRemoteAsset(
@@ -157,9 +202,11 @@ class _RecordingSnapshotRepository
         revision: 1,
       ),
     ),
+    this.onFetch,
   });
 
   final HomeWidgetAssetUpdate update;
+  final Future<void> Function()? onFetch;
   final expectedCoupleIds = <String>[];
 
   @override
@@ -167,6 +214,7 @@ class _RecordingSnapshotRepository
     required String expectedCoupleId,
   }) async {
     expectedCoupleIds.add(expectedCoupleId);
+    await onFetch?.call();
     return update;
   }
 }
