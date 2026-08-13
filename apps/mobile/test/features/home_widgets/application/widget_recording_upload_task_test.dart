@@ -52,8 +52,10 @@ void main() {
         },
       );
       final cache = _FakePlaybackCache(
-        onReplace: (bytes) {
+        onReplace: (bytes, receipt) {
           expect(bytes, [1, 2, 3]);
+          expect(receipt.coupleId, 'couple-id');
+          expect(receipt.recordingId, 'recording-id');
           events.add('cache');
         },
       );
@@ -67,6 +69,7 @@ void main() {
         const WidgetRecordingUploadRequest(
           filePath: '/tmp/pending.m4a',
           durationMs: 4200,
+          recordingId: 'recording-id',
         ),
       );
 
@@ -168,7 +171,7 @@ class _FakeUploadGateway implements WidgetRecordingUploadGateway {
   int uploadCount = 0;
 
   @override
-  Future<void> upload(
+  Future<WidgetRecordingUploadReceipt> upload(
     Uint8List bytes, {
     required int durationMs,
     String? recordingId,
@@ -179,23 +182,31 @@ class _FakeUploadGateway implements WidgetRecordingUploadGateway {
       throw uploadError;
     }
     onUpload?.call(bytes, durationMs);
+    return WidgetRecordingUploadReceipt(
+      coupleId: 'couple-id',
+      recordingId: recordingId ?? 'generated-recording-id',
+    );
   }
 }
 
 class _FakePlaybackCache implements WidgetRecordingPlaybackCache {
   _FakePlaybackCache({this.onReplace, this.error});
 
-  final void Function(Uint8List bytes)? onReplace;
+  final void Function(Uint8List bytes, WidgetRecordingUploadReceipt receipt)?
+  onReplace;
   final Object? error;
   int replaceCount = 0;
 
   @override
-  Future<void> replace(Uint8List bytes) async {
+  Future<void> replace(
+    Uint8List bytes,
+    WidgetRecordingUploadReceipt receipt,
+  ) async {
     replaceCount += 1;
     final cacheError = error;
     if (cacheError != null) {
       throw cacheError;
     }
-    onReplace?.call(bytes);
+    onReplace?.call(bytes, receipt);
   }
 }
