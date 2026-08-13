@@ -1,4 +1,28 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'home_widget_sync_service.dart';
+
+final homeWidgetRecordingNotificationCoordinatorProvider =
+    Provider<HomeWidgetRecordingNotificationCoordinator>((ref) {
+      final cacheRepository = ref.watch(
+        homeWidgetRecordingCacheRepositoryProvider,
+      );
+      final syncService = ref.watch(homeWidgetRecordingSyncServiceProvider);
+      return HomeWidgetRecordingNotificationCoordinator(
+        markRequired: ({required coupleId, required recordingId}) async {
+          await cacheRepository.markRequired(
+            coupleId: coupleId,
+            recordingId: recordingId,
+          );
+        },
+        synchronizeRecording: ({required expectedCoupleId}) {
+          return syncService.synchronizeSafely(
+            expectedCoupleId: expectedCoupleId,
+          );
+        },
+      );
+    });
 
 typedef MarkHomeWidgetRecordingRequired =
     Future<void> Function({

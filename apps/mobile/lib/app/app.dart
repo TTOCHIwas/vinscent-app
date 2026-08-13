@@ -17,6 +17,7 @@ import '../features/couple/application/couple_controller.dart';
 import '../features/characters/application/couple_character_controller.dart';
 import '../features/home_widgets/application/home_widget_launch_coordinator.dart';
 import '../features/home_widgets/application/home_widget_launch_policy.dart';
+import '../features/home_widgets/application/home_widget_recording_notification_coordinator.dart';
 import '../features/home_widgets/application/home_widget_sync_scheduler.dart';
 import '../features/home_widgets/application/home_widget_sync_service.dart';
 import '../features/home_widgets/data/home_widget_platform_store.dart';
@@ -87,14 +88,20 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       });
     }
     if (_supportsHomeWidgets) {
-      _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((_) {
+      _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
+        message,
+      ) {
         ref
             .read(storyLoopRealtimeControllerProvider.notifier)
             .refreshReadModels();
         ref
             .read(coupleCalendarEventRealtimeControllerProvider.notifier)
             .refreshReadModels();
-        _scheduleWidgetSync();
+        if (HomeWidgetRecordingNotification.tryParse(message.data) != null) {
+          unawaited(_synchronizeRecordingNotification(message.data));
+        } else {
+          _scheduleWidgetSync();
+        }
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(_initializeHomeWidgets());
@@ -221,6 +228,17 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       return;
     }
     _widgetSyncScheduler.schedule();
+  }
+
+  Future<void> _synchronizeRecordingNotification(
+    Map<String, dynamic> data,
+  ) async {
+    final synchronized = await ref
+        .read(homeWidgetRecordingNotificationCoordinatorProvider)
+        .handleSafely(data);
+    if (!synchronized && mounted) {
+      _scheduleWidgetSync();
+    }
   }
 
   @override
