@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import 'android_push_notification_presenter.dart';
 import 'push_token_authorization_policy.dart';
 import 'push_token_failure.dart';
 
@@ -41,18 +42,17 @@ class FirebasePushTokenRepository implements PushTokenRepository {
     FlutterLocalNotificationsPlugin? localNotifications,
   }) : _messaging = messaging ?? FirebaseMessaging.instance,
        _localNotifications =
-           localNotifications ?? FlutterLocalNotificationsPlugin();
+           localNotifications ?? FlutterLocalNotificationsPlugin() {
+    _androidPresenter = AndroidPushNotificationPresenter(
+      localNotifications: _localNotifications,
+    );
+  }
 
-  static const _androidChannel = AndroidNotificationChannel(
-    'vinscent_notifications',
-    '커플 알림',
-    description: '질문, 스토리, 녹음, 연결 상태 알림을 표시합니다.',
-    importance: Importance.high,
-  );
   static const _authorizationPolicy = PushTokenAuthorizationPolicy();
 
   final FirebaseMessaging _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications;
+  late final AndroidPushNotificationPresenter _androidPresenter;
   final _notificationOpenController =
       StreamController<Map<String, dynamic>>.broadcast();
   StreamSubscription<RemoteMessage>? _notificationOpenSubscription;
@@ -106,24 +106,15 @@ class FirebasePushTokenRepository implements PushTokenRepository {
 
     if (defaultTargetPlatform == TargetPlatform.android) {
       _debugPushLog('Android foreground notification channel setup started');
-      const androidSettings = AndroidInitializationSettings(
-        'ic_widget_notification',
+      await _androidPresenter.configure(
+        onNotificationResponse: _handleLocalNotificationResponse,
       );
-      const initializationSettings = InitializationSettings(
-        android: androidSettings,
-      );
-
-      await _localNotifications.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse: _handleLocalNotificationResponse,
-      );
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.createNotificationChannel(_androidChannel);
-
-      FirebaseMessaging.onMessage.listen(_showForegroundAndroidNotification);
+      FirebaseMessaging.onMessage.listen((message) async {
+        final shown = await _androidPresenter.show(message);
+        if (!shown) {
+          _debugPushLog('Foreground FCM message received without content');
+        }
+      });
       _debugPushLog('Android foreground notification channel setup completed');
     }
 
@@ -316,33 +307,6 @@ class FirebasePushTokenRepository implements PushTokenRepository {
       _debugPushLog('deactivate_user_push_token RPC failed: ${error.message}');
       throw _mapPostgrestError(error);
     }
-  }
-
-  Future<void> _showForegroundAndroidNotification(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) {
-      _debugPushLog('Foreground FCM message received without notification');
-      return;
-    }
-
-    _debugPushLog(
-      'Foreground FCM notification received: ${notification.title}',
-    );
-    await _localNotifications.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _androidChannel.id,
-          _androidChannel.name,
-          channelDescription: _androidChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-      payload: jsonEncode(message.data),
-    );
   }
 
   void _handleLocalNotificationResponse(NotificationResponse response) {
