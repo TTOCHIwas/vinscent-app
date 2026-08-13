@@ -51,6 +51,9 @@ jobs:
         run: flutter analyze --no-pub
       - name: Test Flutter
         run: flutter test --no-pub
+      - name: Test Android native code
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:testDebugUnitTest
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub
 
