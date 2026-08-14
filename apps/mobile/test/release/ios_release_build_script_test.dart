@@ -8,6 +8,9 @@ void main() {
   final signingInstaller = File('../../scripts/install_ios_signing_assets.sh');
   final kakaoConfig = File('ios/Flutter/Kakao.xcconfig');
   final xcodeProject = File('ios/Runner.xcodeproj/project.pbxproj');
+  final launchImageDirectory = Directory(
+    'ios/Runner/Assets.xcassets/LaunchImage.imageset',
+  );
   final gitignore = File('../../.gitignore');
 
   test('iOS release script validates its platform and runtime inputs', () {
@@ -229,6 +232,24 @@ void main() {
     expect(source, contains('Pods_Runner.framework in Frameworks'));
   });
 
+  test('iOS launch screen uses branded images at every exact scale', () {
+    const expectedSizes = <String, (int, int)>{
+      'LaunchImage.png': (168, 185),
+      'LaunchImage@2x.png': (336, 370),
+      'LaunchImage@3x.png': (504, 555),
+    };
+
+    for (final MapEntry(key: filename, value: (width, height))
+        in expectedSizes.entries) {
+      final image = File('${launchImageDirectory.path}/$filename');
+      expect(image.existsSync(), isTrue, reason: filename);
+      final bytes = image.readAsBytesSync();
+      expect(bytes.length, greaterThan(1024), reason: filename);
+      expect(_pngDimension(bytes, 16), width, reason: '$filename width');
+      expect(_pngDimension(bytes, 20), height, reason: '$filename height');
+    }
+  });
+
   test(
     'iOS signing installer restores distribution signing on modern macOS',
     () {
@@ -245,6 +266,12 @@ void main() {
     },
   );
 }
+
+int _pngDimension(List<int> bytes, int offset) =>
+    (bytes[offset] << 24) |
+    (bytes[offset + 1] << 16) |
+    (bytes[offset + 2] << 8) |
+    bytes[offset + 3];
 
 const _requiredConfiguration = <String>[
   'DANJJAN_SUPABASE_URL',
