@@ -7,6 +7,7 @@ void main() {
   final preflightScript = File('../../scripts/check_ios_release_mac.sh');
   final signingInstaller = File('../../scripts/install_ios_signing_assets.sh');
   final kakaoConfig = File('ios/Flutter/Kakao.xcconfig');
+  final xcodeProject = File('ios/Runner.xcodeproj/project.pbxproj');
   final gitignore = File('../../.gitignore');
 
   test('iOS release script validates its platform and runtime inputs', () {
@@ -212,6 +213,20 @@ void main() {
       preflightSource,
       contains('The generated Kakao configuration include'),
     );
+  });
+
+  test('iOS project tracks CocoaPods client integration before builds', () {
+    expect(xcodeProject.existsSync(), isTrue);
+    final source = xcodeProject.readAsStringSync();
+
+    for (final buildPhase in <String>[
+      '[CP] Check Pods Manifest.lock',
+      '[CP] Embed Pods Frameworks',
+      '[CP] Copy Pods Resources',
+    ]) {
+      expect(source, contains(buildPhase));
+    }
+    expect(source, contains('Pods_Runner.framework in Frameworks'));
   });
 
   test(
