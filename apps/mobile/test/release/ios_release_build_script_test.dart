@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final script = File('../../scripts/build_ios_release_candidate.sh');
   final preflightScript = File('../../scripts/check_ios_release_mac.sh');
+  final signingInstaller = File('../../scripts/install_ios_signing_assets.sh');
   final kakaoConfig = File('ios/Flutter/Kakao.xcconfig');
   final gitignore = File('../../.gitignore');
 
@@ -211,6 +212,15 @@ void main() {
       preflightSource,
       contains('The generated Kakao configuration include'),
     );
+  });
+
+  test('iOS signing installer supports macOS legacy PKCS12 encryption', () {
+    expect(signingInstaller.existsSync(), isTrue);
+    final source = signingInstaller.readAsStringSync();
+
+    expect(source, contains('openssl pkcs12 -help'));
+    expect(source, contains('openssl_pkcs12_legacy_arguments=(-legacy)'));
+    expect(source, contains(r'"${openssl_pkcs12_legacy_arguments[@]}"'));
   });
 }
 

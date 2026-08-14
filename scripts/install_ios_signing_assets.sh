@@ -122,7 +122,13 @@ if ! grep -Fq "Apple Distribution" <<< "$identity_output"; then
   exit 1
 fi
 
+openssl_pkcs12_legacy_arguments=()
+if openssl pkcs12 -help 2>&1 | grep -Fq -- "-legacy"; then
+  openssl_pkcs12_legacy_arguments=(-legacy)
+fi
+
 openssl pkcs12 \
+  "${openssl_pkcs12_legacy_arguments[@]}" \
   -in "$certificate_path" \
   -clcerts \
   -nokeys \
