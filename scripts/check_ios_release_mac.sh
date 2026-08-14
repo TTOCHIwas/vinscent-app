@@ -64,6 +64,7 @@ pod_lock="$ios_directory/Podfile.lock"
 runner_entitlements="$ios_directory/Runner/Runner.entitlements"
 widget_entitlements="$ios_directory/VinscentWidgets/VinscentWidgets.entitlements"
 firebase_plist="$ios_directory/Runner/GoogleService-Info.plist"
+kakao_xcconfig="$ios_directory/Flutter/Kakao.xcconfig"
 expected_commit_sha="$1"
 source_branch="$(git -C "$repository_root" branch --show-current)"
 
@@ -103,6 +104,7 @@ require_file "$project_file"
 require_file "$runner_entitlements"
 require_file "$widget_entitlements"
 require_file "$firebase_plist"
+require_file "$kakao_xcconfig"
 
 if [[ ! -s "$pod_lock" ]]; then
   fail \
@@ -113,6 +115,10 @@ require_text \
   "$workspace_data" \
   "group:Pods/Pods.xcodeproj" \
   "The CocoaPods workspace reference"
+require_text \
+  "$kakao_xcconfig" \
+  '#include? "Kakao.generated.xcconfig"' \
+  "The generated Kakao configuration include"
 require_text "$project_file" "com.vinscent.vinscent;" "Runner bundle ID"
 require_text \
   "$project_file" \

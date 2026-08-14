@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final script = File('../../scripts/build_ios_release_candidate.sh');
+  final preflightScript = File('../../scripts/check_ios_release_mac.sh');
+  final kakaoConfig = File('ios/Flutter/Kakao.xcconfig');
+  final gitignore = File('../../.gitignore');
 
   test('iOS release script validates its platform and runtime inputs', () {
     expect(script.existsSync(), isTrue);
@@ -23,6 +26,10 @@ void main() {
     expect(source, contains(r'-z "$authority"'));
     expect(source, contains(r'"$value" == *[[:space:]]*'));
     expect(source, contains(r'^[A-Z0-9]{10}$'));
+    expect(
+      source,
+      contains(r'"$DANJJAN_KAKAO_NATIVE_APP_KEY" =~ ^[A-Za-z0-9]+$'),
+    );
     expect(
       source,
       contains(
@@ -85,6 +92,24 @@ void main() {
     expect(source, contains('--dart-define="SUPABASE_URL='));
     expect(source, contains('--dart-define="SUPABASE_ANON_KEY='));
     expect(source, contains('--dart-define="KAKAO_NATIVE_APP_KEY='));
+    expect(
+      source,
+      contains(
+        r'kakao_xcconfig="$mobile_directory/ios/Flutter/'
+        'Kakao.generated.xcconfig"',
+      ),
+    );
+    expect(source, contains("printf 'KAKAO_NATIVE_APP_KEY=%s\\n'"));
+    expect(source, contains(r'chmod 600 "$kakao_xcconfig"'));
+    expect(source, contains('trap cleanup_kakao_xcconfig EXIT'));
+    expect(source, contains('CFBundleURLTypes:0:CFBundleURLSchemes:0'));
+    expect(
+      source,
+      contains(
+        r'"$kakao_url_scheme" != "kakao${DANJJAN_KAKAO_NATIVE_APP_KEY}"',
+      ),
+    );
+    expect(source, contains('kakao_url_scheme_verification=verified'));
     expect(source, contains('--dart-define="POLICY_BASE_URL='));
     expect(source, contains('shopt -s nullglob'));
     expect(source, contains(r'${#archive_candidates[@]} -ne 1'));
@@ -165,6 +190,27 @@ void main() {
     expect(source, isNot(contains('altool')));
     expect(source, isNot(contains('transporter')));
     expect(source, contains('export_method="app-store-connect"'));
+  });
+
+  test('iOS Kakao key is loaded from an ignored generated config', () {
+    expect(preflightScript.existsSync(), isTrue);
+    expect(kakaoConfig.existsSync(), isTrue);
+    expect(gitignore.existsSync(), isTrue);
+
+    final preflightSource = preflightScript.readAsStringSync();
+    final configSource = kakaoConfig.readAsStringSync();
+    final ignoreSource = gitignore.readAsStringSync();
+
+    expect(configSource, contains('KAKAO_NATIVE_APP_KEY='));
+    expect(configSource, contains('#include? "Kakao.generated.xcconfig"'));
+    expect(
+      ignoreSource,
+      contains('**/ios/**/Flutter/Kakao.generated.xcconfig'),
+    );
+    expect(
+      preflightSource,
+      contains('The generated Kakao configuration include'),
+    );
   });
 }
 

@@ -55,6 +55,11 @@ if [[ ! "$DANJJAN_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
   exit 1
 fi
 
+if [[ ! "$DANJJAN_KAKAO_NATIVE_APP_KEY" =~ ^[A-Za-z0-9]+$ ]]; then
+  echo "DANJJAN_KAKAO_NATIVE_APP_KEY must be alphanumeric." >&2
+  exit 1
+fi
+
 validate_https_url() {
   local variable_name="$1"
   local value="$2"
@@ -87,6 +92,7 @@ evidence_parent="$(dirname "$evidence_directory")"
 source_verifier="$repository_root/scripts/verify_release_source.sh"
 source_branch="$(git -C "$repository_root" branch --show-current)"
 source_commit_sha="$(git -C "$repository_root" rev-parse HEAD)"
+kakao_xcconfig="$mobile_directory/ios/Flutter/Kakao.generated.xcconfig"
 
 if [[ "$source_branch" != "main" && "${GITHUB_REF:-}" != "refs/heads/main" ]]; then
   echo "iOS release candidates must be built from main." >&2
@@ -123,6 +129,15 @@ build_arguments=(
 )
 export_method="app-store"
 
+cleanup_kakao_xcconfig() {
+  rm -f "$kakao_xcconfig"
+}
+
+trap cleanup_kakao_xcconfig EXIT
+printf 'KAKAO_NATIVE_APP_KEY=%s\n' \
+  "$DANJJAN_KAKAO_NATIVE_APP_KEY" > "$kakao_xcconfig"
+chmod 600 "$kakao_xcconfig"
+
 if [[ -n "${DANJJAN_IOS_EXPORT_OPTIONS_PLIST:-}" ]]; then
   if [[ ! -s "$DANJJAN_IOS_EXPORT_OPTIONS_PLIST" ]]; then
     echo "DANJJAN_IOS_EXPORT_OPTIONS_PLIST must reference a non-empty file." >&2
@@ -137,6 +152,8 @@ else
 fi
 
 "$flutter_binary" build "${build_arguments[@]}"
+cleanup_kakao_xcconfig
+trap - EXIT
 
 shopt -s nullglob
 archive_candidates=(build/ios/archive/*.xcarchive)
@@ -212,6 +229,11 @@ exported_version="$(
 exported_build_number="$(
   read_plist_value "$app_bundle/Info.plist" CFBundleVersion
 )"
+kakao_url_scheme="$(
+  read_plist_value \
+    "$app_bundle/Info.plist" \
+    "CFBundleURLTypes:0:CFBundleURLSchemes:0"
+)"
 
 require_equal "Runner bundle ID" "$runner_bundle_id" "com.vinscent.vinscent"
 require_equal \
@@ -220,6 +242,11 @@ require_equal \
   "com.vinscent.vinscent.widgets"
 require_equal "Exported version" "$exported_version" "$app_version"
 require_equal "Exported build number" "$exported_build_number" "$build_number"
+
+if [[ "$kakao_url_scheme" != "kakao${DANJJAN_KAKAO_NATIVE_APP_KEY}" ]]; then
+  echo "Exported Kakao URL scheme does not match the configured key." >&2
+  exit 1
+fi
 
 runner_entitlements="$temporary_evidence/Runner-entitlements.plist"
 widget_entitlements="$temporary_evidence/VinscentWidgets-entitlements.plist"
@@ -347,6 +374,7 @@ created_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     "$widget_application_identifier"
   printf 'push_environment=%s\n' "$push_environment"
   printf 'app_group=%s\n' "$runner_app_group"
+  printf 'kakao_url_scheme_verification=verified\n'
   printf 'created_at=%s\n' "$created_at"
 } > "$staged_evidence/metadata.txt"
 

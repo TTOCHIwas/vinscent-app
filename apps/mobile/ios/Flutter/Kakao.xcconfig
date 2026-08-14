@@ -1,1 +1,2 @@
 KAKAO_NATIVE_APP_KEY=
+#include? "Kakao.generated.xcconfig"
