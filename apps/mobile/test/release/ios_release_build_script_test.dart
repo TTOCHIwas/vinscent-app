@@ -214,14 +214,21 @@ void main() {
     );
   });
 
-  test('iOS signing installer supports macOS legacy PKCS12 encryption', () {
-    expect(signingInstaller.existsSync(), isTrue);
-    final source = signingInstaller.readAsStringSync();
+  test(
+    'iOS signing installer restores distribution signing on modern macOS',
+    () {
+      expect(signingInstaller.existsSync(), isTrue);
+      final source = signingInstaller.readAsStringSync();
 
-    expect(source, contains('openssl pkcs12 -help'));
-    expect(source, contains('openssl_pkcs12_legacy_arguments=(-legacy)'));
-    expect(source, contains(r'"${openssl_pkcs12_legacy_arguments[@]}"'));
-  });
+      expect(source, contains('openssl pkcs12 -help'));
+      expect(source, contains('openssl_pkcs12_legacy_arguments=(-legacy)'));
+      expect(source, contains(r'"${openssl_pkcs12_legacy_arguments[@]}"'));
+      expect(
+        source,
+        contains('FLUTTER_XCODE_CODE_SIGN_IDENTITY=Apple Distribution'),
+      );
+    },
+  );
 }
 
 const _requiredConfiguration = <String>[

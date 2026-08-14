@@ -276,6 +276,7 @@ chmod 600 "$export_options_path"
   printf 'DANJJAN_RUNNER_PROFILE_SPECIFIER=%s\n' "$runner_profile_uuid"
   printf 'DANJJAN_WIDGET_PROFILE_SPECIFIER=%s\n' "$widget_profile_uuid"
   printf 'FLUTTER_XCODE_DEVELOPMENT_TEAM=%s\n' "$DANJJAN_APPLE_TEAM_ID"
+  printf 'FLUTTER_XCODE_CODE_SIGN_IDENTITY=Apple Distribution\n'
   printf 'FLUTTER_XCODE_DANJJAN_CODE_SIGN_STYLE=Manual\n'
   printf \
     'FLUTTER_XCODE_DANJJAN_RUNNER_PROFILE_SPECIFIER=%s\n' \
