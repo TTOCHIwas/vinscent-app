@@ -12,7 +12,7 @@ void main() {
     expect(copy.appStoreSubtitle, '카드와 목소리 기록');
     expect(copy.appStorePromotionalText, '둘의 오늘을 함께 남겨 보세요.');
     expect(copy.appStoreKeywords, '커플,연애,카드');
-    expect(copy.appStoreDescription, '앱스토어 설명입니다.');
+    expect(copy.appStoreDescription, '첫 번째 문단입니다.\n\n두 번째 문단입니다.');
   });
 
   test('rejects text that exceeds official store limits', () {
@@ -79,6 +79,26 @@ void main() {
       ),
     );
   });
+
+  test('requires the App Store and Google Play descriptions to match', () {
+    final copy = StoreListingCopy(
+      appName: '단짠',
+      playShortDescription: '둘만의 기록',
+      playFullDescription: 'Google Play 설명',
+      appStoreSubtitle: '둘만의 기록',
+      appStorePromotionalText: '오늘을 함께 기록해 보세요.',
+      appStoreKeywords: '커플,연애,기록',
+      appStoreDescription: 'App Store 설명',
+    );
+
+    expect(
+      const StoreListingCopyValidator().validate(copy),
+      contains(
+        'appStore.description must exactly match '
+        'googlePlay.fullDescription.',
+      ),
+    );
+  });
 }
 
 const _validSource = '''
@@ -118,5 +138,7 @@ const _validSource = '''
 
 ### 설명
 
-> 앱스토어 설명입니다.
+> 첫 번째 문단입니다.
+>
+> 두 번째 문단입니다.
 ''';

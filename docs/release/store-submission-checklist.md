@@ -192,6 +192,8 @@ capability와 archive 검증은
 
 App Privacy 세부 답변은
 `docs/release/ios-privacy-declaration.md`와 `privacy-data-map.md`를 따른다.
+App Store Connect의 화면별 입력값과 Google Play 등록 정보 대응은
+`docs/release/app-store-connect-submission-ko.md`를 따른다.
 
 ### Product page와 build
 
