@@ -34,6 +34,15 @@ void main() {
       expect(plist, contains('<string>$mode</string>'));
     }
   });
+
+  test('Runner declares that it only uses exempt encryption', () {
+    final plist = infoPlist.readAsStringSync();
+
+    expect(
+      plist,
+      contains('<key>ITSAppUsesNonExemptEncryption</key>\n\t<false/>'),
+    );
+  });
 }
 
 const _backgroundModes = <String>[

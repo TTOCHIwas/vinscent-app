@@ -161,12 +161,12 @@ apps/mobile/flutterw.cmd build appbundle --release --analyze-size
 ### Apple Developer와 App Store Connect
 
 - [ ] Apple Developer Program 등록과 계약·세금·금융 상태 확인
-- [ ] App ID `com.vinscent.vinscent` 생성
-- [ ] Widget App ID `com.vinscent.vinscent.widgets` 생성
-- [ ] App Group `group.com.vinscent.vinscent` 생성·연결
-- [ ] Runner의 Push Notifications, Sign in with Apple, Background Modes 연결
-- [ ] Firebase에 APNs authentication key, Key ID, Team ID 등록
-- [ ] App Store Connect app record 생성
+- [x] App ID `com.vinscent.vinscent` 생성
+- [x] Widget App ID `com.vinscent.vinscent.widgets` 생성
+- [x] App Group `group.com.vinscent.vinscent` 생성·연결
+- [x] Runner의 Push Notifications, Sign in with Apple, Background Modes 연결
+- [x] Firebase에 APNs authentication key, Key ID, Team ID 등록
+- [x] App Store Connect app record 생성
 - [ ] TestFlight 내부 tester 설치와 실제 iPhone 검증
 
 capability와 archive 검증은
@@ -192,6 +192,8 @@ capability와 archive 검증은
 
 App Privacy 세부 답변은
 `docs/release/ios-privacy-declaration.md`와 `privacy-data-map.md`를 따른다.
+App Store Connect의 화면별 입력값과 Google Play 등록 정보 대응은
+`docs/release/app-store-connect-submission-ko.md`를 따른다.
 
 ### Product page와 build
 
@@ -200,23 +202,23 @@ App Privacy 세부 답변은
 - [ ] iPad 지원 화면 screenshot 등록
 - [ ] 앱 아이콘과 화면이 실제 출시 build와 일치
 - [ ] version `1.0.0`, build number가 App Store Connect에서 고유함
-- [ ] Xcode 26 이상과 iOS 26 SDK로 Distribution 서명 archive 생성
-- [ ] Mac에서 `Podfile.lock`과 CocoaPods workspace 참조를 생성·검토해 커밋
-- [ ] `scripts/check_ios_release_mac.sh <main-commit-sha>` 통과
-- [ ] GitHub `ios-release` Environment의 승인자, `main` 제한, secret·variable
+- [x] Xcode 26 이상과 iOS 26 SDK로 Distribution 서명 archive 생성
+- [x] Mac에서 `Podfile.lock`과 CocoaPods workspace 참조를 생성·검토해 커밋
+- [x] `scripts/check_ios_release_mac.sh <main-commit-sha>` 통과
+- [x] GitHub `ios-release` Environment의 승인자, `main` 제한, secret·variable
   등록 완료
-- [ ] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값과
+- [x] `build_ios_release_candidate.sh`에 정책 URL을 포함한 런타임 값과
   Apple Developer Membership의 10자리 `DANJJAN_APPLE_TEAM_ID` 주입
-- [ ] `main`에서 출시할 40자 commit SHA를 명시해
+- [x] `main`에서 출시할 40자 commit SHA를 명시해
   `build_ios_release_candidate.sh` 실행
-- [ ] 입력한 SHA와 HEAD가 일치하고 추적 파일 수정과 미추적 파일이 없는
+- [x] 입력한 SHA와 HEAD가 일치하고 추적 파일 수정과 미추적 파일이 없는
   source commit에서 스크립트 실행
-- [ ] IPA·xcarchive·SHA-256·commit SHA 증빙 보관
-- [ ] 최종 IPA 증빙의 export 방식이 `app-store`이고 Runner·위젯 Team ID와
+- [x] IPA·xcarchive·SHA-256·commit SHA 증빙 보관
+- [x] 최종 IPA 증빙의 export 방식이 `app-store-connect`이고 Runner·위젯 Team ID와
   application identifier가 지정한 Apple Team ID에 정확히 일치함
-- [ ] Runner의 production push entitlement 확인
-- [ ] 위젯에는 App Group 이외의 불필요한 entitlement가 없음
-- [ ] `iOS release candidate`를 업로드 없이 실행해 서명·archive 검증 통과
+- [x] Runner의 production push entitlement 확인
+- [x] 위젯에는 App Group 이외의 불필요한 entitlement가 없음
+- [x] `iOS release candidate`를 업로드 없이 실행해 서명·archive 검증 통과
 - [ ] 새 build number로 `publish_testflight`를 선택해 build upload 통과
 - [ ] 처리된 build를 TestFlight에서 설치해 최종 smoke test
 

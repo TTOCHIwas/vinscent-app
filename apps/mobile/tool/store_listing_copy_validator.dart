@@ -166,6 +166,12 @@ final class StoreListingCopyValidator {
       copy.appStoreDescription,
       errors,
     );
+    if (copy.appStoreDescription != copy.playFullDescription) {
+      errors.add(
+        'appStore.description must exactly match '
+        'googlePlay.fullDescription.',
+      );
+    }
 
     errors.sort();
     return List.unmodifiable(errors);
