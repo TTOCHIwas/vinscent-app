@@ -100,25 +100,28 @@ void main() {
     );
   });
 
-  test('requires the App Store promotional text and Play short copy to match', () {
-    final copy = StoreListingCopy(
-      appName: '단짠',
-      playShortDescription: 'Google Play 짧은 설명',
-      playFullDescription: '공통 설명',
-      appStoreSubtitle: '둘만의 기록',
-      appStorePromotionalText: 'App Store 프로모션 문구',
-      appStoreKeywords: '커플,연애,기록',
-      appStoreDescription: '공통 설명',
-    );
+  test(
+    'requires the App Store promotional text and Play short copy to match',
+    () {
+      final copy = StoreListingCopy(
+        appName: '단짠',
+        playShortDescription: 'Google Play 짧은 설명',
+        playFullDescription: '공통 설명',
+        appStoreSubtitle: '둘만의 기록',
+        appStorePromotionalText: 'App Store 프로모션 문구',
+        appStoreKeywords: '커플,연애,기록',
+        appStoreDescription: '공통 설명',
+      );
 
-    expect(
-      const StoreListingCopyValidator().validate(copy),
-      contains(
-        'appStore.promotionalText must exactly match '
-        'googlePlay.shortDescription.',
-      ),
-    );
-  });
+      expect(
+        const StoreListingCopyValidator().validate(copy),
+        contains(
+          'appStore.promotionalText must exactly match '
+          'googlePlay.shortDescription.',
+        ),
+      );
+    },
+  );
 }
 
 const _validSource = '''
