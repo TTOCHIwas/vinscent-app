@@ -209,7 +209,9 @@ export type CoupleFeedbackValidationCode =
   | 'invalid_punctuation'
   | 'answer_owner'
   | 'blocked_topic'
-  | 'mixed_certainty_content';
+  | 'mixed_certainty_content'
+  | 'question_echo'
+  | 'answer_restatement';
 
 export class CoupleFeedbackValidationError extends Error {
   readonly code: CoupleFeedbackValidationCode;
@@ -813,8 +815,24 @@ export function validateCoupleFeedback(
     );
   }
   if (context !== undefined) {
+    validateQuestionEcho(context, candidate.text);
     validateMixedCertaintyFeedback(context, candidate.text);
+    validateAnswerRestatement(context, candidate.text);
   }
+}
+
+function validateQuestionEcho(
+  context: AnonymizedCompletedQuestionContext,
+  feedbackText: string,
+): void {
+  if (!areQuestionsNearDuplicate(context.question.text, feedbackText)) {
+    return;
+  }
+
+  throw new CoupleFeedbackValidationError(
+    'question_echo',
+    'couple feedback cannot repeat the source question',
+  );
 }
 
 const mixedCertaintyFeedbackStopTerms = new Set([
@@ -863,6 +881,30 @@ function validateMixedCertaintyFeedback(
       'couple feedback cannot repeat mixed certainty answer content',
     );
   }
+}
+
+const feedbackRestatementPattern =
+  /(?:좋아하(?:네|는|나|고|지|겠)|선호하|취향|답(?:했|은|이|도|변)|골랐|말했|생각하(?:네|는|나)|원하(?:네|는|나)|(?:같|닮|다르)(?:네|구나|군))/u;
+
+function validateAnswerRestatement(
+  context: AnonymizedCompletedQuestionContext,
+  feedbackText: string,
+): void {
+  if (!feedbackRestatementPattern.test(feedbackText)) {
+    return;
+  }
+
+  const repeatsAnswerContent = context.answers.some(({ text }) =>
+    feedbackContentTerms(text).some((term) => feedbackText.includes(term))
+  );
+  if (!repeatsAnswerContent) {
+    return;
+  }
+
+  throw new CoupleFeedbackValidationError(
+    'answer_restatement',
+    'couple feedback cannot merely restate an answer',
+  );
 }
 
 export function resolveCoupleFeedbackFallback(
