@@ -45,6 +45,10 @@ class AiQuestionFeedbackSection extends ConsumerWidget {
           presentation == AiQuestionFeedbackPresentation.characterSpeech
               ? const _FeedbackStatus(message: '조금만 더 기다려줘. 다 읽으면 바로 알려줄게!')
               : const SizedBox.shrink(),
+        AiQuestionFeedbackFailed() =>
+          presentation == AiQuestionFeedbackPresentation.characterSpeech
+              ? const _FeedbackFailure()
+              : const SizedBox.shrink(),
         AiQuestionFeedbackDisabled() => const SizedBox.shrink(),
       },
     );
@@ -183,6 +187,29 @@ class _FeedbackStatus extends StatelessWidget {
           bubbleKey: const Key('ai-question-feedback-status-prompt'),
           thinkingDotsKey: const Key('ai-question-feedback-thinking-dots'),
           message: message,
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackFailure extends StatelessWidget {
+  const _FeedbackFailure();
+
+  static const _message = '이번 한마디는 잘 떠오르지 않았어...';
+
+  @override
+  Widget build(BuildContext context) {
+    return const KeyedSubtree(
+      key: Key('ai-question-feedback-failed'),
+      child: Padding(
+        padding: EdgeInsets.only(top: 32),
+        child: AiCharacterSpeechRow(
+          characterKey: Key('ai-question-feedback-failed-character'),
+          bubbleKey: Key('ai-question-feedback-failed-prompt'),
+          speechText: _message,
+          semanticLabel: '캐릭터의 한마디: $_message',
+          maxLines: 3,
         ),
       ),
     );

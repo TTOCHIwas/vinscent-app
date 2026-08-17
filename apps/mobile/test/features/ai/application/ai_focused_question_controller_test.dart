@@ -5,6 +5,7 @@ import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_learning_repository.dart';
+import 'package:vinscent/features/ai/data/ai_question_feedback_snapshot.dart';
 
 void main() {
   test('loads a focused question and advances after submitting', () async {
@@ -87,10 +88,10 @@ class _FocusedRepository implements AiLearningRepository {
   }) async {}
 
   @override
-  Future<AiQuestionFeedback?> fetchQuestionFeedback(
+  Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
     String dailyQuestionId,
   ) async {
-    return null;
+    return const AiQuestionFeedbackSnapshot.processing();
   }
 }
 

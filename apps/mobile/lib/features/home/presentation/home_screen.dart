@@ -529,6 +529,7 @@ class _HomeAiMessage {
         dailyQuestionId,
       ),
       AiQuestionFeedbackDelayed() => null,
+      AiQuestionFeedbackFailed() => null,
       AiQuestionFeedbackPublished(feedback: final feedback) => _published(
         dailyQuestionId,
         feedback.feedbackText,

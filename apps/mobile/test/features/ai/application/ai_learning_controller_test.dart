@@ -7,6 +7,7 @@ import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_learning_repository.dart';
+import 'package:vinscent/features/ai/data/ai_question_feedback_snapshot.dart';
 
 void main() {
   test('loads the dashboard and refreshes it after granting consent', () async {
@@ -187,10 +188,10 @@ class _FakeAiLearningRepository implements AiLearningRepository {
   }
 
   @override
-  Future<AiQuestionFeedback?> fetchQuestionFeedback(
+  Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
     String dailyQuestionId,
   ) async {
-    return null;
+    return const AiQuestionFeedbackSnapshot.processing();
   }
 
   @override
@@ -271,7 +272,9 @@ class _SerialMemoryDecisionRepository implements AiLearningRepository {
   }
 
   @override
-  Future<AiQuestionFeedback?> fetchQuestionFeedback(String dailyQuestionId) {
+  Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
+    String dailyQuestionId,
+  ) {
     throw UnimplementedError();
   }
 

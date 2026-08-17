@@ -116,11 +116,7 @@ void main() {
 }
 
 class _FeedbackRepository implements AiLearningRepository {
-  _FeedbackRepository({
-    required this.dashboard,
-    this.feedback,
-    this.snapshot,
-  });
+  _FeedbackRepository({required this.dashboard, this.feedback, this.snapshot});
 
   final AiLearningDashboard dashboard;
   final AiQuestionFeedback? feedback;
@@ -135,21 +131,14 @@ class _FeedbackRepository implements AiLearningRepository {
   }
 
   @override
-  Future<AiQuestionFeedback?> fetchQuestionFeedback(
-    String dailyQuestionId,
-  ) async {
-    feedbackRequestCount += 1;
-    return feedback;
-  }
-
-  @override
   Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
     String dailyQuestionId,
   ) async {
     feedbackRequestCount += 1;
-    return snapshot ?? (feedback == null
-        ? const AiQuestionFeedbackSnapshot.processing()
-        : AiQuestionFeedbackSnapshot.published(feedback!));
+    return snapshot ??
+        (feedback == null
+            ? const AiQuestionFeedbackSnapshot.processing()
+            : AiQuestionFeedbackSnapshot.published(feedback!));
   }
 
   @override

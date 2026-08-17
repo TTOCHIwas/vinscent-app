@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ai_learning_controller.dart';
 import '../data/ai_learning_dashboard.dart';
 import '../data/ai_learning_repository.dart';
+import '../data/ai_question_feedback_snapshot.dart';
 
 const _feedbackPollInterval = Duration(seconds: 10);
 const _maximumFeedbackPollAttempts = 36;
@@ -24,6 +25,10 @@ final class AiQuestionFeedbackDelayed extends AiQuestionFeedbackState {
   const AiQuestionFeedbackDelayed();
 }
 
+final class AiQuestionFeedbackFailed extends AiQuestionFeedbackState {
+  const AiQuestionFeedbackFailed();
+}
+
 final class AiQuestionFeedbackPublished extends AiQuestionFeedbackState {
   const AiQuestionFeedbackPublished(this.feedback);
 
@@ -41,22 +46,29 @@ final aiQuestionFeedbackProvider = StreamProvider.autoDispose
       }
 
       for (var attempt = 0; attempt < _maximumFeedbackPollAttempts; attempt++) {
-        final feedback = await repository.fetchQuestionFeedback(
+        final snapshot = await repository.fetchQuestionFeedbackStatus(
           dailyQuestionId,
         );
 
-        if (feedback != null) {
-          yield AiQuestionFeedbackPublished(feedback);
+        switch (snapshot) {
+          case AiQuestionFeedbackSnapshotPublished(feedback: final feedback):
+            yield AiQuestionFeedbackPublished(feedback);
+            return;
+          case AiQuestionFeedbackSnapshotFailed():
+            yield const AiQuestionFeedbackFailed();
+            return;
+          case AiQuestionFeedbackSnapshotProcessing():
+            break;
+        }
+
+        if (attempt == _maximumFeedbackPollAttempts - 1) {
+          yield const AiQuestionFeedbackFailed();
           return;
         }
 
         yield attempt >= _delayedFeedbackPollAttempt
             ? const AiQuestionFeedbackDelayed()
             : const AiQuestionFeedbackProcessing();
-
-        if (attempt == _maximumFeedbackPollAttempts - 1) {
-          return;
-        }
 
         await Future<void>.delayed(_feedbackPollInterval);
       }

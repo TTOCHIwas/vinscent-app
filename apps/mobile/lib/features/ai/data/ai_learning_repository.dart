@@ -8,6 +8,7 @@ import 'ai_focused_question_flow.dart';
 import 'ai_focused_question_history_entry.dart';
 import 'ai_learning_dashboard.dart';
 import 'ai_learning_failure.dart';
+import 'ai_question_feedback_snapshot.dart';
 
 const _aiConsentPolicyVersion = 'ai-learning-v1';
 
@@ -36,7 +37,9 @@ abstract interface class AiLearningRepository {
     required String answerText,
   });
 
-  Future<AiQuestionFeedback?> fetchQuestionFeedback(String dailyQuestionId);
+  Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
+    String dailyQuestionId,
+  );
 }
 
 class SupabaseAiLearningRepository implements AiLearningRepository {
@@ -132,20 +135,16 @@ class SupabaseAiLearningRepository implements AiLearningRepository {
   }
 
   @override
-  Future<AiQuestionFeedback?> fetchQuestionFeedback(
+  Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
     String dailyQuestionId,
   ) async {
     final data = await _rpc(
-      'get_ai_question_feedback',
+      'get_ai_question_feedback_status',
       params: {'requested_daily_question_id': dailyQuestionId},
     );
 
-    if (data == null) {
-      return null;
-    }
-
     try {
-      return AiQuestionFeedback.fromJson(_asRow(data));
+      return AiQuestionFeedbackSnapshot.fromJson(_asRow(data));
     } on FormatException catch (error) {
       throw AiLearningRepositoryException(
         AiLearningFailureReason.invalidResponse,
