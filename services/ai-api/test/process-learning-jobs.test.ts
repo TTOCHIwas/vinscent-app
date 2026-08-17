@@ -1362,7 +1362,11 @@ test('processor stops after one invalid shared feedback regeneration', async () 
   const model = modelWith({
     async generateCoupleFeedback() {
       calls += 1;
-      return result({ text: '서로의 답이 다르네.' });
+      return result({
+        text: calls === 1
+          ? '너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐'
+          : '서로의 답이 다르네.',
+      });
     },
   });
   const processor = new LearningJobProcessor({
@@ -1377,7 +1381,15 @@ test('processor stops after one invalid shared feedback regeneration', async () 
 
   assert.equal(calls, 2);
   assert.equal(summary.failed, 1);
-  assert.equal(repository.failures[0]?.errorCode, 'model_contract_invalid');
+  assert.equal(
+    repository.failures[0]?.errorCode,
+    'feedback_rejected_a1_answer_owner_a2_invalid_punctuation',
+  );
+  assert.deepEqual(repository.failures[0]?.usage, {
+    inputTokenCount: 40,
+    outputTokenCount: 20,
+    latencyMs: 240,
+  });
   assert.equal(repository.successes.length, 0);
 });
 
