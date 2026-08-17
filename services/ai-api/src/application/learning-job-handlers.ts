@@ -30,6 +30,7 @@ import {
   type LearningJobHandler,
   type PreparedLearningJob,
 } from './learning-job-handler.ts';
+import { LearningJobExecutionError } from './learning-job-execution-error.ts';
 import {
   AiRepositoryError,
   type ClaimedLearningJob,
@@ -130,6 +131,9 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       let rejectedText: string | null = null;
       let rejectionCode: CoupleFeedbackGenerationOptions['rejectionCode'] =
         null;
+      const rejectionCodes: Array<NonNullable<
+        CoupleFeedbackGenerationOptions['rejectionCode']
+      >> = [];
       let combinedUsage: LearningModelUsage | null = null;
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -149,6 +153,7 @@ class GenerateFeedbackHandler implements LearningJobHandler {
           };
         } catch (error) {
           const currentRejectionCode = coupleFeedbackRejectionCode(error);
+          rejectionCodes.push(currentRejectionCode);
           if (attempt === 1) {
             if (currentRejectionCode === 'mixed_certainty_content') {
               const fallback = resolveCoupleFeedbackFallback(
@@ -163,7 +168,12 @@ class GenerateFeedbackHandler implements LearningJobHandler {
                 };
               }
             }
-            throw error;
+            throw new LearningJobExecutionError({
+              code: coupleFeedbackFailureCode(rejectionCodes),
+              retryable: false,
+              usage: combinedUsage,
+              cause: error,
+            });
           }
           rejectionCode = currentRejectionCode;
           rejectedText = rejectedModelTextForRetry(
@@ -315,6 +325,19 @@ function coupleFeedbackRejectionCode(
     return error.code;
   }
   return koreanOutputRejectionCode(error) ?? 'candidate_validation_failed';
+}
+
+function coupleFeedbackFailureCode(
+  rejectionCodes: ReadonlyArray<NonNullable<
+    CoupleFeedbackGenerationOptions['rejectionCode']
+  >>,
+): string {
+  if (rejectionCodes.length !== 2) {
+    throw new RangeError(
+      'couple feedback rejection history must contain 2 codes',
+    );
+  }
+  return `feedback_rejected_a1_${rejectionCodes[0]}_a2_${rejectionCodes[1]}`;
 }
 
 function personalizedQuestionRejectionCode(

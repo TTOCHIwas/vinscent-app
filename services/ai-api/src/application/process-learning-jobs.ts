@@ -4,6 +4,7 @@ import type {
 import {
   createDefaultLearningJobHandlerRegistry,
 } from './learning-job-handlers.ts';
+import { LearningJobExecutionError } from './learning-job-execution-error.ts';
 import {
   AiRepositoryError,
   type LearningJobRepository,
@@ -178,6 +179,18 @@ function classifyFailure(
       providerErrorStatus: error.providerErrorStatus,
       providerErrorDetail: error.diagnosticDetail,
       retryAfterMs: error.retryAfterMs,
+      usage: error.usage,
+    };
+  }
+  if (error instanceof LearningJobExecutionError) {
+    return {
+      errorCode: error.code,
+      safetyStatus: 'error',
+      retryable: error.retryable,
+      providerHttpStatus: null,
+      providerErrorStatus: null,
+      providerErrorDetail: null,
+      retryAfterMs: null,
       usage: error.usage,
     };
   }
