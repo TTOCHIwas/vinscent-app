@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(31);
+select plan(32);
 
 select ok(
   to_regclass('public.ai_question_curricula') is not null,
@@ -145,6 +145,10 @@ select ok(
 select ok(
   to_regprocedure('public.get_ai_question_feedback(uuid)') is not null,
   'get_ai_question_feedback exists'
+);
+select ok(
+  to_regprocedure('public.get_ai_question_feedback_status(uuid)') is not null,
+  'get_ai_question_feedback_status exists'
 );
 select ok(
   to_regprocedure('public.claim_ai_processing_jobs(text,integer)') is not null,

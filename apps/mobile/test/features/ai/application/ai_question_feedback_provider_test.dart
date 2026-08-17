@@ -5,6 +5,7 @@ import 'package:vinscent/features/ai/data/ai_focused_question_flow.dart';
 import 'package:vinscent/features/ai/data/ai_focused_question_history_entry.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_learning_repository.dart';
+import 'package:vinscent/features/ai/data/ai_question_feedback_snapshot.dart';
 
 void main() {
   test('does not request feedback before both members consent', () async {
@@ -88,13 +89,42 @@ void main() {
     expect(repository.dashboardRequestCount, 1);
     expect(repository.feedbackRequestCount, 1);
   });
+
+  test('stops polling after a terminal feedback failure is returned', () async {
+    final repository = _FeedbackRepository(
+      dashboard: _dashboard(isEnabled: true),
+      snapshot: const AiQuestionFeedbackSnapshot.failed(),
+    );
+    final container = ProviderContainer(
+      overrides: [aiLearningRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    final provider = aiQuestionFeedbackProvider('daily-question-id');
+    final subscription = container.listen(
+      provider,
+      (previous, next) {},
+      fireImmediately: true,
+    );
+    addTearDown(subscription.close);
+
+    final feedbackState = await container.read(provider.future);
+
+    expect(feedbackState, isA<AiQuestionFeedbackFailed>());
+    expect(repository.feedbackRequestCount, 1);
+  });
 }
 
 class _FeedbackRepository implements AiLearningRepository {
-  _FeedbackRepository({required this.dashboard, this.feedback});
+  _FeedbackRepository({
+    required this.dashboard,
+    this.feedback,
+    this.snapshot,
+  });
 
   final AiLearningDashboard dashboard;
   final AiQuestionFeedback? feedback;
+  final AiQuestionFeedbackSnapshot? snapshot;
   var dashboardRequestCount = 0;
   var feedbackRequestCount = 0;
 
@@ -110,6 +140,16 @@ class _FeedbackRepository implements AiLearningRepository {
   ) async {
     feedbackRequestCount += 1;
     return feedback;
+  }
+
+  @override
+  Future<AiQuestionFeedbackSnapshot> fetchQuestionFeedbackStatus(
+    String dailyQuestionId,
+  ) async {
+    feedbackRequestCount += 1;
+    return snapshot ?? (feedback == null
+        ? const AiQuestionFeedbackSnapshot.processing()
+        : AiQuestionFeedbackSnapshot.published(feedback!));
   }
 
   @override

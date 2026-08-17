@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(34);
+select plan(37);
 
 insert into auth.users (
   id,
@@ -449,6 +449,23 @@ select is(
   'successful result completes the claimed job'
 );
 
+select set_config(
+  'request.jwt.claim.sub',
+  '11000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.get_ai_question_feedback_status(
+    '41000000-0000-0000-0000-000000000001'
+  )->>'status',
+  'processing'::text,
+  'a couple member can see that feedback is processing'
+);
+
+reset role;
+
 insert into ai_worker_test_values (value_key, value_uuid)
 select
   'feedback_run',
@@ -508,6 +525,14 @@ select is(
   )->>'feedback_text',
   'You value different moments and can make room for both.'::text,
   'a couple member can read published question feedback'
+);
+
+select is(
+  public.get_ai_question_feedback_status(
+    '41000000-0000-0000-0000-000000000001'
+  )->>'status',
+  'published'::text,
+  'feedback status becomes published with the readable result'
 );
 
 reset role;
@@ -695,6 +720,36 @@ select is(
   5,
   'AI jobs receive enough attempts for exponential provider backoff'
 );
+
+delete from public.ai_question_feedbacks
+where daily_question_id = '41000000-0000-0000-0000-000000000001';
+
+update public.ai_processing_jobs
+set
+  status = 'failed',
+  completed_at = now(),
+  claimed_at = null,
+  claimed_by = null,
+  lease_expires_at = null
+where daily_question_id = '41000000-0000-0000-0000-000000000001'
+  and job_type = 'generate_feedback';
+
+select set_config(
+  'request.jwt.claim.sub',
+  '11000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.get_ai_question_feedback_status(
+    '41000000-0000-0000-0000-000000000001'
+  )->>'status',
+  'failed'::text,
+  'a terminal feedback failure is visible to a couple member'
+);
+
+reset role;
 
 select is(
   public.expand_ai_rebuild_profile_job(

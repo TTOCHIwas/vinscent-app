@@ -1171,6 +1171,69 @@ test('processor regenerates shared feedback once after a contract violation', as
   });
 });
 
+test('processor regenerates feedback that merely restates an answer', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-answer-restatement', 'generate_feedback'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-real-a',
+        text: '나는 존윅같은 거 진짜 개좋아',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-real-b',
+        text: '범죄,액션,스릴러~',
+      },
+    ],
+  };
+  const retryOptions: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      retryOptions.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      return result({
+        text: retryOptions.length === 1
+          ? '액션 영화 좋아하네, 둘이서도 즐길 만하겠어...'
+          : '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(retryOptions, [
+    { rejectedText: null, rejectionCode: null },
+    {
+      rejectedText: '액션 영화 좋아하네, 둘이서도 즐길 만하겠어...',
+      rejectionCode: 'answer_restatement',
+    },
+  ]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+  });
+});
+
 test('processor regenerates feedback that interprets mixed-certainty answers', async () => {
   const repository = new FakeRepository([
     job('job-feedback-mixed-certainty', 'generate_feedback'),

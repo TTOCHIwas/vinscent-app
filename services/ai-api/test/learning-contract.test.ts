@@ -914,6 +914,37 @@ test('한 줄 피드백은 커플 공유 반응 형식을 지켜야 한다', () 
   assert.doesNotThrow(() => validateCoupleFeedback({
     text: '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
   }, mixedCertaintyContext));
+
+  const movieContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-a', text: '나는 존윅같은 거 진짜 개좋아' },
+      { answerId: 'answer-b', userId: 'user-b', text: '범죄,액션,스릴러~' },
+    ],
+  });
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    }, movieContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'question_echo',
+  );
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '액션 영화 좋아하네, 둘이서도 즐길 만하겠어...',
+    }, movieContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'answer_restatement',
+  );
+  assert.doesNotThrow(() => validateCoupleFeedback({
+    text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+  }, movieContext));
 });
 
 test('개인화 질문은 사용자에게 분석 과정을 요구하지 않는다', () => {

@@ -465,6 +465,30 @@ void main() {
       );
     });
 
+    testWidgets('shows a settled message when feedback generation fails', (
+      tester,
+    ) async {
+      final repository = _FakeDailyQuestionAnswerRepository(
+        _completedAnswerState,
+      );
+
+      await _pumpRouter(
+        tester,
+        repository: repository,
+        failedAiFeedbackIds: {'daily-question-id'},
+        settle: false,
+      );
+
+      expect(
+        findTextIgnoringWordJoiners('이번 한마디는 잘 떠오르지 않았어...'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ai-question-feedback-thinking-dots')),
+        findsNothing,
+      );
+    });
+
     testWidgets('centers published feedback on phone and tablet widths', (
       tester,
     ) async {
@@ -1260,6 +1284,7 @@ Future<GoRouter> _pumpRouter(
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   Set<String> processingAiFeedbackIds = const {},
   Set<String> delayedAiFeedbackIds = const {},
+  Set<String> failedAiFeedbackIds = const {},
   SafetyReportRepository? safetyReportRepository,
   bool settle = true,
 }) async {
@@ -1340,6 +1365,7 @@ Future<GoRouter> _pumpRouter(
               aiFeedbacks: aiFeedbacks,
               processingIds: processingAiFeedbackIds,
               delayedIds: delayedAiFeedbackIds,
+              failedIds: failedAiFeedbackIds,
             ),
           ),
         ),
@@ -1370,6 +1396,7 @@ AiQuestionFeedbackState _aiFeedbackState(
   required Map<String, AiQuestionFeedback> aiFeedbacks,
   required Set<String> processingIds,
   required Set<String> delayedIds,
+  required Set<String> failedIds,
 }) {
   final feedback = aiFeedbacks[dailyQuestionId];
   if (feedback != null) {
@@ -1382,6 +1409,10 @@ AiQuestionFeedbackState _aiFeedbackState(
 
   if (delayedIds.contains(dailyQuestionId)) {
     return const AiQuestionFeedbackDelayed();
+  }
+
+  if (failedIds.contains(dailyQuestionId)) {
+    return const AiQuestionFeedbackFailed();
   }
 
   return const AiQuestionFeedbackDisabled();
