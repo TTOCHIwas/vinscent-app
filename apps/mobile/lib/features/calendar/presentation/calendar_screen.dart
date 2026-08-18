@@ -321,6 +321,41 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       _selectedDate = selectedDate;
     });
     _replaceCalendarRoute(selectedDate);
+    unawaited(_openSelectedDateDetail());
+  }
+
+  Future<void> _openSelectedDateDetail() async {
+    final metrics = _layoutMetrics;
+    if (metrics == null || !_scrollController.hasClients) {
+      return;
+    }
+
+    final generation = ++_gestureGeneration;
+    _activeGesture = null;
+    _shouldResetViewportAfterRouteChange = false;
+    _viewportState = CalendarViewportState.weekly;
+    _clearCalendarGesture();
+    const ShellBottomBarVisibilityNotification(
+      isHidden: false,
+    ).dispatch(context);
+
+    final target = metrics.weeklyScrollOffset.clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    try {
+      if ((target - _scrollController.offset).abs() > 0.5) {
+        await _scrollController.animateTo(
+          target,
+          duration: _viewportSnapDuration,
+          curve: _viewportSnapCurve,
+        );
+      }
+    } finally {
+      if (generation == _gestureGeneration) {
+        _clearCalendarGesture();
+      }
+    }
   }
 
   void _moveCalendarPeriod(
