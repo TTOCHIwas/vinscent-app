@@ -3,13 +3,25 @@
     android:id="@+id/character_widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="@android:color/transparent"
     android:padding="6dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <FrameLayout
+        android:id="@+id/character_widget_surface"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_gravity="center"
+        android:background="@android:color/white">
+
+        <ImageView
+            android:id="@+id/character_widget_image"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/character_widget_playback"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_character_placeholder" />
 
         <LinearLayout
             android:id="@+id/character_widget_calendar_summary"
@@ -57,63 +69,53 @@
 
         </LinearLayout>
 
-        <ImageView
-            android:id="@+id/character_widget_image"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:contentDescription="@string/character_widget_playback"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_widget_character_placeholder" />
+        <FrameLayout
+            android:id="@+id/character_widget_record"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/widget_record_button_background"
+            android:contentDescription="@string/character_widget_record">
 
-    </LinearLayout>
+            <ProgressBar
+                android:id="@+id/character_widget_recording_indicator"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:indeterminate="false"
+                android:max="15000"
+                android:progress="15000"
+                android:progressDrawable="@drawable/widget_recording_indicator"
+                android:rotation="90"
+                android:scaleX="-1"
+                android:visibility="gone" />
 
-    <FrameLayout
-        android:id="@+id/character_widget_record"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="10dp"
-        android:layout_marginBottom="10dp"
-        android:background="@drawable/widget_record_button_background"
-        android:contentDescription="@string/character_widget_record">
+            <ImageView
+                android:id="@+id/character_widget_record_icon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:padding="13dp"
+                android:src="@drawable/ic_widget_mic" />
 
-        <ProgressBar
-            android:id="@+id/character_widget_recording_indicator"
-            style="@android:style/Widget.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:indeterminate="false"
-            android:max="15000"
-            android:progress="15000"
-            android:progressDrawable="@drawable/widget_recording_indicator"
-            android:rotation="90"
-            android:scaleX="-1"
-            android:visibility="gone" />
+            <ProgressBar
+                android:id="@+id/character_widget_record_progress"
+                style="@android:style/Widget.ProgressBar.Small"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateBehavior="repeat"
+                android:indeterminateDrawable="@drawable/widget_upload_spinner"
+                android:indeterminateDuration="700"
+                android:indeterminateOnly="true"
+                android:interpolator="@android:anim/linear_interpolator"
+                android:visibility="gone" />
 
-        <ImageView
-            android:id="@+id/character_widget_record_icon"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:contentDescription="@null"
-            android:padding="13dp"
-            android:src="@drawable/ic_widget_mic" />
-
-        <ProgressBar
-            android:id="@+id/character_widget_record_progress"
-            style="@android:style/Widget.ProgressBar.Small"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_gravity="center"
-            android:indeterminate="true"
-            android:indeterminateBehavior="repeat"
-            android:indeterminateDrawable="@drawable/widget_upload_spinner"
-            android:indeterminateDuration="700"
-            android:indeterminateOnly="true"
-            android:interpolator="@android:anim/linear_interpolator"
-            android:visibility="gone" />
+        </FrameLayout>
 
     </FrameLayout>
 

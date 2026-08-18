@@ -17,6 +17,38 @@ private enum VinscentWidgetPalette {
   )
 }
 
+private enum VinscentWidgetLayout {
+  static let contentInset: CGFloat = 6
+  static let recordingControlInset: CGFloat = 10
+  static let cardAspectRatio: CGFloat = 4.0 / 5.0
+
+  static func cardSurfaceSize(in containerSize: CGSize) -> CGSize {
+    let availableWidth = max(containerSize.width - contentInset * 2, 0)
+    let availableHeight = max(containerSize.height - contentInset * 2, 0)
+    let width = min(availableWidth, availableHeight * cardAspectRatio)
+    return CGSize(width: width, height: width / cardAspectRatio)
+  }
+}
+
+private struct VinscentCardSizedWidgetSurface<Content: View>: View {
+  private let content: Content
+
+  init(@ViewBuilder content: () -> Content) {
+    self.content = content()
+  }
+
+  var body: some View {
+    GeometryReader { proxy in
+      let surfaceSize = VinscentWidgetLayout.cardSurfaceSize(
+        in: proxy.size
+      )
+      content
+        .frame(width: surfaceSize.width, height: surfaceSize.height)
+        .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+    }
+  }
+}
+
 @main
 struct VinscentWidgets: WidgetBundle {
   var body: some Widget {
@@ -64,7 +96,7 @@ private struct VinscentCharacterWidget: Widget {
       provider: VinscentCharacterProvider()
     ) { entry in
       VinscentCharacterWidgetView(entry: entry)
-        .containerBackground(.white, for: .widget)
+        .containerBackground(.clear, for: .widget)
     }
     .configurationDisplayName("단짠 캐릭터")
     .description("둘이 나눈 녹음을 재생하거나 새로 녹음해요")
@@ -77,14 +109,17 @@ private struct VinscentCharacterWidgetView: View {
   let entry: VinscentCharacterEntry
 
   var body: some View {
-    ZStack(alignment: .bottomTrailing) {
-      VStack(spacing: 0) {
-        calendarEventSummary
-        characterInteraction
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+    VinscentCardSizedWidgetSurface {
+      ZStack(alignment: .bottomTrailing) {
+        Color.white
+        VStack(spacing: 0) {
+          calendarEventSummary
+          characterInteraction
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        recordingControl
+          .padding(VinscentWidgetLayout.recordingControlInset)
       }
-      recordingControl
-        .padding(10)
     }
   }
 
@@ -370,14 +405,16 @@ private struct VinscentCardWidgetView: View {
   let entry: VinscentCardEntry
 
   var body: some View {
-    Link(destination: VinscentWidgetConstants.cardURL) {
-      cardImage
-        .rotationEffect(.degrees(entry.tilt.degrees))
-        .padding(entry.tilt == .none ? 6 : 12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+    VinscentCardSizedWidgetSurface {
+      Link(destination: VinscentWidgetConstants.cardURL) {
+        cardImage
+          .rotationEffect(.degrees(entry.tilt.degrees))
+          .padding(entry.tilt == .none ? 0 : 6)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .contentShape(Rectangle())
+      }
+      .accessibilityLabel("최신 카드 열기")
     }
-    .accessibilityLabel("최신 카드 열기")
   }
 
   @ViewBuilder
