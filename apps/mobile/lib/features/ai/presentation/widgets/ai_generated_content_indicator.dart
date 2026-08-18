@@ -51,12 +51,14 @@ class AiGeneratedContentBadgeOverlay extends StatelessWidget {
     this.showIndicator = true,
     this.onReportPressed,
     this.attachmentBottomInset = 0,
+    this.reserveIndicatorSpace = false,
   });
 
   final Widget child;
   final bool showIndicator;
   final VoidCallback? onReportPressed;
   final double attachmentBottomInset;
+  final bool reserveIndicatorSpace;
 
   static const contentBottomPadding = 18.0;
 
@@ -66,10 +68,19 @@ class AiGeneratedContentBadgeOverlay extends StatelessWidget {
       return child;
     }
 
+    final presentedChild = reserveIndicatorSpace
+        ? Padding(
+            padding: EdgeInsets.only(
+              bottom: contentBottomPadding + attachmentBottomInset,
+            ),
+            child: child,
+          )
+        : child;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        child,
+        presentedChild,
         Positioned(
           right: 0,
           bottom: attachmentBottomInset,

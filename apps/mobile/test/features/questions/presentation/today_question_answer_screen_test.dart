@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
@@ -18,7 +19,6 @@ import 'package:vinscent/features/questions/presentation/question_route_context.
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
-import 'package:vinscent/features/questions/presentation/widgets/character_speech_prompt.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -519,20 +519,19 @@ void main() {
         final character = find.byKey(
           const Key('ai-question-feedback-character'),
         );
-        final bubbleBody = find.descendant(
+        final message = find.descendant(
           of: feedback,
-          matching: find.byWidgetPredicate((widget) {
-            if (widget case Container(decoration: final BoxDecoration value)) {
-              return value.color == const Color(0xFFEFEFEF);
-            }
-            return false;
-          }),
+          matching: find.byKey(const Key('ai-question-feedback-prompt')),
         );
 
-        expect(bubbleBody, findsOneWidget);
+        expect(message, findsOneWidget);
+        expect(
+          tester.widget<CharacterSpeechMessage>(message).speechText,
+          contains('same small moments'),
+        );
         final characterRect = tester.getRect(character);
-        final bubbleRect = tester.getRect(bubbleBody);
-        final visualCenter = (characterRect.left + bubbleRect.right) / 2;
+        final messageRect = tester.getRect(message);
+        final visualCenter = (characterRect.left + messageRect.right) / 2;
 
         expect(
           visualCenter,
@@ -540,7 +539,7 @@ void main() {
           reason: 'feedback should remain centered at width $width',
         );
         expect(
-          bubbleRect.right - characterRect.left,
+          messageRect.right - characterRect.left,
           lessThanOrEqualTo(360),
           reason: 'feedback should keep a readable maximum width',
         );
@@ -902,9 +901,12 @@ void main() {
         final question = find.byKey(const Key('question-answer-prompt'));
 
         expect(find.byType(StoryCardPreviewSurface), findsNWidgets(2));
-        final speechBubble = tester.widget<CharacterSpeechBubble>(question);
-        expect(speechBubble.tailPosition, SpeechBubbleTailPosition.left);
-        expect(speechBubble.tailSize, const Size(10, 18));
+        final speechMessage = tester.widget<CharacterSpeechMessage>(question);
+        expect(speechMessage.speechText, _dailyQuestion.questionText);
+        expect(
+          find.descendant(of: question, matching: find.byType(CustomPaint)),
+          findsNothing,
+        );
         expect(
           tester.getSize(myCard).width,
           StoryCardPairLayout.maximumCardWidth,

@@ -17,6 +17,7 @@ import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_repository.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
+import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -310,7 +311,7 @@ void main() {
       expect(find.byKey(_questionForegroundKey), findsOneWidget);
       expect(
         find.descendant(of: questionBubble, matching: find.byType(CustomPaint)),
-        findsOneWidget,
+        findsNothing,
       );
       expect(tester.getSize(questionAction), tester.getSize(questionBubble));
       expect(
@@ -404,7 +405,9 @@ void main() {
     final generatedBadge = find.byKey(const Key('ai-generated-content-badge'));
     expect(generatedIndicator, findsOneWidget);
 
-    final questionBubbleRect = tester.getRect(find.byKey(_questionBubbleKey));
+    final generatedContentRect = tester.getRect(
+      find.byType(AiGeneratedContentBadgeOverlay),
+    );
     final questionTextRect = tester.getRect(questionText);
     final generatedBadgeRect = tester.getRect(generatedBadge);
     expect(
@@ -413,15 +416,15 @@ void main() {
     );
     expect(
       generatedBadgeRect.center.dx,
-      closeTo(questionBubbleRect.right - 16, 0.5),
+      closeTo(generatedContentRect.right - 16, 0.5),
     );
     expect(
       generatedBadgeRect.right,
-      lessThanOrEqualTo(questionBubbleRect.right),
+      lessThanOrEqualTo(generatedContentRect.right),
     );
     expect(
       generatedBadgeRect.bottom,
-      lessThanOrEqualTo(questionBubbleRect.bottom - 8),
+      lessThanOrEqualTo(generatedContentRect.bottom - 8),
     );
   });
 

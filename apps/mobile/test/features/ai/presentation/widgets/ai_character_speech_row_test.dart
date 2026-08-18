@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/character_speech_bubble.dart';
 import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_character_speech_row.dart';
+import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 
 void main() {
@@ -58,7 +59,9 @@ void main() {
     );
   });
 
-  testWidgets('keeps generated speech padding compact', (tester) async {
+  testWidgets('reserves compact space for the generated-content indicator', (
+    tester,
+  ) async {
     const bubbleKey = Key('ai-character-speech-bubble');
     const speechText = '둘의 답변을 바탕으로 만든 한마디';
 
@@ -73,7 +76,10 @@ void main() {
         ),
       ),
     );
-    final regularSize = tester.getSize(find.byKey(bubbleKey));
+    final regularMessageSize = tester.getSize(find.byKey(bubbleKey));
+    final regularPresentationSize = tester.getSize(
+      find.byType(AiGeneratedContentBadgeOverlay),
+    );
 
     await _pump(
       tester,
@@ -87,16 +93,25 @@ void main() {
         ),
       ),
     );
-    final generatedSize = tester.getSize(find.byKey(bubbleKey));
-    final generatedRect = tester.getRect(find.byKey(bubbleKey));
+    final generatedMessageSize = tester.getSize(find.byKey(bubbleKey));
+    final generatedPresentationRect = tester.getRect(
+      find.byType(AiGeneratedContentBadgeOverlay),
+    );
+    final generatedPresentationSize = generatedPresentationRect.size;
     final badgeRect = tester.getRect(
       find.byKey(const Key('ai-generated-content-badge')),
     );
 
-    expect(generatedSize.width - regularSize.width, closeTo(0, 0.1));
-    expect(generatedSize.height - regularSize.height, closeTo(6, 0.1));
-    expect(badgeRect.right, lessThanOrEqualTo(generatedRect.right));
-    expect(badgeRect.bottom, lessThanOrEqualTo(generatedRect.bottom));
+    expect(generatedMessageSize, regularMessageSize);
+    expect(
+      generatedPresentationSize.height - regularPresentationSize.height,
+      closeTo(AiGeneratedContentBadgeOverlay.contentBottomPadding, 0.1),
+    );
+    expect(badgeRect.right, lessThanOrEqualTo(generatedPresentationRect.right));
+    expect(
+      badgeRect.bottom,
+      lessThanOrEqualTo(generatedPresentationRect.bottom),
+    );
   });
 
   testWidgets('labels generated custom speech content', (tester) async {

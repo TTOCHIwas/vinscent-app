@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
+import '../../../core/presentation/widgets/character_speech_message.dart';
 import '../../../core/questions/daily_question.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -18,7 +19,6 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
-import '../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../recordings/application/couple_recording_overview_controller.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart';
@@ -773,18 +773,18 @@ class _HomeQuestionAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bubble = AnimatedOpacity(
+    final message = AnimatedOpacity(
       key: const Key('home-question-opacity'),
       opacity: opacity,
       duration: TransientHomeFeedbackPresenter.fadeDuration,
       curve: Curves.easeOut,
-      child: _HomeQuestionBubble(
+      child: _HomeQuestionMessage(
         questionText: questionText,
         isAiGenerated: isAiGenerated,
         reportTarget: reportTarget,
         onTap: onTap,
         actionKey: const Key('home-question-action'),
-        bubbleKey: const Key('home-question-speech-bubble'),
+        messageKey: const Key('home-question-speech-bubble'),
       ),
     );
     final dismissibleKey = this.dismissibleKey;
@@ -796,7 +796,7 @@ class _HomeQuestionAction extends StatelessWidget {
       placeholder: IgnorePointer(
         child: Opacity(
           opacity: 0,
-          child: _HomeQuestionBubble(
+          child: _HomeQuestionMessage(
             questionText: questionText,
             isAiGenerated: isAiGenerated,
             reportTarget: reportTarget,
@@ -804,7 +804,7 @@ class _HomeQuestionAction extends StatelessWidget {
         ),
       ),
       child: dismissibleKey == null || onDismissed == null
-          ? bubble
+          ? message
           : Dismissible(
               key: dismissibleKey,
               direction: DismissDirection.horizontal,
@@ -815,20 +815,20 @@ class _HomeQuestionAction extends StatelessWidget {
               movementDuration: const Duration(milliseconds: 180),
               resizeDuration: null,
               onDismissed: (_) => onDismissed(),
-              child: bubble,
+              child: message,
             ),
     );
   }
 }
 
-class _HomeQuestionBubble extends StatelessWidget {
-  const _HomeQuestionBubble({
+class _HomeQuestionMessage extends StatelessWidget {
+  const _HomeQuestionMessage({
     required this.questionText,
     this.isAiGenerated = false,
     this.reportTarget,
     this.onTap,
     this.actionKey,
-    this.bubbleKey,
+    this.messageKey,
   });
 
   final String questionText;
@@ -836,7 +836,7 @@ class _HomeQuestionBubble extends StatelessWidget {
   final SafetyReportTarget? reportTarget;
   final VoidCallback? onTap;
   final Key? actionKey;
-  final Key? bubbleKey;
+  final Key? messageKey;
 
   @override
   Widget build(BuildContext context) {
@@ -845,30 +845,22 @@ class _HomeQuestionBubble extends StatelessWidget {
       child: InkWell(
         key: actionKey,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
         child: AiGeneratedContentBadgeOverlay(
           showIndicator: isAiGenerated,
           attachmentBottomInset: 8,
+          reserveIndicatorSpace: true,
           onReportPressed: reportTarget == null
               ? null
               : () => showSafetyReportSheet(
                   context: context,
                   target: reportTarget!,
                 ),
-          child: CharacterSpeechBubble(
-            key: bubbleKey,
+          child: CharacterSpeechMessage(
+            key: messageKey,
             speechText: questionText,
             maxWidth: 320,
             textStyle: AppTextStyles.homeQuestionBubble,
-            contentPadding: isAiGenerated
-                ? const EdgeInsets.fromLTRB(
-                    16,
-                    9,
-                    16,
-                    AiGeneratedContentBadgeOverlay.contentBottomPadding,
-                  )
-                : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            tailSize: const Size(16, 8),
           ),
         ),
       ),

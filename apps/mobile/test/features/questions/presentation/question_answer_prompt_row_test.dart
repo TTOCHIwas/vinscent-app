@@ -7,7 +7,7 @@ import 'package:vinscent/features/characters/application/couple_character_contro
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
 
 void main() {
-  testWidgets('centers the character and speech bubble on phone and tablet', (
+  testWidgets('centers the character and speech message on phone and tablet', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -36,10 +36,10 @@ void main() {
       await tester.pump();
 
       final character = find.byKey(const Key('question-answer-character'));
-      final bubble = find.byKey(const Key('question-answer-prompt'));
+      final message = find.byKey(const Key('question-answer-prompt'));
       final characterRect = tester.getRect(character);
-      final bubbleRect = tester.getRect(bubble);
-      final visualCenter = (characterRect.left + bubbleRect.right) / 2;
+      final messageRect = tester.getRect(message);
+      final visualCenter = (characterRect.left + messageRect.right) / 2;
 
       expect(
         visualCenter,
@@ -47,21 +47,12 @@ void main() {
         reason: 'prompt should remain centered at width $width',
       );
       expect(
-        bubbleRect.right - characterRect.left,
+        messageRect.right - characterRect.left,
         lessThanOrEqualTo(360),
         reason: 'prompt should keep the shared readable maximum width',
       );
-      expect(
-        find.descendant(
-          of: bubble,
-          matching: find.byType(CharacterSpeechMessage),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.byType(CharacterSpeechBubble),
-        findsNothing,
-      );
+      expect(find.byType(CharacterSpeechMessage), findsOneWidget);
+      expect(find.byType(CharacterSpeechBubble), findsNothing);
     }
   });
 }

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_bubble.dart';
 import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/features/questions/presentation/widgets/character_speech_prompt.dart';
 
 void main() {
-  testWidgets('presents prompt speech without a bubble surface', (tester) async {
+  testWidgets('presents prompt speech without a bubble surface', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/presentation/widgets/character_speech_bubble.dart';
+import '../../../../core/presentation/widgets/character_speech_message.dart';
 import '../../../../core/presentation/widgets/character_speech_row.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -53,45 +53,32 @@ class AiCharacterSpeechRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
-    final contentPadding = showGeneratedIndicator
-        ? const EdgeInsets.fromLTRB(
-            16,
-            12,
-            16,
-            AiGeneratedContentBadgeOverlay.contentBottomPadding,
-          )
-        : const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
-    final bubble = _content == null
-        ? CharacterSpeechBubble(
+    final message = _content == null
+        ? CharacterSpeechMessage(
             key: bubbleKey,
             speechText: speechText!,
             maxWidth: double.infinity,
             maxLines: maxLines,
-            contentPadding: contentPadding,
-            tailSize: const Size(10, 18),
-            tailPosition: SpeechBubbleTailPosition.left,
             textStyle: AppTextStyles.homeQuestionBubble,
             textAlign: textAlign,
           )
-        : CharacterSpeechBubble.custom(
+        : CharacterSpeechMessage.custom(
             key: bubbleKey,
             semanticLabel: label,
             maxWidth: double.infinity,
-            contentPadding: contentPadding,
-            tailSize: const Size(10, 18),
-            tailPosition: SpeechBubbleTailPosition.left,
             child: _content,
           );
-    final presentedBubble = AiGeneratedContentBadgeOverlay(
+    final presentedMessage = AiGeneratedContentBadgeOverlay(
       showIndicator: showGeneratedIndicator,
       onReportPressed: onGeneratedIndicatorPressed,
-      child: Semantics(label: label, excludeSemantics: true, child: bubble),
+      reserveIndicatorSpace: true,
+      child: Semantics(label: label, excludeSemantics: true, child: message),
     );
 
     return CharacterSpeechRow(
       maximumContentWidth: maximumContentWidth,
       character: CoupleCharacterAvatar(key: characterKey, size: characterSize),
-      bubble: presentedBubble,
+      message: presentedMessage,
     );
   }
 }
@@ -141,45 +128,34 @@ class AiCharacterSpeechColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
-    final contentPadding = showGeneratedIndicator
-        ? const EdgeInsets.fromLTRB(
-            18,
-            12,
-            18,
-            AiGeneratedContentBadgeOverlay.contentBottomPadding,
-          )
-        : const EdgeInsets.symmetric(horizontal: 18, vertical: 12);
-    final bubble = _content == null
-        ? CharacterSpeechBubble(
+    final message = _content == null
+        ? CharacterSpeechMessage(
             key: bubbleKey,
             speechText: speechText!,
             maxWidth: maximumBubbleWidth,
             maxLines: maxLines,
-            contentPadding: contentPadding,
-            tailPosition: SpeechBubbleTailPosition.bottom,
             textStyle: AppTextStyles.homeQuestionBubble,
             textAlign: textAlign,
           )
-        : CharacterSpeechBubble.custom(
+        : CharacterSpeechMessage.custom(
             key: bubbleKey,
             semanticLabel: label,
             maxWidth: maximumBubbleWidth,
-            contentPadding: contentPadding,
-            tailPosition: SpeechBubbleTailPosition.bottom,
             child: _content,
           );
-    final presentedBubble = AiGeneratedContentBadgeOverlay(
+    final presentedMessage = AiGeneratedContentBadgeOverlay(
       showIndicator: showGeneratedIndicator,
       onReportPressed: onGeneratedIndicatorPressed,
       attachmentBottomInset: 10,
-      child: Semantics(label: label, excludeSemantics: true, child: bubble),
+      reserveIndicatorSpace: true,
+      child: Semantics(label: label, excludeSemantics: true, child: message),
     );
 
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          presentedBubble,
+          presentedMessage,
           const SizedBox(height: 10),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),

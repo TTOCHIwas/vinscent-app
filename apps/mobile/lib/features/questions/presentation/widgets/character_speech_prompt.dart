@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/presentation/widgets/character_speech_bubble.dart';
+import '../../../../core/presentation/widgets/character_speech_message.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../characters/presentation/widgets/couple_character_avatar.dart';
-
-export '../../../../core/presentation/widgets/character_speech_bubble.dart';
 
 class CharacterSpeechPrompt extends StatelessWidget {
   const CharacterSpeechPrompt({
@@ -32,8 +30,8 @@ class CharacterSpeechPrompt extends StatelessWidget {
         const SizedBox(height: 20),
         _OptionalTap(
           onTap: onSpeechTap,
-          borderRadius: BorderRadius.circular(12),
-          child: CharacterSpeechBubble(
+          borderRadius: BorderRadius.circular(4),
+          child: CharacterSpeechMessage(
             speechText: speechText,
             maxWidth: maxSpeechWidth,
           ),

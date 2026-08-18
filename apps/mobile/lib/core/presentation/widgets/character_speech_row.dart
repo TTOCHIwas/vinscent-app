@@ -4,13 +4,15 @@ class CharacterSpeechRow extends StatelessWidget {
   const CharacterSpeechRow({
     super.key,
     required this.character,
-    required this.bubble,
+    required this.message,
     this.maximumContentWidth = 360,
+    this.spacing = 12,
   });
 
   final Widget character;
-  final Widget bubble;
+  final Widget message;
   final double maximumContentWidth;
+  final double spacing;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +24,8 @@ class CharacterSpeechRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             character,
-            Flexible(fit: FlexFit.loose, child: bubble),
+            SizedBox(width: spacing),
+            Flexible(fit: FlexFit.loose, child: message),
           ],
         ),
       ),
