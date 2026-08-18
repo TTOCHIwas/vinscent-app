@@ -20,6 +20,7 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.semanticLabel,
     this.textAlign = TextAlign.start,
     this.showGeneratedIndicator = false,
+    this.attachGeneratedIndicatorToText = false,
     this.onGeneratedIndicatorPressed,
   }) : _content = null;
 
@@ -36,6 +37,7 @@ class AiCharacterSpeechRow extends StatelessWidget {
   }) : speechText = null,
        maxLines = null,
        textAlign = TextAlign.start,
+       attachGeneratedIndicatorToText = false,
        _content = child;
 
   final String? speechText;
@@ -48,19 +50,33 @@ class AiCharacterSpeechRow extends StatelessWidget {
   final Widget? _content;
   final TextAlign textAlign;
   final bool showGeneratedIndicator;
+  final bool attachGeneratedIndicatorToText;
   final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
+    final attachesIndicator =
+        _content == null &&
+        showGeneratedIndicator &&
+        attachGeneratedIndicatorToText;
     final message = _content == null
         ? CharacterSpeechMessage(
             key: bubbleKey,
             speechText: speechText!,
+            semanticLabel: label,
             maxWidth: double.infinity,
             maxLines: maxLines,
             textStyle: AppTextStyles.homeQuestionBubble,
             textAlign: textAlign,
+            trailing: attachesIndicator
+                ? Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 2),
+                    child: AiGeneratedContentIndicator(
+                      onReportPressed: onGeneratedIndicatorPressed,
+                    ),
+                  )
+                : null,
           )
         : CharacterSpeechMessage.custom(
             key: bubbleKey,
@@ -68,12 +84,18 @@ class AiCharacterSpeechRow extends StatelessWidget {
             maxWidth: double.infinity,
             child: _content,
           );
-    final presentedMessage = AiGeneratedContentBadgeOverlay(
-      showIndicator: showGeneratedIndicator,
-      onReportPressed: onGeneratedIndicatorPressed,
-      reserveIndicatorSpace: true,
-      child: Semantics(label: label, excludeSemantics: true, child: message),
-    );
+    final presentedMessage = attachesIndicator
+        ? message
+        : AiGeneratedContentBadgeOverlay(
+            showIndicator: showGeneratedIndicator,
+            onReportPressed: onGeneratedIndicatorPressed,
+            reserveIndicatorSpace: true,
+            child: Semantics(
+              label: label,
+              excludeSemantics: true,
+              child: message,
+            ),
+          );
 
     return CharacterSpeechRow(
       maximumContentWidth: maximumContentWidth,
@@ -95,7 +117,6 @@ class AiCharacterSpeechColumn extends StatelessWidget {
     this.semanticLabel,
     this.textAlign = TextAlign.start,
     this.showGeneratedIndicator = false,
-    this.attachGeneratedIndicatorToText = false,
     this.onGeneratedIndicatorPressed,
   }) : _content = null;
 
@@ -112,7 +133,6 @@ class AiCharacterSpeechColumn extends StatelessWidget {
   }) : speechText = null,
        maxLines = null,
        textAlign = TextAlign.start,
-       attachGeneratedIndicatorToText = false,
        _content = child;
 
   final String? speechText;
@@ -125,16 +145,11 @@ class AiCharacterSpeechColumn extends StatelessWidget {
   final Widget? _content;
   final TextAlign textAlign;
   final bool showGeneratedIndicator;
-  final bool attachGeneratedIndicatorToText;
   final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
     final label = semanticLabel ?? speechText!;
-    final attachesIndicator =
-        _content == null &&
-        showGeneratedIndicator &&
-        attachGeneratedIndicatorToText;
     final message = _content == null
         ? CharacterSpeechMessage(
             key: bubbleKey,
@@ -144,14 +159,6 @@ class AiCharacterSpeechColumn extends StatelessWidget {
             maxLines: maxLines,
             textStyle: AppTextStyles.homeQuestionBubble,
             textAlign: textAlign,
-            trailing: attachesIndicator
-                ? Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 2),
-                    child: AiGeneratedContentIndicator(
-                      onReportPressed: onGeneratedIndicatorPressed,
-                    ),
-                  )
-                : null,
           )
         : CharacterSpeechMessage.custom(
             key: bubbleKey,
@@ -159,19 +166,13 @@ class AiCharacterSpeechColumn extends StatelessWidget {
             maxWidth: maximumBubbleWidth,
             child: _content,
           );
-    final presentedMessage = attachesIndicator
-        ? message
-        : AiGeneratedContentBadgeOverlay(
-            showIndicator: showGeneratedIndicator,
-            onReportPressed: onGeneratedIndicatorPressed,
-            attachmentBottomInset: 10,
-            reserveIndicatorSpace: true,
-            child: Semantics(
-              label: label,
-              excludeSemantics: true,
-              child: message,
-            ),
-          );
+    final presentedMessage = AiGeneratedContentBadgeOverlay(
+      showIndicator: showGeneratedIndicator,
+      onReportPressed: onGeneratedIndicatorPressed,
+      attachmentBottomInset: 10,
+      reserveIndicatorSpace: true,
+      child: Semantics(label: label, excludeSemantics: true, child: message),
+    );
 
     return Center(
       child: Column(

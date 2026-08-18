@@ -144,13 +144,13 @@ class _CharacterSpeechFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 32),
-      child: AiCharacterSpeechColumn(
+      child: AiCharacterSpeechRow(
         characterKey: const Key('ai-question-feedback-character'),
         bubbleKey: const Key('ai-question-feedback-prompt'),
         speechText: feedback.feedbackText,
         semanticLabel: '캐릭터의 한마디: ${feedback.feedbackText}',
         characterSize: 96,
-        maximumBubbleWidth: 360,
+        maximumContentWidth: 360,
         showGeneratedIndicator: true,
         attachGeneratedIndicatorToText: true,
         onGeneratedIndicatorPressed: () =>
@@ -184,13 +184,13 @@ class _FeedbackStatus extends StatelessWidget {
       key: const Key('ai-question-feedback-status'),
       child: Padding(
         padding: const EdgeInsets.only(top: 32),
-        child: AiCharacterThinkingSpeechColumn(
+        child: AiCharacterThinkingSpeechRow(
           characterKey: const Key('ai-question-feedback-status-character'),
           bubbleKey: const Key('ai-question-feedback-status-prompt'),
           thinkingDotsKey: const Key('ai-question-feedback-thinking-dots'),
           message: message,
           characterSize: 96,
-          maximumBubbleWidth: 360,
+          maximumContentWidth: 360,
         ),
       ),
     );
@@ -208,13 +208,13 @@ class _FeedbackFailure extends StatelessWidget {
       key: Key('ai-question-feedback-failed'),
       child: Padding(
         padding: EdgeInsets.only(top: 32),
-        child: AiCharacterSpeechColumn(
+        child: AiCharacterSpeechRow(
           characterKey: Key('ai-question-feedback-failed-character'),
           bubbleKey: Key('ai-question-feedback-failed-prompt'),
           speechText: _message,
           semanticLabel: '캐릭터의 한마디: $_message',
           characterSize: 96,
-          maximumBubbleWidth: 360,
+          maximumContentWidth: 360,
         ),
       ),
     );
