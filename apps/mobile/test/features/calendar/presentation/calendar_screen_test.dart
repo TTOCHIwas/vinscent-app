@@ -122,6 +122,41 @@ void main() {
     );
   });
 
+  testWidgets('opens the weekly detail state when a date is tapped', (
+    tester,
+  ) async {
+    final repository = FakeStoryLoopReadRepository();
+    final router = await pumpCalendar(
+      tester,
+      repository: repository,
+      relationshipStartDate: DateTime(2026, 5, 1),
+    );
+    final scrollFinder = find.byKey(const Key('calendar-scroll-view'));
+    final scrollView = tester.widget<CustomScrollView>(scrollFinder);
+    final metrics = CalendarMonthLayoutMetrics.forViewport(
+      tester.getSize(scrollFinder).height,
+    );
+
+    expect(
+      scrollView.controller!.offset,
+      closeTo(metrics.standardScrollOffset, 0.5),
+    );
+
+    await tester.tap(find.text('9').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/calendar?date=2026-05-09',
+    );
+    expect(repository.requestedDetailDates, contains(DateTime(2026, 5, 9)));
+    expect(find.text('5월 9일'), findsOneWidget);
+    expect(
+      scrollView.controller!.offset,
+      closeTo(metrics.weeklyScrollOffset, 0.5),
+    );
+  });
+
   testWidgets('resets the viewport when the routed date changes', (
     tester,
   ) async {
