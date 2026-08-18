@@ -255,7 +255,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
 
   Widget _completedAnswer(BuildContext context) {
     final followUp = entry.followUp;
-    void onGeneratedAttributionPressed() {
+    void onGeneratedIndicatorPressed() {
       showSafetyReportSheet(
         context: context,
         target: SafetyReportTarget(
@@ -275,7 +275,7 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         primaryCharacterSize: primaryCharacterSize,
         onApprove: () => onApproveFollowUp(entry.id),
         onDismiss: () => onDismissFollowUp(entry.id),
-        onGeneratedAttributionPressed: onGeneratedAttributionPressed,
+        onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
       );
     }
 
@@ -288,8 +288,8 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
         maximumContentWidth: 420,
         speechText: entry.answerText!,
         semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
-        showGeneratedAttribution: true,
-        onGeneratedAttributionPressed: onGeneratedAttributionPressed,
+        showGeneratedIndicator: true,
+        onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
       );
     }
 
@@ -300,8 +300,8 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
       characterSize: 76,
       speechText: entry.answerText!,
       semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
-      showGeneratedAttribution: true,
-      onGeneratedAttributionPressed: onGeneratedAttributionPressed,
+      showGeneratedIndicator: true,
+      onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
     );
   }
 }

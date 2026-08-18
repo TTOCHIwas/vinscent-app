@@ -30,38 +30,6 @@ void main() {
     );
   });
 
-  testWidgets('shows a labelled attribution for generated speech', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: AiGeneratedContentAttribution())),
-    );
-
-    expect(
-      find.byKey(const Key('ai-generated-content-attribution')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('ai-generated-content-label')), findsOneWidget);
-    expect(find.text('AI 생성'), findsOneWidget);
-    expect(find.byTooltip('AI 생성 내용 안내'), findsOneWidget);
-  });
-
-  testWidgets('opens information from the labelled attribution', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: AiGeneratedContentAttribution())),
-    );
-
-    await tester.tap(find.byKey(const Key('ai-generated-content-attribution')));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const Key('ai-generated-content-info-sheet')),
-      findsOneWidget,
-    );
-  });
-
   testWidgets(
     'opens AI-generated content information without a report action',
     (tester) async {

@@ -19,8 +19,8 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.maxLines,
     this.semanticLabel,
     this.textAlign = TextAlign.start,
-    this.showGeneratedAttribution = false,
-    this.onGeneratedAttributionPressed,
+    this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   }) : _content = null;
 
   const AiCharacterSpeechRow.custom({
@@ -31,8 +31,8 @@ class AiCharacterSpeechRow extends StatelessWidget {
     this.bubbleKey,
     this.characterSize = 96,
     this.maximumContentWidth = 360,
-    this.showGeneratedAttribution = false,
-    this.onGeneratedAttributionPressed,
+    this.showGeneratedIndicator = false,
+    this.onGeneratedIndicatorPressed,
   }) : speechText = null,
        maxLines = null,
        textAlign = TextAlign.start,
@@ -47,8 +47,8 @@ class AiCharacterSpeechRow extends StatelessWidget {
   final int? maxLines;
   final Widget? _content;
   final TextAlign textAlign;
-  final bool showGeneratedAttribution;
-  final VoidCallback? onGeneratedAttributionPressed;
+  final bool showGeneratedIndicator;
+  final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -71,8 +71,8 @@ class AiCharacterSpeechRow extends StatelessWidget {
           );
     final presentedMessage = _AiCharacterSpeechContent(
       message: Semantics(label: label, excludeSemantics: true, child: message),
-      showGeneratedAttribution: showGeneratedAttribution,
-      onGeneratedAttributionPressed: onGeneratedAttributionPressed,
+      showGeneratedIndicator: showGeneratedIndicator,
+      onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
     );
 
     return CharacterSpeechRow(
@@ -86,17 +86,17 @@ class AiCharacterSpeechRow extends StatelessWidget {
 class _AiCharacterSpeechContent extends StatelessWidget {
   const _AiCharacterSpeechContent({
     required this.message,
-    required this.showGeneratedAttribution,
-    required this.onGeneratedAttributionPressed,
+    required this.showGeneratedIndicator,
+    required this.onGeneratedIndicatorPressed,
   });
 
   final Widget message;
-  final bool showGeneratedAttribution;
-  final VoidCallback? onGeneratedAttributionPressed;
+  final bool showGeneratedIndicator;
+  final VoidCallback? onGeneratedIndicatorPressed;
 
   @override
   Widget build(BuildContext context) {
-    if (!showGeneratedAttribution) {
+    if (!showGeneratedIndicator) {
       return message;
     }
 
@@ -106,8 +106,8 @@ class _AiCharacterSpeechContent extends StatelessWidget {
       children: [
         message,
         const SizedBox(height: 2),
-        AiGeneratedContentAttribution(
-          onReportPressed: onGeneratedAttributionPressed,
+        AiGeneratedContentIndicator(
+          onReportPressed: onGeneratedIndicatorPressed,
         ),
       ],
     );

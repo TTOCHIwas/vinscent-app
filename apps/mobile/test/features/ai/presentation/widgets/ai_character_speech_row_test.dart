@@ -47,19 +47,20 @@ void main() {
         home: Scaffold(
           body: AiCharacterSpeechRow(
             speechText: '둘의 답변을 바탕으로 만든 한마디',
-            showGeneratedAttribution: true,
+            showGeneratedIndicator: true,
           ),
         ),
       ),
     );
 
     expect(
-      find.byKey(const Key('ai-generated-content-attribution')),
+      find.byKey(const Key('ai-generated-content-indicator')),
       findsOneWidget,
     );
+    expect(find.text('AI 생성'), findsNothing);
   });
 
-  testWidgets('places generated attribution below the speech content', (
+  testWidgets('places generated indicator below the speech content', (
     tester,
   ) async {
     const bubbleKey = Key('ai-character-speech-bubble');
@@ -84,32 +85,25 @@ void main() {
           body: AiCharacterSpeechRow(
             bubbleKey: bubbleKey,
             speechText: speechText,
-            showGeneratedAttribution: true,
+            showGeneratedIndicator: true,
           ),
         ),
       ),
     );
     final generatedMessageSize = tester.getSize(find.byKey(bubbleKey));
     final generatedMessageRect = tester.getRect(find.byKey(bubbleKey));
-    final attributionRect = tester.getRect(
-      find.byKey(const Key('ai-generated-content-attribution')),
+    final indicatorRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-indicator')),
     );
 
     expect(generatedMessageSize, regularMessageSize);
     expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
-    expect(find.text('AI 생성'), findsOneWidget);
     expect(
-      attributionRect.top,
+      indicatorRect.top,
       greaterThanOrEqualTo(generatedMessageRect.bottom),
     );
-    expect(
-      attributionRect.right,
-      lessThanOrEqualTo(generatedMessageRect.right),
-    );
-    expect(
-      attributionRect.left,
-      greaterThanOrEqualTo(generatedMessageRect.left),
-    );
+    expect(indicatorRect.right, lessThanOrEqualTo(generatedMessageRect.right));
+    expect(indicatorRect.left, greaterThanOrEqualTo(generatedMessageRect.left));
   });
 
   testWidgets('labels generated custom speech content', (tester) async {
@@ -119,7 +113,7 @@ void main() {
         home: Scaffold(
           body: AiCharacterSpeechRow.custom(
             semanticLabel: '생성된 답변과 후속 질문',
-            showGeneratedAttribution: true,
+            showGeneratedIndicator: true,
             child: Text('생성된 답변'),
           ),
         ),
@@ -127,12 +121,12 @@ void main() {
     );
 
     expect(
-      find.byKey(const Key('ai-generated-content-attribution')),
+      find.byKey(const Key('ai-generated-content-indicator')),
       findsOneWidget,
     );
   });
 
-  testWidgets('keeps generated attribution separate at large text scale', (
+  testWidgets('keeps generated indicator separate at large text scale', (
     tester,
   ) async {
     const bubbleKey = Key('ai-scaled-speech-message');
@@ -146,7 +140,7 @@ void main() {
             body: AiCharacterSpeechRow(
               bubbleKey: bubbleKey,
               speechText: '화면 글자가 커져도 AI 생성 표시는 답변과 겹치지 않아',
-              showGeneratedAttribution: true,
+              showGeneratedIndicator: true,
             ),
           ),
         ),
@@ -154,10 +148,10 @@ void main() {
     );
 
     final messageRect = tester.getRect(find.byKey(bubbleKey));
-    final attributionRect = tester.getRect(
-      find.byKey(const Key('ai-generated-content-attribution')),
+    final indicatorRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-indicator')),
     );
-    expect(attributionRect.top, greaterThanOrEqualTo(messageRect.bottom));
+    expect(indicatorRect.top, greaterThanOrEqualTo(messageRect.bottom));
     expect(tester.takeException(), isNull);
   });
 }
