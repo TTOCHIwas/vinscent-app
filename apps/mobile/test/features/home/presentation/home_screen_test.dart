@@ -405,18 +405,17 @@ void main() {
     final generatedBadge = find.byKey(const Key('ai-generated-content-badge'));
     expect(generatedIndicator, findsOneWidget);
 
-    final generatedContentRect = tester.getRect(
-      find.byType(AiGeneratedContentBadgeOverlay),
-    );
+    final generatedContentRect = tester.getRect(find.byKey(_questionBubbleKey));
     final questionTextRect = tester.getRect(questionText);
     final generatedBadgeRect = tester.getRect(generatedBadge);
+    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
     expect(
       generatedBadgeRect.center.dy,
-      greaterThanOrEqualTo(questionTextRect.bottom),
+      inInclusiveRange(questionTextRect.top, questionTextRect.bottom),
     );
     expect(
       generatedBadgeRect.center.dx,
-      closeTo(generatedContentRect.right - 16, 0.5),
+      lessThanOrEqualTo(generatedContentRect.right),
     );
     expect(
       generatedBadgeRect.right,
@@ -424,7 +423,7 @@ void main() {
     );
     expect(
       generatedBadgeRect.bottom,
-      lessThanOrEqualTo(generatedContentRect.bottom - 8),
+      lessThanOrEqualTo(generatedContentRect.bottom),
     );
   });
 
@@ -690,14 +689,14 @@ void main() {
       findTextIgnoringWordJoiners(_dailyQuestion.questionText),
       findsNothing,
     );
-    expect(find.text(_aiFeedbackText), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsOneWidget);
     expect(find.byKey(_questionBubbleKey), findsOneWidget);
     expect(
       find.byKey(const Key('ai-generated-content-indicator')),
       findsOneWidget,
     );
 
-    await tester.tap(find.text(_aiFeedbackText));
+    await tester.tap(findTextIgnoringWordJoiners(_aiFeedbackText));
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home/question');
@@ -779,7 +778,7 @@ void main() {
       },
     );
 
-    expect(find.text(_aiFeedbackText), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsOneWidget);
     expect(
       impressionStore.lastShownByUser[_profile.id],
       _dailyQuestion.dailyQuestionId,
@@ -788,7 +787,7 @@ void main() {
     await tester.pump(const Duration(seconds: 8));
     await tester.pump(const Duration(milliseconds: 240));
 
-    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsNothing);
     expect(find.byKey(_questionBubbleKey), findsNothing);
   });
 
@@ -814,7 +813,7 @@ void main() {
       },
     );
 
-    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsNothing);
     expect(find.byKey(_questionBubbleKey), findsNothing);
   });
 
@@ -851,7 +850,7 @@ void main() {
       },
     );
 
-    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsNothing);
   });
 
   testWidgets('keeps a proactive suggestion visible until it is swiped away', (
@@ -973,7 +972,17 @@ void main() {
       );
       final renderedText = find.descendant(
         of: find.byKey(_questionBubbleKey),
-        matching: find.byType(RichText),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is RichText &&
+              widget.text
+                  .toPlainText()
+                  .replaceAll('\u2060', '')
+                  .replaceAll('\uFFFC', '')
+                  .replaceAll(RegExp(r'\s+'), ' ')
+                  .trim() ==
+                  suggestion.text,
+        ),
       );
       expect(renderedText, findsOneWidget);
       expect(
@@ -1016,14 +1025,14 @@ void main() {
       settle: false,
     );
 
-    expect(find.text(_aiFeedbackText), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsOneWidget);
     expect(findTextIgnoringWordJoiners(suggestion.text), findsNothing);
 
     await tester.pump(TransientHomeFeedbackPresenter.displayDuration);
     await tester.pump(TransientHomeFeedbackPresenter.fadeDuration);
     await tester.pump();
 
-    expect(find.text(_aiFeedbackText), findsNothing);
+    expect(findTextIgnoringWordJoiners(_aiFeedbackText), findsNothing);
     expect(find.byType(Dismissible), findsOneWidget);
     expect(findTextIgnoringWordJoiners(suggestion.text), findsWidgets);
   });

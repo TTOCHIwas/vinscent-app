@@ -13,6 +13,7 @@ class CharacterSpeechMessage extends StatelessWidget {
     this.maxLines,
     this.textStyle = AppTextStyles.homeCharacterLabel,
     this.textAlign = TextAlign.start,
+    this.trailing,
   }) : semanticLabel = speechText,
        _content = null;
 
@@ -25,6 +26,7 @@ class CharacterSpeechMessage extends StatelessWidget {
        maxLines = null,
        textStyle = AppTextStyles.homeCharacterLabel,
        textAlign = TextAlign.start,
+       trailing = null,
        _content = child;
 
   final String speechText;
@@ -33,6 +35,7 @@ class CharacterSpeechMessage extends StatelessWidget {
   final int? maxLines;
   final TextStyle textStyle;
   final TextAlign textAlign;
+  final Widget? trailing;
   final Widget? _content;
 
   @override
@@ -57,6 +60,7 @@ class CharacterSpeechMessage extends StatelessWidget {
                   semanticsLabel: semanticLabel,
                   textAlign: textAlign,
                   style: textStyle,
+                  trailing: trailing,
                 )
               : Semantics(
                   label: semanticLabel,

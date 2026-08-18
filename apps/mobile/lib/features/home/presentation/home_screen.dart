@@ -846,22 +846,24 @@ class _HomeQuestionMessage extends StatelessWidget {
         key: actionKey,
         onTap: onTap,
         borderRadius: BorderRadius.circular(4),
-        child: AiGeneratedContentBadgeOverlay(
-          showIndicator: isAiGenerated,
-          attachmentBottomInset: 8,
-          reserveIndicatorSpace: true,
-          onReportPressed: reportTarget == null
+        child: CharacterSpeechMessage(
+          key: messageKey,
+          speechText: questionText,
+          maxWidth: 320,
+          textStyle: AppTextStyles.homeQuestionBubble,
+          trailing: !isAiGenerated
               ? null
-              : () => showSafetyReportSheet(
-                  context: context,
-                  target: reportTarget!,
+              : Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 2),
+                  child: AiGeneratedContentIndicator(
+                    onReportPressed: reportTarget == null
+                        ? null
+                        : () => showSafetyReportSheet(
+                            context: context,
+                            target: reportTarget!,
+                          ),
+                  ),
                 ),
-          child: CharacterSpeechMessage(
-            key: messageKey,
-            speechText: questionText,
-            maxWidth: 320,
-            textStyle: AppTextStyles.homeQuestionBubble,
-          ),
         ),
       ),
     );

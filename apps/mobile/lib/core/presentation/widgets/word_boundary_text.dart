@@ -13,6 +13,7 @@ class WordBoundaryText extends StatelessWidget {
     this.overflow,
     this.semanticsLabel,
     this.textAlign,
+    this.trailing,
   });
 
   final String text;
@@ -21,6 +22,7 @@ class WordBoundaryText extends StatelessWidget {
   final TextOverflow? overflow;
   final String? semanticsLabel;
   final TextAlign? textAlign;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +39,29 @@ class WordBoundaryText extends StatelessWidget {
           locale: Localizations.maybeLocaleOf(context),
         );
 
-        return Text(
-          displayText,
+        final trailing = this.trailing;
+        if (trailing == null) {
+          return Text(
+            displayText,
+            maxLines: maxLines,
+            overflow: overflow,
+            semanticsLabel: semanticsLabel ?? text,
+            textAlign: textAlign,
+            style: style,
+          );
+        }
+
+        return Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: displayText),
+              const TextSpan(text: '\u2060'),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: trailing,
+              ),
+            ],
+          ),
           maxLines: maxLines,
           overflow: overflow,
           semanticsLabel: semanticsLabel ?? text,
