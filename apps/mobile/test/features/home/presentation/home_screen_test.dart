@@ -428,6 +428,63 @@ void main() {
     );
   });
 
+  testWidgets(
+    'keeps AI speech attached to the character across system text sizes',
+    (tester) async {
+      final aiQuestion = sampleDailyQuestion(
+        assignedDate: _today,
+        questionSource: QuestionSource.ai,
+      );
+
+      for (final scale in [0.8, 2.0]) {
+        await _pumpHome(
+          tester,
+          couple: _activeCouple,
+          today: _today,
+          textScaler: TextScaler.linear(scale),
+          recordingOverview: _emptyRecordingOverview,
+          todaySummary: sampleTodaySummary(
+            coupleDate: _today,
+            cards: [
+              samplePreviewCard(authorUserId: _profile.id),
+              samplePreviewCard(
+                id: 'card-2',
+                authorUserId: 'partner-id',
+                previewPath: 'previews/card-2.png',
+              ),
+            ],
+            question: StoryLoopQuestionSummary(
+              question: aiQuestion,
+              myAnswerExists: false,
+              partnerAnswerExists: false,
+              answerCount: 0,
+            ),
+          ),
+        );
+
+        final speech = find.byKey(_questionBubbleKey);
+        final indicator = find.byKey(
+          const Key('ai-generated-content-indicator'),
+        );
+        final character = find.byKey(CharacterRecordingControl.controlKey);
+        final speechRect = tester.getRect(speech);
+        final indicatorRect = tester.getRect(indicator);
+
+        expect(
+          tester.getTopLeft(character).dy - speechRect.bottom,
+          closeTo(8, 0.1),
+          reason: 'text scale $scale should not create a detached footer',
+        );
+        expect(
+          indicatorRect.center.dy,
+          inInclusiveRange(speechRect.top, speechRect.bottom),
+          reason: 'text scale $scale should keep the AI mark with the speech',
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('reports an AI-generated daily question on home', (tester) async {
     final safetyRepository = _FakeSafetyReportRepository();
     final aiQuestion = sampleDailyQuestion(
@@ -1506,6 +1563,7 @@ Future<void> _pumpHome(
   AiProactiveSuggestionStore? proactiveStore,
   AiCurrentLocationService? proactiveLocationService,
   SafetyReportRepository? safetyReportRepository,
+  TextScaler? textScaler,
   bool settle = true,
 }) async {
   await tester.pumpWidget(
@@ -1556,7 +1614,15 @@ Future<void> _pumpHome(
             safetyReportRepository,
           ),
       ],
-      child: const MaterialApp(home: Scaffold(body: HomeScreen())),
+      child: MaterialApp(
+        builder: textScaler == null
+            ? null
+            : (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+                child: child!,
+              ),
+        home: const Scaffold(body: HomeScreen()),
+      ),
     ),
   );
 
