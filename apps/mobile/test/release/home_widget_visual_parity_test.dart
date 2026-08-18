@@ -11,19 +11,51 @@ void main() {
     final characterInfo = _readXml(
       'android/app/src/main/res/xml/character_widget_info.xml',
     );
+    final cardLayout = _readXml(
+      'android/app/src/main/res/layout/card_widget.xml',
+    );
     final cardInfo = _readXml(
       'android/app/src/main/res/xml/card_widget_info.xml',
     );
     final root = _elementById(characterLayout, 'character_widget_root');
     final surface = _elementById(characterLayout, 'character_widget_surface');
+    final characterImage = _elementById(
+      characterLayout,
+      'character_widget_image',
+    );
+    final cardRoot = _elementById(cardLayout, 'card_widget_root');
+    final cardImage = _elementById(cardLayout, 'card_widget_image');
     final recordButton = _elementById(
       characterLayout,
       'character_widget_record',
     );
 
     expect(_attribute(root, 'background'), '@android:color/transparent');
-    expect(_attribute(surface, 'layout_width'), 'wrap_content');
-    expect(_attribute(surface, 'layout_height'), 'match_parent');
+    expect(_attribute(root, 'padding'), _attribute(cardRoot, 'padding'));
+    expect(
+      _attribute(surface, 'layout_width'),
+      _attribute(cardImage, 'layout_width'),
+    );
+    expect(
+      _attribute(surface, 'layout_height'),
+      _attribute(cardImage, 'layout_height'),
+    );
+    expect(
+      _attribute(characterImage, 'layout_width'),
+      _attribute(cardImage, 'layout_width'),
+    );
+    expect(
+      _attribute(characterImage, 'layout_height'),
+      _attribute(cardImage, 'layout_height'),
+    );
+    expect(
+      _attribute(characterImage, 'adjustViewBounds'),
+      _attribute(cardImage, 'adjustViewBounds'),
+    );
+    expect(
+      _attribute(characterImage, 'scaleType'),
+      _attribute(cardImage, 'scaleType'),
+    );
     expect(_attribute(surface, 'background'), '@android:color/white');
     expect(recordButton.ancestors, contains(surface));
     expect(_attribute(recordButton, 'layout_marginEnd'), '10dp');
