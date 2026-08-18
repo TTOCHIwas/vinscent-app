@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../theme/app_text_styles.dart';
-import 'word_boundary_text.dart';
+import 'character_speech_message.dart';
 
 const _speechBubbleColor = Color(0xFFEFEFEF);
 
@@ -61,8 +61,6 @@ class CharacterSpeechBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final textScaler = MediaQuery.textScalerOf(context);
-        final effectiveMaxLines = textScaler.scale(1) > 1.01 ? null : maxLines;
         final tailWidth = tailPosition != SpeechBubbleTailPosition.bottom
             ? tailSize.width
             : 0.0;
@@ -87,19 +85,16 @@ class CharacterSpeechBubble extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: _content == null
-              ? WordBoundaryText(
-                  speechText,
-                  maxLines: effectiveMaxLines,
-                  overflow: effectiveMaxLines == null
-                      ? null
-                      : TextOverflow.ellipsis,
-                  semanticsLabel: semanticLabel,
+              ? CharacterSpeechMessage(
+                  speechText: speechText,
+                  maxWidth: double.infinity,
+                  maxLines: maxLines,
                   textAlign: textAlign,
-                  style: textStyle,
+                  textStyle: textStyle,
                 )
-              : Semantics(
-                  label: semanticLabel,
-                  excludeSemantics: true,
+              : CharacterSpeechMessage.custom(
+                  semanticLabel: semanticLabel,
+                  maxWidth: double.infinity,
                   child: _content,
                 ),
         );
