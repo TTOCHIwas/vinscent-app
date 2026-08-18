@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import 'ai_generated_content_info_sheet.dart';
 
 class AiGeneratedContentIndicator extends StatelessWidget {
@@ -38,6 +39,64 @@ class AiGeneratedContentIndicator extends StatelessWidget {
           Icons.auto_awesome_rounded,
           size: _iconSize,
           color: AppColors.textMuted,
+        ),
+      ),
+    );
+  }
+}
+
+class AiGeneratedContentAttribution extends StatelessWidget {
+  const AiGeneratedContentAttribution({super.key, this.onReportPressed});
+
+  static const _attributionKey = Key('ai-generated-content-attribution');
+  static const _labelKey = Key('ai-generated-content-label');
+  static const _iconSize = 13.0;
+
+  final VoidCallback? onReportPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(
+      key: _attributionKey,
+      child: Semantics(
+        button: true,
+        label: 'AI 생성 내용 안내',
+        excludeSemantics: true,
+        child: Tooltip(
+          message: 'AI 생성 내용 안내',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: AiGeneratedContentIndicator._indicatorKey,
+              onTap: () => showAiGeneratedContentInfoSheet(
+                context: context,
+                onReportPressed: onReportPressed,
+              ),
+              borderRadius: BorderRadius.circular(6),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 32),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        size: _iconSize,
+                        color: AppColors.textMuted,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'AI 생성',
+                        key: _labelKey,
+                        style: AppTextStyles.aiGeneratedAttribution,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

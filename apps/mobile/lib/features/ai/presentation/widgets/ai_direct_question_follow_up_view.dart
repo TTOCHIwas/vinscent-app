@@ -16,7 +16,7 @@ class AiDirectQuestionFollowUpView extends StatefulWidget {
     required this.followUp,
     required this.onApprove,
     required this.onDismiss,
-    required this.onGeneratedIndicatorPressed,
+    required this.onGeneratedAttributionPressed,
     this.usePrimaryLayout = false,
     this.primaryCharacterSize = 156,
   });
@@ -26,7 +26,7 @@ class AiDirectQuestionFollowUpView extends StatefulWidget {
   final AiDirectQuestionFollowUp followUp;
   final Future<void> Function() onApprove;
   final Future<void> Function() onDismiss;
-  final VoidCallback onGeneratedIndicatorPressed;
+  final VoidCallback onGeneratedAttributionPressed;
   final bool usePrimaryLayout;
   final double primaryCharacterSize;
 
@@ -95,8 +95,8 @@ class _AiDirectQuestionFollowUpViewState
         characterSize: widget.primaryCharacterSize,
         maximumContentWidth: 420,
         semanticLabel: semanticLabel,
-        showGeneratedIndicator: true,
-        onGeneratedIndicatorPressed: widget.onGeneratedIndicatorPressed,
+        showGeneratedAttribution: true,
+        onGeneratedAttributionPressed: widget.onGeneratedAttributionPressed,
         child: content,
       );
     }
@@ -107,8 +107,8 @@ class _AiDirectQuestionFollowUpViewState
       bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
       characterSize: 76,
       semanticLabel: semanticLabel,
-      showGeneratedIndicator: true,
-      onGeneratedIndicatorPressed: widget.onGeneratedIndicatorPressed,
+      showGeneratedAttribution: true,
+      onGeneratedAttributionPressed: widget.onGeneratedAttributionPressed,
       child: content,
     );
   }

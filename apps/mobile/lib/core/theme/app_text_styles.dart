@@ -4,6 +4,7 @@ import 'app_colors.dart';
 import 'app_typography.dart';
 
 abstract final class AppTextStyles {
+  static const _tracking12 = 12 * AppTypography.letterSpacingRatio;
   static const _tracking13 = 13 * AppTypography.letterSpacingRatio;
   static const _tracking14 = 14 * AppTypography.letterSpacingRatio;
   static const _tracking16 = 16 * AppTypography.letterSpacingRatio;
@@ -50,6 +51,14 @@ abstract final class AppTextStyles {
     fontWeight: FontWeight.w500,
     height: AppTypography.bodyLineHeight,
     letterSpacing: _tracking16,
+  );
+
+  static const aiGeneratedAttribution = TextStyle(
+    color: AppColors.textMuted,
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 16 / 12,
+    letterSpacing: _tracking12,
   );
 
   static const shellDayCount = TextStyle(

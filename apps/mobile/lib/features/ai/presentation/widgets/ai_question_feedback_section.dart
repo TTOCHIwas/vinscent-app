@@ -151,9 +151,8 @@ class _CharacterSpeechFeedback extends StatelessWidget {
         semanticLabel: '캐릭터의 한마디: ${feedback.feedbackText}',
         characterSize: 96,
         maximumContentWidth: 360,
-        showGeneratedIndicator: true,
-        attachGeneratedIndicatorToText: true,
-        onGeneratedIndicatorPressed: () =>
+        showGeneratedAttribution: true,
+        onGeneratedAttributionPressed: () =>
             _showFeedbackReport(context, dailyQuestionId: dailyQuestionId),
       ),
     );
