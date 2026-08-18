@@ -877,7 +877,7 @@ test('feedback prompt requests a shared character reaction instead of an answer 
       prompts.push(prompt);
       return {
         value: {
-          feedback_text: '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+          feedback_text: '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐',
         },
         usage: {
           inputTokenCount: null,
@@ -916,7 +916,15 @@ test('feedback prompt requests a shared character reaction instead of an answer 
   assert.equal(capturedPrompt.includes('누가 어떤 답을 썼는지 드러내지 마'), true);
   assert.equal(capturedPrompt.includes('마침표는 쓰지 마'), true);
   assert.equal(
-    capturedPrompt.includes('문장 끝은 무기호, !, ?, ... 중 하나만 사용해'),
+    capturedPrompt.includes('문장 끝은 보통 무기호로 두고'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('가볍거나 기대감 있는 장면은 무기호나 !로 마무리하고 ...로 흐리지 마'),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('단순히 부드럽게 보이려고 붙이지 마'),
     true,
   );
   assert.equal(
@@ -929,9 +937,15 @@ test('feedback prompt requests a shared character reaction instead of an answer 
   );
   assert.equal(
     capturedPrompt.includes(
-      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐',
     ),
     true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐..."',
+    ),
+    false,
   );
   assert.equal(
     capturedPrompt.includes('소중한 걸 고르는 데도 시간이 조금 필요한가 봐!'),
@@ -1833,9 +1847,15 @@ test('compact-model prompts state critical semantic decisions explicitly', async
   );
   assert.equal(
     prompts[1]?.includes(
-      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐...',
+      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐',
     ),
     true,
+  );
+  assert.equal(
+    prompts[1]?.includes(
+      '소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐..."',
+    ),
+    false,
   );
   assert.equal(
     prompts[1]?.includes('소중한 걸 고르는 데도 시간이 조금 필요한가 봐!'),

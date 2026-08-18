@@ -512,7 +512,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
       name: 'feedback_shared_laughter',
       scenario: '같은 장난스러운 순간을 좋아하는 답변',
       source: 'representative_boundary',
-      expectation: '공유된 웃음 장면에 가벼운 말맛을 더해',
+      expectation: '공유된 웃음 장면에 가벼운 말맛을 더하고 말끝을 흐리지 않아',
       context: completedContext({
         questionText: '함께 있을 때 시간이 빨리 가는 순간은 언제야?',
         domain: 'relationship_strength',
@@ -521,6 +521,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         personalized: false,
       }),
       requiredTerms: [['웃', '장난', '재밌']],
+      forbiddenPatterns: [/\.\.\.$/u],
     }),
     feedbackCase({
       name: 'feedback_nothing_special_without_judgment',
@@ -547,7 +548,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
       name: 'feedback_playful_food_difference',
       scenario: '서로 다른 야식 메뉴를 고른 가벼운 답변',
       source: 'representative_boundary',
-      expectation: '메뉴 차이를 보고서처럼 반복하지 않고 귀엽게 반응해',
+      expectation: '메뉴 차이를 보고서처럼 반복하지 않고 말끝을 흐리지 않으며 귀엽게 반응해',
       context: completedContext({
         questionText: '오늘 밤 같이 먹고 싶은 건 뭐야?',
         domain: 'daily_life',
@@ -556,7 +557,26 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         personalized: false,
       }),
       requiredTerms: [['먹', '메뉴', '야식', '맛']],
-      forbiddenPatterns: [/답변/u, /(?:서로\s*)?(?:다르|달라)/u],
+      forbiddenPatterns: [
+        /답변/u,
+        /(?:서로\s*)?(?:다르|달라)/u,
+        /\.\.\.$/u,
+      ],
+    }),
+    feedbackCase({
+      name: 'feedback_shared_action_movie_stays_lively',
+      scenario: '같이 보고 싶은 액션 영화라는 실제 회귀 답변',
+      source: 'production_regression',
+      expectation: '답을 되읽지 않고 함께 볼 장면을 더하며 긍정적인 말끝을 흐리지 않아',
+      context: completedContext({
+        questionText: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+        domain: 'daily_life',
+        answerA: '나는 존윅같은 거 진짜 개좋아',
+        answerB: '범죄,액션,스릴러~',
+        personalized: false,
+      }),
+      requiredTerms: [['영화', '액션', '스크린', '극장', '소파']],
+      forbiddenPatterns: [/\.\.\.$/u],
     }),
     feedbackCase({
       name: 'feedback_rejected_owner_reference',
@@ -581,7 +601,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
       name: 'feedback_personalized_without_owner_exposure',
       scenario: '승인된 공통 기억을 은근히 활용하는 한마디',
       source: 'representative_boundary',
-      expectation: '걷기라는 확인된 맥락은 사용하되 기억 주인을 노출하지 않아',
+      expectation: '걷기라는 확인된 맥락은 사용하되 기억 주인을 노출하거나 긍정적인 말끝을 흐리지 않아',
       context: completedContext({
         questionText: '이번 주에 다시 하고 싶은 작은 일은 뭐야?',
         domain: 'daily_life',
@@ -606,6 +626,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         '산책',
         '발걸음',
       ]],
+      forbiddenPatterns: [/\.\.\.$/u],
     }),
   ];
 }

@@ -127,7 +127,7 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('feedback-v8', async () => {
+    return modelJob('feedback-v9', async () => {
       let rejectedText: string | null = null;
       let rejectionCode: CoupleFeedbackGenerationOptions['rejectionCode'] =
         null;

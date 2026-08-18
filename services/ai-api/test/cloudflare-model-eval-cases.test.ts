@@ -218,6 +218,43 @@ test('한마디 평가는 답변을 되읽거나 숨은 의도와 조언을 만�
   }), /mixed certainty|forbidden pattern/i);
 });
 
+test('한마디 평가는 가볍고 긍정적인 장면을 말줄임표로 흐리지 않는다', () => {
+  const cases = createCloudflareModelEvaluationCases();
+  const scenarios = [
+    {
+      name: 'feedback_shared_laughter',
+      lively: '둘이 웃기 시작하면 시계가 제일 먼저 퇴근하겠네!',
+      trailing: '둘이 웃기 시작하면 시계가 제일 먼저 퇴근하겠네...',
+    },
+    {
+      name: 'feedback_playful_food_difference',
+      lively: '오늘 밤 메뉴판이 꽤 오래 고민하겠네!',
+      trailing: '오늘 밤 메뉴판이 꽤 오래 고민하겠네...',
+    },
+    {
+      name: 'feedback_shared_action_movie_stays_lively',
+      lively: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+      trailing: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네...',
+    },
+    {
+      name: 'feedback_personalized_without_owner_exposure',
+      lively: '이번 주 산책길에는 할 이야기가 한가득이겠네!',
+      trailing: '이번 주 산책길에는 할 이야기가 한가득이겠네...',
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const evaluationCase = cases.find((item) => item.name === scenario.name);
+    assert.ok(evaluationCase);
+    assert.doesNotThrow(() => evaluationCase.validate({
+      text: scenario.lively,
+    }));
+    assert.throws(() => evaluationCase.validate({
+      text: scenario.trailing,
+    }), /forbidden pattern/i);
+  }
+});
+
 test('선제 추천 평가는 날씨 종류를 보존하고 자연스러운 장소 표현을 인정한다', () => {
   const cases = createCloudflareModelEvaluationCases();
   const hotWeather = cases.find(
