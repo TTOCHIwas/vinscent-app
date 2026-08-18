@@ -200,7 +200,6 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
     final card = find.byKey(const ValueKey('calendar-story-card-card-2'));
-    await scrollCalendarUp(tester);
     await tester.tap(card);
     await tester.pumpAndSettle();
 
