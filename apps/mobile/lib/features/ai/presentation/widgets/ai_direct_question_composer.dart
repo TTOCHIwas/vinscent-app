@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../../core/presentation/widgets/app_keyboard_accessory.dart';
 import '../../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
@@ -11,8 +10,10 @@ import '../../application/ai_direct_question_controller.dart';
 import '../../data/ai_direct_question_history.dart';
 import '../../data/ai_direct_question_repository.dart';
 import '../ai_direct_question_composer_controller.dart';
-import 'ai_character_speech_row.dart';
+import '../../../characters/presentation/widgets/couple_character_avatar.dart';
+import '../../../shell/presentation/app_shell.dart';
 import 'ai_direct_question_entry_view.dart';
+import 'ai_direct_question_input_dock.dart';
 import 'ai_learning_error_message.dart';
 
 class AiDirectQuestionComposer extends ConsumerWidget {
@@ -97,117 +98,194 @@ class _DirectQuestionComposerContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final latestQuestion = history.questions.firstOrNull;
     final keyboardVisible = AppKeyboardVisibility.of(context);
+    final bottomNavigationClearance =
+        AppShell.bottomBarHeight + MediaQuery.viewPaddingOf(context).bottom;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final primaryCharacterSize = _primaryCharacterSizeFor(
+        final guideCharacterSize = _guideCharacterSizeFor(
+          constraints.maxHeight,
+        );
+        final answerCharacterSize = _answerCharacterSizeFor(
           constraints.maxHeight,
         );
 
         return TextFieldTapRegion(
-          child: RefreshIndicator(
-            color: AppColors.brandAccent,
-            onRefresh: onRefresh,
-            child: ListView(
-              key: const Key('ai-direct-question-conversation'),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              children: [
-                GestureDetector(
-                  key: const Key('ai-direct-question-content'),
-                  behavior: HitTestBehavior.translucent,
-                  onTap: controller.focusNode.unfocus,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Column(
-                      key: const Key('ai-direct-question-composer'),
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                          child: latestQuestion == null
-                              ? Center(
-                                  child: _DirectQuestionGuide(
-                                    characterSize: primaryCharacterSize,
-                                  ),
-                                )
-                              : Align(
-                                  alignment: Alignment.topCenter,
-                                  child: AiDirectQuestionExchange(
-                                    entry: latestQuestion,
-                                    questionBubbleKey: const Key(
-                                      'ai-direct-latest-question-bubble',
-                                    ),
-                                    isLatest: true,
-                                    usePrimaryAnswerLayout: true,
-                                    primaryCharacterSize: primaryCharacterSize,
-                                    onApproveFollowUp: onApproveFollowUp,
-                                    onDismissFollowUp: onDismissFollowUp,
-                                  ),
+          child: Column(
+            key: const Key('ai-direct-question-composer'),
+            children: [
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, conversationConstraints) {
+                    return RefreshIndicator(
+                      color: AppColors.brandAccent,
+                      onRefresh: onRefresh,
+                      child: ListView(
+                        key: const Key('ai-direct-question-conversation'),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.manual,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        children: [
+                          GestureDetector(
+                            key: const Key('ai-direct-question-content'),
+                            behavior: HitTestBehavior.translucent,
+                            onTap: controller.focusNode.unfocus,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: conversationConstraints.maxHeight,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  24,
+                                  16,
+                                  24,
+                                  24,
                                 ),
-                        ),
-                        ColoredBox(
-                          color: AppColors.background,
-                          child: Padding(
-                            key: const Key('ai-direct-question-input-dock'),
-                            padding: EdgeInsets.fromLTRB(
-                              24,
-                              8,
-                              24,
-                              keyboardVisible ? 8 : 104,
-                            ),
-                            child: AppAnswerInput(
-                              key: const Key('ai-direct-question-input'),
-                              controller: controller.questionController,
-                              focusNode: controller.focusNode,
-                              enabled:
-                                  !controller.isSubmitting &&
-                                  history.remainingCount > 0,
-                              minLines: keyboardVisible ? 1 : 3,
-                              maxLines: keyboardVisible ? 3 : 5,
-                              maxLength: AiDirectQuestionComposerController
-                                  .maxQuestionLength,
-                              hintText: history.remainingCount > 0
-                                  ? '예: 상대는 지친 날에 어떤 걸 좋아할까?'
-                                  : '오늘 질문은 모두 사용했어',
+                                child: latestQuestion == null
+                                    ? Center(
+                                        child: _DirectQuestionGuide(
+                                          characterSize: guideCharacterSize,
+                                          canAsk: history.remainingCount > 0,
+                                          onSuggestionPressed:
+                                              controller.useStarterQuestion,
+                                        ),
+                                      )
+                                    : Align(
+                                        alignment: Alignment.topCenter,
+                                        child: AiDirectQuestionExchange(
+                                          entry: latestQuestion,
+                                          questionBubbleKey: const Key(
+                                            'ai-direct-latest-question-bubble',
+                                          ),
+                                          isLatest: true,
+                                          usePrimaryAnswerLayout: true,
+                                          primaryCharacterSize:
+                                              answerCharacterSize,
+                                          onApproveFollowUp: onApproveFollowUp,
+                                          onDismissFollowUp: onDismissFollowUp,
+                                        ),
+                                      ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+              AiDirectQuestionInputDock(
+                controller: controller,
+                remainingCount: history.remainingCount,
+                keyboardVisible: keyboardVisible,
+                bottomNavigationClearance: bottomNavigationClearance,
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  double _primaryCharacterSizeFor(double availableHeight) {
+  double _guideCharacterSizeFor(double availableHeight) {
     return (availableHeight * 0.36).clamp(132.0, 220.0).toDouble();
+  }
+
+  double _answerCharacterSizeFor(double availableHeight) {
+    return (availableHeight * 0.2).clamp(96.0, 120.0).toDouble();
   }
 }
 
 class _DirectQuestionGuide extends StatelessWidget {
-  const _DirectQuestionGuide({required this.characterSize});
+  const _DirectQuestionGuide({
+    required this.characterSize,
+    required this.canAsk,
+    required this.onSuggestionPressed,
+  });
 
   final double characterSize;
+  final bool canAsk;
+  final ValueChanged<String> onSuggestionPressed;
 
   @override
   Widget build(BuildContext context) {
-    return AiCharacterSpeechColumn(
-      characterKey: const Key('ai-direct-guide-character'),
-      bubbleKey: const Key('ai-direct-guide-prompt'),
-      characterSize: characterSize,
-      speechText: '우리 둘에 관해 궁금한 걸 물어봐',
-      textAlign: TextAlign.center,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CoupleCharacterAvatar(
+            key: const Key('ai-direct-guide-character'),
+            size: characterSize,
+          ),
+          const SizedBox(height: 12),
+          WordBoundaryText(
+            canAsk ? '우리 둘에 관해 궁금한 걸 물어봐' : '오늘은 여기까지 물어봤어',
+            key: const Key('ai-direct-guide-prompt'),
+            textAlign: TextAlign.center,
+            style: AppTextStyles.homeQuestionBubble,
+          ),
+          if (canAsk) ...[
+            const SizedBox(height: 22),
+            _StarterQuestionOption(
+              optionKey: const Key('ai-direct-suggestion-partner-rest'),
+              question: '상대는 지친 날에 어떤 걸 좋아할까?',
+              onPressed: onSuggestionPressed,
+            ),
+            const SizedBox(height: 8),
+            _StarterQuestionOption(
+              optionKey: const Key('ai-direct-suggestion-weekend'),
+              question: '우리 둘에게 잘 맞는 주말은 어떤 모습일까?',
+              onPressed: onSuggestionPressed,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StarterQuestionOption extends StatelessWidget {
+  const _StarterQuestionOption({
+    required this.optionKey,
+    required this.question,
+    required this.onPressed,
+  });
+
+  final Key optionKey;
+  final String question;
+  final ValueChanged<String> onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: optionKey,
+      color: AppColors.formSurface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () => onPressed(question),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: WordBoundaryText(
+                  question,
+                  style: AppTextStyles.homeBodyMedium,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                size: 20,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

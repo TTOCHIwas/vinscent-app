@@ -88,11 +88,12 @@ class _AiDirectQuestionFollowUpViewState
     );
 
     if (widget.usePrimaryLayout) {
-      return AiCharacterSpeechColumn.custom(
+      return AiCharacterSpeechRow.custom(
         key: Key('ai-direct-answer-completed-${widget.questionId}'),
         characterKey: Key('ai-direct-answer-character-${widget.questionId}'),
         bubbleKey: Key('ai-direct-answer-bubble-${widget.questionId}'),
         characterSize: widget.primaryCharacterSize,
+        maximumContentWidth: 420,
         semanticLabel: semanticLabel,
         showGeneratedIndicator: true,
         onGeneratedIndicatorPressed: widget.onGeneratedIndicatorPressed,

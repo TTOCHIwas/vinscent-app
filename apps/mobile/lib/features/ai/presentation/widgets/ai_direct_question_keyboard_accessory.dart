@@ -5,7 +5,7 @@ import '../../../../core/presentation/widgets/app_keyboard_accessory.dart';
 import '../../../../core/presentation/widgets/app_action_tone.dart';
 import '../../application/ai_direct_question_controller.dart';
 import '../ai_direct_question_composer_controller.dart';
-import 'ai_learning_error_message.dart';
+import 'ai_direct_question_submission.dart';
 
 class AiDirectQuestionKeyboardAccessory extends ConsumerWidget {
   const AiDirectQuestionKeyboardAccessory({
@@ -41,33 +41,13 @@ class AiDirectQuestionKeyboardAccessory extends ConsumerWidget {
           enabled: canSubmit,
           isLoading: controller.isSubmitting,
           horizontalPadding: 24,
-          onPressed: () => _submitQuestion(context, ref),
+          onPressed: () => submitAiDirectQuestion(
+            context: context,
+            ref: ref,
+            controller: controller,
+          ),
         );
       },
     );
-  }
-
-  Future<void> _submitQuestion(BuildContext context, WidgetRef ref) async {
-    final question = controller.normalizedQuestion;
-    if (controller.isSubmitting || !controller.hasValidQuestion) {
-      return;
-    }
-
-    controller.setSubmitting(true);
-    try {
-      await ref
-          .read(aiDirectQuestionControllerProvider.notifier)
-          .submitQuestion(question);
-      controller.completeSubmission();
-    } catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(aiLearningErrorMessage(error))));
-    } finally {
-      controller.setSubmitting(false);
-    }
   }
 }

@@ -20,6 +20,17 @@ class AiDirectQuestionComposerController extends ChangeNotifier {
   bool get hasValidQuestion =>
       normalizedQuestion.isNotEmpty && characterCount <= maxQuestionLength;
 
+  void useStarterQuestion(String question) {
+    if (_isDisposed) {
+      return;
+    }
+    questionController.value = TextEditingValue(
+      text: question,
+      selection: TextSelection.collapsed(offset: question.length),
+    );
+    focusNode.requestFocus();
+  }
+
   void setSubmitting(bool value) {
     if (_isDisposed || _isSubmitting == value) {
       return;

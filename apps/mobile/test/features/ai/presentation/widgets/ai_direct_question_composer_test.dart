@@ -349,7 +349,7 @@ void main() {
     await _pump(
       tester,
       _FakeDirectQuestionRepository(
-        history: _history(questions: [_completedQuestion]),
+        history: _history(questions: [_questionWithPendingFollowUp]),
       ),
     );
 

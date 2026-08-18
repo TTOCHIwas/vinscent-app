@@ -209,12 +209,13 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
           : 'ai-direct-answer-thinking-dots-${entry.id}',
     );
     if (usePrimaryLayout) {
-      return AiCharacterThinkingSpeechColumn(
+      return AiCharacterThinkingSpeechRow(
         key: Key('ai-direct-answer-pending-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
         thinkingDotsKey: thinkingDotsKey,
         characterSize: primaryCharacterSize,
+        maximumContentWidth: 420,
         message: '답을 생각하는 중',
       );
     }
@@ -231,11 +232,12 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
 
   Widget _failedAnswer() {
     if (usePrimaryLayout) {
-      return AiCharacterSpeechColumn(
+      return AiCharacterSpeechRow(
         key: Key('ai-direct-answer-failed-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
         characterSize: primaryCharacterSize,
+        maximumContentWidth: 420,
         speechText: '이번에는 답을 만들지 못했어',
         textAlign: TextAlign.center,
       );
@@ -278,11 +280,12 @@ class AiDirectQuestionAnswerView extends StatelessWidget {
     }
 
     if (usePrimaryLayout) {
-      return AiCharacterSpeechColumn(
+      return AiCharacterSpeechRow(
         key: Key('ai-direct-answer-completed-${entry.id}'),
         characterKey: Key('ai-direct-answer-character-${entry.id}'),
         bubbleKey: Key('ai-direct-answer-bubble-${entry.id}'),
         characterSize: primaryCharacterSize,
+        maximumContentWidth: 420,
         speechText: entry.answerText!,
         semanticLabel: '캐릭터의 답변: ${entry.answerText!}',
         showGeneratedIndicator: true,
