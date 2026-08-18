@@ -489,15 +489,18 @@ void main() {
       );
     });
 
-    testWidgets('centers published feedback on phone and tablet widths', (
+    testWidgets('stacks published feedback above the character across layouts', (
       tester,
     ) async {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      for (final width in [360.0, 1024.0]) {
-        tester.view.physicalSize = Size(width, 1400);
+      for (final layout in [
+        (width: 360.0, textScaleFactor: 2.0),
+        (width: 1024.0, textScaleFactor: 0.8),
+      ]) {
+        tester.view.physicalSize = Size(layout.width, 1400);
         final repository = _FakeDailyQuestionAnswerRepository(
           _completedAnswerState,
         );
@@ -513,6 +516,7 @@ void main() {
               publishedAt: DateTime.utc(2026, 5, 31, 12),
             ),
           },
+          textScaleFactor: layout.textScaleFactor,
         );
 
         final feedback = find.byKey(const Key('ai-question-feedback'));
@@ -531,15 +535,17 @@ void main() {
         );
         final characterRect = tester.getRect(character);
         final messageRect = tester.getRect(message);
-        final visualCenter = (characterRect.left + messageRect.right) / 2;
 
+        expect(messageRect.bottom, lessThan(characterRect.top));
         expect(
-          visualCenter,
-          closeTo(width / 2, 0.5),
-          reason: 'feedback should remain centered at width $width',
+          messageRect.center.dx,
+          closeTo(characterRect.center.dx, 0.5),
+          reason:
+              'feedback and character should share an axis at '
+              '${layout.width}px and ${layout.textScaleFactor}x text',
         );
         expect(
-          messageRect.right - characterRect.left,
+          messageRect.width,
           lessThanOrEqualTo(360),
           reason: 'feedback should keep a readable maximum width',
         );
@@ -1288,6 +1294,7 @@ Future<GoRouter> _pumpRouter(
   Set<String> delayedAiFeedbackIds = const {},
   Set<String> failedAiFeedbackIds = const {},
   SafetyReportRepository? safetyReportRepository,
+  double textScaleFactor = 1,
   bool settle = true,
 }) async {
   tester.view.viewInsets = FakeViewPadding(bottom: viewInsetsBottom);
@@ -1379,7 +1386,15 @@ Future<GoRouter> _pumpRouter(
             safetyReportRepository,
           ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+          child: child!,
+        ),
+      ),
     ),
   );
 

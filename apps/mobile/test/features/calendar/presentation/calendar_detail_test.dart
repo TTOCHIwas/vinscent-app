@@ -120,6 +120,17 @@ void main() {
       find.byKey(const Key('ai-question-feedback-prompt')),
       findsOneWidget,
     );
+    final feedbackCharacterRect = tester.getRect(
+      find.byKey(const Key('ai-question-feedback-character')),
+    );
+    final feedbackMessageRect = tester.getRect(
+      find.byKey(const Key('ai-question-feedback-prompt')),
+    );
+    expect(feedbackMessageRect.bottom, lessThan(feedbackCharacterRect.top));
+    expect(
+      feedbackMessageRect.center.dx,
+      closeTo(feedbackCharacterRect.center.dx, 0.5),
+    );
     expect(findTextIgnoringWordJoiners('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
@@ -156,7 +167,10 @@ void main() {
     );
     expect(
       tester.getRect(generatedBadge).center.dy,
-      greaterThanOrEqualTo(tester.getRect(renderedQuestion).bottom),
+      inInclusiveRange(
+        tester.getRect(renderedQuestion).top,
+        tester.getRect(renderedQuestion).bottom,
+      ),
     );
     await tester.tap(indicator);
     await tester.pumpAndSettle();

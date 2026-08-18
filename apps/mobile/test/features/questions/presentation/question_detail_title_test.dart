@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
+import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_detail_title.dart';
 
 void main() {
@@ -57,6 +58,18 @@ void main() {
         matching: find.byKey(const Key('ai-generated-content-indicator')),
       ),
       findsOneWidget,
+    );
+    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
+
+    final titleRect = tester.getRect(
+      find.byKey(const Key('question-detail-title')),
+    );
+    final badgeRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-badge')),
+    );
+    expect(
+      badgeRect.center.dy,
+      inInclusiveRange(titleRect.top, titleRect.bottom),
     );
   });
 
