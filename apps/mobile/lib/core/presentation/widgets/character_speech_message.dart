@@ -9,12 +9,13 @@ class CharacterSpeechMessage extends StatelessWidget {
   const CharacterSpeechMessage({
     super.key,
     required this.speechText,
+    String? semanticLabel,
     this.maxWidth = 300,
     this.maxLines,
     this.textStyle = AppTextStyles.homeCharacterLabel,
     this.textAlign = TextAlign.start,
     this.trailing,
-  }) : semanticLabel = speechText,
+  }) : semanticLabel = semanticLabel ?? speechText,
        _content = null;
 
   const CharacterSpeechMessage.custom({

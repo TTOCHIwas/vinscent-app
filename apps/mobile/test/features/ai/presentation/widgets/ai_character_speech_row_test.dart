@@ -134,6 +134,36 @@ void main() {
     );
   });
 
+  testWidgets('attaches a generated indicator to column text when requested', (
+    tester,
+  ) async {
+    const messageKey = Key('ai-column-speech-message');
+
+    await _pump(
+      tester,
+      const MaterialApp(
+        home: Scaffold(
+          body: AiCharacterSpeechColumn(
+            bubbleKey: messageKey,
+            speechText: '둘의 답변을 바탕으로 만든 한마디',
+            showGeneratedIndicator: true,
+            attachGeneratedIndicatorToText: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
+    final messageRect = tester.getRect(find.byKey(messageKey));
+    final badgeRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-badge')),
+    );
+    expect(
+      badgeRect.center.dy,
+      inInclusiveRange(messageRect.top, messageRect.bottom),
+    );
+  });
+
   testWidgets('uses the width provided to primary speech content', (
     tester,
   ) async {

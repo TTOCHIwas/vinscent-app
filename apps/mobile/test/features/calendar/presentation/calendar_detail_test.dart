@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
+import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_sections.dart';
@@ -161,10 +162,7 @@ void main() {
       tester.widget<QuestionDetailTitle>(questionTitle).textAlign,
       TextAlign.start,
     );
-    expect(
-      tester.getRect(generatedBadge).center.dx,
-      greaterThan(tester.getRect(questionTitle).center.dx),
-    );
+    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
     expect(
       tester.getRect(generatedBadge).center.dy,
       inInclusiveRange(

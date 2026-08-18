@@ -23,32 +23,24 @@ class QuestionDetailTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: AiGeneratedContentBadgeOverlay(
-        showIndicator: showGeneratedIndicator,
-        onReportPressed: onGeneratedIndicatorPressed,
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: showGeneratedIndicator
-                ? AiGeneratedContentBadgeOverlay.contentBottomPadding
-                : 0,
-          ),
-          child: Semantics(
-            header: true,
-            label: showGeneratedIndicator
-                ? 'AI 생성 질문: $questionText'
-                : '질문: $questionText',
-            excludeSemantics: true,
-            child: WordBoundaryText(
-              questionText,
-              key: const Key('question-detail-title'),
-              semanticsLabel: questionText,
-              textAlign: textAlign,
-              style: AppTypography.withFontSize(
-                AppTextStyles.homeBodyMedium,
-                18,
-              ),
-            ),
-          ),
+      child: Semantics(
+        header: true,
+        child: WordBoundaryText(
+          questionText,
+          key: const Key('question-detail-title'),
+          semanticsLabel: showGeneratedIndicator
+              ? 'AI 생성 질문: $questionText'
+              : questionText,
+          textAlign: textAlign,
+          style: AppTypography.withFontSize(AppTextStyles.homeBodyMedium, 18),
+          trailing: showGeneratedIndicator
+              ? Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 2),
+                  child: AiGeneratedContentIndicator(
+                    onReportPressed: onGeneratedIndicatorPressed,
+                  ),
+                )
+              : null,
         ),
       ),
     );
