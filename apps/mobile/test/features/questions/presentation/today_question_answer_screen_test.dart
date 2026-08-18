@@ -489,7 +489,7 @@ void main() {
       );
     });
 
-    testWidgets('stacks published feedback above the character across layouts', (
+    testWidgets('keeps published feedback beside the character across layouts', (
       tester,
     ) async {
       tester.view.devicePixelRatio = 1;
@@ -536,18 +536,18 @@ void main() {
         final characterRect = tester.getRect(character);
         final messageRect = tester.getRect(message);
 
-        expect(messageRect.bottom, lessThan(characterRect.top));
+        expect(characterRect.right, lessThan(messageRect.left));
         expect(
-          messageRect.center.dx,
-          closeTo(characterRect.center.dx, 0.5),
+          (characterRect.left + messageRect.right) / 2,
+          closeTo(layout.width / 2, 0.5),
           reason:
-              'feedback and character should share an axis at '
+              'feedback and character should form one centered row at '
               '${layout.width}px and ${layout.textScaleFactor}x text',
         );
         expect(
-          messageRect.width,
+          messageRect.right - characterRect.left,
           lessThanOrEqualTo(360),
-          reason: 'feedback should keep a readable maximum width',
+          reason: 'feedback row should keep a readable maximum width',
         );
       }
     });

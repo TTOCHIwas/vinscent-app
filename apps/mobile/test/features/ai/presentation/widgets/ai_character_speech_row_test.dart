@@ -134,16 +134,16 @@ void main() {
     );
   });
 
-  testWidgets('attaches a generated indicator to column text when requested', (
+  testWidgets('attaches a generated indicator to row text when requested', (
     tester,
   ) async {
-    const messageKey = Key('ai-column-speech-message');
+    const messageKey = Key('ai-row-speech-message');
 
     await _pump(
       tester,
       const MaterialApp(
         home: Scaffold(
-          body: AiCharacterSpeechColumn(
+          body: AiCharacterSpeechRow(
             bubbleKey: messageKey,
             speechText: '둘의 답변을 바탕으로 만든 한마디',
             showGeneratedIndicator: true,
