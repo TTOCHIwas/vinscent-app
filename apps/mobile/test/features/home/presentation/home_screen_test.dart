@@ -976,11 +976,11 @@ void main() {
           (widget) =>
               widget is RichText &&
               widget.text
-                  .toPlainText()
-                  .replaceAll('\u2060', '')
-                  .replaceAll('\uFFFC', '')
-                  .replaceAll(RegExp(r'\s+'), ' ')
-                  .trim() ==
+                      .toPlainText()
+                      .replaceAll('\u2060', '')
+                      .replaceAll('\uFFFC', '')
+                      .replaceAll(RegExp(r'\s+'), ' ')
+                      .trim() ==
                   suggestion.text,
         ),
       );
