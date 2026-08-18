@@ -38,7 +38,7 @@ void main() {
             ),
           )
           .size,
-      216,
+      120,
     );
     expect(_wordBoundaryText('우리 둘은 쉬는 날에 뭘 하면 잘 맞을까?'), findsOneWidget);
     expect(_wordBoundaryText('가볍게 걸으며 이야기하는 시간이 잘 어울려'), findsOneWidget);
@@ -48,6 +48,18 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('ai-direct-history-open')), findsNothing);
+    expect(
+      tester
+          .getRect(
+            find.byKey(
+              const Key('ai-direct-answer-character-completed-question'),
+            ),
+          )
+          .right,
+      lessThan(
+        tester.getRect(_wordBoundaryText('가볍게 걸으며 이야기하는 시간이 잘 어울려')).left,
+      ),
+    );
   });
 
   testWidgets('opens the report flow from a generated direct answer', (
@@ -134,7 +146,7 @@ void main() {
             ),
           )
           .size,
-      216,
+      120,
     );
     await tester.ensureVisible(dismiss);
     await tester.pumpAndSettle();
@@ -171,6 +183,35 @@ void main() {
     expect(_wordBoundaryText('우리 둘에 관해 궁금한 걸 물어봐'), findsOneWidget);
     expect(find.byKey(const Key('ai-direct-guide-character')), findsOneWidget);
     expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
+    expect(
+      find.byKey(const Key('ai-direct-suggestion-partner-rest')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('ai-direct-suggestion-weekend')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('ai-direct-inline-submit')), findsOneWidget);
+  });
+
+  testWidgets('fills and focuses the input from a starter question', (
+    tester,
+  ) async {
+    await _pump(tester, _FakeDirectQuestionRepository(history: _history()));
+
+    await tester.tap(
+      find.byKey(const Key('ai-direct-suggestion-partner-rest')),
+    );
+    await tester.pump();
+
+    final input = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const Key('ai-direct-question-input')),
+        matching: find.byType(TextField),
+      ),
+    );
+    expect(input.controller?.text, '상대는 지친 날에 어떤 걸 좋아할까?');
+    expect(input.focusNode?.hasFocus, isTrue);
   });
 
   testWidgets('sizes the primary character from the available height', (
@@ -241,6 +282,7 @@ void main() {
 
     expect(find.byKey(const Key('ai-direct-keyboard-accessory')), findsNothing);
     expect(find.byKey(const Key('ai-direct-submit')), findsNothing);
+    expect(find.byKey(const Key('ai-direct-inline-submit')), findsOneWidget);
 
     await tester.tap(input);
     await tester.pump();
@@ -255,6 +297,7 @@ void main() {
     );
     final accessory = find.byKey(const Key('ai-direct-keyboard-accessory'));
     expect(accessory, findsOneWidget);
+    expect(find.byKey(const Key('ai-direct-inline-submit')), findsNothing);
     expect(tester.getRect(accessory).bottom, 400);
     expect(
       find.descendant(of: accessory, matching: find.text('13 / 300')),
@@ -314,7 +357,8 @@ void main() {
       of: find.byKey(const Key('ai-direct-question-input')),
       matching: find.byType(TextField),
     );
-    expect(tester.widget<TextField>(input).minLines, 3);
+    expect(tester.widget<TextField>(input).minLines, 1);
+    expect(tester.widget<TextField>(input).maxLines, 2);
 
     await tester.tap(input);
     await tester.pump();
@@ -395,7 +439,8 @@ void main() {
       find.byKey(const Key('ai-direct-question-input-dock')),
     );
     expect((inputDock.padding as EdgeInsets).bottom, 104);
-    expect(tester.widget<TextField>(input).minLines, 3);
+    expect(tester.widget<TextField>(input).minLines, 1);
+    expect(tester.widget<TextField>(input).maxLines, 2);
   });
 
   testWidgets('dismisses the keyboard after a completed content tap', (
@@ -445,6 +490,26 @@ void main() {
     expect(find.byKey(const Key('ai-direct-keyboard-accessory')), findsNothing);
   });
 
+  testWidgets('submits from the persistent action without a soft keyboard', (
+    tester,
+  ) async {
+    final repository = _FakeDirectQuestionRepository(history: _history());
+    await _pump(tester, repository);
+
+    final input = find.descendant(
+      of: find.byKey(const Key('ai-direct-question-input')),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(input, '상대는 어떤 순간에 가장 편안해할까?');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('ai-direct-inline-submit')));
+    await tester.pump();
+    await tester.pump();
+
+    expect(repository.submittedQuestions, ['상대는 어떤 순간에 가장 편안해할까?']);
+    expect(tester.widget<TextField>(input).controller?.text, isEmpty);
+  });
+
   testWidgets(
     'shows the character thinking while the latest answer is pending',
     (tester) async {
@@ -483,7 +548,7 @@ void main() {
               ),
             )
             .size,
-        216,
+        120,
       );
       expect(
         find.byKey(const Key('ai-generated-content-indicator')),
