@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_bubble.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/questions/daily_question.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
@@ -121,6 +123,8 @@ void main() {
         findTextIgnoringWordJoiners(HomeGuide.card.message),
         findsOneWidget,
       );
+      expect(find.byType(CharacterSpeechMessage), findsOneWidget);
+      expect(find.byType(CharacterSpeechBubble), findsNothing);
       expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
       expect(
         tester.getSize(find.byKey(CharacterRecordingControl.controlKey)),

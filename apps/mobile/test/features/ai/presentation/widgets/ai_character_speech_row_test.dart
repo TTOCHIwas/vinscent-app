@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_bubble.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_character_speech_row.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 
 void main() {
+  testWidgets('presents character speech without a bubble surface', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const MaterialApp(
+        home: Scaffold(body: AiCharacterSpeechRow(speechText: '오늘의 한마디')),
+      ),
+    );
+
+    expect(find.byType(CharacterSpeechMessage), findsOneWidget);
+    expect(find.byType(CharacterSpeechBubble), findsNothing);
+  });
+
   testWidgets('does not label static character speech as AI-generated', (
     tester,
   ) async {

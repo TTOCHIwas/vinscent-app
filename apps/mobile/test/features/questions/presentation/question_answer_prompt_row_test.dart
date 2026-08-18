@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_bubble.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
 
@@ -48,6 +50,17 @@ void main() {
         bubbleRect.right - characterRect.left,
         lessThanOrEqualTo(360),
         reason: 'prompt should keep the shared readable maximum width',
+      );
+      expect(
+        find.descendant(
+          of: bubble,
+          matching: find.byType(CharacterSpeechMessage),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byType(CharacterSpeechBubble),
+        findsNothing,
       );
     }
   });

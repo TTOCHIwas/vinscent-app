@@ -1,9 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/features/questions/presentation/widgets/character_speech_prompt.dart';
 
 void main() {
+  testWidgets('presents prompt speech without a bubble surface', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: CharacterSpeechPrompt(
+              labelText: '질문',
+              speechText: '오늘 가장 즐거웠던 순간은 언제야?',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(CharacterSpeechMessage), findsOneWidget);
+    expect(find.byType(CharacterSpeechBubble), findsNothing);
+  });
+
   testWidgets('aligns regular speech to the reading direction', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
