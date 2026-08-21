@@ -162,8 +162,11 @@ class _HomeRecordingArtworkLayerState
     if (index < 0 || index == slots.length - 1) {
       return slots;
     }
-    final frontSlot = slots.removeAt(index);
-    return [...slots, frontSlot];
+    return List.unmodifiable([
+      for (var slotIndex = 0; slotIndex < slots.length; slotIndex++)
+        if (slotIndex != index) slots[slotIndex],
+      slots[index],
+    ]);
   }
 
   Offset? _positionFor(

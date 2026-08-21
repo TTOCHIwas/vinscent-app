@@ -268,6 +268,54 @@ void main() {
 
     expect(repository.savedSlotIndex, 2);
   });
+
+  testWidgets('dragging a lower z-index artwork keeps the layer rendered', (
+    tester,
+  ) async {
+    final repository = _FakeRecordingRepository(
+      _overviewWithSlots(
+        slots: [
+          _slot(
+            slotId: 'back-slot',
+            slotIndex: 1,
+            placement: const CoupleRecordingSlotPlacement(
+              normalizedX: 0.25,
+              normalizedY: 0.45,
+              revision: 1,
+              zIndex: 1,
+            ),
+          ),
+          _slot(
+            slotId: 'front-slot',
+            slotIndex: 2,
+            placement: const CoupleRecordingSlotPlacement(
+              normalizedX: 0.75,
+              normalizedY: 0.45,
+              revision: 1,
+              zIndex: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+    await _pumpLayer(tester, repository);
+
+    final backArtwork = find.byKey(
+      const ValueKey('home-recording-artwork-back-slot'),
+    );
+    final gesture = await tester.startGesture(tester.getCenter(backArtwork));
+    await gesture.moveBy(const Offset(24, 0));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey('home-recording-artwork-trash-target')),
+      findsOneWidget,
+    );
+
+    await gesture.cancel();
+    await tester.pump();
+  });
 }
 
 Future<ProviderContainer> _pumpLayer(
