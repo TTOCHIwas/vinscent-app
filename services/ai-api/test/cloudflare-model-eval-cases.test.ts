@@ -267,8 +267,8 @@ test('한마디 평가는 가볍고 긍정적인 장면을 말줄임표로 흐�
     },
     {
       name: 'feedback_shared_action_movie_stays_lively',
-      lively: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
-      trailing: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네...',
+      lively: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
+      trailing: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네...',
     },
     {
       name: 'feedback_personalized_without_owner_exposure',

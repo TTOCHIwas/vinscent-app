@@ -978,6 +978,29 @@ test('한 줄 피드백은 커플 공유 반응 형식을 지켜야 한다', () 
     text: '영화 틀면 소파 자리부터 금방 차겠네!',
   }, sofaContext));
 
+  const personalizedMovieContext = {
+    ...movieContext,
+    foundationProgress: {
+      ...movieContext.foundationProgress,
+      personalizationEnabled: true,
+    },
+    confirmedMemories: [
+      {
+        memoryKey: 'shared_movie_routine',
+        scope: 'couple' as const,
+        subjectParticipantKey: null,
+        kind: 'shared_activity',
+        domain: 'daily_life' as const,
+        evidenceType: 'repeated_pattern' as const,
+        statement: '주말마다 함께 영화를 고르면 이야기가 길어져',
+        confidence: 0.9,
+      },
+    ],
+  };
+  assert.doesNotThrow(() => validateCoupleFeedback({
+    text: '영화 이야기는 또 금방 길어지겠네!',
+  }, personalizedMovieContext));
+
   assert.throws(
     () => validateCoupleFeedback({
       text: '이번 주말엔 존윅 같은 액션 영화를 같이 보자!',
@@ -1039,15 +1062,15 @@ test('한 줄 피드백은 커플 공유 반응 형식을 지켜야 한다', () 
 
 test('한 줄 피드백은 내용 검증 전에 문장부호만 안전하게 복구할 수 있다', () => {
   const repaired = repairCoupleFeedbackPunctuation({
-    text: '오늘 이야기도 한 장면 더 생겼네. 같이 웃으면 더 재밌겠어!',
+    text: '이야기도 한 장면 더 생겼네. 같이 웃으면 더 재밌겠어!',
   });
 
   assert.deepEqual(repaired, {
-    text: '오늘 이야기도 한 장면 더 생겼네 같이 웃으면 더 재밌겠어!',
+    text: '이야기도 한 장면 더 생겼네 같이 웃으면 더 재밌겠어!',
   });
   assert.doesNotThrow(() => validateCoupleFeedback(repaired!, context));
   assert.equal(repairCoupleFeedbackPunctuation({
-    text: '오늘 이야기도 한 장면 더 생겼네!',
+    text: '이야기도 한 장면 더 생겼네!',
   }), null);
 });
 

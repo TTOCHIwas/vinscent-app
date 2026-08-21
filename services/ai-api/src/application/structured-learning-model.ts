@@ -647,7 +647,9 @@ function buildFeedbackPrompt(
       '- 답변을 요약하거나 차이를 그대로 읽어주지 마. 핵심 단어를 쓰더라도 답을 되읽거나 한 답변을 다른 답변의 이유로 해석하지 마.',
       '- "몰라", "없어", "글쎄"와 구체적인 답이 함께 있으면 구체적인 답을 불확실한 답의 이유나 해결책으로 연결하지 마.',
       '- 한 답만 explicit_unknown 또는 explicit_none이면 두 답의 핵심 단어를 한마디에 반복하지 마. 불확실한 답과 구체적인 답을 직접 설명하지 말고 답하기 쉬운 정도가 달랐던 장면에만 반응해.',
-      '- 작은 장면이나 가벼운 말맛을 하나 더해. 장난스러운 일상에는 가벼운 말맛, 다정한 답에는 따뜻한 연결, 무거운 답에는 농담 없는 차분한 관찰이 어울려.',
+      '- 작은 장면이나 가벼운 말맛은 현재 질문과 답변에 직접 나온 행동·대상만 재배치해 더해. 확인되지 않은 시간, 반복, 장소, 물건, 행동은 만들지 마.',
+      '- current_question의 "다음"을 "이번"으로 바꾸거나, 근거 없이 오늘, 또, 에도, 다시 같은 표현을 붙이지 마.',
+      '- current_question, current_answers, 허용된 개인화 맥락에 없는 소파, 거실, 침대, 카페 같은 구체 장소나 물건을 추가하지 마.',
       '- 일상에서 실제로 쓰는 단어를 사용해. 억지 비유나 번역투 표현을 만들지 마.',
       '- 금지 단어: 너, 너는, 너와, 네가, 니가, 상대방, 한 사람, 다른 사람.',
       '- 누가 어떤 답을 썼는지 드러내지 마. 너, 네가, 상대방, 한 사람, 다른 사람, partner_a, partner_b를 쓰지 말고 답변 주인이 바뀌어도 자연스러워야 해.',
@@ -658,10 +660,10 @@ function buildFeedbackPrompt(
       '- 존댓말, 아기 말투, 놀림, 과장, 억지 감동, 조언, 평가는 피하고 평범한 답을 관계의 큰 교훈으로 만들지 마.',
       '예시:',
       '- 질문 "요즘 네가 가장 소중하게 지키고 싶은 건 뭐야?", 답변 "몰라"와 "시간" -> "소중한 건 바로 이름 붙을 수도, 아직 빈칸일 수도 있나 봐"',
-      '- 답변 "회사에서 버티기 힘들어"와 "아무 말도 하기 싫어" -> "오늘은 둘의 하루가 평소보다 조금 무거운 날인가 봐..."',
-      '- 답변 "떡볶이"와 "치킨" -> "오늘 밤 메뉴판 앞에서 행복한 고민이 시작되겠네!"',
+      '- 답변 "회사에서 버티기 힘들어"와 "아무 말도 하기 싫어" -> "말을 고르기조차 조금 무거운 질문이었나 봐..."',
+      '- 답변 "떡볶이"와 "치킨" -> "하나만 고르기엔 맛있는 답이 둘이나 모였네!"',
       '- 나쁜 예: "서로 답변이 시간과 몰라로 달라", "너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐", "서로를 알아가는 소중한 과정이네"',
-      '- 답변 "존윅"과 "범죄, 액션, 스릴러" -> 나쁜 예: "액션 영화를 좋아하네" / 좋은 예: "오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!"',
+      '- 답변 "존윅"과 "범죄, 액션, 스릴러" -> 나쁜 예: "액션 영화를 좋아하네", "이번 주말에도 액션 영화로 소파가 바빠지겠네!" / 좋은 예: "영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!"',
       '- 어색한 예: "거리 걸음에 빠지든", "시간을 잡고 싶어도 아직은 미정인 기분이네"',
       '- rejected_feedback가 있으면 표현만 바꾸지 말고 규칙에 맞는 다른 관점의 한마디를 만들어.',
       '- rejection_code와 retry_correction이 있으면 거절 원인을 먼저 고친 완전히 다른 문장을 만들어.',
@@ -676,7 +678,7 @@ function buildRefinedFeedbackTask(): string {
     '목표: 현재 질문과 두 답을 읽고 두 사람에게 똑같이 보이는 캐릭터의 한마디 하나를 만들어.',
     '판단 순서:',
     '1. response_semantics와 답의 실제 내용을 함께 보고 두 답의 관계를 먼저 판단해. 같은 구체 내용, 서로 다른 구체 내용, 불확실한 답이 섞인 경우, 둘 다 불확실한 경우를 구분해.',
-    '2. 같은 구체 내용이면 답을 되읽지 말고 그 내용에서 자연스럽게 이어지는 작은 공동 장면을 더해.',
+    '2. 같은 구체 내용이면 답을 되읽지 말고 현재 질문과 답에 직접 나온 행동·대상만 재배치한 작은 공동 장면을 더해.',
     '3. 서로 다른 구체 내용이면 둘이 같은 행동이나 취향을 공유한다고 합치지 말고, 어느 답의 주인도 드러내지 않는 반응을 만들어.',
     '4. 불확실한 답은 의미 있는 답으로 받아들이되 무관심, 회피, 바쁨, 성격, 감정 같은 숨은 이유를 만들지 마.',
     '5. 완성한 문장이 답 요약, 질문 반복, 평가, 조언인지 확인하고 하나라도 해당하면 새로 작성해.',
@@ -686,6 +688,8 @@ function buildRefinedFeedbackTask(): string {
     '- 해봐, 해보자, 가자, 보자, 하면 좋겠다처럼 명령하거나 행동을 권하지 마.',
     '- 누가 어떤 답을 썼는지 드러내지 말고 답변 주인이 바뀌어도 자연스러워야 해.',
     '- 확인된 답과 confirmed_profile 밖의 의도, 원인, 감정, 성격, 관계 상태를 만들지 마.',
+    '- current_question의 시간 표현을 바꾸지 말고, 근거 없는 시간, 반복, 장소, 물건, 행동을 추가하지 마.',
+    '- 특히 다음을 이번으로 바꾸거나 근거 없이 오늘, 또, 에도, 다시, 소파 같은 표현을 붙이지 마.',
     '- confirmed_profile과 recent_completed_questions는 개인화가 열린 경우에만 은근한 보조 맥락으로 사용해.',
     '출력 검사:',
     '- feedback_text는 공백 포함 80자 이내의 자연스러운 한국어 반말 한 문장이야.',
@@ -712,6 +716,8 @@ function buildStructuredFeedbackTask(
       '- Use both answers. Treat explicit_unknown and explicit_none as meaningful answers, never as avoidance or disinterest.',
       '- If personalization is enabled, use only confirmed_profile and recent_completed_questions as subtle supporting context.',
       '- Never reveal who wrote an answer or who owns a memory.',
+      '- Build any small scene only by recombining actions and objects explicitly grounded in current_question, current_answers, or allowed personalization context.',
+      '- Preserve time references exactly. Never change next to this, and never add unsupported time, repetition, location, object, or action details.',
       '- Do not invent intent, emotion, personality, frequency, confidence, advice, or evaluation.',
       'Output checks:',
       '- feedback_text is one natural Korean banmal sentence with at most 80 characters including spaces.',
@@ -735,6 +741,8 @@ function buildStructuredFeedbackTask(
     '- 두 답을 모두 사용하고 explicit_unknown과 explicit_none도 의미 있는 답으로 다뤄. 회피나 무관심으로 해석하지 마.',
     '- 개인화가 열렸다면 confirmed_profile과 recent_completed_questions만 보조 맥락으로 사용해.',
     '- 답변 작성자와 기억 주인은 절대 드러내지 마.',
+    '- 작은 장면은 current_question, current_answers, 허용된 개인화 맥락에 직접 나온 행동과 대상만 재배치해 만들어.',
+    '- 시간 표현을 그대로 유지하고, 다음을 이번으로 바꾸거나 근거 없는 시간, 반복, 장소, 물건, 행동을 추가하지 마.',
     '- 의도, 감정, 성격, 빈도, 자신감, 조언, 평가를 새로 만들지 마.',
     '출력 검사:',
     '- feedback_text는 공백 포함 80자 이내의 자연스러운 한국어 반말 한 문장이야.',
@@ -773,6 +781,9 @@ function feedbackRetryCorrection(
   }
   if (code === 'unsupported_inference') {
     return '불확실한 답에서 바쁨, 무관심, 회피, 감정 같은 숨은 이유를 만들지 마. 드러난 답의 상태만 받아들여.';
+  }
+  if (code === 'ungrounded_detail') {
+    return '현재 질문과 답변에 없는 시간, 반복, 장소, 물건, 행동을 모두 빼. 시간 표현을 바꾸지 말고 확인된 단서만 재배치해.';
   }
   if (code === 'instruction_leak') {
     return '규칙, 지시문, 예시, 작성 과정에 관해 말하지 마. 두 답을 읽은 캐릭터의 실제 한마디만 만들어.';

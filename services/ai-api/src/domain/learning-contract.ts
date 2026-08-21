@@ -1,7 +1,8 @@
+import { hasUngroundedCoupleFeedbackDetail } from './couple-feedback-grounding.ts';
+import { classifyDirectQuestionResponse } from './direct-question-evidence.ts';
 import { hasSharedMemoryEvidence } from './memory-evidence.ts';
 import { areQuestionsNearDuplicate } from './question-duplicate-detector.ts';
 import { preservesQuestionScope } from './question-scope-preservation.ts';
-import { classifyDirectQuestionResponse } from './direct-question-evidence.ts';
 import {
   KoreanOutputPolicyError,
   normalizeAndValidateKoreanOutput,
@@ -212,6 +213,7 @@ export type CoupleFeedbackValidationCode =
   | 'instruction_leak'
   | 'advice_or_command'
   | 'unsupported_inference'
+  | 'ungrounded_detail'
   | 'mixed_certainty_content'
   | 'question_echo'
   | 'answer_restatement';
@@ -835,6 +837,7 @@ export function validateCoupleFeedback(
   if (context !== undefined) {
     validateQuestionEcho(context, candidate.text);
     validateUnsupportedFeedbackInference(context, candidate.text);
+    validateGroundedFeedbackDetails(context, candidate.text);
     validateMixedCertaintyFeedback(context, candidate.text);
     validateAnswerRestatement(context, candidate.text);
   }
@@ -884,6 +887,18 @@ function validateUnsupportedFeedbackInference(
     throw new CoupleFeedbackValidationError(
       'unsupported_inference',
       'couple feedback cannot infer a motive from uncertain answers',
+    );
+  }
+}
+
+function validateGroundedFeedbackDetails(
+  context: AnonymizedCompletedQuestionContext,
+  feedbackText: string,
+): void {
+  if (hasUngroundedCoupleFeedbackDetail(context, feedbackText)) {
+    throw new CoupleFeedbackValidationError(
+      'ungrounded_detail',
+      'couple feedback cannot introduce unsupported time, frequency, or setting details',
     );
   }
 }
@@ -988,7 +1003,7 @@ export function resolveCoupleFeedbackFallback(
   }
 
   return {
-    text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+    text: '두 답이 모이니 이야깃거리 하나가 생겼네',
   };
 }
 

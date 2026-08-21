@@ -909,7 +909,7 @@ test('feedback prompt requests a shared character reaction instead of an answer 
     true,
   );
   assert.equal(
-    capturedPrompt.includes('작은 장면이나 가벼운 말맛을 하나 더해'),
+    capturedPrompt.includes('작은 장면이나 가벼운 말맛은 현재 질문과 답변에 직접 나온'),
     true,
   );
   assert.equal(capturedPrompt.includes('몰라'), true);
@@ -932,7 +932,7 @@ test('feedback prompt requests a shared character reaction instead of an answer 
     true,
   );
   assert.equal(
-    capturedPrompt.includes('오늘은 둘의 하루가 평소보다 조금 무거운 날인가 봐...'),
+    capturedPrompt.includes('말을 고르기조차 조금 무거운 질문이었나 봐...'),
     true,
   );
   assert.equal(
@@ -1873,7 +1873,7 @@ test('refined Korean feedback prompt uses decision rules without copyable answer
       capturedPrompt = request.prompt;
       return {
         value: {
-          feedback_text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+          feedback_text: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
         },
         usage: {
           inputTokenCount: null,
@@ -1889,6 +1889,8 @@ test('refined Korean feedback prompt uses decision rules without copyable answer
   assert.equal(capturedPrompt.includes('두 답의 관계를 먼저 판단해'), true);
   assert.equal(capturedPrompt.includes('명령하거나 행동을 권하지 마'), true);
   assert.equal(capturedPrompt.includes('숨은 이유를 만들지 마'), true);
+  assert.equal(capturedPrompt.includes('근거 없는 시간, 반복, 장소'), true);
+  assert.equal(capturedPrompt.includes('다음을 이번으로 바꾸거나'), true);
   assert.equal(
     capturedPrompt.includes('오늘 밤 메뉴판 앞에서 행복한 고민이 시작되겠네!'),
     false,

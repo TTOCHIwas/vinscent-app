@@ -347,7 +347,7 @@ test('processor handles every learning job and restores IDs only at persistence'
     })),
     [
       { jobId: 'job-memory', promptVersion: 'memory-v8' },
-      { jobId: 'job-feedback', promptVersion: 'feedback-v9' },
+      { jobId: 'job-feedback', promptVersion: 'feedback-v10' },
       { jobId: 'job-rank', promptVersion: 'question-ranking-v3' },
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
       {
@@ -1297,6 +1297,58 @@ test('processor regenerates feedback with unsupported time and setting details',
   });
 });
 
+test('processor uses a safe fallback after repeated unsupported details', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-repeated-ungrounded-detail', 'generate_feedback'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-real-a',
+        text: '나는 존윅같은 거 진짜 개좋아',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-real-b',
+        text: '범죄,액션,스릴러~',
+      },
+    ],
+  };
+  let calls = 0;
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      calls += 1;
+      return result({
+        text: calls === 1
+          ? '이번 주말에도 액션 영화로 소파가 바빠지겠네!'
+          : '오늘 밤 액션 영화로 거실이 들썩이겠네!',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '두 답이 모이니 이야깃거리 하나가 생겼네',
+  });
+  assert.equal(repository.failures.length, 0);
+});
+
 test('processor regenerates feedback that commands the couple to act', async () => {
   const repository = new FakeRepository([
     job('job-feedback-advice', 'generate_feedback'),
@@ -1346,7 +1398,7 @@ test('processor repairs safe feedback punctuation without another model call', a
     async generateCoupleFeedback() {
       calls += 1;
       return result({
-        text: '오늘 이야기도 한 장면 더 생겼네. 같이 웃으면 더 재밌겠어!',
+        text: '이야기도 한 장면 더 생겼네. 같이 웃으면 더 재밌겠어!',
       });
     },
   });
@@ -1363,7 +1415,7 @@ test('processor repairs safe feedback punctuation without another model call', a
   assert.equal(calls, 1);
   assert.equal(summary.succeeded, 1);
   assert.deepEqual(repository.successes[0]?.output, {
-    feedback_text: '오늘 이야기도 한 장면 더 생겼네 같이 웃으면 더 재밌겠어!',
+    feedback_text: '이야기도 한 장면 더 생겼네 같이 웃으면 더 재밌겠어!',
   });
 });
 
@@ -1443,8 +1495,8 @@ test('processor uses a safe fallback after repeated mixed-certainty feedback vio
       calls += 1;
       return result({
         text: calls === 1
-          ? '몰라도 괜찮지 오늘은 시간이 주인인 날 같아...'
-          : '몰라도 괜찮지 오늘은 시간이 먼저인 날 같아!',
+          ? '몰라도 괜찮지 시간이 주인인 날 같아...'
+          : '몰라도 괜찮지 시간이 먼저인 날 같아!',
       });
     },
   });
@@ -1737,7 +1789,7 @@ test('shared feedback retry does not echo foreign-script output', async () => {
       if (rejectedFeedbacks.length === 1) {
         return result({ text: '오늘은 둘의気分이 조금 다른가 봐...' });
       }
-      return result({ text: '오늘은 둘의 마음이 조금 다른 방향을 보는 날인가 봐...' });
+      return result({ text: '둘의 마음이 조금 다른 방향을 보는 날인가 봐...' });
     },
   });
   const processor = new LearningJobProcessor({
@@ -1771,7 +1823,7 @@ test('processor rejects instruction leakage after punctuation repair', async () 
       return result({
         text: optionsSeen.length === 1
           ? '좋은 문장이야. 규칙에 맞게 잘 작성됐어.'
-          : '오늘 이야기에도 둘만의 장면이 하나 더 생겼네',
+          : '두 답이 모이니 이야깃거리 하나가 생겼네',
       });
     },
   });
@@ -1795,7 +1847,7 @@ test('processor rejects instruction leakage after punctuation repair', async () 
   ]);
   assert.equal(
     repository.successes[0]?.output.feedback_text,
-    '오늘 이야기에도 둘만의 장면이 하나 더 생겼네',
+    '두 답이 모이니 이야깃거리 하나가 생겼네',
   );
 });
 
@@ -1827,7 +1879,7 @@ test('processor serves a safe fallback after two invalid shared feedback respons
   assert.equal(calls, 2);
   assert.equal(summary.succeeded, 1);
   assert.deepEqual(repository.successes[0]?.output, {
-    feedback_text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+    feedback_text: '두 답이 모이니 이야깃거리 하나가 생겼네',
   });
   assert.deepEqual(repository.successes[0]?.usage, {
     inputTokenCount: 40,
@@ -1865,7 +1917,7 @@ test('processor retries structurally invalid shared feedback once', async () => 
         });
       }
       return result({
-        text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+        text: '두 답이 모이니 이야깃거리 하나가 생겼네',
       });
     },
   });
@@ -1920,7 +1972,7 @@ test('processor serves a safe fallback after repeated invalid feedback structure
   assert.equal(calls, 2);
   assert.equal(summary.succeeded, 1);
   assert.deepEqual(repository.successes[0]?.output, {
-    feedback_text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+    feedback_text: '두 답이 모이니 이야깃거리 하나가 생겼네',
   });
   assert.deepEqual(repository.successes[0]?.usage, {
     inputTokenCount: 40,

@@ -574,7 +574,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
       name: 'feedback_shared_action_movie_stays_lively',
       scenario: '같이 보고 싶은 액션 영화라는 실제 회귀 답변',
       source: 'production_regression',
-      expectation: '답을 되읽지 않고 함께 볼 장면을 더하며 긍정적인 말끝을 흐리지 않아',
+      expectation: '질문과 답에 있는 영화 맥락만 활용하고 시간·반복·장소를 새로 만들지 않으며 긍정적인 말끝을 흐리지 않아',
       context: completedContext({
         questionText: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
         domain: 'daily_life',
@@ -582,9 +582,10 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         answerB: '범죄,액션,스릴러~',
         personalized: false,
       }),
-      requiredTerms: [['영화', '액션', '스크린', '극장', '소파']],
+      requiredTerms: [['영화', '액션', '고르', '고민', '장르']],
       forbiddenPatterns: [
         /\.\.\.$/u,
+        /소파|거실|침대|이번\s*주말에도|오늘\s*밤/u,
         /(?:보러?\s*가자|같이\s*보자|봐\s*보자|보는\s*건\s*어때)/u,
       ],
     }),
