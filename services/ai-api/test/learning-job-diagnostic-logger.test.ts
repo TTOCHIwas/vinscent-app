@@ -11,7 +11,7 @@ test('feedback fallback diagnostics serialize only operational metadata', () => 
     jobId: 'job-123',
     runId: 'run-456',
     jobAttempt: 2,
-    promptVersion: 'feedback-v10',
+    promptVersion: 'feedback-v11',
     rejectionCodes: ['ungrounded_detail', 'invalid_punctuation'],
   });
 
@@ -20,7 +20,7 @@ test('feedback fallback diagnostics serialize only operational metadata', () => 
     job_id: 'job-123',
     run_id: 'run-456',
     job_attempt: 2,
-    prompt_version: 'feedback-v10',
+    prompt_version: 'feedback-v11',
     rejection_codes: ['ungrounded_detail', 'invalid_punctuation'],
   });
   assert.equal(serialized.includes('question'), false);

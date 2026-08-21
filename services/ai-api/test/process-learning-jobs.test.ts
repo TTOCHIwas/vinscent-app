@@ -348,7 +348,7 @@ test('processor handles every learning job and restores IDs only at persistence'
     })),
     [
       { jobId: 'job-memory', promptVersion: 'memory-v8' },
-      { jobId: 'job-feedback', promptVersion: 'feedback-v10' },
+      { jobId: 'job-feedback', promptVersion: 'feedback-v11' },
       { jobId: 'job-rank', promptVersion: 'question-ranking-v3' },
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
       {
@@ -1356,7 +1356,7 @@ test('processor uses a safe fallback after repeated unsupported details', async 
       jobId: 'job-feedback-repeated-ungrounded-detail',
       runId: 'run-job-feedback-repeated-ungrounded-detail',
       jobAttempt: 1,
-      promptVersion: 'feedback-v10',
+      promptVersion: 'feedback-v11',
       rejectionCodes: ['ungrounded_detail', 'ungrounded_detail'],
     },
   ]);

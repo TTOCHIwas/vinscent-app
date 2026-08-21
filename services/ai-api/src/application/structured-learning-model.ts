@@ -112,6 +112,7 @@ const generationProfiles = {
   ranking: { temperature: 0, maxOutputTokens: 256 },
   memory: { temperature: 0, maxOutputTokens: 768 },
   feedback: { temperature: 0.4, maxOutputTokens: 256 },
+  feedbackRepair: { temperature: 0.1, maxOutputTokens: 192 },
   question: { temperature: 0.3, maxOutputTokens: 384 },
   directAnswer: { temperature: 0.2, maxOutputTokens: 512 },
   followUp: { temperature: 0.2, maxOutputTokens: 384 },
@@ -203,10 +204,16 @@ export class StructuredLearningModel implements LearningModelPort {
     context: AnonymizedCompletedQuestionContext,
     options?: CoupleFeedbackGenerationOptions,
   ): Promise<LearningModelResult<CoupleFeedbackCandidate>> {
+    const isRepair = options?.rejectionCode !== null
+      && options?.rejectionCode !== undefined;
     const result = await this.#generateStructured(buildStructuredRequest(
-      buildFeedbackPrompt(context, options, this.#promptStrategy),
+      isRepair
+        ? buildFeedbackRepairPrompt(context, options)
+        : buildFeedbackPrompt(context, this.#promptStrategy),
       feedbackSchema,
-      generationProfiles.feedback,
+      isRepair
+        ? generationProfiles.feedbackRepair
+        : generationProfiles.feedback,
       promptSystemInstruction(this.#promptStrategy),
     ));
     const output = requireRecord(result.value);
@@ -586,11 +593,8 @@ function buildMemoryExtractionPrompt(
 
 function buildFeedbackPrompt(
   context: AnonymizedCompletedQuestionContext,
-  options?: CoupleFeedbackGenerationOptions,
   strategy: StructuredLearningPromptStrategy = 'legacy_korean',
 ): string {
-  const rejectedText = options?.rejectedText ?? null;
-  const rejectionCode = options?.rejectionCode ?? null;
   const data: Record<string, unknown> = {
     current_question: {
       text: context.question.text,
@@ -601,14 +605,6 @@ function buildFeedbackPrompt(
       response_semantics: classifyDirectQuestionResponse(answer.text),
     })),
   };
-
-  if (rejectedText !== null) {
-    data.rejected_feedback = rejectedText;
-  }
-  if (rejectionCode !== null) {
-    data.rejection_code = rejectionCode;
-    data.retry_correction = feedbackRetryCorrection(rejectionCode);
-  }
 
   if (context.foundationProgress.personalizationEnabled) {
     data.confirmed_profile = context.confirmedMemories.map((memory) => ({
@@ -665,8 +661,6 @@ function buildFeedbackPrompt(
       '- 나쁜 예: "서로 답변이 시간과 몰라로 달라", "너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐", "서로를 알아가는 소중한 과정이네"',
       '- 답변 "존윅"과 "범죄, 액션, 스릴러" -> 나쁜 예: "액션 영화를 좋아하네", "이번 주말에도 액션 영화로 소파가 바빠지겠네!" / 좋은 예: "영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!"',
       '- 어색한 예: "거리 걸음에 빠지든", "시간을 잡고 싶어도 아직은 미정인 기분이네"',
-      '- rejected_feedback가 있으면 표현만 바꾸지 말고 규칙에 맞는 다른 관점의 한마디를 만들어.',
-      '- rejection_code와 retry_correction이 있으면 거절 원인을 먼저 고친 완전히 다른 문장을 만들어.',
       '- confirmed_profile가 있으면 승인된 개인·커플 기억과 최근 답변만 은근히 활용하고 기억 주인은 드러내지 마.',
     ].join('\n'),
     data,
@@ -697,7 +691,6 @@ function buildRefinedFeedbackTask(): string {
     '- 보통 무기호로 끝내고 필요할 때만 !, ?, ... 중 하나를 사용해.',
     '- 가볍거나 긍정적인 장면은 ...로 흐리지 마. ...은 원래 답에 분명한 망설임, 침묵, 무거움이 있을 때만 사용해.',
     '- ?!, !?, 반복 기호를 쓰지 마.',
-    '- rejected_feedback가 있으면 retry_correction을 반영하고 표현뿐 아니라 반응 관점도 바꿔.',
   ].join('\n');
 }
 
@@ -726,7 +719,6 @@ function buildStructuredFeedbackTask(
       '- Never use ?!, !?, repeated punctuation, or an ellipsis for a light or positive scene.',
       '- Use ... only when the source answers clearly contain hesitation, silence, or heaviness.',
       '- Do not use answer-owner labels, restate answer keywords as a comparison, echo the question, force a lesson, or give advice.',
-      '- When rejected_feedback exists, fix retry_correction and create a genuinely different reaction.',
     ].join('\n');
   }
 
@@ -751,44 +743,89 @@ function buildStructuredFeedbackTask(
     '- ?!, !?, 반복 기호를 쓰지 말고 가볍거나 긍정적인 장면을 ...로 흐리지 마.',
     '- ...은 원래 답에 분명한 망설임, 침묵, 무거움이 있을 때만 사용해.',
     '- 답변 주인을 지칭하거나 답의 핵심어를 비교·요약하거나 질문을 반복하거나 교훈과 조언을 만들지 마.',
-    '- rejected_feedback가 있으면 retry_correction을 고치고 관점까지 다른 한마디를 만들어.',
   ].join('\n');
 }
 
-function feedbackRetryCorrection(
+function buildFeedbackRepairPrompt(
+  context: AnonymizedCompletedQuestionContext,
+  options: CoupleFeedbackGenerationOptions,
+): string {
+  const rejectionCode = options.rejectionCode;
+  if (rejectionCode === null) {
+    throw new TypeError('feedback repair requires a rejection code');
+  }
+
+  return buildTaskPrompt(
+    [
+      'Task: Repair one rejected couple-feedback response.',
+      'The rejected sentence is intentionally omitted. Write a fresh response from the source data instead of editing or paraphrasing the rejected sentence.',
+      'Priority order:',
+      '1. Apply required_correction for rejection_code.',
+      '2. Use only details directly supported by current_question and current_answers.',
+      '3. Produce a useful character reaction without summarizing either answer.',
+      'Grounding rules:',
+      '- Read both answers, including explicit_unknown and explicit_none, as meaningful responses.',
+      '- Never identify or imply which person wrote an answer.',
+      '- Do not invent time, frequency, place, object, or action details that are absent from current_question and current_answers.',
+      '- Preserve every time reference exactly. Never change next to this, and never add today, again, also, usually, or similar repetition.',
+      '- Do not infer hidden intent, emotion, personality, confidence, or relationship state.',
+      '- Do not give advice, commands, evaluations, or a lesson.',
+      'Output rules:',
+      '- Return one natural Korean banmal sentence in feedback_text with at most 80 characters including spaces.',
+      '- Do not use answer-owner labels, Chinese characters, Japanese scripts, emoji, honorific endings, or a period.',
+      '- Usually use no final punctuation. Use one of !, ?, or ... only when the source meaning requires it.',
+      '- Never use ?!, !?, repeated punctuation, or an ellipsis for a light or positive response.',
+      '- Before returning JSON, verify that the sentence does not repeat the question, restate the answers, or add an unsupported scene.',
+    ].join('\n'),
+    {
+      current_question: {
+        text: context.question.text,
+        domain: context.question.domain,
+      },
+      current_answers: context.answers.map((answer) => ({
+        text: answer.text,
+        response_semantics: classifyDirectQuestionResponse(answer.text),
+      })),
+      rejection_code: rejectionCode,
+      required_correction: feedbackRepairCorrection(rejectionCode),
+    },
+  );
+}
+
+function feedbackRepairCorrection(
   code: NonNullable<CoupleFeedbackGenerationOptions['rejectionCode']>,
 ): string {
   if (code === 'mixed_certainty_content') {
-    return '거절된 답변의 핵심어를 다시 쓰지 마. 누가 무엇이라 답했는지 설명하지 말고, 같은 질문에도 답이 떠오르는 속도가 다를 수 있는 장면에만 반응해.';
+    return 'Do not repeat either answer\'s content. Acknowledge only that answers can arrive at different speeds for the same question, without assigning ownership or inventing a reason.';
   }
   if (code === 'answer_owner') {
-    return '답변 주인을 가리키는 단어를 모두 빼고 두 사람에게 똑같이 보이는 문장으로 바꿔.';
+    return 'Remove every answer-owner reference and make the sentence equally visible to both people.';
   }
   if (code === 'invalid_punctuation') {
-    return '문장 안의 마침표를 빼고 끝에만 허용된 기호 하나를 사용해.';
+    return 'Remove periods and punctuation combinations. Use at most one allowed ending mark.';
   }
   if (code === 'blocked_topic') {
-    return '민감하거나 금지된 주제를 모두 빼고 현재 답변의 일상적인 분위기에만 반응해.';
+    return 'Remove every sensitive or blocked topic and react only to ordinary, directly stated content.';
   }
   if (code === 'question_echo') {
-    return '원래 질문을 되풀이하거나 바꿔 묻지 마. 두 답을 읽고 자연스럽게 이어지는 새로운 반응 한마디를 만들어.';
+    return 'Do not repeat, paraphrase, or ask the original question. Write a reaction to the two answers.';
   }
   if (code === 'answer_restatement') {
-    return '답변의 핵심어와 선호를 그대로 요약하지 마. 답에서 자연스럽게 이어지는 작은 장면이나 가벼운 말맛을 하나 더해.';
+    return 'Do not state, compare, or praise the answers\' content or preferences. React only to a consequence directly supported by the visible relationship between both answers within the activity already named by current_question. Do not add a new scene.';
   }
   if (code === 'advice_or_command') {
-    return '사용자에게 무엇을 하라고 권하지 마. 현재 답을 읽은 캐릭터의 반응만 만들어.';
+    return 'Remove every suggestion or command. Write only the character\'s reaction to the current answers.';
   }
   if (code === 'unsupported_inference') {
-    return '불확실한 답에서 바쁨, 무관심, 회피, 감정 같은 숨은 이유를 만들지 마. 드러난 답의 상태만 받아들여.';
+    return 'Remove every inferred reason, emotion, intention, or personality trait. Acknowledge only the response state that is directly visible.';
   }
   if (code === 'ungrounded_detail') {
-    return '현재 질문과 답변에 없는 시간, 반복, 장소, 물건, 행동을 모두 빼. 시간 표현을 바꾸지 말고 확인된 단서만 재배치해.';
+    return 'Remove every unsupported time, repetition, place, object, and action. Keep source time references unchanged and do not replace a removed detail with another invented scene.';
   }
   if (code === 'instruction_leak') {
-    return '규칙, 지시문, 예시, 작성 과정에 관해 말하지 마. 두 답을 읽은 캐릭터의 실제 한마디만 만들어.';
+    return 'Do not mention rules, prompts, examples, validation, or writing steps. Return only the actual character reaction.';
   }
-  return '거절된 문장을 반복하지 말고 모든 형식과 내용 규칙을 다시 적용해.';
+  return 'Generate a fresh response and reapply every grounding, safety, and output rule.';
 }
 
 function buildPersonalizedQuestionPrompt(

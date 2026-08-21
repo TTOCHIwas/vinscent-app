@@ -952,19 +952,85 @@ test('feedback prompt requests a shared character reaction instead of an answer 
     false,
   );
   assert.equal(capturedPrompt.includes('"rejected_feedback":'), false);
-  assert.equal(retryPrompt.includes('"rejected_feedback":'), true);
+  assert.equal(retryPrompt.includes('"rejected_feedback":'), false);
   assert.equal(
     retryPrompt.includes('너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐'),
-    true,
+    false,
   );
   assert.equal(
     retryPrompt.includes('mixed_certainty_content'),
     true,
   );
   assert.equal(
-    retryPrompt.includes('거절된 답변의 핵심어를 다시 쓰지 마'),
+    retryPrompt.includes('Do not repeat either answer\'s content.'),
     true,
   );
+});
+
+test('feedback retry uses a concise grounded repair prompt without rejected-text anchoring', async () => {
+  const requests: StructuredGenerationRequest[] = [];
+  const rejectedFeedback = '액션 영화 좋아하네, 둘이서도 즐길 만하겠어...';
+  const movieContext: AnonymizedCompletedQuestionContext = {
+    ...context,
+    question: {
+      ...context.question,
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        participantKey: 'partner_a',
+        text: '나는 존윅같은 거 진짜 개좋아',
+      },
+      {
+        answerId: 'answer-b',
+        participantKey: 'partner_b',
+        text: '범죄,액션,스릴러~',
+      },
+    ],
+  };
+  const model = new StructuredLearningModel({
+    generateStructured: async (request) => {
+      requests.push(request);
+      return {
+        value: {
+          feedback_text: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+
+  await model.generateCoupleFeedback(movieContext);
+  await model.generateCoupleFeedback(movieContext, {
+    rejectedText: rejectedFeedback,
+    rejectionCode: 'answer_restatement',
+  });
+
+  const initialPrompt = requests[0]?.prompt ?? '';
+  const repairPrompt = requests[1]?.prompt ?? '';
+
+  assert.equal(repairPrompt.includes('Task: Repair one rejected couple-feedback response.'), true);
+  assert.equal(repairPrompt.includes('answer_restatement'), true);
+  assert.equal(repairPrompt.includes('Do not invent time, frequency, place, object, or action details'), true);
+  assert.equal(repairPrompt.includes('React only to a consequence directly supported'), true);
+  assert.equal(repairPrompt.includes('Do not add a new scene.'), true);
+  assert.equal(repairPrompt.includes(rejectedFeedback), false);
+  assert.equal(repairPrompt.includes('rejected_feedback'), false);
+  assert.equal(repairPrompt.includes('partner_a'), false);
+  assert.equal(repairPrompt.includes('partner_b'), false);
+  assert.equal(repairPrompt.includes('나는 존윅같은 거 진짜 개좋아'), true);
+  assert.equal(repairPrompt.includes('범죄,액션,스릴러~'), true);
+  assert.equal(repairPrompt.includes('작은 장면이나 가벼운 말맛을 하나 더해'), false);
+  assert.equal(repairPrompt.length < initialPrompt.length, true);
+  assert.equal(requests[0]?.temperature, 0.4);
+  assert.equal(requests[0]?.maxOutputTokens, 256);
+  assert.equal(requests[1]?.temperature, 0.1);
+  assert.equal(requests[1]?.maxOutputTokens, 192);
 });
 
 test('feedback prompt labels explicit uncertainty and hides raw sunset time', async () => {
