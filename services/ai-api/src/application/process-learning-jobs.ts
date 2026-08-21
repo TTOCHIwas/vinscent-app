@@ -1,4 +1,5 @@
 import type {
+  LearningJobExecutionDiagnostic,
   LearningJobHandlerRegistry,
 } from './learning-job-handler.ts';
 import {
@@ -33,6 +34,15 @@ export interface LearningJobBatchSummary {
   failed: number;
 }
 
+export interface LearningJobOperationalDiagnostic {
+  event: 'ai_learning_feedback_fallback';
+  jobId: string;
+  runId: string;
+  jobAttempt: number;
+  promptVersion: string;
+  rejectionCodes: readonly string[];
+}
+
 interface LearningJobProcessorOptions {
   repository: LearningJobRepository;
   model: LearningModelPort;
@@ -40,6 +50,7 @@ interface LearningJobProcessorOptions {
   provider: string;
   modelName: string;
   handlerRegistry?: LearningJobHandlerRegistry;
+  onDiagnostic?: (diagnostic: LearningJobOperationalDiagnostic) => void;
 }
 
 interface ClassifiedFailure {
@@ -65,6 +76,9 @@ export class LearningJobProcessor {
   readonly #workerId: string;
   readonly #provider: string;
   readonly #modelName: string;
+  readonly #onDiagnostic: (
+    diagnostic: LearningJobOperationalDiagnostic,
+  ) => void;
 
   constructor(options: LearningJobProcessorOptions) {
     this.#repository = options.repository;
@@ -76,6 +90,7 @@ export class LearningJobProcessor {
     this.#workerId = requireNonBlank(options.workerId, 'worker id', 120);
     this.#provider = requireNonBlank(options.provider, 'provider', 100);
     this.#modelName = requireNonBlank(options.modelName, 'model', 160);
+    this.#onDiagnostic = options.onDiagnostic ?? (() => {});
   }
 
   async processBatch(limit: number): Promise<LearningJobBatchSummary> {
@@ -105,15 +120,16 @@ export class LearningJobProcessor {
           continue;
         }
 
+        const promptVersion = requireNonBlank(
+          prepared.promptVersion,
+          'prompt version',
+          160,
+        );
         runId = await this.#repository.startRun(
           job,
           this.#provider,
           this.#modelName,
-          requireNonBlank(
-            prepared.promptVersion,
-            'prompt version',
-            160,
-          ),
+          promptVersion,
         );
         const execution = await prepared.execute();
         usage = execution.usage;
@@ -129,6 +145,13 @@ export class LearningJobProcessor {
           });
         }
 
+        this.#reportDiagnostics(
+          job.jobId,
+          runId,
+          job.attempt,
+          promptVersion,
+          execution.diagnostics,
+        );
         summary.succeeded += 1;
       } catch (error) {
         const failure = classifyFailure(error, usage);
@@ -161,6 +184,39 @@ export class LearningJobProcessor {
     }
 
     return summary;
+  }
+
+  #reportDiagnostics(
+    jobId: string,
+    runId: string,
+    jobAttempt: number,
+    promptVersion: string,
+    diagnostics: readonly LearningJobExecutionDiagnostic[] | undefined,
+  ): void {
+    for (const diagnostic of diagnostics ?? []) {
+      if (diagnostic.kind !== 'couple_feedback_fallback') {
+        continue;
+      }
+      reportDiagnosticSafely(this.#onDiagnostic, {
+        event: 'ai_learning_feedback_fallback',
+        jobId,
+        runId,
+        jobAttempt,
+        promptVersion,
+        rejectionCodes: [...diagnostic.rejectionCodes],
+      });
+    }
+  }
+}
+
+function reportDiagnosticSafely(
+  observer: (diagnostic: LearningJobOperationalDiagnostic) => void,
+  diagnostic: LearningJobOperationalDiagnostic,
+): void {
+  try {
+    observer(diagnostic);
+  } catch (_) {
+    return;
   }
 }
 

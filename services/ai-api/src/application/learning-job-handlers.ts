@@ -55,6 +55,10 @@ interface DefaultLearningJobHandlerOptions {
   model: LearningModelPort;
 }
 
+type CoupleFeedbackRejectionCode = NonNullable<
+  CoupleFeedbackGenerationOptions['rejectionCode']
+>;
+
 export function createDefaultLearningJobHandlerRegistry(
   options: DefaultLearningJobHandlerOptions,
 ): LearningJobHandlerRegistry {
@@ -132,9 +136,7 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       let rejectedText: string | null = null;
       let rejectionCode: CoupleFeedbackGenerationOptions['rejectionCode'] =
         null;
-      const rejectionCodes: Array<NonNullable<
-        CoupleFeedbackGenerationOptions['rejectionCode']
-      >> = [];
+      const rejectionCodes: CoupleFeedbackRejectionCode[] = [];
       let combinedUsage: LearningModelUsage | null = null;
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -162,10 +164,11 @@ class GenerateFeedbackHandler implements LearningJobHandler {
             const fallback = resolveCoupleFeedbackFallback(context, null);
             if (fallback !== null) {
               validateCoupleFeedback(fallback, context);
-              return {
-                output: { feedback_text: fallback.text },
-                usage: combinedUsage,
-              };
+              return coupleFeedbackFallbackExecution(
+                fallback.text,
+                combinedUsage,
+                rejectionCodes,
+              );
             }
             throw error;
           }
@@ -214,10 +217,11 @@ class GenerateFeedbackHandler implements LearningJobHandler {
             );
             if (fallback !== null) {
               validateCoupleFeedback(fallback, context);
-              return {
-                output: { feedback_text: fallback.text },
-                usage: combinedUsage,
-              };
+              return coupleFeedbackFallbackExecution(
+                fallback.text,
+                combinedUsage,
+                rejectionCodes,
+              );
             }
             throw new LearningJobExecutionError({
               code: coupleFeedbackFailureCode(rejectionCodes),
@@ -237,6 +241,23 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       throw new Error('couple feedback generation exhausted');
     });
   }
+}
+
+function coupleFeedbackFallbackExecution(
+  fallbackText: string,
+  usage: LearningModelUsage,
+  rejectionCodes: readonly CoupleFeedbackRejectionCode[],
+): LearningJobExecution {
+  return {
+    output: { feedback_text: fallbackText },
+    usage,
+    diagnostics: [
+      {
+        kind: 'couple_feedback_fallback',
+        rejectionCodes: [...rejectionCodes],
+      },
+    ],
+  };
 }
 
 class SelectCuratedQuestionHandler implements LearningJobHandler {

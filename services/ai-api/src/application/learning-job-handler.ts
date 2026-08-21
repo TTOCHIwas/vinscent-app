@@ -4,9 +4,18 @@ import type {
 } from './learning-job-repository.ts';
 import type { LearningModelUsage } from './learning-model-port.ts';
 
+export interface CoupleFeedbackFallbackDiagnostic {
+  kind: 'couple_feedback_fallback';
+  rejectionCodes: readonly string[];
+}
+
+export type LearningJobExecutionDiagnostic =
+  CoupleFeedbackFallbackDiagnostic;
+
 export interface LearningJobExecution {
   output: Record<string, unknown>;
   usage: LearningModelUsage;
+  diagnostics?: readonly LearningJobExecutionDiagnostic[];
 }
 
 export interface PreparedModelLearningJob {

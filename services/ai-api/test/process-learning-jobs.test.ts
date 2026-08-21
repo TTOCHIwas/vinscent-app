@@ -11,6 +11,7 @@ import {
   AiRepositoryError,
   LearningJobProcessor,
   type ClaimedLearningJob,
+  type LearningJobOperationalDiagnostic,
   type LearningJobRepository,
   type RunFailure,
   type RunSuccess,
@@ -1331,12 +1332,14 @@ test('processor uses a safe fallback after repeated unsupported details', async 
       });
     },
   });
+  const diagnostics: LearningJobOperationalDiagnostic[] = [];
   const processor = new LearningJobProcessor({
     repository,
     model,
     workerId: 'test-worker',
     provider: 'cloudflare',
     modelName: 'mistral-test',
+    onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
   });
 
   const summary = await processor.processBatch(1);
@@ -1346,6 +1349,53 @@ test('processor uses a safe fallback after repeated unsupported details', async 
   assert.deepEqual(repository.successes[0]?.output, {
     feedback_text: '두 답이 모이니 이야깃거리 하나가 생겼네',
   });
+  assert.equal(repository.failures.length, 0);
+  assert.deepEqual(diagnostics, [
+    {
+      event: 'ai_learning_feedback_fallback',
+      jobId: 'job-feedback-repeated-ungrounded-detail',
+      runId: 'run-job-feedback-repeated-ungrounded-detail',
+      jobAttempt: 1,
+      promptVersion: 'feedback-v10',
+      rejectionCodes: ['ungrounded_detail', 'ungrounded_detail'],
+    },
+  ]);
+  const serializedDiagnostics = JSON.stringify(diagnostics);
+  assert.equal(serializedDiagnostics.includes('이번 주말'), false);
+  assert.equal(serializedDiagnostics.includes('소파'), false);
+  assert.equal(serializedDiagnostics.includes('거실'), false);
+  assert.equal(serializedDiagnostics.includes('존윅'), false);
+});
+
+test('processor preserves a persisted fallback when diagnostic reporting fails', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-diagnostic-failure', 'generate_feedback'),
+  ]);
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      return result({ text: '답에 없는 장소에서 영화를 같이 보겠네!' });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+    onDiagnostic() {
+      throw new Error('diagnostic sink unavailable');
+    },
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 1,
+    retried: 0,
+    failed: 0,
+  });
+  assert.equal(repository.successes.length, 1);
   assert.equal(repository.failures.length, 0);
 });
 
@@ -1959,12 +2009,14 @@ test('processor serves a safe fallback after repeated invalid feedback structure
       });
     },
   });
+  const diagnostics: LearningJobOperationalDiagnostic[] = [];
   const processor = new LearningJobProcessor({
     repository,
     model,
     workerId: 'test-worker',
     provider: 'cloudflare',
     modelName: 'mistral-test',
+    onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
   });
 
   const summary = await processor.processBatch(1);
@@ -1980,6 +2032,10 @@ test('processor serves a safe fallback after repeated invalid feedback structure
     latencyMs: 240,
   });
   assert.equal(repository.failures.length, 0);
+  assert.deepEqual(diagnostics[0]?.rejectionCodes, [
+    'candidate_validation_failed',
+    'candidate_validation_failed',
+  ]);
 });
 
 test('processor records a safe model output validation detail', async () => {
