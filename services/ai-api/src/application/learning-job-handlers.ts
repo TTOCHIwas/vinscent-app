@@ -3,6 +3,7 @@ import {
   CoupleFeedbackValidationError,
   DirectQuestionFollowUpValidationError,
   PersonalizedQuestionValidationError,
+  repairCoupleFeedbackPunctuation,
   resolveCoupleFeedbackFallback,
   resolveMemoryCandidates,
   type DirectQuestionAnswer,
@@ -137,10 +138,41 @@ class GenerateFeedbackHandler implements LearningJobHandler {
       let combinedUsage: LearningModelUsage | null = null;
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const result = await this.#model.generateCoupleFeedback(
-          context,
-          { rejectedText, rejectionCode },
-        );
+        let result: Awaited<
+          ReturnType<LearningModelPort['generateCoupleFeedback']>
+        >;
+        try {
+          result = await this.#model.generateCoupleFeedback(
+            context,
+            { rejectedText, rejectionCode },
+          );
+        } catch (error) {
+          if (
+            !(error instanceof LearningModelError)
+            || error.code !== 'model_invalid_output'
+          ) {
+            throw error;
+          }
+          combinedUsage = combinedUsage === null
+            ? error.usage
+            : combineUsage(combinedUsage, error.usage);
+          const structuralRejectionCode = 'candidate_validation_failed';
+          rejectionCodes.push(structuralRejectionCode);
+          if (attempt === 1) {
+            const fallback = resolveCoupleFeedbackFallback(context, null);
+            if (fallback !== null) {
+              validateCoupleFeedback(fallback, context);
+              return {
+                output: { feedback_text: fallback.text },
+                usage: combinedUsage,
+              };
+            }
+            throw error;
+          }
+          rejectedText = null;
+          rejectionCode = structuralRejectionCode;
+          continue;
+        }
         combinedUsage = combinedUsage === null
           ? result.usage
           : combineUsage(combinedUsage, result.usage);
@@ -152,32 +184,51 @@ class GenerateFeedbackHandler implements LearningJobHandler {
             usage: combinedUsage,
           };
         } catch (error) {
-          const currentRejectionCode = coupleFeedbackRejectionCode(error);
-          rejectionCodes.push(currentRejectionCode);
-          if (attempt === 1) {
-            if (currentRejectionCode === 'mixed_certainty_content') {
-              const fallback = resolveCoupleFeedbackFallback(
-                context,
-                currentRejectionCode,
-              );
-              if (fallback !== null) {
-                validateCoupleFeedback(fallback, context);
+          let validationError = error;
+          let rejectedCandidate = result.value;
+          if (coupleFeedbackRejectionCode(error) === 'invalid_punctuation') {
+            const repaired = repairCoupleFeedbackPunctuation(result.value);
+            if (repaired !== null) {
+              try {
+                validateCoupleFeedback(repaired, context);
                 return {
-                  output: { feedback_text: fallback.text },
+                  output: { feedback_text: repaired.text },
                   usage: combinedUsage,
                 };
+              } catch (repairError) {
+                validationError = repairError;
+                rejectedCandidate = repaired;
               }
+            }
+          }
+          const currentRejectionCode = coupleFeedbackRejectionCode(
+            validationError,
+          );
+          rejectionCodes.push(currentRejectionCode);
+          if (attempt === 1) {
+            const fallback = resolveCoupleFeedbackFallback(
+              context,
+              currentRejectionCode === 'mixed_certainty_content'
+                ? currentRejectionCode
+                : null,
+            );
+            if (fallback !== null) {
+              validateCoupleFeedback(fallback, context);
+              return {
+                output: { feedback_text: fallback.text },
+                usage: combinedUsage,
+              };
             }
             throw new LearningJobExecutionError({
               code: coupleFeedbackFailureCode(rejectionCodes),
               retryable: false,
               usage: combinedUsage,
-              cause: error,
+              cause: validationError,
             });
           }
           rejectionCode = currentRejectionCode;
           rejectedText = rejectedModelTextForRetry(
-            result.value.text,
+            rejectedCandidate.text,
             rejectionCode,
           );
         }
@@ -281,16 +332,37 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       let combinedUsage: LearningModelUsage | null = null;
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const result = await this.#model.generatePersonalizedQuestion(
-          context,
-          { rejectedText, rejectionCode },
-        );
+        let result: Awaited<
+          ReturnType<LearningModelPort['generatePersonalizedQuestion']>
+        >;
+        try {
+          result = await this.#model.generatePersonalizedQuestion(
+            context,
+            { rejectedText, rejectionCode },
+          );
+        } catch (error) {
+          if (
+            !(error instanceof LearningModelError)
+            || error.code !== 'model_invalid_output'
+          ) {
+            throw error;
+          }
+          combinedUsage = combinedUsage === null
+            ? error.usage
+            : combineUsage(combinedUsage, error.usage);
+          if (attempt === 1) {
+            throw copyModelErrorWithUsage(error, combinedUsage);
+          }
+          rejectedText = null;
+          rejectionCode = 'candidate_validation_failed';
+          continue;
+        }
         combinedUsage = combinedUsage === null
           ? result.usage
           : combineUsage(combinedUsage, result.usage);
 
         try {
-          validatePersonalizedQuestion(result.value);
+          validatePersonalizedQuestion(result.value, context);
           return {
             output: {
               question_key: result.value.questionKey,
@@ -586,6 +658,23 @@ function combineUsage(
     ),
     latencyMs: first.latencyMs + second.latencyMs,
   };
+}
+
+function copyModelErrorWithUsage(
+  error: LearningModelError,
+  usage: LearningModelUsage,
+): LearningModelError {
+  return new LearningModelError({
+    code: error.code,
+    retryable: error.retryable,
+    providerHttpStatus: error.providerHttpStatus,
+    providerErrorStatus: error.providerErrorStatus,
+    diagnosticDetail: error.diagnosticDetail,
+    retryAfterMs: error.retryAfterMs,
+    usage,
+    diagnostics: error.diagnostics,
+    cause: error,
+  });
 }
 
 function sumKnownCounts(

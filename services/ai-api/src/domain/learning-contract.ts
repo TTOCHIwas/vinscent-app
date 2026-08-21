@@ -209,6 +209,9 @@ export type CoupleFeedbackValidationCode =
   | 'invalid_punctuation'
   | 'answer_owner'
   | 'blocked_topic'
+  | 'instruction_leak'
+  | 'advice_or_command'
+  | 'unsupported_inference'
   | 'mixed_certainty_content'
   | 'question_echo'
   | 'answer_restatement';
@@ -231,7 +234,10 @@ export interface PersonalizedQuestionCandidate {
   rationale: string;
 }
 
-export type PersonalizedQuestionValidationCode = 'meta_language';
+export type PersonalizedQuestionValidationCode =
+  | 'meta_language'
+  | 'strategy_leak'
+  | 'duplicate_question';
 
 export class PersonalizedQuestionValidationError extends Error {
   readonly code: PersonalizedQuestionValidationCode;
@@ -814,10 +820,71 @@ export function validateCoupleFeedback(
       'couple feedback contains a blocked topic',
     );
   }
+  if (feedbackInstructionLeakPattern.test(candidate.text)) {
+    throw new CoupleFeedbackValidationError(
+      'instruction_leak',
+      'couple feedback exposes an internal generation instruction',
+    );
+  }
+  if (feedbackAdviceOrCommandPattern.test(candidate.text)) {
+    throw new CoupleFeedbackValidationError(
+      'advice_or_command',
+      'couple feedback cannot advise or command an action',
+    );
+  }
   if (context !== undefined) {
     validateQuestionEcho(context, candidate.text);
+    validateUnsupportedFeedbackInference(context, candidate.text);
     validateMixedCertaintyFeedback(context, candidate.text);
     validateAnswerRestatement(context, candidate.text);
+  }
+}
+
+const feedbackInstructionLeakPattern = new RegExp(
+  [
+    '규칙(?:에|을|이)?\\s*맞',
+    '(?:잘|다시)\\s*작성(?:됐|해|하)',
+    '지시문',
+    '출력\\s*(?:검사|형식|규칙)',
+    'JSON\\s*(?:Schema|스키마)?',
+    'feedback_text',
+    'current_(?:question|answers)',
+    'response_semantics',
+    'confirmed_profile',
+    'recent_completed_questions',
+    'rejected_feedback',
+    'retry_correction',
+  ].join('|'),
+  'iu',
+);
+
+const feedbackAdviceOrCommandPattern = new RegExp(
+  [
+    '(?:해|가|먹|보|쉬|걷)(?:는|어\\s*보는|해\\s*보는)?\\s*건\\s*어때',
+    '(?:하면|해\\s*보면|가면|먹으면|보면)\\s*(?:좋겠|어때|괜찮겠)',
+    '(?:해\\s*봐|해\\s*보자|가\\s*보자|가자|보자|먹자|쉬자|물어\\s*봐|말해\\s*봐|나눠\\s*보자)(?:[!?]|\\.\\.\\.)?$',
+  ].join('|'),
+  'u',
+);
+
+const unsupportedInferencePattern =
+  /(?:바쁘|여유(?:가|도)?\s*없|관심\s*없|의욕\s*없|생각도\s*없|귀찮|피하|회피|마음\s*없|하기\s*싫|원하지\s*않)/u;
+
+function validateUnsupportedFeedbackInference(
+  context: AnonymizedCompletedQuestionContext,
+  feedbackText: string,
+): void {
+  const hasOnlyUncertainAnswers = context.answers.every((answer) =>
+    classifyDirectQuestionResponse(answer.text) !== 'substantive'
+  );
+  if (
+    hasOnlyUncertainAnswers
+    && unsupportedInferencePattern.test(feedbackText)
+  ) {
+    throw new CoupleFeedbackValidationError(
+      'unsupported_inference',
+      'couple feedback cannot infer a motive from uncertain answers',
+    );
   }
 }
 
@@ -884,7 +951,7 @@ function validateMixedCertaintyFeedback(
 }
 
 const feedbackRestatementPattern =
-  /(?:좋아하(?:네|는|나|고|지|겠)|선호하|취향|답(?:했|은|이|도|변)|골랐|말했|생각하(?:네|는|나)|원하(?:네|는|나)|(?:같|닮|다르)(?:네|구나|군))/u;
+  /(?:좋아하(?:네|는|나|고|지|겠)|선호하|취향|답(?:했|은|이|도|변)|골랐|말했|생각하(?:네|는|나)|원하(?:네|는|나)|(?:같|닮|다르)(?:네|구나|군)|둘\s*다)/u;
 
 function validateAnswerRestatement(
   context: AnonymizedCompletedQuestionContext,
@@ -909,18 +976,42 @@ function validateAnswerRestatement(
 
 export function resolveCoupleFeedbackFallback(
   context: AnonymizedCompletedQuestionContext,
-  rejectionCode: CoupleFeedbackValidationCode,
+  rejectionCode: CoupleFeedbackValidationCode | null,
 ): CoupleFeedbackCandidate | null {
   if (
-    rejectionCode !== 'mixed_certainty_content'
-    || !hasMixedCertaintyAnswers(context)
+    rejectionCode === 'mixed_certainty_content'
+    && hasMixedCertaintyAnswers(context)
   ) {
-    return null;
+    return {
+      text: '같은 질문도 답이 바로 떠오르는 날과 천천히 생각나는 날이 있나 봐...',
+    };
   }
 
   return {
-    text: '같은 질문도 답이 바로 떠오르는 날과 천천히 생각나는 날이 있나 봐...',
+    text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
   };
+}
+
+export function repairCoupleFeedbackPunctuation(
+  candidate: CoupleFeedbackCandidate,
+): CoupleFeedbackCandidate | null {
+  const text = candidate.text.normalize('NFC').trim();
+  const ending = text.endsWith('...')
+    ? '...'
+    : text.match(/[!?]$/u)?.[0] ?? '';
+  const body = ending.length === 0
+    ? text
+    : text.slice(0, -ending.length);
+  const repairedBody = body
+    .replace(/[.!?]+/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+  const repairedText = `${repairedBody}${ending}`;
+
+  if (repairedText.length === 0 || repairedText === text) {
+    return null;
+  }
+  return { text: repairedText };
 }
 
 function hasMixedCertaintyAnswers(
@@ -939,13 +1030,19 @@ function feedbackContentTerms(value: string): string[] {
     .replace(/[^\p{Script=Hangul}\p{L}\p{N}]+/gu, ' ')
     .trim()
     .split(/\s+/u)
-    .map((term) => term.replace(
-      /(?:에게서|한테서|으로|에서|에게|한테|까지|부터|처럼|보다|이랑|하고|은|는|이|가|을|를|도|에|로|와|과|랑)$/u,
-      '',
-    ))
+    .map(normalizeFeedbackContentTerm)
     .filter((term) =>
       term.length >= 2 && !mixedCertaintyFeedbackStopTerms.has(term)
     );
+}
+
+function normalizeFeedbackContentTerm(value: string): string {
+  return value
+    .replace(
+      /(?:에게서|한테서|으로|에서|에게|한테|까지|부터|처럼|보다|이랑|하고|은|는|이|가|을|를|도|에|로|와|과|랑)$/u,
+      '',
+    )
+    .replace(/(?:했어|했네|했지|였어|였네|었어|었네|았어|았네)$/u, '');
 }
 
 const feedbackAnswerOwnerPatterns = [
@@ -961,6 +1058,10 @@ const feedbackAnswerOwnerPatterns = [
 
 export function validatePersonalizedQuestion(
   candidate: PersonalizedQuestionCandidate,
+  context?: Pick<
+    AnonymizedCompletedQuestionContext,
+    'question' | 'recentCompletedQuestions'
+  >,
 ): void {
   validateGeneratedQuestion(candidate);
 
@@ -969,6 +1070,25 @@ export function validatePersonalizedQuestion(
     || /(?:확인|파악|분석|탐색)(?:해\s*보)?려면/u.test(candidate.text)
   ) {
     throw new PersonalizedQuestionValidationError('meta_language');
+  }
+
+  if (
+    [candidate.category, candidate.mood ?? '', candidate.rationale]
+      .some((value) => /(?:^|[^a-z])(?:continue|explore)(?:$|[^a-z])/iu.test(value))
+  ) {
+    throw new PersonalizedQuestionValidationError('strategy_leak');
+  }
+
+  if (
+    context !== undefined
+    && [
+      context.question.text,
+      ...context.recentCompletedQuestions.map(({ question }) => question.text),
+    ].some((questionText) =>
+      areQuestionsNearDuplicate(candidate.text, questionText)
+    )
+  ) {
+    throw new PersonalizedQuestionValidationError('duplicate_question');
   }
 }
 

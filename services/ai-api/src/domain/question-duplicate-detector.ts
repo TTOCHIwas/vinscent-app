@@ -13,6 +13,7 @@ const comparisonStopWords = new Set([
   '건',
   '것',
   '더',
+  '다음',
   '방식',
   '사람',
   '상대',

@@ -1234,6 +1234,76 @@ test('processor regenerates feedback that merely restates an answer', async () =
   });
 });
 
+test('processor regenerates feedback that commands the couple to act', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-advice', 'generate_feedback'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-real-a', text: '존윅' },
+      { answerId: 'answer-b', userId: 'user-real-b', text: '액션 영화' },
+    ],
+  };
+  const retryCodes: Array<string | null> = [];
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      retryCodes.push(options?.rejectionCode ?? null);
+      return result({
+        text: retryCodes.length === 1
+          ? '이번 주말엔 액션 영화를 같이 보자!'
+          : '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(retryCodes, [null, 'advice_or_command']);
+});
+
+test('processor repairs safe feedback punctuation without another model call', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-punctuation-repair', 'generate_feedback'),
+  ]);
+  let calls = 0;
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      calls += 1;
+      return result({
+        text: '오늘 이야기도 한 장면 더 생겼네. 같이 웃으면 더 재밌겠어!',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 1);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '오늘 이야기도 한 장면 더 생겼네 같이 웃으면 더 재밌겠어!',
+  });
+});
+
 test('processor regenerates feedback that interprets mixed-certainty answers', async () => {
   const repository = new FakeRepository([
     job('job-feedback-mixed-certainty', 'generate_feedback'),
@@ -1389,6 +1459,210 @@ test('processor regenerates a personalized question that exposes analysis langua
   });
 });
 
+test('processor regenerates a personalized question that leaks its strategy', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-strategy-leak', 'generate_personalized_question'),
+  ]);
+  const retryCodes: Array<string | null> = [];
+  const model = modelWith({
+    async generatePersonalizedQuestion(_context, options) {
+      retryCodes.push(options?.rejectionCode ?? null);
+      return result({
+        questionKey: 'personalized_generated_weekend_ab12cd34',
+        text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
+        category: retryCodes.length === 1 ? 'CONTINUE' : 'daily_life',
+        mood: null,
+        rationale: '직전 답변의 단서를 이어가기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(retryCodes, [null, 'strategy_leak']);
+});
+
+test('processor regenerates a personalized question that repeats the current question', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-duplicate', 'generate_personalized_question'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-real-a',
+        text: '나는 존윅같은 거 진짜 개좋아',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-real-b',
+        text: '범죄,액션,스릴러~',
+      },
+    ],
+  };
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const repeatedQuestion =
+    '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?';
+  const model = modelWith({
+    async generatePersonalizedQuestion(_context, options) {
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      const text = optionsSeen.length === 1
+        ? repeatedQuestion
+        : '둘이 영화를 볼 때 극장이 좋아, 집이 좋아?';
+      return result({
+        questionKey: 'personalized_generated_movie_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '같이 영화를 보는 환경의 선호를 알아보기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: repeatedQuestion, rejectionCode: 'duplicate_question' },
+  ]);
+  assert.equal(
+    repository.successes[0]?.output.question_text,
+    '둘이 영화를 볼 때 극장이 좋아, 집이 좋아?',
+  );
+});
+
+test('processor retries structurally invalid personalized question once', async () => {
+  const repository = new FakeRepository([
+    job('job-invalid-personalized-structure', 'generate_personalized_question'),
+  ]);
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  let calls = 0;
+  const model = modelWith({
+    async generatePersonalizedQuestion(_context, options) {
+      calls += 1;
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      if (calls === 1) {
+        throw new LearningModelError({
+          code: 'model_invalid_output',
+          retryable: false,
+          usage: {
+            inputTokenCount: 15,
+            outputTokenCount: 0,
+            latencyMs: 80,
+          },
+        });
+      }
+      return result({
+        questionKey: 'personalized_generated_weekend_ab12cd34',
+        text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: null, rejectionCode: 'candidate_validation_failed' },
+  ]);
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 35,
+    outputTokenCount: 10,
+    latencyMs: 200,
+  });
+});
+
+test('processor preserves repeated personalized structure failures', async () => {
+  const repository = new FakeRepository([
+    job('job-repeated-invalid-personalized-structure', 'generate_personalized_question'),
+  ]);
+  let calls = 0;
+  const model = modelWith({
+    async generatePersonalizedQuestion() {
+      calls += 1;
+      throw new LearningModelError({
+        code: 'model_invalid_output',
+        retryable: false,
+        diagnosticDetail: 'personalized_question.invalid_structure',
+        usage,
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 0,
+    retried: 0,
+    failed: 1,
+  });
+  assert.equal(repository.failures[0]?.errorCode, 'model_invalid_output');
+  assert.equal(
+    repository.failures[0]?.providerErrorDetail,
+    'personalized_question.invalid_structure',
+  );
+  assert.deepEqual(repository.failures[0]?.usage, {
+    inputTokenCount: 40,
+    outputTokenCount: 20,
+    latencyMs: 240,
+  });
+});
+
 test('shared feedback retry does not echo foreign-script output', async () => {
   const repository = new FakeRepository([
     job('job-feedback-foreign-script', 'generate_feedback'),
@@ -1417,7 +1691,52 @@ test('shared feedback retry does not echo foreign-script output', async () => {
   assert.deepEqual(rejectedFeedbacks, [null, null]);
 });
 
-test('processor stops after one invalid shared feedback regeneration', async () => {
+test('processor rejects instruction leakage after punctuation repair', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-instruction-leak', 'generate_feedback'),
+  ]);
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      return result({
+        text: optionsSeen.length === 1
+          ? '좋은 문장이야. 규칙에 맞게 잘 작성됐어.'
+          : '오늘 이야기에도 둘만의 장면이 하나 더 생겼네',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    {
+      rejectedText: '좋은 문장이야 규칙에 맞게 잘 작성됐어',
+      rejectionCode: 'instruction_leak',
+    },
+  ]);
+  assert.equal(
+    repository.successes[0]?.output.feedback_text,
+    '오늘 이야기에도 둘만의 장면이 하나 더 생겼네',
+  );
+});
+
+test('processor serves a safe fallback after two invalid shared feedback responses', async () => {
   const repository = new FakeRepository([
     job('job-invalid-feedback', 'generate_feedback'),
   ]);
@@ -1428,7 +1747,7 @@ test('processor stops after one invalid shared feedback regeneration', async () 
       return result({
         text: calls === 1
           ? '너는 시간을 소중하게 생각하는데 상대방은 아직 잘 모르겠나 봐'
-          : '서로의 답이 다르네.',
+          : '너도 오늘 답이 다르네.',
       });
     },
   });
@@ -1443,17 +1762,109 @@ test('processor stops after one invalid shared feedback regeneration', async () 
   const summary = await processor.processBatch(1);
 
   assert.equal(calls, 2);
-  assert.equal(summary.failed, 1);
-  assert.equal(
-    repository.failures[0]?.errorCode,
-    'feedback_rejected_a1_answer_owner_a2_invalid_punctuation',
-  );
-  assert.deepEqual(repository.failures[0]?.usage, {
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
     inputTokenCount: 40,
     outputTokenCount: 20,
     latencyMs: 240,
   });
-  assert.equal(repository.successes.length, 0);
+  assert.equal(repository.failures.length, 0);
+});
+
+test('processor retries structurally invalid shared feedback once', async () => {
+  const repository = new FakeRepository([
+    job('job-invalid-feedback-structure', 'generate_feedback'),
+  ]);
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  let calls = 0;
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      calls += 1;
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      if (calls === 1) {
+        throw new LearningModelError({
+          code: 'model_invalid_output',
+          retryable: false,
+          usage: {
+            inputTokenCount: 15,
+            outputTokenCount: 0,
+            latencyMs: 80,
+          },
+        });
+      }
+      return result({
+        text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: null, rejectionCode: 'candidate_validation_failed' },
+  ]);
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 35,
+    outputTokenCount: 10,
+    latencyMs: 200,
+  });
+});
+
+test('processor serves a safe fallback after repeated invalid feedback structures', async () => {
+  const repository = new FakeRepository([
+    job('job-repeated-invalid-feedback-structure', 'generate_feedback'),
+  ]);
+  let calls = 0;
+  const model = modelWith({
+    async generateCoupleFeedback() {
+      calls += 1;
+      throw new LearningModelError({
+        code: 'model_invalid_output',
+        retryable: false,
+        usage,
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(calls, 2);
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '두 답이 모이니 오늘 이야기에도 한 줄이 더 남았네',
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 40,
+    outputTokenCount: 20,
+    latencyMs: 240,
+  });
+  assert.equal(repository.failures.length, 0);
 });
 
 test('processor records a safe model output validation detail', async () => {

@@ -8,6 +8,7 @@ import {
   PersonalizedQuestionValidationError,
   ProactiveSuggestionValidationError,
   resolveMemoryCandidates,
+  repairCoupleFeedbackPunctuation,
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
   validateDirectQuestionFollowUp,
@@ -945,6 +946,78 @@ test('한 줄 피드백은 커플 공유 반응 형식을 지켜야 한다', () 
   assert.doesNotThrow(() => validateCoupleFeedback({
     text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
   }, movieContext));
+
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '이번 주말엔 존윅 같은 액션 영화를 같이 보자!',
+    }, movieContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'advice_or_command',
+  );
+
+  const noPreferenceContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '요즘 둘이 새로 해보고 싶은 게 있어?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-a', text: '딱히 없어' },
+      { answerId: 'answer-b', userId: 'user-b', text: '잘 모르겠어' },
+    ],
+  });
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '둘 다 바빠서 새로운 걸 생각할 여유가 없나 보네',
+    }, noPreferenceContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'unsupported_inference',
+  );
+
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '좋은 문장이야 규칙에 맞게 잘 작성됐어',
+    }, movieContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'instruction_leak',
+  );
+
+  const heavyDayContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '오늘 마음에 가장 오래 남은 일은 뭐야?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-a', text: '회사에서 버티기 힘들었어' },
+      { answerId: 'answer-b', userId: 'user-b', text: '오늘은 아무 말도 하기 싫었어' },
+    ],
+  });
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '오늘은 둘 다 힘들었네',
+    }, heavyDayContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'answer_restatement',
+  );
+});
+
+test('한 줄 피드백은 내용 검증 전에 문장부호만 안전하게 복구할 수 있다', () => {
+  const repaired = repairCoupleFeedbackPunctuation({
+    text: '오늘 이야기도 한 장면 더 생겼네. 같이 웃으면 더 재밌겠어!',
+  });
+
+  assert.deepEqual(repaired, {
+    text: '오늘 이야기도 한 장면 더 생겼네 같이 웃으면 더 재밌겠어!',
+  });
+  assert.doesNotThrow(() => validateCoupleFeedback(repaired!, context));
+  assert.equal(repairCoupleFeedbackPunctuation({
+    text: '오늘 이야기도 한 장면 더 생겼네!',
+  }), null);
 });
 
 test('개인화 질문은 사용자에게 분석 과정을 요구하지 않는다', () => {
@@ -968,6 +1041,57 @@ test('개인화 질문은 사용자에게 분석 과정을 요구하지 않는�
     mood: null,
     rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
   }));
+});
+
+test('개인화 질문은 현재 질문이나 최근 질문을 표현만 바꿔 반복하지 않는다', () => {
+  const candidate = {
+    questionKey: 'personalized_generated_movie_ab12cd34',
+    text: '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '함께 보고 싶은 영화 취향을 더 알아보기 위해',
+  };
+  const personalizedContext = {
+    ...context,
+    question: {
+      ...context.question,
+      text: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    recentCompletedQuestions: [{
+      question: {
+        dailyQuestionId: 'daily-question-previous',
+        text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+        domain: 'daily_life' as const,
+      },
+      answers: [],
+    }],
+  };
+
+  assert.throws(
+    () => validatePersonalizedQuestion(candidate, personalizedContext),
+    (error: unknown) =>
+      error instanceof PersonalizedQuestionValidationError
+      && error.code === 'duplicate_question',
+  );
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    ...candidate,
+    text: '둘이 영화를 볼 때 극장이 좋아, 집이 좋아?',
+  }, personalizedContext));
+});
+
+test('개인화 질문 메타데이터에는 내부 판단 단계가 노출되지 않는다', () => {
+  assert.throws(
+    () => validatePersonalizedQuestion({
+      questionKey: 'personalized_generated_strategy_ab12cd34',
+      text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
+      category: 'CONTINUE',
+      mood: null,
+      rationale: '직전 답변의 단서를 이어가기 위해',
+    }),
+    (error: unknown) =>
+      error instanceof PersonalizedQuestionValidationError
+      && error.code === 'strategy_leak',
+  );
 });
 
 test('고정 질문 추천은 남은 커리큘럼 후보 안에서만 선택한다', () => {
