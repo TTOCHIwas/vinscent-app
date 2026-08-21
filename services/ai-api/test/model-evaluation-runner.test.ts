@@ -286,6 +286,68 @@ test('model evaluation retries one retryable generation failure', async () => {
   assert.equal(result.recovery?.status, 'passed');
 });
 
+test('model evaluation uses task recovery for structurally invalid output', async () => {
+  let recoveryCount = 0;
+  const structurallyInvalidCase: ModelEvaluationCase = {
+    ...evaluationCase,
+    name: 'invalid_structure_generation',
+    run: async () => {
+      throw new LearningModelError({
+        code: 'model_invalid_output',
+        retryable: false,
+        usage: {
+          inputTokenCount: 10,
+          outputTokenCount: 0,
+          latencyMs: 20,
+        },
+      });
+    },
+    recoverGeneration: async (_model, rejectionCode) => {
+      recoveryCount += 1;
+      assert.equal(rejectionCode, 'model_invalid_output');
+      return modelResult('통과', 1, 'stop');
+    },
+  };
+  const execution = await runModelEvaluation({
+    models: [modelSpec('cloudflare', 'mistral-small', 'unused')],
+    cases: [structurallyInvalidCase],
+    runs: 1,
+  });
+
+  const result = execution.report.report[0]!.results[0]!;
+  assert.equal(recoveryCount, 1);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.failurePhase, 'generation');
+  assert.equal(result.operationalStatus, 'passed');
+  assert.equal(result.recovery?.status, 'passed');
+});
+
+test('model evaluation records fallback after repeated invalid structures', async () => {
+  const structurallyInvalidCase: ModelEvaluationCase = {
+    ...evaluationCase,
+    name: 'repeated_invalid_structure_generation',
+    run: async () => {
+      throw invalidOutputError();
+    },
+    recoverGeneration: async () => {
+      throw invalidOutputError();
+    },
+    resolveFallback: () => modelResult('통과', 0, 'deterministic_fallback'),
+  };
+  const execution = await runModelEvaluation({
+    models: [modelSpec('cloudflare', 'mistral-small', 'unused')],
+    cases: [structurallyInvalidCase],
+    runs: 1,
+  });
+
+  const result = execution.report.report[0]!.results[0]!;
+  assert.equal(result.status, 'failed');
+  assert.equal(result.operationalStatus, 'failed');
+  assert.equal(result.servedStatus, 'passed');
+  assert.equal(result.recovery?.failurePhase, 'generation');
+  assert.equal(result.fallback?.status, 'passed');
+});
+
 function modelSpec(
   provider: string,
   model: string,
@@ -311,6 +373,18 @@ function modelSpec(
       },
     } as LearningModelPort),
   };
+}
+
+function invalidOutputError(): LearningModelError {
+  return new LearningModelError({
+    code: 'model_invalid_output',
+    retryable: false,
+    usage: {
+      inputTokenCount: 10,
+      outputTokenCount: 0,
+      latencyMs: 20,
+    },
+  });
 }
 
 function modelResult(

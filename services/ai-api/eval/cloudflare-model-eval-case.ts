@@ -29,6 +29,10 @@ export interface ModelEvaluationCase {
     rejectedOutput: unknown,
     rejectionCode: string | null,
   ): Promise<LearningModelResult<unknown>>;
+  recoverGeneration?(
+    model: LearningModelPort,
+    rejectionCode: string,
+  ): Promise<LearningModelResult<unknown>>;
   resolveFallback?(
     rejectedOutput: unknown,
     rejectionCode: string | null,

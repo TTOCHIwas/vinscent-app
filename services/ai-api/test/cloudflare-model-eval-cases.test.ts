@@ -99,6 +99,40 @@ test('서로 다른 휴식 방식에는 같이 답할 수 있는 중립 질문�
   }));
 });
 
+test('개인화 질문 평가는 현재 질문 반복과 직전 답변 맥락 단절을 거부한다', () => {
+  const cases = createCloudflareModelEvaluationCases();
+  const repeated = cases.find(
+    (item) => item.name === 'personalized_question_rejects_temporal_rephrase',
+  );
+  const continuity = cases.find(
+    (item) => item.name === 'personalized_question_continues_latest_answers',
+  );
+
+  assert.ok(repeated);
+  assert.ok(continuity);
+  assert.throws(() => repeated.validate({
+    questionKey: 'personalized_generated_movie_repeat',
+    text: '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '영화 취향을 더 알아보기 위해',
+  }), /duplicate_question/u);
+  assert.throws(() => continuity.validate({
+    questionKey: 'personalized_generated_unrelated_movie',
+    text: '다음에는 둘이 어떤 영화를 같이 보고 싶어?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '함께 보고 싶은 영화를 알아보기 위해',
+  }), /missing one of|forbidden pattern/u);
+  assert.doesNotThrow(() => continuity.validate({
+    questionKey: 'personalized_generated_after_test',
+    text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '직전 계획 다음에 이어질 작은 보상을 알아보기 위해',
+  }));
+});
+
 test('운영에서 재생성하는 작업은 평가에서도 복구 경로를 제공한다', () => {
   const cases = createCloudflareModelEvaluationCases();
   const recoverableTasks = new Set<ModelEvaluationTask>([

@@ -1,5 +1,7 @@
 import {
   anonymizeCompletedQuestionContext,
+  CoupleFeedbackValidationError,
+  repairCoupleFeedbackPunctuation,
   resolveCoupleFeedbackFallback,
   resolveMemoryCandidates,
   validateCoupleFeedback,
@@ -486,6 +488,7 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         /행복/u,
         /좋은\s*추억/u,
         /소중한\s*과정/u,
+        /둘\s*다.{0,12}힘들/u,
         /알아차렸으면/u,
         /(?:말|표현)해\s*봐/u,
         /해야\s*해/u,
@@ -540,6 +543,10 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         /관심\s*없/u,
         /회피/u,
         /마음\s*없/u,
+        /바쁘/u,
+        /생각도\s*없/u,
+        /의욕/u,
+        /귀찮/u,
         /찾으려\s*애쓰/u,
         /애쓰는\s*마음/u,
       ],
@@ -576,7 +583,10 @@ function createFeedbackCases(): ModelEvaluationCase[] {
         personalized: false,
       }),
       requiredTerms: [['영화', '액션', '스크린', '극장', '소파']],
-      forbiddenPatterns: [/\.\.\.$/u],
+      forbiddenPatterns: [
+        /\.\.\.$/u,
+        /(?:보러?\s*가자|같이\s*보자|봐\s*보자|보는\s*건\s*어때)/u,
+      ],
     }),
     feedbackCase({
       name: 'feedback_rejected_owner_reference',
@@ -640,21 +650,47 @@ function feedbackCase(options: FeedbackScenario): ModelEvaluationCase {
       rejectedText: options.rejectedText ?? null,
       rejectionCode: null,
     }),
-    recoverValidation: (model, rejectedOutput, rejectionCode) =>
-      model.generateCoupleFeedback(context, {
-        rejectedText: readRejectedOutputText(rejectedOutput),
-        rejectionCode: feedbackRejectionCode(rejectionCode),
-      }),
+    recoverGeneration: (model) => model.generateCoupleFeedback(context, {
+      rejectedText: null,
+      rejectionCode: 'candidate_validation_failed',
+    }),
+    recoverValidation: async (model, rejectedOutput, rejectionCode) => {
+      let rejectedText = readRejectedOutputText(rejectedOutput);
+      let resolvedRejectionCode = feedbackRejectionCode(rejectionCode);
+      if (rejectionCode === 'invalid_punctuation' && rejectedText !== null) {
+        const repaired = repairCoupleFeedbackPunctuation({
+          text: rejectedText,
+        });
+        if (repaired !== null) {
+          try {
+            validateCoupleFeedback(repaired, context);
+            return deterministicEvaluationResult(
+              repaired,
+              'deterministic_punctuation_repair',
+            );
+          } catch (error) {
+            rejectedText = repaired.text;
+            resolvedRejectionCode = error
+                instanceof CoupleFeedbackValidationError
+              ? error.code
+              : 'candidate_validation_failed';
+          }
+        }
+      }
+      return model.generateCoupleFeedback(context, {
+        rejectedText,
+        rejectionCode: resolvedRejectionCode,
+      });
+    },
     validateForRecovery: (value) => {
       validateCoupleFeedback(value as CoupleFeedbackCandidate, context);
     },
     resolveFallback: (_rejectedOutput, rejectionCode) => {
-      if (rejectionCode !== 'mixed_certainty_content') {
-        return null;
-      }
       const fallback = resolveCoupleFeedbackFallback(
         context,
-        rejectionCode,
+        rejectionCode === 'mixed_certainty_content'
+          ? rejectionCode
+          : null,
       );
       return fallback === null
         ? null
@@ -743,6 +779,7 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
   const scenarios: Array<ScenarioMetadata & {
     context: CompletedQuestionContext;
     requiredTerms?: string[][];
+    forbiddenPatterns?: RegExp[];
   }> = [
     {
       name: 'personalized_question_shared_walk_context',
@@ -803,6 +840,50 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
       }),
     },
     {
+      name: 'personalized_question_rejects_temporal_rephrase',
+      scenario: '현재 영화 취향 질문에 시간 표현만 붙인 반복 질문',
+      source: 'production_regression',
+      expectation: '현재 질문과 같은 정보를 다시 묻지 않고 새 관점을 선택해',
+      context: completedContext({
+        questionText: '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+        domain: 'daily_life',
+        answerA: '나는 존윅같은 거 진짜 개좋아',
+        answerB: '범죄,액션,스릴러~',
+        recentQuestions: [
+          recentQuestion(
+            'recent-weekend-plan',
+            '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+            'daily_life',
+            '두 번째 앱 테스트 올려버리기',
+            '같이 맛있는 고기 먹기',
+          ),
+        ],
+      }),
+    },
+    {
+      name: 'personalized_question_continues_latest_answers',
+      scenario: '앱 테스트와 외식 답변 다음의 맥락 연결 질문',
+      source: 'production_regression',
+      expectation: '직전 답의 구체적인 단서로 이어지고 무관한 영화 주제로 점프하지 않아',
+      context: completedContext({
+        questionText: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+        domain: 'daily_life',
+        answerA: '두 번째 앱 테스트 올려버리기',
+        answerB: '같이 맛있는 고기 먹기',
+      }),
+      requiredTerms: [[
+        '앱',
+        '테스트',
+        '출시',
+        '올리',
+        '고기',
+        '먹',
+        '메뉴',
+        '식당',
+      ]],
+      forbiddenPatterns: [/영화/u],
+    },
+    {
       name: 'personalized_question_sparse_profile',
       scenario: '승인된 기억이 적은 개인화 초기 상태',
       source: 'representative_boundary',
@@ -826,6 +907,13 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
         rejectedText: null,
         rejectionCode: null,
       }),
+      recoverGeneration: (model) => model.generatePersonalizedQuestion(
+        context,
+        {
+          rejectedText: null,
+          rejectionCode: 'candidate_validation_failed',
+        },
+      ),
       recoverValidation: (model, rejectedOutput, rejectionCode) =>
         model.generatePersonalizedQuestion(context, {
           rejectedText: readRejectedOutputText(rejectedOutput),
@@ -834,19 +922,15 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
       validateForRecovery: (value: unknown) => {
         validatePersonalizedQuestion(
           value as PersonalizedQuestionCandidate,
+          context,
         );
       },
       validate: (value: unknown) => {
         const question = value as PersonalizedQuestionCandidate;
-        validatePersonalizedQuestion(question);
+        validatePersonalizedQuestion(question, context);
         validateQuestionText(question.text);
-        requireNotRecentQuestion(
-          question.text,
-          context.recentCompletedQuestions.map(
-            (recent) => recent.question.text,
-          ),
-        );
         requireTerms(question.text, options.requiredTerms ?? []);
+        forbidPatterns(question.text, options.forbiddenPatterns ?? []);
       },
     };
   });
@@ -1330,6 +1414,24 @@ function proactiveCase(options: ProactiveScenario): ModelEvaluationCase {
       }
       requireTerms(suggestion.text, options.requiredTerms ?? []);
       forbidPatterns(suggestion.text, options.forbiddenPatterns ?? []);
+    },
+  };
+}
+
+function deterministicEvaluationResult<T>(
+  value: T,
+  completionReason: string,
+) {
+  return {
+    value,
+    usage: {
+      inputTokenCount: 0,
+      outputTokenCount: 0,
+      latencyMs: 0,
+    },
+    diagnostics: {
+      providerAttemptCount: 0,
+      completionReason,
     },
   };
 }

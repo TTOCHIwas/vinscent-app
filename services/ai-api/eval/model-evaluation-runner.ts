@@ -340,10 +340,8 @@ async function resolveEvaluationFallback(options: {
   if (
     recovery === null
     || recovery.status === 'passed'
-    || recovery.failurePhase !== 'validation'
     || evaluationCase.resolveFallback === undefined
-    || evaluationCase.validateForRecovery === undefined
-    || !hasOperationalValidationFailure(evaluationCase, recovery.output)
+    || !hasFallbackEligibleFailure(evaluationCase, recovery)
   ) {
     return null;
   }
@@ -359,7 +357,7 @@ async function resolveEvaluationFallback(options: {
   return runEvaluationCase({
     name: evaluationCase.name,
     execute: async () => fallback,
-    validate: evaluationCase.validateForRecovery,
+    validate: evaluationCase.validateForRecovery ?? evaluationCase.validate,
   });
 }
 
@@ -377,6 +375,9 @@ async function recoverEvaluationCase(options: {
 
   const retryGeneration = firstPassResult.failurePhase === 'generation'
     && firstPassResult.error?.retryable === true;
+  const recoverInvalidOutput = firstPassResult.failurePhase === 'generation'
+    && firstPassResult.error?.code === 'model_invalid_output'
+    && evaluationCase.recoverGeneration !== undefined;
   const recoverValidation = firstPassResult.failurePhase === 'validation'
     && evaluationCase.recoverValidation !== undefined;
   const failedOperationalValidation = recoverValidation
@@ -384,7 +385,11 @@ async function recoverEvaluationCase(options: {
       evaluationCase,
       firstPassResult.output,
     );
-  if (!retryGeneration && !failedOperationalValidation) {
+  if (
+    !retryGeneration
+    && !recoverInvalidOutput
+    && !failedOperationalValidation
+  ) {
     return null;
   }
 
@@ -392,17 +397,42 @@ async function recoverEvaluationCase(options: {
     await options.wait(options.caseDelayMs);
   }
 
+  let execute: ModelEvaluationCase['run'];
+  if (retryGeneration) {
+    execute = () => evaluationCase.run(options.model);
+  } else if (recoverInvalidOutput) {
+    const recoverGeneration = evaluationCase.recoverGeneration!;
+    const rejectionCode = firstPassResult.error!.code!;
+    execute = () => recoverGeneration(options.model, rejectionCode);
+  } else {
+    const recoverValidation = evaluationCase.recoverValidation!;
+    execute = () => recoverValidation(
+      options.model,
+      firstPassResult.output,
+      firstPassResult.error?.code ?? null,
+    );
+  }
+
   return runEvaluationCase({
     name: evaluationCase.name,
-    execute: retryGeneration
-      ? () => evaluationCase.run(options.model)
-      : () => evaluationCase.recoverValidation!(
-        options.model,
-        firstPassResult.output,
-        firstPassResult.error?.code ?? null,
-      ),
+    execute,
     validate: evaluationCase.validate,
   });
+}
+
+function hasFallbackEligibleFailure(
+  evaluationCase: ModelEvaluationCase,
+  result: EvaluationCaseResult,
+): boolean {
+  if (
+    result.failurePhase === 'generation'
+    && result.error?.code === 'model_invalid_output'
+  ) {
+    return true;
+  }
+  return result.failurePhase === 'validation'
+    && evaluationCase.validateForRecovery !== undefined
+    && hasOperationalValidationFailure(evaluationCase, result.output);
 }
 
 function hasOperationalValidationFailure(

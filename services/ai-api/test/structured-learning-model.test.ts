@@ -1783,6 +1783,122 @@ test('personalized question retry explains how to replace analysis language', as
   );
 });
 
+test('prompt strategies keep Korean context while changing compact-model controls', async () => {
+  const requests: StructuredGenerationRequest[] = [];
+  const client = {
+    generateStructured: async (request: StructuredGenerationRequest) => {
+      requests.push(request);
+      return {
+        value: {
+          question_text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '직전 계획 다음에 이어질 작은 보상을 알아보기 위해',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  };
+  const koreanContext: AnonymizedCompletedQuestionContext = {
+    ...context,
+    question: {
+      ...context.question,
+      text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        participantKey: 'partner_a',
+        text: '두 번째 앱 테스트 올려버리기',
+      },
+      {
+        answerId: 'answer-b',
+        participantKey: 'partner_b',
+        text: '같이 맛있는 고기 먹기',
+      },
+    ],
+  };
+
+  await new StructuredLearningModel(client, {
+    promptStrategy: 'structured_korean',
+  }).generatePersonalizedQuestion(koreanContext);
+  await new StructuredLearningModel(client, {
+    promptStrategy: 'hybrid_english_korean',
+  }).generatePersonalizedQuestion(koreanContext);
+  await new StructuredLearningModel(client, {
+    promptStrategy: 'refined_korean',
+  }).generatePersonalizedQuestion(koreanContext);
+
+  const [structuredKorean, hybrid, refinedKorean] = requests;
+  assert.ok(structuredKorean);
+  assert.ok(hybrid);
+  assert.ok(refinedKorean);
+  assert.equal(structuredKorean.prompt.includes('CONTINUE'), true);
+  assert.equal(structuredKorean.prompt.includes('EXPLORE'), true);
+  assert.equal(structuredKorean.prompt.includes('두 번째 앱 테스트 올려버리기'), true);
+  assert.equal(
+    structuredKorean.prompt.includes('다음 주말에 둘이 같이 해보고 싶은 건 뭐야?"'),
+    true,
+  );
+  assert.equal(
+    structuredKorean.prompt.includes('- 좋은 예: "다음 주말에 둘이 같이 해보고 싶은 건 뭐야?"'),
+    false,
+  );
+  assert.equal(hybrid.systemInstruction?.startsWith('You are'), true);
+  assert.equal(hybrid.prompt.includes('Decision order:'), true);
+  assert.equal(hybrid.prompt.includes('두 번째 앱 테스트 올려버리기'), true);
+  assert.equal(hybrid.prompt.includes('Write question_text in natural Korean banmal'), true);
+  assert.equal(refinedKorean.prompt.includes('두 번째 앱 테스트 올려버리기'), true);
+  assert.equal(refinedKorean.prompt.includes('CONTINUE'), false);
+  assert.equal(refinedKorean.prompt.includes('EXPLORE'), false);
+  assert.equal(
+    refinedKorean.prompt.includes('- 좋은 예: "다음 주말에 둘이 같이 해보고 싶은 건 뭐야?"'),
+    false,
+  );
+  assert.equal(
+    refinedKorean.prompt.includes('category에는 내부 판단 단계'),
+    true,
+  );
+});
+
+test('refined Korean feedback prompt uses decision rules without copyable answers', async () => {
+  let capturedPrompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async (request) => {
+      capturedPrompt = request.prompt;
+      return {
+        value: {
+          feedback_text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  }, { promptStrategy: 'refined_korean' });
+
+  await model.generateCoupleFeedback(context);
+
+  assert.equal(capturedPrompt.includes('두 답의 관계를 먼저 판단해'), true);
+  assert.equal(capturedPrompt.includes('명령하거나 행동을 권하지 마'), true);
+  assert.equal(capturedPrompt.includes('숨은 이유를 만들지 마'), true);
+  assert.equal(
+    capturedPrompt.includes('오늘 밤 메뉴판 앞에서 행복한 고민이 시작되겠네!'),
+    false,
+  );
+  assert.equal(
+    capturedPrompt.includes('오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!'),
+    false,
+  );
+});
+
 test('compact-model prompts state critical semantic decisions explicitly', async () => {
   const prompts: string[] = [];
   const outputs = [

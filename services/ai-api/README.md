@@ -47,8 +47,17 @@ npm test
 The candidate evaluator runs the same anonymized service scenarios through
 Cloudflare Workers AI, Groq, and the OpenAI Responses API without changing the
 deployed provider. It defaults to one smoke case for each of the eight AI
-tasks. Models that pass the smoke suite can then run the complete 47-case
+tasks. Models that pass the smoke suite can then run the complete 50-case
 suite.
+
+The prompt strategy evaluator compares the deployed Korean prompt with a
+candidate prompt through the same production schemas, validators, retry path,
+and deterministic fallback. It defaults to one run of `legacy_korean` and
+`refined_korean`.
+
+```sh
+npm run eval:prompts
+```
 
 See [AI candidate model evaluation](../../docs/release/ai-candidate-model-evaluation.md)
 for credentials, pacing, commands, and acceptance rules.
