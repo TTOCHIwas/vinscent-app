@@ -1207,7 +1207,7 @@ test('processor regenerates feedback that merely restates an answer', async () =
       return result({
         text: retryOptions.length === 1
           ? '액션 영화 좋아하네, 둘이서도 즐길 만하겠어...'
-          : '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+          : '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
       });
     },
   });
@@ -1230,7 +1230,70 @@ test('processor regenerates feedback that merely restates an answer', async () =
     },
   ]);
   assert.deepEqual(repository.successes[0]?.output, {
-    feedback_text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+    feedback_text: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
+  });
+});
+
+test('processor regenerates feedback with unsupported time and setting details', async () => {
+  const repository = new FakeRepository([
+    job('job-feedback-ungrounded-detail', 'generate_feedback'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-real-a',
+        text: '나는 존윙같은 거 진짜 개좋아',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-real-b',
+        text: '범죄,액션,스릴러~',
+      },
+    ],
+  };
+  const retryOptions: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const model = modelWith({
+    async generateCoupleFeedback(_context, options) {
+      retryOptions.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      return result({
+        text: retryOptions.length === 1
+          ? '이번 주말에도 액션 영화로 소파가 바빠지겠네!'
+          : '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(retryOptions, [
+    { rejectedText: null, rejectionCode: null },
+    {
+      rejectedText: '이번 주말에도 액션 영화로 소파가 바빠지겠네!',
+      rejectionCode: 'ungrounded_detail',
+    },
+  ]);
+  assert.deepEqual(repository.successes[0]?.output, {
+    feedback_text: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
   });
 });
 
@@ -1256,7 +1319,7 @@ test('processor regenerates feedback that commands the couple to act', async () 
       return result({
         text: retryCodes.length === 1
           ? '이번 주말엔 액션 영화를 같이 보자!'
-          : '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+          : '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
       });
     },
   });

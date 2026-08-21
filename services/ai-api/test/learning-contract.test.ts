@@ -943,9 +943,40 @@ test('한 줄 피드백은 커플 공유 반응 형식을 지켜야 한다', () 
       error instanceof CoupleFeedbackValidationError
       && error.code === 'answer_restatement',
   );
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '이번 주말에도 액션 영화로 소파가 바빠지겠네!',
+    }, movieContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'ungrounded_detail',
+  );
+  assert.throws(
+    () => validateCoupleFeedback({
+      text: '액션 영화로 소파가 바빠지겠네!',
+    }, movieContext),
+    (error: unknown) =>
+      error instanceof CoupleFeedbackValidationError
+      && error.code === 'ungrounded_detail',
+  );
   assert.doesNotThrow(() => validateCoupleFeedback({
-    text: '오늘 밤 액션 한 편이면 둘의 소파가 꽤 바빠지겠네!',
+    text: '영화 고를 때만큼은 둘의 고민이 오래 걸리지 않겠네!',
   }, movieContext));
+
+  const sofaContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '집에서 영화 볼 때 가장 편한 자리는 어디야?',
+    },
+    answers: [
+      { answerId: 'answer-a', userId: 'user-a', text: '거실 소파' },
+      { answerId: 'answer-b', userId: 'user-b', text: '나도 소파가 좋아' },
+    ],
+  });
+  assert.doesNotThrow(() => validateCoupleFeedback({
+    text: '영화 틀면 소파 자리부터 금방 차겠네!',
+  }, sofaContext));
 
   assert.throws(
     () => validateCoupleFeedback({
