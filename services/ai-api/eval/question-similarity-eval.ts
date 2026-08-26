@@ -12,7 +12,10 @@ import {
   createQuestionSimilarityEvaluationScenarios,
 } from './question-similarity-eval-cases.ts';
 import {
+  evaluateHybridQuestionSimilarityLeaveOneGroupOut,
   evaluateQuestionSimilarityPredictions,
+  evaluateQuestionSimilarityLeaveOneGroupOutAtPrecision,
+  selectHybridQuestionSimilarityThresholdAtPrecision,
   selectQuestionSimilarityThreshold,
   selectQuestionSimilarityThresholdAtPrecision,
 } from './question-similarity-eval-metrics.ts';
@@ -70,6 +73,41 @@ const scoreEvaluations = {
   raw: evaluateScores(cases, ({ rawScore }) => rawScore),
   semanticFocus: evaluateScores(cases, ({ focusScore }) => focusScore),
 };
+const topicCooldownPairs = cases.map((item) => ({
+  groupId: item.scenarioId,
+  rawScore: item.rawScore,
+  focusScore: item.focusScore,
+  lexicalSameTopic: item.lexicalSameTopic,
+  sameTopic: item.relation !== 'distinct',
+}));
+const topicCooldownValidation = {
+  hybridPrecisionFirst: selectHybridQuestionSimilarityThresholdAtPrecision(
+    topicCooldownPairs,
+    minimumPrecision,
+  ),
+  leaveOneScenarioOut: {
+    raw: evaluateQuestionSimilarityLeaveOneGroupOutAtPrecision(
+      topicCooldownPairs.map((item) => ({
+        groupId: item.groupId,
+        score: item.rawScore,
+        sameTopic: item.sameTopic,
+      })),
+      minimumPrecision,
+    ),
+    semanticFocus: evaluateQuestionSimilarityLeaveOneGroupOutAtPrecision(
+      topicCooldownPairs.map((item) => ({
+        groupId: item.groupId,
+        score: item.focusScore,
+        sameTopic: item.sameTopic,
+      })),
+      minimumPrecision,
+    ),
+    hybrid: evaluateHybridQuestionSimilarityLeaveOneGroupOut(
+      topicCooldownPairs,
+      minimumPrecision,
+    ),
+  },
+};
 const report = {
   generatedAt: new Date().toISOString(),
   model,
@@ -85,6 +123,7 @@ const report = {
   ).length,
   recommendedThreshold: scoreEvaluations.raw.topicCooldown.f1Optimal,
   scoreEvaluations,
+  topicCooldownValidation,
   lexicalStrictDuplicateMetrics: evaluateQuestionSimilarityPredictions(
     cases.map(({ lexicalSameTopic, relation }) => ({
       predictedSameTopic: lexicalSameTopic,
