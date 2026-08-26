@@ -228,6 +228,10 @@ test('hybrid leave-one-group-out evaluation reports every held-out prediction', 
   const result = evaluateHybridQuestionSimilarityLeaveOneGroupOut(pairs, 1);
 
   assert.equal(result.folds.length, 3);
+  for (const fold of result.folds) {
+    assert.notEqual(fold.rawThreshold, null);
+    assert.notEqual(fold.focusThreshold, null);
+  }
   assert.equal(
     result.metrics.truePositive
       + result.metrics.falsePositive
