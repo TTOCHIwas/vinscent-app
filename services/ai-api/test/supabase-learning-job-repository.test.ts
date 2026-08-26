@@ -65,6 +65,12 @@ test('repository maps claimed jobs and worker context', async () => {
         memory_candidates: [],
         recent_foundation_questions: [],
         recent_completed_questions: [],
+        recent_exposed_questions: [
+          '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 장소를 좋아해?',
+        ],
+        pending_question_candidates: [
+          '다음 주말에 둘이 같이 해보고 싶은 영화는 뭐야?',
+        ],
         remaining_foundation_questions: [
           {
             question_key: 'foundation_v1_personal_values_02',
@@ -141,6 +147,12 @@ test('repository maps claimed jobs and worker context', async () => {
   assert.equal(context.confirmedMemories[0]?.scope, 'couple');
   assert.equal(context.foundationProgress.personalizationEnabled, true);
   assert.equal(context.confirmedMemories[0]?.domain, 'daily_life');
+  assert.deepEqual(context.recentExposedQuestionTexts, [
+    '다음 주말에 둘이 같이 영화 보러 갈 때 어떤 장소를 좋아해?',
+  ]);
+  assert.deepEqual(context.pendingQuestionTexts, [
+    '다음 주말에 둘이 같이 해보고 싶은 영화는 뭐야?',
+  ]);
   assert.equal(
     context.remainingFoundationQuestions[0]?.depth,
     'exploratory',

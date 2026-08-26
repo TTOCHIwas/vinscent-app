@@ -1849,6 +1849,65 @@ test('personalized question retry explains how to replace analysis language', as
   );
 });
 
+test('personalized question prompt treats exposed and pending questions as negative-only context', async () => {
+  let capturedPrompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          question_text: '둘이 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '쉬는 날의 선호를 새로 알아보기 위해',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+
+  await model.generatePersonalizedQuestion({
+    ...context,
+    recentExposedQuestionTexts: [
+      '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    ],
+    pendingQuestionTexts: [
+      '다음 주말에 둘이 같이 해보고 싶은 영화는 뭐야?',
+    ],
+  });
+
+  assert.equal(capturedPrompt.includes('recent_exposed_questions'), true);
+  assert.equal(capturedPrompt.includes('pending_question_candidates'), true);
+  assert.equal(
+    capturedPrompt.includes(
+      '반복 방지를 위한 금지 목록일 뿐이야. 질문 근거나 이어갈 단서로 사용하지 마',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '오늘, 내일, 이번 주말, 다음 주말처럼 후보가 노출될 때 의미가 달라지는 상대 날짜 표현을 쓰지 마',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '영화는 보다, 활동은 해보다처럼 대상에 맞는 자연스러운 동사를 써',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes(
+      '- 좋은 예: "다음 주말에 둘이 같이 해보고 싶은 건 뭐야?"',
+    ),
+    false,
+  );
+});
+
 test('prompt strategies keep Korean context while changing compact-model controls', async () => {
   const requests: StructuredGenerationRequest[] = [];
   const client = {

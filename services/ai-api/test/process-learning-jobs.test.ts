@@ -353,7 +353,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
       {
         jobId: 'job-personalized',
-        promptVersion: 'personalized-question-v5',
+        promptVersion: 'personalized-question-v6',
       },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
@@ -1721,6 +1721,60 @@ test('processor regenerates a personalized question that repeats the current que
   assert.equal(
     repository.successes[0]?.output.question_text,
     '둘이 영화를 볼 때 극장이 좋아, 집이 좋아?',
+  );
+});
+
+test('processor regenerates a personalized question that repeats a recently exposed topic', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-repeated-topic', 'generate_personalized_question'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    recentExposedQuestionTexts: [
+      '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    ],
+    pendingQuestionTexts: [],
+  };
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const repeatedTopicQuestion = '둘이 영화를 볼 때 어느 자리가 좋아?';
+  const model = modelWith({
+    async generatePersonalizedQuestion(_context, options) {
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      return result({
+        questionKey: 'personalized_generated_freetime_ab12cd34',
+        text: optionsSeen.length === 1
+          ? repeatedTopicQuestion
+          : '둘이 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '쉬는 날의 선호를 새로 알아보기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    { rejectedText: repeatedTopicQuestion, rejectionCode: 'repeated_topic' },
+  ]);
+  assert.equal(
+    repository.successes[0]?.output.question_text,
+    '둘이 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
   );
 });
 
