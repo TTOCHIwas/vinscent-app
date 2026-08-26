@@ -5,6 +5,9 @@ import {
   createQuestionSimilarityEvaluationScenarios,
 } from '../eval/question-similarity-eval-cases.ts';
 import {
+  evaluateHybridQuestionSimilarityLeaveOneGroupOut,
+  evaluateQuestionSimilarityLeaveOneGroupOutAtPrecision,
+  selectHybridQuestionSimilarityThresholdAtPrecision,
   selectQuestionSimilarityThreshold,
   selectQuestionSimilarityThresholdAtPrecision,
 } from '../eval/question-similarity-eval-metrics.ts';
@@ -94,4 +97,142 @@ test('precision-first threshold reports when no useful threshold meets the floor
     { score: 0.9, sameTopic: false },
     { score: 0.8, sameTopic: true },
   ], 1), null);
+});
+
+test('hybrid threshold combines complementary high-confidence signals', () => {
+  const result = selectHybridQuestionSimilarityThresholdAtPrecision([
+    {
+      rawScore: 0.9,
+      focusScore: 0.4,
+      lexicalSameTopic: false,
+      sameTopic: true,
+    },
+    {
+      rawScore: 0.6,
+      focusScore: 0.8,
+      lexicalSameTopic: false,
+      sameTopic: true,
+    },
+    {
+      rawScore: 0.2,
+      focusScore: 0.2,
+      lexicalSameTopic: true,
+      sameTopic: true,
+    },
+    {
+      rawScore: 0.75,
+      focusScore: 0.3,
+      lexicalSameTopic: false,
+      sameTopic: false,
+    },
+    {
+      rawScore: 0.4,
+      focusScore: 0.7,
+      lexicalSameTopic: false,
+      sameTopic: false,
+    },
+  ], 0.95);
+
+  assert.deepEqual(result, {
+    rawThreshold: 0.9,
+    focusThreshold: 0.8,
+    metrics: {
+      truePositive: 3,
+      falsePositive: 0,
+      trueNegative: 2,
+      falseNegative: 0,
+      precision: 1,
+      recall: 1,
+      f1: 1,
+      accuracy: 1,
+    },
+  });
+});
+
+test('leave-one-group-out evaluation calibrates without the held-out scenario', () => {
+  const result = evaluateQuestionSimilarityLeaveOneGroupOutAtPrecision([
+    { groupId: 'a', score: 0.8, sameTopic: true },
+    { groupId: 'a', score: 0.2, sameTopic: false },
+    { groupId: 'b', score: 0.8, sameTopic: true },
+    { groupId: 'b', score: 0.2, sameTopic: false },
+    { groupId: 'c', score: 0.8, sameTopic: true },
+    { groupId: 'c', score: 0.85, sameTopic: false },
+  ], 1);
+
+  assert.deepEqual(result.metrics, {
+    truePositive: 1,
+    falsePositive: 1,
+    trueNegative: 2,
+    falseNegative: 2,
+    precision: 0.5,
+    recall: 1 / 3,
+    f1: 0.4,
+    accuracy: 0.5,
+  });
+  assert.deepEqual(
+    result.folds.map(({ groupId, threshold }) => ({ groupId, threshold })),
+    [
+      { groupId: 'a', threshold: null },
+      { groupId: 'b', threshold: null },
+      { groupId: 'c', threshold: 0.8 },
+    ],
+  );
+});
+
+test('hybrid leave-one-group-out evaluation reports every held-out prediction', () => {
+  const pairs = [
+    {
+      groupId: 'raw',
+      rawScore: 0.9,
+      focusScore: 0.2,
+      lexicalSameTopic: false,
+      sameTopic: true,
+    },
+    {
+      groupId: 'raw',
+      rawScore: 0.2,
+      focusScore: 0.2,
+      lexicalSameTopic: false,
+      sameTopic: false,
+    },
+    {
+      groupId: 'focus',
+      rawScore: 0.2,
+      focusScore: 0.9,
+      lexicalSameTopic: false,
+      sameTopic: true,
+    },
+    {
+      groupId: 'focus',
+      rawScore: 0.2,
+      focusScore: 0.2,
+      lexicalSameTopic: false,
+      sameTopic: false,
+    },
+    {
+      groupId: 'lexical',
+      rawScore: 0.2,
+      focusScore: 0.2,
+      lexicalSameTopic: true,
+      sameTopic: true,
+    },
+    {
+      groupId: 'lexical',
+      rawScore: 0.2,
+      focusScore: 0.2,
+      lexicalSameTopic: false,
+      sameTopic: false,
+    },
+  ];
+
+  const result = evaluateHybridQuestionSimilarityLeaveOneGroupOut(pairs, 1);
+
+  assert.equal(result.folds.length, 3);
+  assert.equal(
+    result.metrics.truePositive
+      + result.metrics.falsePositive
+      + result.metrics.trueNegative
+      + result.metrics.falseNegative,
+    pairs.length,
+  );
 });
