@@ -3,8 +3,15 @@
 ## 목적
 
 `.github/workflows/ci.yml`은 Pull Request와 `main` 브랜치 변경에서 출시 전
-회귀를 검증한다. 이 워크플로는 원격 Supabase, Play Console, App Store
-Connect에 배포하지 않으며 배포 비밀키를 사용하지 않는다.
+회귀를 검증한다. `.github/ci-paths.yml`로 변경된 구성요소를 분류하고 관련된
+검증만 실행한다. `workflow_dispatch` 수동 실행은 경로와 관계없이 모든 검증을
+실행한다. 이 워크플로는 원격 Supabase, Play Console, App Store Connect에
+배포하지 않으며 배포 비밀키를 사용하지 않는다.
+
+`Change detection` 작업은 모든 실행에서 변경 경로를 분류하고 추적된 비밀값을
+검사한다. 기존 필수 체크인 `Node services`는 항상 결과를 남기며 변경 감지
+작업이 실패하면 그 실패를 전달한다. 따라서 필터 오류나 비밀값 검사 실패가
+조건부 작업의 건너뜀으로 가려지지 않는다.
 
 `.github/workflows/supabase-production.yml`은 CI와 분리된 수동 운영 배포
 워크플로다. 정확한 `main` commit과 project ref 확인, GitHub Environment
@@ -22,9 +29,12 @@ Mac 사전 점검 뒤 서명된 IPA와 검증 증빙을 만든다. 실행자가
 `publish_testflight`를 선택한 경우에만 App Store Connect에 업로드한다.
 
 GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제한하고,
-외부 액션은 전체 커밋 SHA로 고정한다.
+변경 파일 조회가 필요한 작업에만 `pull-requests: read`를 추가한다. 외부
+액션은 전체 커밋 SHA로 고정한다.
 
 - [GitHub Actions 보안 사용 지침](https://docs.github.com/en/actions/reference/security/secure-use)
+- [GitHub Actions 작업 조건](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-jobs-with-conditions)
+- [dorny/paths-filter](https://github.com/dorny/paths-filter)
 - [Flutter 통합 테스트](https://docs.flutter.dev/testing/integration-tests)
 - [GitHub-hosted Android 하드웨어 가속](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 - [GitHub macOS 26 runner 이미지](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md)
@@ -32,24 +42,42 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 
 ## 필수 체크
 
-| 체크 | 검증 범위 |
-|---|---|
-| `Flutter` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
-| `Android integration` | API 36 에뮬레이터에서 프로덕션 진입점 콜드 스타트, Firebase·홈 위젯 플러그인 등록, 백엔드 미설정 시 안전한 로그인 화면 |
-| `iOS native build` | `main` 반영 또는 수동 실행 시 macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
-| `Node services` | 저장소 출시·비밀값 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
-| `Edge functions` | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
-| `Supabase database` | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
+| 체크 | 자동 실행 조건 | 검증 범위 |
+|---|---|---|
+| `Change detection` | 항상 | 변경 경로 분류, 추적된 비밀값 검사 |
+| `Flutter` | `apps/mobile/**` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
+| `Android integration` | Flutter 런타임·Android·자산·통합 테스트 변경 | API 36 에뮬레이터에서 프로덕션 진입점 콜드 스타트, Firebase·홈 위젯 플러그인 등록, 백엔드 미설정 시 안전한 로그인 화면 |
+| `iOS native build` | `main`의 Flutter 런타임·iOS·자산 변경 | macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
+| `Node services` | 체크는 항상, 세부 테스트는 관련 변경만 | 변경 감지 실패 전달, 저장소 출시 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
+| `Edge functions` | Edge 함수·함수 테스트·공유 AI 소스·런타임 설정 변경 | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
+| `Supabase database` | 마이그레이션·DB 테스트·Supabase 설정 변경 | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
+
+CI 워크플로 또는 경로 분류 파일 자체가 바뀌면 모든 검증을 한 번 실행한다.
+`services/ai-api/src/**`는 Edge Function이 직접 가져오는 공유 소스이므로 AI와
+Edge 검증을 함께 실행한다. 반면 AI 평가 케이스나 문서만 바뀌면 Android
+에뮬레이터, iOS macOS runner, Supabase 로컬 DB를 실행하지 않는다.
 
 GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 다섯 체크를
 `main` 병합 전 필수로 설정한다. macOS 비용을 제한하기 위해 iOS 빌드는
 Pull Request에서는 건너뛰고 `main` 반영 직후와 수동 실행에서 검증한다.
+조건에 맞지 않는 작업은 GitHub의 작업 수준 `if` 조건으로 건너뛰므로 기존
+필수 체크 이름은 유지된다. `Node services`가 변경 감지 실패까지 전달하므로
+브랜치 보호에 새 체크를 추가하지 않아도 기존 실패 차단 경계가 유지된다.
 워크플로 자체의 쓰기 권한이나 배포 비밀키는 추가하지 않는다.
+
+Android·iOS·Supabase 운영 배포 워크플로의 사전 검증은 변경하지 않는다.
+배포 워크플로는 실행 빈도가 낮고 서명·마이그레이션·운영 환경을 다루므로,
+선택적 CI 결과와 별개로 배포 직전에 전체 관련 검증을 다시 수행한다.
 
 Supabase 운영 배포 설정과 실행 절차는
 `docs/release/supabase-production-deployment.md`를 따른다.
 
 ## 로컬 검증
+
+개발 중 피드백은 GitHub Actions 실행을 기다리지 않고 변경한 구성요소의 로컬
+명령으로 먼저 확인한다. 커밋과 푸시 이후의 Actions는 로컬 검증을 대신하는
+테스트 러너가 아니라 깨끗한 환경에서 수행하는 독립 확인 단계다. 수동 전체
+CI는 출시 후보 확인이나 CI 경로 규칙 변경 검증에 사용한다.
 
 Windows에서는 저장소에 포함된 Flutter 래퍼를 사용한다.
 
