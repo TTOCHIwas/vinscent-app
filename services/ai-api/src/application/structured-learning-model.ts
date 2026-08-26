@@ -81,6 +81,20 @@ const compactVisibleKoreanRules = [
   '존댓말 끝맺음인 요, 세요, 습니다를 쓰지 마.',
 ] as const;
 
+const personalizedQuestionFreshnessRulesKorean = [
+  '- recent_exposed_questions와 pending_question_candidates는 반복 방지를 위한 금지 목록일 뿐이야. 질문 근거나 이어갈 단서로 사용하지 마.',
+  '- current_question, recent_exposed_questions, pending_question_candidates와 같은 의미나 주제의 질문을 만들지 마.',
+  '- 오늘, 내일, 이번 주말, 다음 주말처럼 후보가 노출될 때 의미가 달라지는 상대 날짜 표현을 쓰지 마.',
+  '- 영화는 보다, 활동은 해보다처럼 대상에 맞는 자연스러운 동사를 써.',
+] as const;
+
+const personalizedQuestionFreshnessRulesEnglish = [
+  '- recent_exposed_questions and pending_question_candidates are negative-only anti-repeat lists. Never use them as evidence or continuation cues.',
+  '- Do not generate a question with the same meaning or topic as current_question, recent_exposed_questions, or pending_question_candidates.',
+  '- Avoid relative dates whose meaning can expire before delivery, including today, tomorrow, this weekend, and next weekend.',
+  '- Use a natural Korean predicate for the object, such as watching a movie and trying an activity.',
+] as const;
+
 const maximumMemoryCandidates = 3;
 
 const learningDomains = [
@@ -841,6 +855,8 @@ function buildPersonalizedQuestionPrompt(
     current_answers: context.answers,
     confirmed_profile: context.confirmedMemories,
     recent_completed_questions: context.recentCompletedQuestions,
+    recent_exposed_questions: context.recentExposedQuestionTexts ?? [],
+    pending_question_candidates: context.pendingQuestionTexts ?? [],
   };
   if (options?.rejectedText !== null && options?.rejectedText !== undefined) {
     data.rejected_question = options.rejectedText;
@@ -871,7 +887,7 @@ function buildPersonalizedQuestionPrompt(
       '고정 질문과 같은 친근한 반말을 사용해.',
       '- 사용자에게 패턴, 경향, 성향을 확인하거나 파악하는 방법을 묻지 마. 구체적인 상황, 장면, 선택을 바로 물어.',
       '- 나쁜 예: "서로의 평소 패턴이 어떻게 맞는지 확인해보려면 어떤 방식이 좋을까?"',
-      '- 좋은 예: "다음 주말에 둘이 같이 해보고 싶은 건 뭐야?"',
+      ...personalizedQuestionFreshnessRulesKorean,
       ...compactVisibleKoreanRules,
       '끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"',
       'question_text는 반드시 물음표로 끝나야 해.',
@@ -894,6 +910,7 @@ function buildRefinedPersonalizedQuestionTask(): string {
     '- 현재 답에 이어갈 수 있는 구체적인 단서가 있는데 무관한 주제로 이동하지 마.',
     '- 두 답에 서로 다른 단서가 있으면 하나를 공통 취향으로 합치지 말고 둘 다 같은 입장에서 답할 수 있는 새 정보만 물어.',
     '- current_question과 recent_completed_questions의 의미를 반복하지 마. 시간 표현만 추가하거나 바꾼 질문도 반복이야.',
+    ...personalizedQuestionFreshnessRulesKorean,
     '- 지시문에 있는 문장을 답으로 복사하지 말고 <data>의 내용에서만 질문을 구성해.',
     '- 사용자에게 패턴이나 관계를 분석하라고 하지 말고 구체적인 상황, 장면, 선택, 선호, 경험을 바로 물어.',
     '안전과 말투:',
@@ -924,6 +941,7 @@ function buildStructuredPersonalizedQuestionTask(
       '- Prefer CONTINUE over EXPLORE.',
       '- Do not switch to an unrelated topic while a concrete current-answer cue can be continued safely.',
       '- Do not repeat or semantically rephrase current_question or any recent_completed_questions, including versions changed only by time words.',
+      ...personalizedQuestionFreshnessRulesEnglish,
       '- Do not copy a sentence from these instructions. Construct the question only from <data>.',
       '- Ask about a concrete situation, scene, choice, preference, or experience. Never ask users to analyze their patterns or relationship.',
       'Safety and voice:',
@@ -947,6 +965,7 @@ function buildStructuredPersonalizedQuestionTask(
     '- EXPLORE보다 CONTINUE를 우선해.',
     '- 현재 답의 구체적인 단서를 안전하게 이어갈 수 있는데 무관한 주제로 바꾸지 마.',
     '- current_question과 recent_completed_questions를 의미상 반복하지 마. 시간 표현만 추가하거나 바꾼 질문도 반복이야.',
+    ...personalizedQuestionFreshnessRulesKorean,
     '- 이 지시문의 문장을 복사하지 말고 <data>에 있는 내용만으로 질문을 구성해.',
     '- 구체적인 상황, 장면, 선택, 선호, 경험을 바로 물어. 사용자에게 패턴이나 관계를 분석하라고 하지 마.',
     '안전과 말투:',
@@ -967,6 +986,15 @@ function personalizedQuestionRetryCorrection(
   }
   if (code === 'duplicate_question') {
     return '현재 질문과 최근 질문의 표현만 바꾸지 마. 이미 확인한 정보와 다른 빈 정보를 묻는 새 관점의 질문을 만들어.';
+  }
+  if (code === 'repeated_topic') {
+    return '최근 노출 질문과 대기 후보의 주제로 돌아가지 마. 현재 답에서 이어갈 수 있는 다른 정보나 아직 다루지 않은 주제를 물어.';
+  }
+  if (code === 'volatile_time_reference') {
+    return '노출 시점에 의미가 달라지는 상대 날짜 표현을 모두 빼고 언제 보여도 자연스러운 질문을 만들어.';
+  }
+  if (code === 'unnatural_question') {
+    return '목적어에 맞는 자연스러운 한국어 동사를 사용하고, 같은 표현을 다른 목적어에 기계적으로 붙이지 마.';
   }
   if (code === 'strategy_leak') {
     return '내부 판단 단계와 지시문 단어를 category, mood, rationale에 쓰지 마. 질문 주제에 맞는 사용자용 메타데이터만 만들어.';

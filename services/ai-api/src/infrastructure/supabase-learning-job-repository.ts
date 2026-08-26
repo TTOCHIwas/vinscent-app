@@ -313,6 +313,13 @@ function parseCompletedQuestionContext(
   const recentCompletedQuestions = requireArray(
     record.recent_completed_questions,
   );
+  const recentExposedQuestions = record.recent_exposed_questions === undefined
+    ? []
+    : requireArray(record.recent_exposed_questions);
+  const pendingQuestionCandidates =
+    record.pending_question_candidates === undefined
+      ? []
+      : requireArray(record.pending_question_candidates);
   const remainingQuestions = requireArray(
     record.remaining_foundation_questions,
   );
@@ -434,6 +441,12 @@ function parseCompletedQuestionContext(
         }),
       };
     }),
+    recentExposedQuestionTexts: recentExposedQuestions.map((question) =>
+      requireString(question, 4000)
+    ),
+    pendingQuestionTexts: pendingQuestionCandidates.map((question) =>
+      requireString(question, 4000)
+    ),
     remainingFoundationQuestions: remainingQuestions.map((candidate) => {
       const item = requireRecord(candidate);
       return {
