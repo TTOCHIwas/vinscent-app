@@ -1090,10 +1090,61 @@ test('개인화 질문은 사용자에게 분석 과정을 요구하지 않는�
 
   assert.doesNotThrow(() => validatePersonalizedQuestion({
     questionKey: 'personalized_generated_weekend_ab12cd34',
-    text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+    text: '둘이 함께 새로 해보고 싶은 건 뭐야?',
     category: 'daily_life',
     mood: null,
     rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
+  }));
+});
+
+test('개인화 질문은 대기 중 의미가 바뀌는 상대 시간 표현을 사용하지 않는다', () => {
+  for (const text of [
+    '오늘 둘이 같이 먹고 싶은 메뉴는 뭐야?',
+    '다음 주말에 둘이 같이 가고 싶은 곳은 어디야?',
+  ]) {
+    assert.throws(
+      () => validatePersonalizedQuestion({
+        questionKey: 'personalized_generated_volatile_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '함께하고 싶은 일을 알아보기 위해',
+      }),
+      (error: unknown) =>
+        error instanceof PersonalizedQuestionValidationError
+        && error.code === 'volatile_time_reference',
+    );
+  }
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_stable_ab12cd34',
+    text: '주말에 둘이 같이 가고 싶은 곳은 어디야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '함께 가고 싶은 곳을 알아보기 위해',
+  }));
+});
+
+test('개인화 질문은 대상에 맞지 않는 포괄 동사를 사용하지 않는다', () => {
+  assert.throws(
+    () => validatePersonalizedQuestion({
+      questionKey: 'personalized_generated_movie_ab12cd34',
+      text: '둘이 같이 해보고 싶은 영화는 뭐야?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '함께 보고 싶은 영화를 알아보기 위해',
+    }),
+    (error: unknown) =>
+      error instanceof PersonalizedQuestionValidationError
+      && error.code === 'unnatural_question',
+  );
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_movie_cd34ef56',
+    text: '둘이 같이 보고 싶은 영화는 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '함께 보고 싶은 영화를 알아보기 위해',
   }));
 });
 
@@ -1131,6 +1182,48 @@ test('개인화 질문은 현재 질문이나 최근 질문을 표현만 바꿔 
     ...candidate,
     text: '둘이 영화를 볼 때 극장이 좋아, 집이 좋아?',
   }, personalizedContext));
+});
+
+test('개인화 질문은 최근 노출 질문과 대기 후보의 주제를 되풀이하지 않는다', () => {
+  const historyContext = {
+    ...context,
+    question: {
+      ...context.question,
+      text: '산이 좋아, 바다가 좋아?',
+    },
+    recentExposedQuestionTexts: [
+      '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    ],
+    pendingQuestionTexts: [
+      '기념일에 둘이 서로 주고 싶은 선물은 뭐야?',
+    ],
+  };
+
+  for (const text of [
+    '둘이 영화를 볼 때 극장이 좋아, 집이 좋아?',
+    '둘이 받고 싶은 선물은 뭐야?',
+  ]) {
+    assert.throws(
+      () => validatePersonalizedQuestion({
+        questionKey: 'personalized_generated_topic_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '아직 모르는 선호를 알아보기 위해',
+      }, historyContext),
+      (error: unknown) =>
+        error instanceof PersonalizedQuestionValidationError
+        && error.code === 'repeated_topic',
+    );
+  }
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_meal_cd34ef56',
+    text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '직전 답변의 식사 단서를 이어가기 위해',
+  }, historyContext));
 });
 
 test('개인화 질문 메타데이터에는 내부 판단 단계가 노출되지 않는다', () => {
