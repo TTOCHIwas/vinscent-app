@@ -27,6 +27,32 @@ const comparisonStopWords = new Set([
   '편',
   '하',
 ]);
+const topicStopWords = new Set([
+  ...comparisonStopWords,
+  '같이',
+  '갈',
+  '기분',
+  '둘',
+  '때',
+  '받고',
+  '보고',
+  '보러',
+  '볼',
+  '새로',
+  '서로',
+  '선호',
+  '시간',
+  '싶',
+  '어떤',
+  '요즘',
+  '이번',
+  '주고',
+  '주말',
+  '평소',
+  '하고',
+  '함께',
+  '해보',
+]);
 
 export function areQuestionsNearDuplicate(
   left: string,
@@ -42,6 +68,22 @@ export function areQuestionsNearDuplicate(
     return false;
   }
   return [...leftTerms].every((term) => rightTerms.has(term));
+}
+
+export function areQuestionsAboutSameTopic(
+  left: string,
+  right: string,
+): boolean {
+  if (areQuestionsNearDuplicate(left, right)) {
+    return true;
+  }
+
+  const leftTerms = questionTopicTerms(left);
+  const rightTerms = questionTopicTerms(right);
+  if (leftTerms.size === 0 || rightTerms.size === 0) {
+    return false;
+  }
+  return [...leftTerms].some((term) => rightTerms.has(term));
 }
 
 function normalizeQuestionSurface(value: string): string {
@@ -89,4 +131,12 @@ function canonicalQuestionTerm(value: string): string {
 
 function isQuestionTerm(value: string): boolean {
   return value.length > 0 && !comparisonStopWords.has(value);
+}
+
+function questionTopicTerms(value: string): Set<string> {
+  return new Set(
+    [...canonicalQuestionTerms(value)].filter((term) =>
+      term.length >= 2 && !topicStopWords.has(term)
+    ),
+  );
 }

@@ -240,7 +240,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       seenModelContexts.push(context);
       return result({
         questionKey: 'personalized_shared_weekend_ab12cd34',
-        text: '이번 주말을 둘 다 편하게 보내려면 어떤 시간이 필요할까?',
+        text: '둘이 쉬는 날을 편하게 보내려면 어떤 시간이 필요할까?',
         category: 'personalized',
         mood: null,
         rationale: 'Their preferred ways of spending time differ.',
@@ -314,7 +314,7 @@ test('processor handles every learning job and restores IDs only at persistence'
   });
   assert.deepEqual(repository.successes[4]?.output, {
     question_key: 'personalized_shared_weekend_ab12cd34',
-    question_text: '이번 주말을 둘 다 편하게 보내려면 어떤 시간이 필요할까?',
+    question_text: '둘이 쉬는 날을 편하게 보내려면 어떤 시간이 필요할까?',
     category: 'personalized',
     mood: null,
     rationale: 'Their preferred ways of spending time differ.',
@@ -1590,7 +1590,7 @@ test('processor regenerates a personalized question that exposes analysis langua
       });
       const text = optionsSeen.length === 1
         ? rejectedQuestion
-        : '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?';
+        : '둘이 함께 새로 해보고 싶은 건 뭐야?';
       return result({
         questionKey: 'personalized_generated_weekend_ab12cd34',
         text,
@@ -1617,7 +1617,7 @@ test('processor regenerates a personalized question that exposes analysis langua
   ]);
   assert.deepEqual(repository.successes[0]?.output, {
     question_key: 'personalized_generated_weekend_ab12cd34',
-    question_text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+    question_text: '둘이 함께 새로 해보고 싶은 건 뭐야?',
     category: 'daily_life',
     mood: null,
     rationale: '요즘 함께하고 싶은 일을 알아보기 위해',
@@ -1753,7 +1753,7 @@ test('processor retries structurally invalid personalized question once', async 
       }
       return result({
         questionKey: 'personalized_generated_weekend_ab12cd34',
-        text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+        text: '둘이 함께 새로 해보고 싶은 건 뭐야?',
         category: 'daily_life',
         mood: null,
         rationale: '요즘 함께하고 싶은 일을 알아보기 위해',

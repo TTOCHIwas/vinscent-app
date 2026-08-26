@@ -1,7 +1,10 @@
 import { hasUngroundedCoupleFeedbackDetail } from './couple-feedback-grounding.ts';
 import { classifyDirectQuestionResponse } from './direct-question-evidence.ts';
 import { hasSharedMemoryEvidence } from './memory-evidence.ts';
-import { areQuestionsNearDuplicate } from './question-duplicate-detector.ts';
+import {
+  areQuestionsAboutSameTopic,
+  areQuestionsNearDuplicate,
+} from './question-duplicate-detector.ts';
 import { preservesQuestionScope } from './question-scope-preservation.ts';
 import {
   KoreanOutputPolicyError,
@@ -131,6 +134,8 @@ export interface CompletedQuestionContext {
   memoryCandidates: MemoryCandidateContext[];
   recentFoundationQuestions: RecentFoundationQuestionContext[];
   recentCompletedQuestions: RecentCompletedQuestionContext[];
+  recentExposedQuestionTexts?: string[];
+  pendingQuestionTexts?: string[];
   remainingFoundationQuestions: FoundationQuestionCandidate[];
 }
 
@@ -173,6 +178,8 @@ export interface AnonymizedCompletedQuestionContext {
       text: string;
     }>;
   }>;
+  recentExposedQuestionTexts?: string[];
+  pendingQuestionTexts?: string[];
   remainingFoundationQuestions: FoundationQuestionCandidate[];
 }
 
@@ -239,7 +246,10 @@ export interface PersonalizedQuestionCandidate {
 export type PersonalizedQuestionValidationCode =
   | 'meta_language'
   | 'strategy_leak'
-  | 'duplicate_question';
+  | 'duplicate_question'
+  | 'repeated_topic'
+  | 'volatile_time_reference'
+  | 'unnatural_question';
 
 export class PersonalizedQuestionValidationError extends Error {
   readonly code: PersonalizedQuestionValidationCode;
@@ -551,6 +561,10 @@ export function anonymizeCompletedQuestionContext(
         };
       },
     ),
+    recentExposedQuestionTexts: [
+      ...(context.recentExposedQuestionTexts ?? []),
+    ],
+    pendingQuestionTexts: [...(context.pendingQuestionTexts ?? [])],
     remainingFoundationQuestions: context.remainingFoundationQuestions.map(
       (question) => ({ ...question }),
     ),
@@ -1075,7 +1089,10 @@ export function validatePersonalizedQuestion(
   candidate: PersonalizedQuestionCandidate,
   context?: Pick<
     AnonymizedCompletedQuestionContext,
-    'question' | 'recentCompletedQuestions'
+    | 'question'
+    | 'recentCompletedQuestions'
+    | 'recentExposedQuestionTexts'
+    | 'pendingQuestionTexts'
   >,
 ): void {
   validateGeneratedQuestion(candidate);
@@ -1104,6 +1121,34 @@ export function validatePersonalizedQuestion(
     )
   ) {
     throw new PersonalizedQuestionValidationError('duplicate_question');
+  }
+
+  if (
+    /(?:오늘\s*밤|오늘|내일|모레|어제|그제|(?:이번|다음|지난)\s*(?:주말|주|달|휴일|연휴))/u
+      .test(candidate.text)
+  ) {
+    throw new PersonalizedQuestionValidationError(
+      'volatile_time_reference',
+    );
+  }
+
+  if (
+    /해\s*보고\s*싶은\s*(?:영화|드라마|영상|노래|음악|책|공연|선물|메뉴|음식)/u
+      .test(candidate.text)
+  ) {
+    throw new PersonalizedQuestionValidationError('unnatural_question');
+  }
+
+  if (
+    context !== undefined
+    && [
+      ...(context.recentExposedQuestionTexts ?? []),
+      ...(context.pendingQuestionTexts ?? []),
+    ].some((questionText) =>
+      areQuestionsAboutSameTopic(candidate.text, questionText)
+    )
+  ) {
+    throw new PersonalizedQuestionValidationError('repeated_topic');
   }
 }
 
