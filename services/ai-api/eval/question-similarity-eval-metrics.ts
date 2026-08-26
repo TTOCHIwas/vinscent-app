@@ -37,8 +37,8 @@ export interface QuestionSimilarityThresholdResult {
 }
 
 export interface HybridQuestionSimilarityThresholdResult {
-  rawThreshold: number | null;
-  focusThreshold: number | null;
+  rawThreshold: number;
+  focusThreshold: number;
   metrics: QuestionSimilarityMetrics;
 }
 
@@ -91,10 +91,10 @@ export function selectHybridQuestionSimilarityThresholdAtPrecision(
   validateMinimumPrecision(minimumPrecision);
   validateHybridQuestionSimilarityPairs(pairs);
 
-  const rawThresholds = uniqueThresholdsWithDisabled(
+  const rawThresholds = uniqueThresholds(
     pairs.map(({ rawScore }) => rawScore),
   );
-  const focusThresholds = uniqueThresholdsWithDisabled(
+  const focusThresholds = uniqueThresholds(
     pairs.map(({ focusScore }) => focusScore),
   );
   const results: HybridQuestionSimilarityThresholdResult[] = [];
@@ -280,9 +280,8 @@ function compareHybridPrecisionFirstThresholdResults(
     || right.metrics.precision - left.metrics.precision
     || right.metrics.f1 - left.metrics.f1
     || right.metrics.accuracy - left.metrics.accuracy
-    || enabledThresholdCount(left) - enabledThresholdCount(right)
-    || compareNullableThresholds(left.rawThreshold, right.rawThreshold)
-    || compareNullableThresholds(left.focusThreshold, right.focusThreshold);
+    || right.rawThreshold - left.rawThreshold
+    || right.focusThreshold - left.focusThreshold;
 }
 
 function evaluateQuestionSimilarityThresholds(
@@ -338,46 +337,28 @@ function requireMultipleQuestionSimilarityGroups(
   return groupIds;
 }
 
-function uniqueThresholdsWithDisabled(
+function uniqueThresholds(
   scores: readonly number[],
-): Array<number | null> {
-  return [
-    null,
-    ...[...new Set(scores)].sort((left, right) => right - left),
-  ];
+): number[] {
+  const uniqueScores = [...new Set(scores)]
+    .sort((left, right) => right - left);
+  const maximumScore = uniqueScores[0] as number;
+  const thresholdAboveMaximum = maximumScore
+    + Math.max(1, Math.abs(maximumScore)) * Number.EPSILON;
+  if (!Number.isFinite(thresholdAboveMaximum)) {
+    throw new RangeError('question similarity score is too large');
+  }
+  return [thresholdAboveMaximum, ...uniqueScores];
 }
 
 function isHybridQuestionSimilarityMatch(
   pair: HybridQuestionSimilarityPair,
-  rawThreshold: number | null,
-  focusThreshold: number | null,
+  rawThreshold: number,
+  focusThreshold: number,
 ): boolean {
   return pair.lexicalSameTopic
-    || (rawThreshold !== null && pair.rawScore >= rawThreshold)
-    || (focusThreshold !== null && pair.focusScore >= focusThreshold);
-}
-
-function enabledThresholdCount(
-  result: Pick<
-    HybridQuestionSimilarityThresholdResult,
-    'rawThreshold' | 'focusThreshold'
-  >,
-): number {
-  return Number(result.rawThreshold !== null)
-    + Number(result.focusThreshold !== null);
-}
-
-function compareNullableThresholds(
-  left: number | null,
-  right: number | null,
-): number {
-  if (left === null) {
-    return right === null ? 0 : -1;
-  }
-  if (right === null) {
-    return 1;
-  }
-  return right - left;
+    || pair.rawScore >= rawThreshold
+    || pair.focusScore >= focusThreshold;
 }
 
 function validateMinimumPrecision(minimumPrecision: number): void {
