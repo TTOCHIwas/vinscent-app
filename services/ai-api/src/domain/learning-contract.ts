@@ -2,6 +2,9 @@ import { hasUngroundedCoupleFeedbackDetail } from './couple-feedback-grounding.t
 import { classifyDirectQuestionResponse } from './direct-question-evidence.ts';
 import { hasSharedMemoryEvidence } from './memory-evidence.ts';
 import {
+  findKoreanQuestionNaturalnessIssue,
+} from './korean-question-naturalness.ts';
+import {
   areQuestionsAboutSameTopic,
   areQuestionsNearDuplicate,
 } from './question-duplicate-detector.ts';
@@ -1132,10 +1135,7 @@ export function validatePersonalizedQuestion(
     );
   }
 
-  if (
-    /해\s*보고\s*싶은\s*(?:영화|드라마|영상|노래|음악|책|공연|선물|메뉴|음식)/u
-      .test(candidate.text)
-  ) {
+  if (findKoreanQuestionNaturalnessIssue(candidate.text) !== null) {
     throw new PersonalizedQuestionValidationError('unnatural_question');
   }
 
@@ -1431,6 +1431,9 @@ export function validateDirectQuestionFollowUp(
     /여행지(?:에서|에서는)[^?]{0,24}(?:해외여행|국내여행)/u
       .test(candidate.text)
   ) {
+    throw new DirectQuestionFollowUpValidationError('unnatural_question');
+  }
+  if (findKoreanQuestionNaturalnessIssue(candidate.text) !== null) {
     throw new DirectQuestionFollowUpValidationError('unnatural_question');
   }
   const isDuplicate = context.recentSharedQuestionTexts.some(

@@ -86,6 +86,7 @@ const personalizedQuestionFreshnessRulesKorean = [
   '- current_question, recent_exposed_questions, pending_question_candidates와 같은 의미나 주제의 질문을 만들지 마.',
   '- 오늘, 내일, 이번 주말, 다음 주말처럼 후보가 노출될 때 의미가 달라지는 상대 날짜 표현을 쓰지 마.',
   '- 영화는 보다, 활동은 해보다처럼 대상에 맞는 자연스러운 동사를 써.',
+  '- 질문은 짧은 일상 구어로 써. 에 있어서, 와 관련하여, 에 기반하여, 에 의해 같은 보고서 표현을 쓰지 마.',
 ] as const;
 
 const personalizedQuestionFreshnessRulesEnglish = [
@@ -93,6 +94,7 @@ const personalizedQuestionFreshnessRulesEnglish = [
   '- Do not generate a question with the same meaning or topic as current_question, recent_exposed_questions, or pending_question_candidates.',
   '- Avoid relative dates whose meaning can expire before delivery, including today, tomorrow, this weekend, and next weekend.',
   '- Use a natural Korean predicate for the object, such as watching a movie and trying an activity.',
+  '- Use short everyday Korean. Avoid formal translationese such as 에 있어서, 와 관련하여, 에 기반하여, and 에 의해.',
 ] as const;
 
 const maximumMemoryCandidates = 3;
@@ -994,7 +996,7 @@ function personalizedQuestionRetryCorrection(
     return '노출 시점에 의미가 달라지는 상대 날짜 표현을 모두 빼고 언제 보여도 자연스러운 질문을 만들어.';
   }
   if (code === 'unnatural_question') {
-    return '목적어에 맞는 자연스러운 한국어 동사를 사용하고, 같은 표현을 다른 목적어에 기계적으로 붙이지 마.';
+    return '목적어에 맞는 자연스러운 한국어 동사를 사용하고, 같은 표현을 다른 목적어에 기계적으로 붙이거나 보고서식 번역투를 쓰지 마.';
   }
   if (code === 'strategy_leak') {
     return '내부 판단 단계와 지시문 단어를 category, mood, rationale에 쓰지 마. 질문 주제에 맞는 사용자용 메타데이터만 만들어.';
