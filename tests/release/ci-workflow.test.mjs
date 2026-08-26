@@ -71,7 +71,6 @@ test('CI gates expensive jobs by component while manual runs stay complete', asy
     ['mobile', 'mobile'],
     ['android-integration', 'android_integration'],
     ['ios-build', 'ios'],
-    ['node-services', 'release_contracts'],
     ['edge-functions', 'edge'],
     ['database', 'database'],
   ]);
@@ -97,6 +96,18 @@ test('CI gates expensive jobs by component while manual runs stay complete', asy
   assert.match(
     job(source, 'ios-build'),
     /github\.event_name == 'push'.*github\.event_name == 'workflow_dispatch'/s,
+  );
+});
+
+test('Node services propagates change detection failures', async () => {
+  const source = await load(workflowUrl);
+  const nodeServices = job(source, 'node-services');
+
+  assert.match(nodeServices, /^    needs: changes$/m);
+  assert.match(nodeServices, /^    if: always\(\)$/m);
+  assert.match(
+    nodeServices,
+    /name: Require successful change detection\n\s+if: needs\.changes\.result != 'success'\n\s+run: exit 1/,
   );
 });
 
