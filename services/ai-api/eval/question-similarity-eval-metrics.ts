@@ -22,28 +22,28 @@ export interface QuestionSimilarityThresholdResult {
 export function selectQuestionSimilarityThreshold(
   pairs: readonly ScoredQuestionSimilarityPair[],
 ): QuestionSimilarityThresholdResult {
-  if (pairs.length === 0) {
-    throw new RangeError('question similarity pairs are required');
-  }
-  for (const pair of pairs) {
-    if (!Number.isFinite(pair.score)) {
-      throw new TypeError('question similarity score must be finite');
-    }
-  }
-
-  const candidates = [...new Set(pairs.map(({ score }) => score))]
-    .sort((left, right) => right - left);
-  const results = candidates.map((threshold) => ({
-    threshold,
-    metrics: evaluateQuestionSimilarityPredictions(
-      pairs.map((pair) => ({
-        predictedSameTopic: pair.score >= threshold,
-        sameTopic: pair.sameTopic,
-      })),
-    ),
-  }));
+  const results = evaluateQuestionSimilarityThresholds(pairs);
   results.sort(compareThresholdResults);
   return results[0] as QuestionSimilarityThresholdResult;
+}
+
+export function selectQuestionSimilarityThresholdAtPrecision(
+  pairs: readonly ScoredQuestionSimilarityPair[],
+  minimumPrecision: number,
+): QuestionSimilarityThresholdResult | null {
+  if (
+    !Number.isFinite(minimumPrecision)
+    || minimumPrecision < 0
+    || minimumPrecision > 1
+  ) {
+    throw new RangeError('minimum question similarity precision is invalid');
+  }
+  const results = evaluateQuestionSimilarityThresholds(pairs)
+    .filter(({ metrics }) =>
+      metrics.truePositive > 0 && metrics.precision >= minimumPrecision
+    );
+  results.sort(comparePrecisionFirstThresholdResults);
+  return results[0] ?? null;
 }
 
 export function evaluateQuestionSimilarityPredictions(
@@ -97,6 +97,42 @@ function compareThresholdResults(
     || right.metrics.recall - left.metrics.recall
     || right.metrics.accuracy - left.metrics.accuracy
     || right.threshold - left.threshold;
+}
+
+function comparePrecisionFirstThresholdResults(
+  left: QuestionSimilarityThresholdResult,
+  right: QuestionSimilarityThresholdResult,
+): number {
+  return right.metrics.recall - left.metrics.recall
+    || right.metrics.precision - left.metrics.precision
+    || right.metrics.f1 - left.metrics.f1
+    || right.metrics.accuracy - left.metrics.accuracy
+    || right.threshold - left.threshold;
+}
+
+function evaluateQuestionSimilarityThresholds(
+  pairs: readonly ScoredQuestionSimilarityPair[],
+): QuestionSimilarityThresholdResult[] {
+  if (pairs.length === 0) {
+    throw new RangeError('question similarity pairs are required');
+  }
+  for (const pair of pairs) {
+    if (!Number.isFinite(pair.score)) {
+      throw new TypeError('question similarity score must be finite');
+    }
+  }
+
+  return [...new Set(pairs.map(({ score }) => score))]
+    .sort((left, right) => right - left)
+    .map((threshold) => ({
+      threshold,
+      metrics: evaluateQuestionSimilarityPredictions(
+        pairs.map((pair) => ({
+          predictedSameTopic: pair.score >= threshold,
+          sameTopic: pair.sameTopic,
+        })),
+      ),
+    }));
 }
 
 function divide(numerator: number, denominator: number): number {

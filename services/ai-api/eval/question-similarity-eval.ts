@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import {
   areQuestionsAboutSameTopic,
+  buildQuestionSemanticFocus,
 } from '../src/domain/question-duplicate-detector.ts';
 import {
   CloudflareWorkersAiQuestionSimilarityClient,
@@ -13,9 +14,11 @@ import {
 import {
   evaluateQuestionSimilarityPredictions,
   selectQuestionSimilarityThreshold,
+  selectQuestionSimilarityThresholdAtPrecision,
 } from './question-similarity-eval-metrics.ts';
 
 const model = '@cf/baai/bge-m3';
+const minimumPrecision = 0.95;
 const client = new CloudflareWorkersAiQuestionSimilarityClient({
   accountId: requireEnvironment('CLOUDFLARE_ACCOUNT_ID'),
   apiToken: requireEnvironment('CLOUDFLARE_WORKERS_AI_API_TOKEN'),
@@ -23,42 +26,75 @@ const client = new CloudflareWorkersAiQuestionSimilarityClient({
 const cases = [];
 
 for (const scenario of createQuestionSimilarityEvaluationScenarios()) {
-  const scores = await client.score(
+  const rawScores = await client.score(
     scenario.candidate,
     scenario.comparisons.map(({ question }) => question),
   );
+  const candidateFocus = buildQuestionSemanticFocus(scenario.candidate);
+  const comparisonFocuses = scenario.comparisons.map(({ question }) =>
+    buildQuestionSemanticFocus(question)
+  );
+  const focusScores = await client.score(candidateFocus, comparisonFocuses);
   for (let index = 0; index < scenario.comparisons.length; index += 1) {
     const comparison = scenario.comparisons[index];
-    const score = scores[index];
-    if (comparison === undefined || score === undefined) {
+    const rawScore = rawScores[index];
+    const focusScore = focusScores[index];
+    const comparisonFocus = comparisonFocuses[index];
+    if (
+      comparison === undefined
+      || rawScore === undefined
+      || focusScore === undefined
+      || comparisonFocus === undefined
+    ) {
       throw new Error('question similarity evaluation result is incomplete');
     }
     cases.push({
       scenarioId: scenario.id,
       candidate: scenario.candidate,
+      candidateFocus,
       question: comparison.question,
-      sameTopic: comparison.sameTopic,
+      questionFocus: comparisonFocus,
+      relation: comparison.relation,
       lexicalSameTopic: areQuestionsAboutSameTopic(
         scenario.candidate,
         comparison.question,
       ),
-      score,
+      score: rawScore,
+      rawScore,
+      focusScore,
     });
   }
 }
 
-const threshold = selectQuestionSimilarityThreshold(cases);
+const scoreEvaluations = {
+  raw: evaluateScores(cases, ({ rawScore }) => rawScore),
+  semanticFocus: evaluateScores(cases, ({ focusScore }) => focusScore),
+};
 const report = {
   generatedAt: new Date().toISOString(),
   model,
   pairCount: cases.length,
-  sameTopicCount: cases.filter(({ sameTopic }) => sameTopic).length,
-  distinctTopicCount: cases.filter(({ sameTopic }) => !sameTopic).length,
-  recommendedThreshold: threshold,
-  lexicalMetrics: evaluateQuestionSimilarityPredictions(
-    cases.map(({ lexicalSameTopic, sameTopic }) => ({
+  nearDuplicateCount: cases.filter(
+    ({ relation }) => relation === 'near_duplicate'
+  ).length,
+  topicOverlapCount: cases.filter(
+    ({ relation }) => relation === 'topic_overlap'
+  ).length,
+  distinctTopicCount: cases.filter(
+    ({ relation }) => relation === 'distinct'
+  ).length,
+  recommendedThreshold: scoreEvaluations.raw.topicCooldown.f1Optimal,
+  scoreEvaluations,
+  lexicalStrictDuplicateMetrics: evaluateQuestionSimilarityPredictions(
+    cases.map(({ lexicalSameTopic, relation }) => ({
       predictedSameTopic: lexicalSameTopic,
-      sameTopic,
+      sameTopic: relation === 'near_duplicate',
+    })),
+  ),
+  lexicalTopicCooldownMetrics: evaluateQuestionSimilarityPredictions(
+    cases.map(({ lexicalSameTopic, relation }) => ({
+      predictedSameTopic: lexicalSameTopic,
+      sameTopic: relation !== 'distinct',
     })),
   ),
   cases,
@@ -69,6 +105,44 @@ if (outputPath !== null) {
   await writeFile(resolve(outputPath), serialized, 'utf8');
 }
 process.stdout.write(serialized);
+
+function evaluateScores<T extends {
+  relation: 'near_duplicate' | 'topic_overlap' | 'distinct';
+}>(
+  evaluationCases: readonly T[],
+  readScore: (item: T) => number,
+) {
+  return {
+    strictDuplicate: evaluateThresholdTask(
+      evaluationCases,
+      readScore,
+      ({ relation }) => relation === 'near_duplicate',
+    ),
+    topicCooldown: evaluateThresholdTask(
+      evaluationCases,
+      readScore,
+      ({ relation }) => relation !== 'distinct',
+    ),
+  };
+}
+
+function evaluateThresholdTask<T>(
+  evaluationCases: readonly T[],
+  readScore: (item: T) => number,
+  isPositive: (item: T) => boolean,
+) {
+  const pairs = evaluationCases.map((item) => ({
+    score: readScore(item),
+    sameTopic: isPositive(item),
+  }));
+  return {
+    f1Optimal: selectQuestionSimilarityThreshold(pairs),
+    precisionFirst: selectQuestionSimilarityThresholdAtPrecision(
+      pairs,
+      minimumPrecision,
+    ),
+  };
+}
 
 function requireEnvironment(name: string): string {
   const value = optionalEnvironment(name);

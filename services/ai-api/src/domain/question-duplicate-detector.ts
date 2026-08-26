@@ -44,6 +44,7 @@ const topicStopWords = new Set([
   '시간',
   '싶',
   '어떤',
+  '어때',
   '요즘',
   '이번',
   '주고',
@@ -84,6 +85,13 @@ export function areQuestionsAboutSameTopic(
     return false;
   }
   return [...leftTerms].some((term) => rightTerms.has(term));
+}
+
+export function buildQuestionSemanticFocus(value: string): string {
+  const terms = [...questionTopicTerms(value)];
+  return terms.length === 0
+    ? value.normalize('NFKC').trim()
+    : terms.join(' ');
 }
 
 function normalizeQuestionSurface(value: string): string {

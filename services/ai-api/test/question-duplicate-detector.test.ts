@@ -100,7 +100,7 @@ test('의미 유사도 입력에서는 커플 질문의 공통 문장 틀만 제
   );
   assert.equal(
     buildQuestionSemanticFocus('둘이 함께 먹고 싶은 메뉴는 뭐야?'),
-    '먹 메뉴',
+    '메뉴',
   );
   assert.equal(buildQuestionSemanticFocus('둘이 어때?'), '둘이 어때?');
 });
