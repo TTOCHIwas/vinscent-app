@@ -412,7 +412,7 @@ select
   'succeeded',
   'stale-assignment:general-question',
   1,
-  now() - interval '1 hour',
+  now(),
   now()
 from public.ai_focused_questions as aifq
 where aifq.couple_id = '23000000-0000-0000-0000-000000000001'
@@ -519,7 +519,9 @@ insert into public.daily_questions (
   question_id,
   assigned_date,
   status,
-  story_loop_id
+  story_loop_id,
+  created_at,
+  updated_at
 )
 values (
   '39000000-0000-0000-0000-000000000010',
@@ -527,7 +529,9 @@ values (
   '68000000-0000-0000-0000-000000000011',
   current_date - 1,
   'answered_by_one',
-  '33000000-0000-0000-0000-000000000010'
+  '33000000-0000-0000-0000-000000000010',
+  now() + interval '1 second',
+  now() + interval '1 second'
 );
 
 create temporary table stale_assignment

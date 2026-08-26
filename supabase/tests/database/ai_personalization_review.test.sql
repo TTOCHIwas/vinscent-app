@@ -610,7 +610,9 @@ insert into public.daily_questions (
   question_id,
   assigned_date,
   status,
-  story_loop_id
+  story_loop_id,
+  created_at,
+  updated_at
 )
 values (
   '93000000-0000-0000-0000-000000000010',
@@ -618,7 +620,9 @@ values (
   '68000000-0000-0000-0000-000000000010',
   current_date,
   'answered_by_one',
-  '92000000-0000-0000-0000-000000000010'
+  '92000000-0000-0000-0000-000000000010',
+  now() + interval '1 second',
+  now() + interval '1 second'
 );
 
 insert into public.ai_runs (
