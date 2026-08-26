@@ -61,7 +61,7 @@ test('CI detects component changes with a commit-pinned action', async () => {
     'edge',
     'database',
   ]) {
-    assert.match(changes, new RegExp(`^    ${output}:`, 'm'));
+    assert.match(changes, new RegExp(`^      ${output}:`, 'm'));
   }
 });
 

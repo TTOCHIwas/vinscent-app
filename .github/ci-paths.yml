@@ -1,0 +1,53 @@
+ci_config:
+  - '.github/workflows/ci.yml'
+  - '.github/ci-paths.yml'
+
+mobile:
+  - 'apps/mobile/**'
+
+android_integration:
+  - 'apps/mobile/lib/**'
+  - 'apps/mobile/integration_test/**'
+  - 'apps/mobile/android/**'
+  - 'apps/mobile/assets/**'
+  - 'apps/mobile/pubspec.yaml'
+  - 'apps/mobile/pubspec.lock'
+
+ios:
+  - 'apps/mobile/lib/**'
+  - 'apps/mobile/ios/**'
+  - 'apps/mobile/assets/**'
+  - 'apps/mobile/pubspec.yaml'
+  - 'apps/mobile/pubspec.lock'
+
+release_contracts:
+  - '.github/workflows/**'
+  - 'tests/release/**'
+  - 'scripts/**'
+  - 'docs/release/**'
+  - '.gitignore'
+  - 'apps/mobile/ios/**'
+  - 'supabase/config.toml'
+  - 'supabase/runtime-environment.manifest.json'
+  - 'supabase/migrations/**'
+  - 'supabase/functions/**'
+
+ai:
+  - 'services/ai-api/**'
+
+policy:
+  - 'apps/policy-web/**'
+
+edge:
+  - 'supabase/functions/**'
+  - 'supabase/tests/functions/**'
+  - 'services/ai-api/src/**'
+  - 'scripts/test_supabase_functions.mjs'
+  - 'scripts/verify_supabase_runtime_environment.mjs'
+  - 'supabase/config.toml'
+  - 'supabase/runtime-environment.manifest.json'
+
+database:
+  - 'supabase/migrations/**'
+  - 'supabase/tests/database/**'
+  - 'supabase/config.toml'

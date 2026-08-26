@@ -19,8 +19,38 @@ env:
   FLUTTER_SUPPRESS_ANALYTICS: true
 
 jobs:
+  changes:
+    name: Change detection
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ci_config: ${{ steps.filter.outputs.ci_config }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      android_integration: ${{ steps.filter.outputs.android_integration }}
+      ios: ${{ steps.filter.outputs.ios }}
+      release_contracts: ${{ steps.filter.outputs.release_contracts }}
+      ai: ${{ steps.filter.outputs.ai }}
+      policy: ${{ steps.filter.outputs.policy }}
+      edge: ${{ steps.filter.outputs.edge }}
+      database: ${{ steps.filter.outputs.database }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: .github/ci-paths.yml
+      - name: Reject tracked release secrets
+        run: node scripts/verify_tracked_secrets.mjs
+
   mobile:
     name: Flutter
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -59,6 +89,8 @@ jobs:
 
   android-integration:
     name: Android integration
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android_integration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -109,7 +141,8 @@ jobs:
 
   ios-build:
     name: iOS native build
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: changes
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.ios == 'true')
     runs-on: macos-26
     timeout-minutes: 30
     defaults:
@@ -131,6 +164,8 @@ jobs:
 
   node-services:
     name: Node services
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.release_contracts == 'true' || needs.changes.outputs.ai == 'true' || needs.changes.outputs.policy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -142,24 +177,29 @@ jobs:
           node-version: "22.19.0"
           package-manager-cache: false
       - name: Test repository release contracts
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.release_contracts == 'true'
         run: node --test "tests/release/*.test.mjs"
-      - name: Reject tracked release secrets
-        run: node scripts/verify_tracked_secrets.mjs
       - name: Test AI service
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.ai == 'true'
         working-directory: services/ai-api
         run: npm test
       - name: Install policy web dependencies
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.policy == 'true'
         working-directory: apps/policy-web
         run: npm ci
       - name: Lint policy web
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.policy == 'true'
         working-directory: apps/policy-web
         run: npm run lint
       - name: Test policy web
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.policy == 'true'
         working-directory: apps/policy-web
         run: npm test
 
   edge-functions:
     name: Edge functions
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.edge == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -188,6 +228,8 @@ jobs:
 
   database:
     name: Supabase database
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
