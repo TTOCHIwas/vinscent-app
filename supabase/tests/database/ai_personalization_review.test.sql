@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(21);
+select plan(24);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -576,18 +576,130 @@ select is(
   'personalized question work becomes claimable after activation'
 );
 
+insert into public.questions (
+  id,
+  source,
+  question_text,
+  category,
+  is_active
+)
+values (
+  '68000000-0000-0000-0000-000000000010',
+  'curated',
+  '최근에 둘이 새로 관심이 생긴 건 뭐야?',
+  'daily_life',
+  true
+);
+
+insert into public.daily_story_loops (
+  id,
+  couple_id,
+  couple_date,
+  status
+)
+values (
+  '92000000-0000-0000-0000-000000000010',
+  '22000000-0000-0000-0000-000000000001',
+  current_date,
+  'answered_by_one'
+);
+
+insert into public.daily_questions (
+  id,
+  couple_id,
+  question_id,
+  assigned_date,
+  status,
+  story_loop_id
+)
+values (
+  '93000000-0000-0000-0000-000000000010',
+  '22000000-0000-0000-0000-000000000001',
+  '68000000-0000-0000-0000-000000000010',
+  current_date,
+  'answered_by_one',
+  '92000000-0000-0000-0000-000000000010'
+);
+
+insert into public.ai_runs (
+  id,
+  couple_id,
+  daily_question_id,
+  task,
+  provider,
+  model,
+  prompt_version,
+  status,
+  safety_status,
+  completed_at
+)
+select
+  '62000000-0000-0000-0000-000000000010',
+  '22000000-0000-0000-0000-000000000001',
+  dq.id,
+  'generate_personalized_question',
+  'fixture',
+  'fixture',
+  'personalized-question-v6',
+  'succeeded',
+  'passed',
+  now()
+from public.daily_questions as dq
+join public.questions as q on q.id = dq.question_id
+where dq.couple_id = '22000000-0000-0000-0000-000000000001'
+  and q.curriculum_position = 24;
+
+insert into public.questions (
+  id,
+  source,
+  question_key,
+  question_text,
+  category,
+  is_active,
+  personalized_for_couple_id,
+  generated_by_run_id
+)
+values (
+  '68000000-0000-0000-0000-000000000011',
+  'ai',
+  'personalized_pending_context_ab12cd34',
+  '둘이 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
+  'daily_life',
+  true,
+  '22000000-0000-0000-0000-000000000001',
+  '62000000-0000-0000-0000-000000000010'
+);
+
+insert into public.ai_question_recommendations (
+  couple_id,
+  question_id,
+  source_run_id,
+  reason
+)
+values (
+  '22000000-0000-0000-0000-000000000001',
+  '68000000-0000-0000-0000-000000000011',
+  '62000000-0000-0000-0000-000000000010',
+  'latest context regression test'
+);
+
+create temporary table personalized_context
+on commit drop
+as
+select public.get_ai_processing_job_context(
+  (
+    select aipj.id
+    from public.ai_processing_jobs as aipj
+    where aipj.couple_id = '22000000-0000-0000-0000-000000000001'
+      and aipj.job_type = 'generate_personalized_question'
+      and aipj.status = 'processing'
+    limit 1
+  )
+) as payload;
+
 select is(
   jsonb_array_length(
-    public.get_ai_processing_job_context(
-      (
-        select aipj.id
-        from public.ai_processing_jobs as aipj
-        where aipj.couple_id = '22000000-0000-0000-0000-000000000001'
-          and aipj.job_type = 'generate_personalized_question'
-          and aipj.status = 'processing'
-        limit 1
-      )
-    )->'confirmed_memories'
+    (select payload from personalized_context)->'confirmed_memories'
   ),
   3,
   'personalized context contains only confirmed profile memories'
@@ -595,19 +707,36 @@ select is(
 
 select is(
   jsonb_array_length(
-    public.get_ai_processing_job_context(
-      (
-        select aipj.id
-        from public.ai_processing_jobs as aipj
-        where aipj.couple_id = '22000000-0000-0000-0000-000000000001'
-          and aipj.job_type = 'generate_personalized_question'
-          and aipj.status = 'processing'
-        limit 1
-      )
-    )->'recent_completed_questions'
+    (select payload from personalized_context)->'recent_completed_questions'
   ),
   6,
   'personalized context includes the previous six completed questions'
+);
+
+select is(
+  (select payload from personalized_context)
+    ->'recent_exposed_questions'->>0,
+  '최근에 둘이 새로 관심이 생긴 건 뭐야?',
+  'personalized context includes the latest one-sided exposed question'
+);
+
+select is(
+  (select payload from personalized_context)
+    ->'pending_question_candidates'->>0,
+  '둘이 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
+  'personalized context includes the pending generated question'
+);
+
+select ok(
+  (
+    select aipj.context_captured_at is not null
+    from public.ai_processing_jobs as aipj
+    where aipj.couple_id = '22000000-0000-0000-0000-000000000001'
+      and aipj.job_type = 'generate_personalized_question'
+      and aipj.status = 'processing'
+    limit 1
+  ),
+  'loading personalized context records its freshness boundary'
 );
 
 select * from finish();

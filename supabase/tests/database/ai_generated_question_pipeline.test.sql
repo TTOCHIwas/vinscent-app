@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(19);
+select plan(23);
 
 insert into auth.users (
   id,
@@ -271,6 +271,16 @@ select ok(
   ) > 0,
   'general question context contains safe question history metadata'
 );
+select ok(
+  (
+    select aipj.context_captured_at is not null
+    from public.ai_processing_jobs as aipj
+    where aipj.couple_id = '23000000-0000-0000-0000-000000000001'
+      and aipj.job_type = 'generate_general_question'
+      and aipj.status = 'processing'
+  ),
+  'loading general question context records its freshness boundary'
+);
 
 create temporary table generated_run
 on commit drop
@@ -381,6 +391,185 @@ select is(
   ),
   'succeeded',
   'the general question job closes after persistence'
+);
+
+insert into public.ai_processing_jobs (
+  id,
+  couple_id,
+  focused_question_id,
+  job_type,
+  status,
+  deduplication_key,
+  attempts,
+  context_captured_at,
+  completed_at
+)
+select
+  '83000000-0000-0000-0000-000000000010',
+  '23000000-0000-0000-0000-000000000001',
+  aifq.id,
+  'generate_general_question',
+  'succeeded',
+  'stale-assignment:general-question',
+  1,
+  now() - interval '1 hour',
+  now()
+from public.ai_focused_questions as aifq
+where aifq.couple_id = '23000000-0000-0000-0000-000000000001'
+order by aifq.created_at, aifq.id
+limit 1;
+
+insert into public.ai_runs (
+  id,
+  job_id,
+  couple_id,
+  task,
+  provider,
+  model,
+  prompt_version,
+  status,
+  safety_status,
+  completed_at
+)
+values (
+  '63000000-0000-0000-0000-000000000010',
+  '83000000-0000-0000-0000-000000000010',
+  '23000000-0000-0000-0000-000000000001',
+  'generate_general_question',
+  'test',
+  'test-model',
+  'general-question-v2',
+  'succeeded',
+  'passed',
+  now()
+);
+
+insert into public.questions (
+  id,
+  source,
+  question_key,
+  question_text,
+  category,
+  is_active,
+  personalized_for_couple_id,
+  generated_by_run_id
+)
+values (
+  '68000000-0000-0000-0000-000000000010',
+  'ai',
+  'general_stale_candidate_ab12cd34',
+  '둘이 함께 쉬고 싶은 장소는 어디야?',
+  'daily_life',
+  true,
+  '23000000-0000-0000-0000-000000000001',
+  '63000000-0000-0000-0000-000000000010'
+);
+
+insert into public.ai_question_recommendations (
+  couple_id,
+  question_id,
+  source_run_id,
+  reason
+)
+values (
+  '23000000-0000-0000-0000-000000000001',
+  '68000000-0000-0000-0000-000000000010',
+  '63000000-0000-0000-0000-000000000010',
+  'stale assignment regression test'
+);
+
+insert into public.questions (
+  id,
+  source,
+  question_text,
+  category,
+  is_active
+)
+values (
+  '68000000-0000-0000-0000-000000000011',
+  'curated',
+  '후보가 만들어진 뒤 새로 노출된 질문은 뭐야?',
+  'daily_life',
+  true
+);
+
+insert into public.daily_story_loops (
+  id,
+  couple_id,
+  couple_date,
+  status
+)
+values
+  (
+    '33000000-0000-0000-0000-000000000010',
+    '23000000-0000-0000-0000-000000000001',
+    current_date - 1,
+    'answered_by_one'
+  ),
+  (
+    '33000000-0000-0000-0000-000000000011',
+    '23000000-0000-0000-0000-000000000001',
+    current_date + 1,
+    'question_preparing'
+  );
+
+insert into public.daily_questions (
+  id,
+  couple_id,
+  question_id,
+  assigned_date,
+  status,
+  story_loop_id
+)
+values (
+  '39000000-0000-0000-0000-000000000010',
+  '23000000-0000-0000-0000-000000000001',
+  '68000000-0000-0000-0000-000000000011',
+  current_date - 1,
+  'answered_by_one',
+  '33000000-0000-0000-0000-000000000010'
+);
+
+create temporary table stale_assignment
+on commit drop
+as
+select (
+  private.assign_pending_ai_question_to_story_loop(
+    (
+      select c
+      from public.couples as c
+      where c.id = '23000000-0000-0000-0000-000000000001'
+    ),
+    (
+      select dsl
+      from public.daily_story_loops as dsl
+      where dsl.id = '33000000-0000-0000-0000-000000000011'
+    )
+  )
+).id as daily_question_id;
+
+select is(
+  (select daily_question_id from stale_assignment),
+  null::uuid,
+  'an automatic candidate is not assigned after newer question exposure'
+);
+select is(
+  (
+    select aiqr.status
+    from public.ai_question_recommendations as aiqr
+    where aiqr.source_run_id = '63000000-0000-0000-0000-000000000010'
+  ),
+  'expired',
+  'the stale automatic candidate is expired during assignment'
+);
+select is(
+  (
+    select q.is_active
+    from public.questions as q
+    where q.id = '68000000-0000-0000-0000-000000000010'
+  ),
+  false,
+  'the stale automatic question is deactivated'
 );
 
 select * from finish();

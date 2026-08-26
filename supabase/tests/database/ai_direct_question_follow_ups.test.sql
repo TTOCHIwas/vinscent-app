@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(24);
+select plan(26);
 
 insert into auth.users (
   id,
@@ -289,6 +289,115 @@ select is(
   ),
   0::bigint,
   'dismissal creates no shared recommendation'
+);
+
+insert into public.ai_runs (
+  id,
+  couple_id,
+  task,
+  provider,
+  model,
+  prompt_version,
+  status,
+  safety_status,
+  completed_at
+)
+values
+  (
+    '57000000-0000-0000-0000-000000000010',
+    '27000000-0000-0000-0000-000000000001',
+    'generate_personalized_question',
+    'test',
+    'test-model',
+    'personalized-question-v6',
+    'succeeded',
+    'passed',
+    now()
+  ),
+  (
+    '57000000-0000-0000-0000-000000000011',
+    '27000000-0000-0000-0000-000000000001',
+    'generate_personalized_question',
+    'test',
+    'test-model',
+    'personalized-question-v6',
+    'succeeded',
+    'passed',
+    now()
+  );
+
+insert into public.questions (
+  id,
+  source,
+  question_key,
+  question_text,
+  category,
+  is_active,
+  personalized_for_couple_id,
+  generated_by_run_id
+)
+values
+  (
+    '67000000-0000-0000-0000-000000000010',
+    'ai',
+    'personalized_queue_first_ab12cd34',
+    '둘이 쉬는 날 가장 먼저 하고 싶은 건 뭐야?',
+    'daily_life',
+    true,
+    '27000000-0000-0000-0000-000000000001',
+    '57000000-0000-0000-0000-000000000010'
+  ),
+  (
+    '67000000-0000-0000-0000-000000000011',
+    'ai',
+    'personalized_queue_second_cd34ef56',
+    '둘이 함께 먹고 싶은 메뉴는 뭐야?',
+    'daily_life',
+    true,
+    '27000000-0000-0000-0000-000000000001',
+    '57000000-0000-0000-0000-000000000011'
+  );
+
+insert into public.ai_question_recommendations (
+  couple_id,
+  question_id,
+  source_run_id,
+  reason
+)
+values
+  (
+    '27000000-0000-0000-0000-000000000001',
+    '67000000-0000-0000-0000-000000000010',
+    '57000000-0000-0000-0000-000000000010',
+    'first automatic candidate'
+  ),
+  (
+    '27000000-0000-0000-0000-000000000001',
+    '67000000-0000-0000-0000-000000000011',
+    '57000000-0000-0000-0000-000000000011',
+    'second automatic candidate'
+  );
+
+select is(
+  (
+    select count(*)
+    from public.ai_question_recommendations as aiqr
+    where aiqr.couple_id = '27000000-0000-0000-0000-000000000001'
+      and aiqr.status = 'pending'
+      and aiqr.source_run_id is not null
+  ),
+  1::bigint,
+  'only the latest automatic candidate remains pending'
+);
+
+select is(
+  (
+    select q.is_active
+    from public.questions as q
+    where q.id = '67000000-0000-0000-0000-000000000010'
+  ),
+  false,
+  'the superseded automatic question is deactivated'
 );
 
 select set_config(
