@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   areQuestionsNearDuplicate,
+  buildQuestionSemanticFocus,
 } from '../src/domain/question-duplicate-detector.ts';
 
 const recentTravelQuestion =
@@ -82,4 +83,24 @@ test('같은 주제라도 질문 초점이나 극성이 다르면 허용한다',
     ),
     false,
   );
+});
+
+test('의미 유사도 입력에서는 커플 질문의 공통 문장 틀만 제거한다', () => {
+  assert.equal(
+    buildQuestionSemanticFocus(
+      '다음 주말에 둘이 같이 해보고 싶은 영화는 뭐야?',
+    ),
+    '영화',
+  );
+  assert.equal(
+    buildQuestionSemanticFocus(
+      '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    ),
+    '영화 장르',
+  );
+  assert.equal(
+    buildQuestionSemanticFocus('둘이 함께 먹고 싶은 메뉴는 뭐야?'),
+    '먹 메뉴',
+  );
+  assert.equal(buildQuestionSemanticFocus('둘이 어때?'), '둘이 어때?');
 });
