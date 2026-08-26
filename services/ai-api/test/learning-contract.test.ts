@@ -1148,6 +1148,35 @@ test('개인화 질문은 대상에 맞지 않는 포괄 동사를 사용하지 
   }));
 });
 
+test('개인화 질문은 짧은 구어 질문에 맞지 않는 격식 번역투를 사용하지 않는다', () => {
+  for (const text of [
+    '둘의 관계에 있어서 가장 중요한 건 뭐야?',
+    '둘의 추억과 관련하여 가장 먼저 떠오르는 건 뭐야?',
+    '둘의 취향에 기반하여 고르고 싶은 데이트는 뭐야?',
+  ]) {
+    assert.throws(
+      () => validatePersonalizedQuestion({
+        questionKey: 'personalized_generated_translation_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '아직 모르는 관계 선호를 알아보기 위해',
+      }),
+      (error: unknown) =>
+        error instanceof PersonalizedQuestionValidationError
+        && error.code === 'unnatural_question',
+    );
+  }
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_natural_cd34ef56',
+    text: '우리 관계에서 가장 중요하게 느끼는 건 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '아직 모르는 관계 선호를 알아보기 위해',
+  }));
+});
+
 test('개인화 질문은 현재 질문이나 최근 질문을 표현만 바꿔 반복하지 않는다', () => {
   const candidate = {
     questionKey: 'personalized_generated_movie_ab12cd34',
