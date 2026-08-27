@@ -35,6 +35,7 @@ try {
     $startedByScript = $true
   }
 
+  Invoke-SupabaseChecked @("db", "reset", "--local", "--no-seed")
   Invoke-SupabaseChecked @("test", "db")
   Invoke-SupabaseChecked @("db", "lint", "--local", "--level", "error")
 } catch {
