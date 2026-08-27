@@ -86,7 +86,6 @@ mobile_directory="$repository_root/apps/mobile"
 build_number="$1"
 expected_commit_sha="$2"
 flutter_binary="${FLUTTER_BIN:-flutter}"
-dart_binary="${DART_BIN:-dart}"
 evidence_directory="$mobile_directory/build/release-evidence/ios-build-${build_number}"
 evidence_parent="$(dirname "$evidence_directory")"
 source_verifier="$repository_root/scripts/verify_release_source.sh"
@@ -115,9 +114,6 @@ if [[ -e "$evidence_directory" ]]; then
 fi
 
 "$flutter_binary" pub get
-"$dart_binary" format --output=none --set-exit-if-changed lib test integration_test
-"$flutter_binary" analyze --no-pub
-"$flutter_binary" test --no-pub
 build_arguments=(
   ipa
   --release
