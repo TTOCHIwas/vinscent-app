@@ -4,62 +4,52 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final workflow = File('../../.github/workflows/ci.yml');
+  final mobileVerification = File('../../scripts/verify_mobile_local.ps1');
+  final iosVerification = File('../../scripts/verify_ios_local.sh');
+  final databaseVerification = File('../../scripts/verify_database_local.ps1');
 
-  test('CI validates every release-critical project boundary', () {
+  test('CI validates every lightweight project boundary', () {
     expect(workflow.existsSync(), isTrue);
     final source = workflow.readAsStringSync();
 
-    for (final job in _requiredJobs) {
+    for (final job in _requiredCiJobs) {
       expect(source, contains('  $job:'));
     }
-    for (final command in _requiredCommands) {
+    for (final command in _requiredCiCommands) {
       expect(source, contains(command));
+    }
+    for (final job in _localOnlyJobs) {
+      expect(source, isNot(contains('  $job:')));
     }
   });
 
-  test('iOS native validation uses the release SDK generation', () {
-    final source = workflow.readAsStringSync();
+  test('iOS native validation stays in the local macOS gate', () {
+    expect(iosVerification.existsSync(), isTrue);
+    final source = iosVerification.readAsStringSync();
 
+    expect(source, contains('flutter test --no-pub'));
     expect(
       source,
-      matches(
-        RegExp(
-          r'ios-build:[\s\S]*?runs-on:\s+macos-26[\s\S]*?'
-          r'flutter build ios --simulator --debug --no-codesign --no-pub',
-        ),
-      ),
+      contains('flutter build ios --simulator --debug --no-codesign --no-pub'),
     );
   });
 
-  test('Android integration runs the production entrypoint on an emulator', () {
-    final source = workflow.readAsStringSync();
+  test('Android native and integration validation stay in the local gate', () {
+    expect(mobileVerification.existsSync(), isTrue);
+    final source = mobileVerification.readAsStringSync();
 
-    expect(
-      source,
-      matches(
-        RegExp(
-          r'android-integration:[\s\S]*?runs-on:\s+ubuntu-latest[\s\S]*?'
-          r'ReactiveCircus/android-emulator-runner@'
-          r'a421e43855164a8197daf9d8d40fe71c6996bb0d[\s\S]*?'
-          r'api-level:\s+36[\s\S]*?'
-          r'flutter test integration_test/app_startup_test.dart --no-pub',
-        ),
-      ),
-    );
+    expect(source, contains(':app:testDebugUnitTest'));
+    expect(source, contains('integration_test/app_startup_test.dart'));
+    expect(source, contains('@("build", "apk", "--debug", "--no-pub")'));
   });
 
-  test('CI runs Android native unit tests', () {
-    final source = workflow.readAsStringSync();
+  test('database validation stays in the local Docker gate', () {
+    expect(databaseVerification.existsSync(), isTrue);
+    final source = databaseVerification.readAsStringSync();
 
-    expect(
-      source,
-      matches(
-        RegExp(
-          r'mobile:[\s\S]*?working-directory:\s+apps/mobile/android[\s\S]*?'
-          r'\.\/gradlew :app:testDebugUnitTest',
-        ),
-      ),
-    );
+    expect(source, contains('@("db", "reset", "--local", "--no-seed")'));
+    expect(source, contains('@("test", "db")'));
+    expect(source, contains('@("db", "lint", "--local", "--level", "error")'));
   });
 
   test(
@@ -83,28 +73,22 @@ void main() {
   );
 }
 
-const _requiredJobs = <String>[
+const _requiredCiJobs = <String>[
+  'changes',
   'mobile',
-  'android-integration',
-  'ios-build',
   'node-services',
   'edge-functions',
-  'database',
 ];
 
-const _requiredCommands = <String>[
+const _requiredCiCommands = <String>[
   'dart format --output=none --set-exit-if-changed lib test integration_test',
   'flutter analyze --no-pub',
   'flutter test --no-pub',
-  'flutter test integration_test/app_startup_test.dart --no-pub',
-  'flutter build apk --debug --no-pub',
-  './gradlew :app:testDebugUnitTest',
-  'flutter build ios --simulator --debug --no-codesign --no-pub',
   'node --test "tests/release/*.test.mjs"',
   'node scripts/verify_tracked_secrets.mjs',
   'npm test',
   'node scripts/test_supabase_functions.mjs',
   'deno check',
-  'supabase db start',
-  'supabase test db',
 ];
+
+const _localOnlyJobs = <String>['android-integration', 'ios-build', 'database'];

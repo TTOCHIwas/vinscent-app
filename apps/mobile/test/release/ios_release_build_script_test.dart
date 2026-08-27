@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final script = File('../../scripts/build_ios_release_candidate.sh');
   final preflightScript = File('../../scripts/check_ios_release_mac.sh');
+  final localVerificationScript = File('../../scripts/verify_ios_local.sh');
   final signingInstaller = File('../../scripts/install_ios_signing_assets.sh');
   final kakaoConfig = File('ios/Flutter/Kakao.xcconfig');
   final xcodeProject = File('ios/Runner.xcodeproj/project.pbxproj');
@@ -71,130 +72,146 @@ void main() {
     );
   });
 
-  test('iOS release script builds a verified archive without uploading it', () {
-    final source = script.readAsStringSync();
+  test(
+    'iOS release script builds one verified archive without repeated tests',
+    () {
+      final source = script.readAsStringSync();
+
+      expect(source, isNot(contains('format --output=none')));
+      expect(source, isNot(contains('analyze --no-pub')));
+      expect(source, isNot(contains(r'"$flutter_binary" test --no-pub')));
+      expect(source, contains('build_arguments=('));
+      expect(RegExp(r'^  ipa$', multiLine: true).hasMatch(source), isTrue);
+      expect(
+        source,
+        contains(r'"$flutter_binary" build "${build_arguments[@]}"'),
+      );
+      expect(source, contains('--release'));
+      expect(source, contains('--export-method app-store'));
+      expect(source, contains('DANJJAN_IOS_EXPORT_OPTIONS_PLIST'));
+      expect(source, contains('--export-options-plist='));
+      expect(source, contains(r'--build-number "$build_number"'));
+      expect(source, contains('--dart-define="SUPABASE_URL='));
+      expect(source, contains('--dart-define="SUPABASE_ANON_KEY='));
+      expect(source, contains('--dart-define="KAKAO_NATIVE_APP_KEY='));
+      expect(
+        source,
+        contains(
+          r'kakao_xcconfig="$mobile_directory/ios/Flutter/'
+          'Kakao.generated.xcconfig"',
+        ),
+      );
+      expect(source, contains("printf 'KAKAO_NATIVE_APP_KEY=%s\\n'"));
+      expect(source, contains(r'chmod 600 "$kakao_xcconfig"'));
+      expect(source, contains('trap cleanup_kakao_xcconfig EXIT'));
+      expect(source, contains('CFBundleURLTypes:0:CFBundleURLSchemes:0'));
+      expect(
+        source,
+        contains(
+          r'"$kakao_url_scheme" != "kakao${DANJJAN_KAKAO_NATIVE_APP_KEY}"',
+        ),
+      );
+      expect(source, contains('kakao_url_scheme_verification=verified'));
+      expect(source, contains('--dart-define="POLICY_BASE_URL='));
+      expect(source, contains('shopt -s nullglob'));
+      expect(source, contains(r'${#archive_candidates[@]} -ne 1'));
+      expect(source, contains(r'${#ipa_candidates[@]} -ne 1'));
+      expect(source, contains('archive_app_bundle='));
+      expect(
+        source,
+        contains('codesign --verify --deep --strict "\$archive_app_bundle"'),
+      );
+      expect(source, contains('unzip -q "\$ipa_path"'));
+      expect(source, contains(r'Payload/*.app'));
+      expect(source, contains(r'${#exported_app_candidates[@]} -ne 1'));
+      expect(source, contains(r'app_bundle="${exported_app_candidates[0]}"'));
+      expect(source, contains('codesign --verify --deep --strict'));
+      expect(source, contains('CFBundleIdentifier'));
+      expect(source, contains('CFBundleShortVersionString'));
+      expect(source, contains('CFBundleVersion'));
+      expect(source, contains('com.vinscent.vinscent.widgets'));
+      expect(source, contains('PrivacyInfo.xcprivacy'));
+      expect(source, contains('codesign -d --entitlements :-'));
+      expect(source, contains('aps-environment'));
+      expect(source, contains('Push environment'));
+      expect(source, contains('production'));
+      expect(source, contains('group.com.vinscent.vinscent'));
+      expect(source, contains('com.apple.developer.applesignin:0'));
+      expect(source, contains('com.apple.developer.team-identifier'));
+      expect(source, contains('Runner Team ID'));
+      expect(source, contains('Widget Team ID'));
+      expect(source, contains(r'${DANJJAN_APPLE_TEAM_ID}.${runner_bundle_id}'));
+      expect(source, contains(r'${DANJJAN_APPLE_TEAM_ID}.${widget_bundle_id}'));
+      expect(
+        source,
+        isNot(
+          contains(
+            r'"$runner_application_identifier" != *".${runner_bundle_id}"',
+          ),
+        ),
+      );
+      expect(
+        source,
+        isNot(
+          contains(
+            r'"$widget_application_identifier" != *".${widget_bundle_id}"',
+          ),
+        ),
+      );
+      expect(source, contains('privacy-manifests.txt'));
+      expect(source, contains('ditto -c -k'));
+      expect(source, contains('shasum -a 256'));
+      expect(source, contains(r'git -C "$repository_root" rev-parse HEAD'));
+      expect(
+        RegExp(
+          r'^commit_sha="\$\(git -C "\$repository_root" rev-parse HEAD\)"$',
+          multiLine: true,
+        ).hasMatch(source),
+        isFalse,
+      );
+      expect(
+        source,
+        contains(r'''printf 'commit_sha=%s\n' "$source_commit_sha"'''),
+      );
+      expect(source, contains(r"printf 'xcode_version=%s\n'"));
+      expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
+      expect(
+        source,
+        contains(r'''printf 'export_method=%s\n' "$export_method"'''),
+      );
+      expect(source, contains(r"printf 'team_id=%s\n'"));
+      expect(source, contains('runner_application_identifier=%s'));
+      expect(source, contains('widget_application_identifier=%s'));
+      expect(
+        source,
+        contains(r'mktemp -d "$evidence_parent/.ios-build-${build_number}.'),
+      );
+      expect(source, contains(r'ipa_output="$staged_evidence/'));
+      expect(source, contains(r'mv "$staged_evidence" "$evidence_directory"'));
+      expect(source, isNot(contains(r'mkdir -p "$evidence_directory"')));
+      expect(source, isNot(contains('altool')));
+      expect(source, isNot(contains('transporter')));
+      expect(source, contains('export_method="app-store-connect"'));
+    },
+  );
+
+  test('local iOS gate owns format analysis tests and simulator build', () {
+    expect(localVerificationScript.existsSync(), isTrue);
+    final source = localVerificationScript.readAsStringSync();
 
     expect(
       source,
       contains(
-        r'"$dart_binary" format --output=none --set-exit-if-changed '
+        'dart format --output=none --set-exit-if-changed '
         'lib test integration_test',
       ),
     );
-    expect(source, contains(r'"$flutter_binary" analyze --no-pub'));
-    expect(source, contains(r'"$flutter_binary" test --no-pub'));
-    expect(source, contains('build_arguments=('));
-    expect(RegExp(r'^  ipa$', multiLine: true).hasMatch(source), isTrue);
+    expect(source, contains('flutter analyze --no-pub'));
+    expect(source, contains('flutter test --no-pub'));
     expect(
       source,
-      contains(r'"$flutter_binary" build "${build_arguments[@]}"'),
+      contains('flutter build ios --simulator --debug --no-codesign --no-pub'),
     );
-    expect(source, contains('--release'));
-    expect(source, contains('--export-method app-store'));
-    expect(source, contains('DANJJAN_IOS_EXPORT_OPTIONS_PLIST'));
-    expect(source, contains('--export-options-plist='));
-    expect(source, contains(r'--build-number "$build_number"'));
-    expect(source, contains('--dart-define="SUPABASE_URL='));
-    expect(source, contains('--dart-define="SUPABASE_ANON_KEY='));
-    expect(source, contains('--dart-define="KAKAO_NATIVE_APP_KEY='));
-    expect(
-      source,
-      contains(
-        r'kakao_xcconfig="$mobile_directory/ios/Flutter/'
-        'Kakao.generated.xcconfig"',
-      ),
-    );
-    expect(source, contains("printf 'KAKAO_NATIVE_APP_KEY=%s\\n'"));
-    expect(source, contains(r'chmod 600 "$kakao_xcconfig"'));
-    expect(source, contains('trap cleanup_kakao_xcconfig EXIT'));
-    expect(source, contains('CFBundleURLTypes:0:CFBundleURLSchemes:0'));
-    expect(
-      source,
-      contains(
-        r'"$kakao_url_scheme" != "kakao${DANJJAN_KAKAO_NATIVE_APP_KEY}"',
-      ),
-    );
-    expect(source, contains('kakao_url_scheme_verification=verified'));
-    expect(source, contains('--dart-define="POLICY_BASE_URL='));
-    expect(source, contains('shopt -s nullglob'));
-    expect(source, contains(r'${#archive_candidates[@]} -ne 1'));
-    expect(source, contains(r'${#ipa_candidates[@]} -ne 1'));
-    expect(source, contains('archive_app_bundle='));
-    expect(
-      source,
-      contains('codesign --verify --deep --strict "\$archive_app_bundle"'),
-    );
-    expect(source, contains('unzip -q "\$ipa_path"'));
-    expect(source, contains(r'Payload/*.app'));
-    expect(source, contains(r'${#exported_app_candidates[@]} -ne 1'));
-    expect(source, contains(r'app_bundle="${exported_app_candidates[0]}"'));
-    expect(source, contains('codesign --verify --deep --strict'));
-    expect(source, contains('CFBundleIdentifier'));
-    expect(source, contains('CFBundleShortVersionString'));
-    expect(source, contains('CFBundleVersion'));
-    expect(source, contains('com.vinscent.vinscent.widgets'));
-    expect(source, contains('PrivacyInfo.xcprivacy'));
-    expect(source, contains('codesign -d --entitlements :-'));
-    expect(source, contains('aps-environment'));
-    expect(source, contains('Push environment'));
-    expect(source, contains('production'));
-    expect(source, contains('group.com.vinscent.vinscent'));
-    expect(source, contains('com.apple.developer.applesignin:0'));
-    expect(source, contains('com.apple.developer.team-identifier'));
-    expect(source, contains('Runner Team ID'));
-    expect(source, contains('Widget Team ID'));
-    expect(source, contains(r'${DANJJAN_APPLE_TEAM_ID}.${runner_bundle_id}'));
-    expect(source, contains(r'${DANJJAN_APPLE_TEAM_ID}.${widget_bundle_id}'));
-    expect(
-      source,
-      isNot(
-        contains(
-          r'"$runner_application_identifier" != *".${runner_bundle_id}"',
-        ),
-      ),
-    );
-    expect(
-      source,
-      isNot(
-        contains(
-          r'"$widget_application_identifier" != *".${widget_bundle_id}"',
-        ),
-      ),
-    );
-    expect(source, contains('privacy-manifests.txt'));
-    expect(source, contains('ditto -c -k'));
-    expect(source, contains('shasum -a 256'));
-    expect(source, contains(r'git -C "$repository_root" rev-parse HEAD'));
-    expect(
-      RegExp(
-        r'^commit_sha="\$\(git -C "\$repository_root" rev-parse HEAD\)"$',
-        multiLine: true,
-      ).hasMatch(source),
-      isFalse,
-    );
-    expect(
-      source,
-      contains(r'''printf 'commit_sha=%s\n' "$source_commit_sha"'''),
-    );
-    expect(source, contains(r"printf 'xcode_version=%s\n'"));
-    expect(source, contains(r"printf 'iphoneos_sdk_version=%s\n'"));
-    expect(
-      source,
-      contains(r'''printf 'export_method=%s\n' "$export_method"'''),
-    );
-    expect(source, contains(r"printf 'team_id=%s\n'"));
-    expect(source, contains('runner_application_identifier=%s'));
-    expect(source, contains('widget_application_identifier=%s'));
-    expect(
-      source,
-      contains(r'mktemp -d "$evidence_parent/.ios-build-${build_number}.'),
-    );
-    expect(source, contains(r'ipa_output="$staged_evidence/'));
-    expect(source, contains(r'mv "$staged_evidence" "$evidence_directory"'));
-    expect(source, isNot(contains(r'mkdir -p "$evidence_directory"')));
-    expect(source, isNot(contains('altool')));
-    expect(source, isNot(contains('transporter')));
-    expect(source, contains('export_method="app-store-connect"'));
   });
 
   test('iOS Kakao key is loaded from an ignored generated config', () {
