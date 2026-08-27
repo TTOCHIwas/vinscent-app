@@ -36,7 +36,10 @@ void main() {
   });
 
   test('Runner declares that it only uses exempt encryption', () {
-    final plist = infoPlist.readAsStringSync();
+    final plist = infoPlist.readAsStringSync().replaceAll(
+      RegExp(r'\r\n?'),
+      '\n',
+    );
 
     expect(
       plist,

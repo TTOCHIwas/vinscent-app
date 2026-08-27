@@ -11,10 +11,8 @@ void main() {
     final androidStrings = File(
       'android/app/src/main/res/values/strings.xml',
     ).readAsStringSync();
-    final iosInfo = File('ios/Runner/Info.plist').readAsStringSync();
-    final widgetInfo = File(
-      'ios/VinscentWidgets/Info.plist',
-    ).readAsStringSync();
+    final iosInfo = _readNormalized(File('ios/Runner/Info.plist'));
+    final widgetInfo = _readNormalized(File('ios/VinscentWidgets/Info.plist'));
 
     expect(flutterApp, contains("title: '단짠'"));
     expect(androidManifest, contains('android:label="@string/app_name"'));
@@ -49,3 +47,6 @@ void main() {
     );
   });
 }
+
+String _readNormalized(File file) =>
+    file.readAsStringSync().replaceAll(RegExp(r'\r\n?'), '\n');
