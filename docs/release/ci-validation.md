@@ -42,38 +42,39 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 
 ## 필수 체크
 
-| 체크 | 자동 실행 조건 | 검증 범위 |
-|---|---|---|
-| `Change detection` | 항상 | 변경 경로 분류, 추적된 비밀값 검사 |
-| `Flutter` | Flutter 소스·테스트·도구·네이티브 및 해당 릴리스 계약 입력 변경 | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트. Android 런타임·빌드 입력 변경일 때만 네이티브 테스트와 디버그 APK 빌드 |
-| `Android integration` | Flutter 런타임·Android·자산·통합 테스트 변경 | API 36 에뮬레이터에서 프로덕션 진입점 콜드 스타트, Firebase·홈 위젯 플러그인 등록, 백엔드 미설정 시 안전한 로그인 화면 |
-| `iOS native build` | `main`의 Flutter 런타임·iOS·자산 변경 | macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
-| `Node services` | 체크는 항상, 세부 테스트는 관련 변경만 | 변경 감지 실패 전달, 저장소 출시 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
-| `Edge functions` | Edge 함수·함수 테스트·공유 AI 소스·런타임 설정 변경 | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
-| `Supabase database` | 마이그레이션·DB 테스트·Supabase 설정 변경 | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
+| 체크 | 자동 PR·`main` | 수동 전체 CI·출시 | 검증 범위 |
+|---|---|---|---|
+| `Change detection` | 항상 | 항상 | 변경 경로 분류, 추적된 비밀값 검사 |
+| `Flutter` | 모바일 관련 변경 | 전체 실행 | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트. 수동 전체 CI에서는 Android 네이티브 테스트와 디버그 APK도 추가 검증 |
+| `Android integration` | 건너뜀 | 수동 전체 CI와 Android 출시 | API 36 에뮬레이터에서 프로덕션 진입점 콜드 스타트, Firebase·홈 위젯 플러그인 등록, 백엔드 미설정 시 안전한 로그인 화면 |
+| `iOS native build` | 건너뜀 | 수동 전체 CI와 iOS 출시 | macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 빌드 |
+| `Node services` | 체크는 항상, 세부 테스트는 관련 변경만 | 전체 실행 | 변경 감지 실패 전달, 저장소 출시 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
+| `Edge functions` | 관련 변경 | 전체 실행과 Supabase 출시 | Node 단위 테스트 자동 검색, 런타임 환경 매니페스트 대조, Deno 진입점 타입 검사 |
+| `Supabase database` | 건너뜀 | 수동 전체 CI와 Supabase 출시 | 빈 로컬 DB에 전체 마이그레이션 적용, pgTAP, DB lint |
 
-CI 워크플로 또는 경로 분류 파일 자체가 바뀌면 모든 검증을 한 번 실행한다.
+CI 워크플로 또는 경로 분류 파일 자체가 바뀌면 자동 실행 대상인 경량 검증을
+모두 실행한다. Android 에뮬레이터, macOS runner, Supabase 로컬 DB처럼 시간과
+비용이 큰 검증은 `workflow_dispatch` 수동 전체 CI에서만 실행한다.
 `services/ai-api/src/**`는 Edge Function이 직접 가져오는 공유 소스이므로 AI와
-Edge 검증을 함께 실행한다. 반면 AI 평가 케이스나 문서만 바뀌면 Android
-에뮬레이터, iOS macOS runner, Supabase 로컬 DB를 실행하지 않는다.
+Edge 검증을 함께 실행한다.
 
 iOS 네이티브 코드나 모바일 릴리스 계약 입력만 바뀌어도 이를 직접 읽는
-Flutter 테스트는 실행한다. 다만 Android 런타임과 빌드 입력이 바뀌지 않았다면
-같은 작업 안의 Java 설정, Android 네이티브 테스트, 디버그 APK 빌드는
-건너뛴다. Flutter 공통 코드·Android 코드·자산·패키지 계약 변경에서는 이
-세 단계를 모두 실행한다.
+Flutter 테스트는 자동 실행한다. Java 설정, Android 네이티브 테스트, 디버그
+APK 빌드는 수동 전체 CI에서 실행한다. 개발 중에는 아래 로컬 스크립트로 같은
+범위를 먼저 검증하고, 출시 워크플로가 해당 플랫폼의 고비용 검증을 다시
+수행한다.
 
-GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 다섯 체크를
-`main` 병합 전 필수로 설정한다. macOS 비용을 제한하기 위해 iOS 빌드는
-Pull Request에서는 건너뛰고 `main` 반영 직후와 수동 실행에서 검증한다.
+GitHub 저장소의 브랜치 보호 규칙에서는 기존 체크 이름을 `main` 병합 전
+필수로 유지한다. 고비용 작업은 자동 실행에서 작업 수준 `if` 조건으로
+건너뛰고 수동 전체 CI와 출시 과정에서 검증한다.
 조건에 맞지 않는 작업은 GitHub의 작업 수준 `if` 조건으로 건너뛰므로 기존
 필수 체크 이름은 유지된다. `Node services`가 변경 감지 실패까지 전달하므로
 브랜치 보호에 새 체크를 추가하지 않아도 기존 실패 차단 경계가 유지된다.
 워크플로 자체의 쓰기 권한이나 배포 비밀키는 추가하지 않는다.
 
-Android·iOS·Supabase 운영 배포 워크플로의 사전 검증은 변경하지 않는다.
-배포 워크플로는 실행 빈도가 낮고 서명·마이그레이션·운영 환경을 다루므로,
-선택적 CI 결과와 별개로 배포 직전에 전체 관련 검증을 다시 수행한다.
+Android·iOS·Supabase 운영 배포 워크플로는 실행 빈도가 낮고 서명·마이그레이션·
+운영 환경을 다루므로, 선택적 CI 결과와 별개로 배포 직전에 전체 관련 검증을
+다시 수행한다.
 
 Supabase 운영 배포 설정과 실행 절차는
 `docs/release/supabase-production-deployment.md`를 따른다.
@@ -85,37 +86,31 @@ Supabase 운영 배포 설정과 실행 절차는
 테스트 러너가 아니라 깨끗한 환경에서 수행하는 독립 확인 단계다. 수동 전체
 CI는 출시 후보 확인이나 CI 경로 규칙 변경 검증에 사용한다.
 
-Windows에서는 저장소에 포함된 Flutter 래퍼를 사용한다.
+Windows 모바일 전체 검증은 저장소 루트에서 다음 종료형 스크립트로 실행한다.
+연결된 기기나 이미 실행 중인 에뮬레이터가 여러 대면 `-DeviceId`를 지정한다.
 
 ```powershell
-cd apps/mobile
-..\..\.toolchains\flutter\bin\dart.bat format --output=none --set-exit-if-changed lib test integration_test
-.\flutterw.cmd pub get
-.\flutterw.cmd analyze --no-pub
-.\flutterw.cmd test --no-pub
-.\flutterw.cmd build apk --debug --no-pub
+.\scripts\verify_mobile_local.ps1
+.\scripts\verify_mobile_local.ps1 -DeviceId <device-id>
 ```
 
-Android 통합 테스트는 실제 기기 또는 에뮬레이터가 연결된 환경에서만
-실행한다. 이 테스트는 릴리스 비밀값을 주입하지 않은 프로덕션 진입점이
-네이티브 플러그인을 등록하고 안전하게 로그인 화면까지 도달하는지
-확인한다.
+스크립트는 의존성 복원, 포맷, 정적 분석, Flutter 테스트, Android 네이티브
+테스트, 프로덕션 콜드 스타트 통합 테스트, 디버그 APK 빌드, Flutter cache
+검증 순서로 실행하고 끝난다. `apps/mobile/.env`가 있으면 APK 빌드에만
+`--dart-define-from-file=.env`로 사용한다. 콜드 스타트 테스트에는 의도적으로
+릴리스 설정을 넣지 않아 설정이 없는 설치도 안전하게 로그인 화면까지
+도달하는지 확인한다.
 
-```powershell
-cd apps/mobile
-.\flutterw.cmd test integration_test/app_startup_test.dart --no-pub
-```
-
-iOS 앱과 위젯 확장의 컴파일 검증은 macOS에서 다음 명령으로 수행한다.
-서명 자격 증명이나 App Store Connect 비밀키는 필요하지 않다.
+iOS 앱과 위젯 확장의 전체 로컬 검증은 macOS에서 저장소 루트의 스크립트로
+수행한다. 서명 자격 증명이나 App Store Connect 비밀키는 필요하지 않다.
 
 ```bash
-cd apps/mobile
-flutter pub get
-flutter build ios --simulator --debug --no-codesign --no-pub
+./scripts/verify_ios_local.sh
 ```
 
-GitHub Actions에서는 `macos-26` runner를 사용해 제출 도구 체인과 같은
+스크립트는 Flutter 3.41.9를 확인한 뒤 의존성 복원, 포맷, 정적 분석, Flutter
+테스트, iOS 시뮬레이터 무서명 빌드를 실행한다. GitHub Actions에서는
+`macos-26` runner를 사용해 제출 도구 체인과 같은
 Xcode 26·iOS 26 SDK 세대에서 이 검증을 수행한다. 이 작업은 시뮬레이터용
 무서명 빌드이므로 제출 가능한 IPA를 만들거나 App Store Connect에
 업로드하지 않는다.
@@ -146,14 +141,12 @@ deno check $entrypoints
 운영 Edge Function 환경변수의 분류와 원격 대조 절차는
 `docs/release/supabase-runtime-configuration.md`를 따른다.
 
-데이터베이스 검증에는 Docker 호환 런타임과 Supabase CLI `2.109.1`이
-필요하다.
+데이터베이스 전체 로컬 검증에는 실행 중인 Docker 호환 런타임이 필요하다.
+스크립트는 Supabase CLI `2.109.1`을 고정해서 사용하며, 로컬 Supabase가 꺼져
+있을 때만 시작하고 자신이 시작한 경우에만 종료한다.
 
 ```powershell
-supabase db start
-supabase test db
-supabase db lint --local --level error
-supabase stop --no-backup
+.\scripts\verify_database_local.ps1
 ```
 
 ## 버전 갱신

@@ -1,7 +1,7 @@
 # 개발 환경 셋업
 
 작성일: 2026-05-06
-검증 갱신: 2026-07-22
+검증 갱신: 2026-08-27
 
 현재 코드의 책임 경계와 전체 회귀 검증 명령은 `docs/code-architecture-and-verification.md`를 함께 참고한다.
 
@@ -94,15 +94,20 @@ Supabase에서 새 프로젝트를 만든 뒤 다음 값을 앱 환경 변수로
 
 - Supabase project URL
 - Supabase anon key
+- Kakao native app key
+- 공개 정책 웹 base URL
 
-현재 앱은 `--dart-define` 값을 우선 사용한다.
+`apps/mobile/.env.example`을 `apps/mobile/.env`로 복사하고 실제 값을 채운다.
+`.env`는 Git에서 무시되며 커밋하지 않는다.
 
-```bash
+```powershell
 cd apps/mobile
-.\flutterw.cmd run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+Copy-Item .env.example .env
+.\flutterw.cmd run --dart-define-from-file=.env
 ```
 
-예시 값은 `apps/mobile/.env.example`에 둔다. 실제 값은 Git에 커밋하지 않는다.
+환경변수 이름과 빈 예시는 `.env.example`에서 관리한다. 값이 없는 상태의
+프로덕션 진입점도 통합 테스트에서 안전하게 로그인 화면까지 도달해야 한다.
 
 ### 2.5 계정 준비
 
@@ -154,34 +159,34 @@ cd apps/mobile
 .\flutterw.cmd pub add --dev build_runner freezed json_serializable
 ```
 
-## 4. 현재 검증 상태
+## 4. 현재 검증 방식
 
-2026-07-22 기준 통과:
+Windows에서 모바일 고비용 검증은 Android 실기기 또는 실행 중인 에뮬레이터를
+준비한 뒤 저장소 루트에서 실행한다.
 
-```bash
-cd apps/mobile
-.\flutterw.cmd --version
-.\flutterw.cmd pub get
-.\flutterw.cmd test
-.\flutterw.cmd analyze
-.\flutterw.cmd build apk --debug
-..\..\scripts\verify_flutter_cache.cmd
-
-cd android
-.\gradlew.bat :app:testDebugUnitTest
+```powershell
+.\scripts\verify_mobile_local.ps1
+.\scripts\verify_mobile_local.ps1 -DeviceId <device-id>
 ```
 
-- Flutter 전체 테스트 349개
-- Flutter analyzer
-- Android 앱 모듈 단위 테스트와 debug APK 패키징
-- Supabase DB pgTAP 테스트 154개
-- Edge 공용 모듈 테스트 8개와 함수 TypeScript 14개 구문 검사
-- AI API 테스트 39개
+Docker Desktop이 실행 중인 Windows에서 데이터베이스 전체 검증을 실행한다.
 
-미완료:
+```powershell
+.\scripts\verify_database_local.ps1
+```
 
-- iOS 빌드와 WidgetKit 검증은 Mac/Xcode 또는 원격 Mac 환경이 필요하다.
-- 마이크, 백그라운드 녹음, 홈 위젯, FCM은 Android/iOS 실기기에서 최종 확인한다.
+macOS와 Xcode가 준비된 환경에서는 iOS 앱과 위젯 확장을 검증한다.
+
+```bash
+./scripts/verify_ios_local.sh
+```
+
+자동 CI는 변경 구성요소의 경량 검증을 수행한다. Android 에뮬레이터, iOS
+네이티브 빌드, Supabase 로컬 DB 검증은 로컬에서 먼저 수행하고 수동 전체 CI와
+각 출시 워크플로에서 다시 확인한다. 자세한 범위는
+`docs/release/ci-validation.md`를 따른다.
+
+마이크, 백그라운드 녹음, 홈 위젯, FCM은 Android/iOS 실기기에서 최종 확인한다.
 
 ## 5. 당장 하지 않아도 되는 일
 

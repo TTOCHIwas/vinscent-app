@@ -19,9 +19,18 @@ cd apps/mobile
 
 앱 실행 예시:
 
-```bash
+```powershell
 cd apps/mobile
-.\flutterw.cmd run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+Copy-Item .env.example .env
+.\flutterw.cmd run --dart-define-from-file=.env
+```
+
+Android 실기기 또는 실행 중인 에뮬레이터를 포함한 전체 로컬 검증:
+
+```powershell
+cd ..\..
+.\scripts\verify_mobile_local.ps1
+.\scripts\verify_mobile_local.ps1 -DeviceId <device-id>
 ```
 
 상세 개발 환경 설명은 [docs/development-setup.md](../../docs/development-setup.md)를 따른다.
