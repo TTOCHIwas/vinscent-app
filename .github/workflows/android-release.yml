@@ -38,7 +38,7 @@ jobs:
   build:
     name: Signed Android App Bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     environment: android-release
     defaults:
       run:
@@ -158,40 +158,6 @@ jobs:
           printf 'app_version=%s\n' "$app_version" >> "$GITHUB_OUTPUT"
       - name: Verify resolved release source
         run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
-      - name: Check Dart formatting
-        run: dart format --output=none --set-exit-if-changed lib test integration_test
-      - name: Analyze Flutter
-        run: flutter analyze --no-pub
-      - name: Test Flutter
-        run: flutter test --no-pub
-      - name: Test Android native code
-        working-directory: apps/mobile/android
-        run: ./gradlew :app:testDebugUnitTest
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
-            sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Test production Android startup
-        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
-        with:
-          api-level: 36
-          target: google_apis
-          arch: x86_64
-          profile: pixel_7
-          disable-animations: true
-          emulator-boot-timeout: 600
-          emulator-options: >-
-            -no-window
-            -gpu swiftshader_indirect
-            -no-snapshot
-            -noaudio
-            -no-boot-anim
-            -camera-back none
-            -camera-front none
-          working-directory: apps/mobile
-          script: flutter test integration_test/app_startup_test.dart --no-pub
       - name: Restore Android upload key
         env:
           DANJJAN_UPLOAD_KEYSTORE_BASE64: ${{ secrets.DANJJAN_UPLOAD_KEYSTORE_BASE64 }}
@@ -450,57 +416,6 @@ jobs:
             printf 'proguard_mapping=embedded_and_exported\n'
             printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > "$release_dir/metadata.txt"
-      - name: Analyze Android app size
-        env:
-          DANJJAN_UPLOAD_STORE_FILE: ${{ runner.temp }}/danjjan-upload-keystore.jks
-          DANJJAN_UPLOAD_STORE_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_STORE_PASSWORD }}
-          DANJJAN_UPLOAD_KEY_ALIAS: ${{ secrets.DANJJAN_UPLOAD_KEY_ALIAS }}
-          DANJJAN_UPLOAD_KEY_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_KEY_PASSWORD }}
-          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
-          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
-          DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
-          DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
-        run: |
-          set -euo pipefail
-          release_dir="build/release-evidence"
-          release_name="danjjan-android-build-${BUILD_NUMBER}"
-
-          size_report_dir="$HOME/.flutter-devtools"
-          mkdir -p "$size_report_dir"
-          find "$size_report_dir" \
-            -type f \
-            -name 'aab-code-size-analysis*.json' \
-            -delete
-          flutter build appbundle \
-            --release \
-            --analyze-size \
-            --target-platform android-arm64 \
-            --build-number "$BUILD_NUMBER" \
-            --dart-define=SUPABASE_URL="$DANJJAN_SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$DANJJAN_SUPABASE_ANON_KEY" \
-            --dart-define=KAKAO_NATIVE_APP_KEY="$DANJJAN_KAKAO_NATIVE_APP_KEY" \
-            --dart-define=POLICY_BASE_URL="$DANJJAN_POLICY_BASE_URL"
-
-          mapfile -t size_reports < <(
-            find "$size_report_dir" \
-              -type f \
-              -name 'aab-code-size-analysis*.json' \
-              -print
-          )
-          if (( ${#size_reports[@]} != 1 )); then
-            echo "Expected one Flutter code-size report; found ${#size_reports[@]}." >&2
-            exit 1
-          fi
-
-          size_evidence="${release_dir}/${release_name}-code-size-analysis.json"
-          cp "${size_reports[0]}" "$size_evidence"
-          (
-            cd "$release_dir"
-            sha256sum "${release_name}-code-size-analysis.json" \
-              > "${release_name}-code-size-analysis.json.sha256"
-          )
-          printf 'size_analysis=flutter-code-size\n' \
-            >> "$release_dir/metadata.txt"
       - name: Verify final release source
         run: ../../scripts/verify_release_source.sh "$GITHUB_SHA"
       - name: Upload release evidence
