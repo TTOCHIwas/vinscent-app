@@ -44,13 +44,6 @@ void main() {
       expect(source, contains(variable));
     }
     expect(source, contains('base64 --decode'));
-    expect(
-      source,
-      contains(
-        'dart format --output=none --set-exit-if-changed '
-        'lib test integration_test',
-      ),
-    );
     expect(source, contains('flutter build appbundle'));
     expect(source, contains(r'--build-number "$BUILD_NUMBER"'));
     expect(source, contains('--dart-define=SUPABASE_URL='));
@@ -69,53 +62,45 @@ void main() {
     expect(source, contains(r'"$value" == *[[:space:]]*'));
   });
 
-  test('release builds regenerate plugins after running tests', () {
+  test('release builds resolve plugins as part of the release build', () {
     final source = workflow.readAsStringSync();
     final releaseBuilds = RegExp(
       r'flutter build appbundle \\\r?\n(?:(?!^\s*- name:)[\s\S])*?(?=^\s*- name:)',
       multiLine: true,
     ).allMatches(source);
 
-    expect(releaseBuilds, hasLength(2));
+    expect(releaseBuilds, hasLength(1));
     for (final build in releaseBuilds) {
       expect(build.group(0), isNot(contains('--no-pub')));
     }
   });
 
-  test('release candidates rerun expensive Android verification', () {
+  test('release candidates leave expensive verification to local gates', () {
     final source = workflow.readAsStringSync();
 
-    expect(source, contains('- name: Test Android native code'));
-    expect(source, contains('./gradlew :app:testDebugUnitTest'));
-    expect(source, contains('- name: Enable KVM'));
-    expect(source, contains('- name: Test production Android startup'));
-    expect(
-      source,
-      contains(
-        'uses: ReactiveCircus/android-emulator-runner@'
-        'a421e43855164a8197daf9d8d40fe71c6996bb0d',
-      ),
-    );
-    expect(
-      source,
-      contains(
-        'script: flutter test integration_test/app_startup_test.dart --no-pub',
-      ),
-    );
-
-    final flutterTestIndex = source.indexOf('- name: Test Flutter');
-    final nativeTestIndex = source.indexOf('- name: Test Android native code');
-    final startupTestIndex = source.indexOf(
+    for (final forbidden in const [
+      '- name: Check Dart formatting',
+      '- name: Analyze Flutter',
+      '- name: Test Flutter',
+      '- name: Test Android native code',
+      '- name: Enable KVM',
       '- name: Test production Android startup',
+      'ReactiveCircus/android-emulator-runner',
+      './gradlew :app:testDebugUnitTest',
+      '--analyze-size',
+    ]) {
+      expect(source, isNot(contains(forbidden)));
+    }
+
+    final dependencyIndex = source.indexOf(
+      '- name: Resolve Flutter dependencies',
     );
     final signingIndex = source.indexOf('- name: Restore Android upload key');
     final bundleIndex = source.indexOf(
       '- name: Build signed Android App Bundle',
     );
 
-    expect(nativeTestIndex, greaterThan(flutterTestIndex));
-    expect(startupTestIndex, greaterThan(nativeTestIndex));
-    expect(signingIndex, greaterThan(startupTestIndex));
+    expect(signingIndex, greaterThan(dependencyIndex));
     expect(bundleIndex, greaterThan(signingIndex));
   });
 
@@ -140,16 +125,14 @@ void main() {
     final resolvedSourceIndex = source.indexOf(
       '- name: Verify resolved release source',
     );
-    final sizeAnalysisIndex = source.indexOf(
-      '- name: Analyze Android app size',
-    );
+    final evidenceIndex = source.indexOf('- name: Prepare release evidence');
     final finalSourceIndex = source.indexOf(
       '- name: Verify final release source',
     );
     final uploadIndex = source.indexOf('- name: Upload release evidence');
 
     expect(resolvedSourceIndex, greaterThan(dependencyIndex));
-    expect(finalSourceIndex, greaterThan(sizeAnalysisIndex));
+    expect(finalSourceIndex, greaterThan(evidenceIndex));
     expect(uploadIndex, greaterThan(finalSourceIndex));
   });
 
@@ -182,21 +165,6 @@ void main() {
     expect(source, contains('upload_certificate_validity=verified'));
     expect(source, contains('play_upload_certificate_match=verified'));
     expect(source, contains('AndroidManifest.xml.sha256'));
-    expect(source, contains('Analyze Android app size'));
-    expect(source, contains('--analyze-size'));
-    expect(source, contains('--target-platform android-arm64'));
-    expect(source, contains(r'size_report_dir="$HOME/.flutter-devtools"'));
-    expect(source, contains("'aab-code-size-analysis*.json'"));
-    expect(source, contains(r'${#size_reports[@]} != 1'));
-    expect(
-      source,
-      contains(r'sha256sum "${release_name}-code-size-analysis.json"'),
-    );
-    expect(
-      source,
-      contains(r'> "${release_name}-code-size-analysis.json.sha256"'),
-    );
-    expect(source, contains('size_analysis=flutter-code-size'));
     for (final metadataKey in const [
       'commit_sha',
       'package_name',
@@ -222,13 +190,9 @@ void main() {
     );
 
     final evidenceIndex = source.indexOf('- name: Prepare release evidence');
-    final sizeAnalysisIndex = source.indexOf(
-      '- name: Analyze Android app size',
-    );
     final uploadIndex = source.indexOf('- name: Upload release evidence');
     expect(evidenceIndex, greaterThanOrEqualTo(0));
-    expect(sizeAnalysisIndex, greaterThan(evidenceIndex));
-    expect(uploadIndex, greaterThan(sizeAnalysisIndex));
+    expect(uploadIndex, greaterThan(evidenceIndex));
   });
 
   test(

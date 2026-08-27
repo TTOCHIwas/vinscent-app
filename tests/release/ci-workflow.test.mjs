@@ -133,33 +133,22 @@ test('CI gates lightweight jobs by component', async () => {
 
 });
 
-test('CI runs expensive platform validation only by manual request', async () => {
+test('CI leaves expensive platform validation to local gates', async () => {
   const source = await load(workflowUrl);
+  const mobile = job(source, 'mobile');
+
+  assert.doesNotMatch(mobile, /actions\/setup-java/);
+  assert.doesNotMatch(mobile, /Test Android native code/);
+  assert.doesNotMatch(mobile, /Build Android debug APK/);
 
   for (const jobId of ['android-integration', 'ios-build', 'database']) {
-    const block = job(source, jobId);
-    assert.match(block, /^    needs: changes$/m, jobId);
-    assert.match(
-      block,
-      /^    if: github\.event_name == 'workflow_dispatch'$/m,
-      jobId,
-    );
-    assert.doesNotMatch(block, /needs\.changes\.outputs\./, jobId);
+    assert.doesNotMatch(source, new RegExp(`^  ${jobId}:`, 'm'), jobId);
   }
 
-  const mobile = job(source, 'mobile');
-  assert.match(
-    mobile,
-    /uses: actions\/setup-java@[^\n]+\n\s+if: github\.event_name == 'workflow_dispatch'/,
-  );
-  assert.match(
-    mobile,
-    /name: Test Android native code\n\s+if: github\.event_name == 'workflow_dispatch'/,
-  );
-  assert.match(
-    mobile,
-    /name: Build Android debug APK\n\s+if: github\.event_name == 'workflow_dispatch'/,
-  );
+  assert.doesNotMatch(source, /ReactiveCircus\/android-emulator-runner/);
+  assert.doesNotMatch(source, /runs-on: macos-/);
+  assert.doesNotMatch(source, /supabase\/setup-cli/);
+  assert.doesNotMatch(source, /supabase (?:db start|test db|db lint)/);
 });
 
 test('Node services propagates change detection failures', async () => {

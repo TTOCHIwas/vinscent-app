@@ -71,15 +71,18 @@ test('Supabase deployment remains bound to the triggering source commit', async 
   assert.ok(uploadIndex > finalSourceIndex);
 });
 
-test('Supabase production release revalidates database and Edge contracts', async () => {
+test('Supabase production release leaves expensive validation to local gates', async () => {
   const source = await loadWorkflow();
 
   assert.match(source, /verify_supabase_runtime_environment\.mjs/);
-  assert.match(source, /test_supabase_functions\.mjs/);
-  assert.match(source, /deno check/);
-  assert.match(source, /supabase db start/);
-  assert.match(source, /supabase test db/);
-  assert.match(source, /supabase db lint --local --level error/);
+  assert.doesNotMatch(source, /^  preflight:/m);
+  assert.doesNotMatch(source, /needs: preflight/);
+  assert.doesNotMatch(source, /test_supabase_functions\.mjs/);
+  assert.doesNotMatch(source, /deno check/);
+  assert.doesNotMatch(source, /supabase db start/);
+  assert.doesNotMatch(source, /supabase test db/);
+  assert.doesNotMatch(source, /supabase db lint --local --level error/);
+  assert.doesNotMatch(source, /supabase stop --no-backup/);
 });
 
 test('Supabase production release uses forward-only deployment commands', async () => {
