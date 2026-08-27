@@ -36,6 +36,9 @@ import {
   buildGeneratedQuestionKey,
 } from '../domain/generated-question-key.ts';
 import {
+  describePersonalizedAnswerEvidence,
+} from '../domain/personalized-question-grounding.ts';
+import {
   classifyDirectQuestionResponse,
 } from '../domain/direct-question-evidence.ts';
 
@@ -84,6 +87,9 @@ const compactVisibleKoreanRules = [
 const personalizedQuestionFreshnessRulesKorean = [
   '- recent_exposed_questions와 pending_question_candidates는 반복 방지를 위한 금지 목록일 뿐이야. 질문 근거나 이어갈 단서로 사용하지 마.',
   '- current_question, recent_exposed_questions, pending_question_candidates와 같은 의미나 주제의 질문을 만들지 마.',
+  '- current_question이 current_answers의 사실 범위를 정해. 답변의 소재만 떼어 사실 수준을 높이지 마.',
+  '- 희망, 계획, 가정에 대한 답은 이미 일어난 사건의 근거가 아니야. 이어갈 때도 조건형, 희망, 계획, 선호의 범위를 유지해.',
+  '- 이미 일어난 일을 전제하는 질문은 current_answer_evidence.kind가 reported_experience일 때만 만들어.',
   '- 오늘, 내일, 이번 주말, 다음 주말처럼 후보가 노출될 때 의미가 달라지는 상대 날짜 표현을 쓰지 마.',
   '- 영화는 보다, 활동은 해보다처럼 대상에 맞는 자연스러운 동사를 써.',
   '- 질문은 짧은 일상 구어로 써. 에 있어서, 와 관련하여, 에 기반하여, 에 의해 같은 보고서 표현을 쓰지 마.',
@@ -92,6 +98,9 @@ const personalizedQuestionFreshnessRulesKorean = [
 const personalizedQuestionFreshnessRulesEnglish = [
   '- recent_exposed_questions and pending_question_candidates are negative-only anti-repeat lists. Never use them as evidence or continuation cues.',
   '- Do not generate a question with the same meaning or topic as current_question, recent_exposed_questions, or pending_question_candidates.',
+  '- current_question defines the factual scope of current_answers. Never raise an answer cue to a stronger factual claim.',
+  '- An answer to a desire, plan, or hypothetical question is not evidence that the activity happened. Preserve its conditional, intended, or preferred status.',
+  '- Presuppose a completed event only when current_answer_evidence.kind is reported_experience.',
   '- Avoid relative dates whose meaning can expire before delivery, including today, tomorrow, this weekend, and next weekend.',
   '- Use a natural Korean predicate for the object, such as watching a movie and trying an activity.',
   '- Use short everyday Korean. Avoid formal translationese such as 에 있어서, 와 관련하여, 에 기반하여, and 에 의해.',
@@ -855,6 +864,9 @@ function buildPersonalizedQuestionPrompt(
       domain: context.question.domain,
     },
     current_answers: context.answers,
+    current_answer_evidence: describePersonalizedAnswerEvidence(
+      context.question.text,
+    ),
     confirmed_profile: context.confirmedMemories,
     recent_completed_questions: context.recentCompletedQuestions,
     recent_exposed_questions: context.recentExposedQuestionTexts ?? [],
@@ -994,6 +1006,9 @@ function personalizedQuestionRetryCorrection(
   }
   if (code === 'volatile_time_reference') {
     return '노출 시점에 의미가 달라지는 상대 날짜 표현을 모두 빼고 언제 보여도 자연스러운 질문을 만들어.';
+  }
+  if (code === 'unsupported_presupposition') {
+    return 'current_question이 답변에 부여한 사실 범위를 보존해. 희망, 계획, 가정의 답을 이미 일어난 일로 바꾸지 말고 조건형이나 선호 질문으로 다시 만들어.';
   }
   if (code === 'unnatural_question') {
     return '목적어에 맞는 자연스러운 한국어 동사를 사용하고, 같은 표현을 다른 목적어에 기계적으로 붙이거나 보고서식 번역투를 쓰지 마.';

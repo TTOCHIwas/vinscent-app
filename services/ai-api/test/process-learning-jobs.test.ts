@@ -353,7 +353,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
       {
         jobId: 'job-personalized',
-        promptVersion: 'personalized-question-v6',
+        promptVersion: 'personalized-question-v7',
       },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
