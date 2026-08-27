@@ -127,6 +127,16 @@ test('release builder supports explicit manual export options', async () => {
   assert.match(source, /--export-options-plist/);
 });
 
+test('iOS release builds the signed artifact without repeating local validation', async () => {
+  const source = await load(releaseBuilderUrl);
+
+  assert.doesNotMatch(source, /"\$dart_binary"\s+format/);
+  assert.doesNotMatch(source, /"\$flutter_binary"\s+analyze/);
+  assert.doesNotMatch(source, /"\$flutter_binary"\s+test/);
+  assert.match(source, /"\$flutter_binary"\s+build\s+"\$\{build_arguments\[@\]\}"/);
+  assert.match(source, /codesign --verify --deep --strict/);
+});
+
 test('Runner and widget use separate release profile specifiers', async () => {
   const source = await load(xcodeProjectUrl);
 
