@@ -45,7 +45,7 @@ GitHub 문서의 권고에 따라 워크플로 권한은 `contents: read`로 제
 | 체크 | 자동 실행 조건 | 검증 범위 |
 |---|---|---|
 | `Change detection` | 항상 | 변경 경로 분류, 추적된 비밀값 검사 |
-| `Flutter` | `apps/mobile/**` | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트, Android 디버그 APK |
+| `Flutter` | Flutter 소스·테스트·도구·네이티브 및 해당 릴리스 계약 입력 변경 | 의존성 복원, Dart 표준 포맷, 정적 분석, 전체 Flutter 테스트. Android 런타임·빌드 입력 변경일 때만 네이티브 테스트와 디버그 APK 빌드 |
 | `Android integration` | Flutter 런타임·Android·자산·통합 테스트 변경 | API 36 에뮬레이터에서 프로덕션 진입점 콜드 스타트, Firebase·홈 위젯 플러그인 등록, 백엔드 미설정 시 안전한 로그인 화면 |
 | `iOS native build` | `main`의 Flutter 런타임·iOS·자산 변경 | macOS 26·Xcode 26 환경에서 iOS 앱과 위젯 확장 시뮬레이터 빌드 |
 | `Node services` | 체크는 항상, 세부 테스트는 관련 변경만 | 변경 감지 실패 전달, 저장소 출시 계약, AI 서비스 테스트, 정책 웹 lint·빌드·렌더링 테스트 |
@@ -56,6 +56,12 @@ CI 워크플로 또는 경로 분류 파일 자체가 바뀌면 모든 검증을
 `services/ai-api/src/**`는 Edge Function이 직접 가져오는 공유 소스이므로 AI와
 Edge 검증을 함께 실행한다. 반면 AI 평가 케이스나 문서만 바뀌면 Android
 에뮬레이터, iOS macOS runner, Supabase 로컬 DB를 실행하지 않는다.
+
+iOS 네이티브 코드나 모바일 릴리스 계약 입력만 바뀌어도 이를 직접 읽는
+Flutter 테스트는 실행한다. 다만 Android 런타임과 빌드 입력이 바뀌지 않았다면
+같은 작업 안의 Java 설정, Android 네이티브 테스트, 디버그 APK 빌드는
+건너뛴다. Flutter 공통 코드·Android 코드·자산·패키지 계약 변경에서는 이
+세 단계를 모두 실행한다.
 
 GitHub 저장소의 브랜치 보호 규칙에서 Linux에서 실행되는 다섯 체크를
 `main` 병합 전 필수로 설정한다. macOS 비용을 제한하기 위해 iOS 빌드는
