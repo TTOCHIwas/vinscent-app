@@ -135,7 +135,9 @@ deno check $entrypoints
 
 데이터베이스 전체 로컬 검증에는 실행 중인 Docker 호환 런타임이 필요하다.
 스크립트는 Supabase CLI `2.109.1`을 고정해서 사용하며, 로컬 Supabase가 꺼져
-있을 때만 시작하고 자신이 시작한 경우에만 종료한다.
+있을 때만 시작하고 자신이 시작한 경우에만 종료한다. 테스트 전에 로컬
+데이터베이스를 현재 migration 기준으로 `reset --local --no-seed`하므로 로컬
+데이터는 삭제된다. 운영 프로젝트에는 연결하지 않는다.
 
 ```powershell
 .\scripts\verify_database_local.ps1

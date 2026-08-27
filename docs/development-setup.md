@@ -175,6 +175,9 @@ Docker Desktop이 실행 중인 Windows에서 데이터베이스 전체 검증�
 .\scripts\verify_database_local.ps1
 ```
 
+이 스크립트는 운영 프로젝트에 연결하지 않지만, 로컬 데이터베이스를 현재
+migration 기준으로 재구성한다. 실행 전 보존할 로컬 데이터가 없는지 확인한다.
+
 macOS와 Xcode가 준비된 환경에서는 iOS 앱과 위젯 확장을 검증한다.
 
 ```bash
