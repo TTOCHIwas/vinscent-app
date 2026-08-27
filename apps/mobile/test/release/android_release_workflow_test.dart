@@ -82,6 +82,43 @@ void main() {
     }
   });
 
+  test('release candidates rerun expensive Android verification', () {
+    final source = workflow.readAsStringSync();
+
+    expect(source, contains('- name: Test Android native code'));
+    expect(source, contains('./gradlew :app:testDebugUnitTest'));
+    expect(source, contains('- name: Enable KVM'));
+    expect(source, contains('- name: Test production Android startup'));
+    expect(
+      source,
+      contains(
+        'uses: ReactiveCircus/android-emulator-runner@'
+        'a421e43855164a8197daf9d8d40fe71c6996bb0d',
+      ),
+    );
+    expect(
+      source,
+      contains(
+        'script: flutter test integration_test/app_startup_test.dart --no-pub',
+      ),
+    );
+
+    final flutterTestIndex = source.indexOf('- name: Test Flutter');
+    final nativeTestIndex = source.indexOf('- name: Test Android native code');
+    final startupTestIndex = source.indexOf(
+      '- name: Test production Android startup',
+    );
+    final signingIndex = source.indexOf('- name: Restore Android upload key');
+    final bundleIndex = source.indexOf(
+      '- name: Build signed Android App Bundle',
+    );
+
+    expect(nativeTestIndex, greaterThan(flutterTestIndex));
+    expect(startupTestIndex, greaterThan(nativeTestIndex));
+    expect(signingIndex, greaterThan(startupTestIndex));
+    expect(bundleIndex, greaterThan(signingIndex));
+  });
+
   test('release evidence remains bound to the triggering source commit', () {
     final source = workflow.readAsStringSync();
     const verifierCommand =
