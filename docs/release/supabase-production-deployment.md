@@ -31,7 +31,9 @@ Environment에는 다음 값을 등록한다.
 다음 조건을 모두 확인한 뒤 실행한다.
 
 - 배포할 commit이 원격 `main`에 존재한다.
-- `CI` workflow의 Linux 다섯 작업과 직전 iOS native build가 통과했다.
+- 해당 commit의 경량 `CI` 체크가 통과했다.
+- Docker 호환 런타임이 있는 개발 환경에서
+  `.\scripts\verify_database_local.ps1` 전체 검증이 통과했다.
 - migration은 이미 적용된 동작을 깨지 않는 전진 호환 변경이다.
 - Edge Function이 새 schema에 의존한다면 migration 적용 뒤에도 이전
   함수가 잠시 동작할 수 있는 경계를 유지한다.
@@ -53,30 +55,27 @@ Environment에는 다음 값을 등록한다.
 입력한 commit 또는 project ref가 보호된 값과 다르면 배포 전에
 중단된다.
 
-## 4. 자동 검증과 배포 순서
+## 4. 배포 안전 검사와 실행 순서
 
-`preflight`는 운영 자격 증명을 받기 전에 다음을 실행한다.
+Edge Function 단위 테스트·Deno type check와 빈 Database migration·pgTAP·
+Database lint는 CI 및 로컬 검증 단계의 책임이다. 운영 배포는 Docker 기반
+검증을 반복하지 않는다. `deploy`는 Environment 승인 뒤 다음 순서로
+실행한다.
 
-1. 런타임 환경 매니페스트와 실제 Edge Function 참조 대조
-2. Edge Function 단위 테스트와 Deno type check
-3. 빈 로컬 Database에 전체 migration 적용
-4. 전체 pgTAP
-5. Database lint
-
-`deploy`는 Environment 승인 뒤 다음 순서로 실행한다.
-
-1. checkout된 HEAD와 workflow commit의 일치 및 깨끗한 worktree 확인
-2. 운영 project 연결
-3. 운영 Edge secret 이름과 필수·fallback 계약 확인
-4. 저장소에 없는 원격 Edge Function 존재 여부 확인
-5. 저장소에 없는 원격 migration 이력이 없는지 확인하되 아직 적용하지
+1. 입력한 commit, workflow commit과 `main` branch의 정확한 일치 확인
+2. checkout된 HEAD와 workflow commit의 일치 및 깨끗한 worktree 확인
+3. 런타임 환경 매니페스트와 실제 Edge Function 참조 대조
+4. 보호된 project ref와 입력값 대조 후 운영 project 연결
+5. 운영 Edge secret 이름과 필수·fallback 계약 확인
+6. 저장소에 없는 원격 Edge Function 존재 여부 확인
+7. 저장소에 없는 원격 migration 이력이 없는지 확인하되 아직 적용하지
    않은 로컬 migration은 허용
-6. `db push --dry-run`
-7. pending migration 전진 적용
-8. 저장소의 모든 Edge Function 배포
-9. 로컬·원격 migration 버전, Edge Function 목록과 `verify_jwt` 모드의
+8. `db push --dry-run`
+9. pending migration 전진 적용
+10. 저장소의 모든 Edge Function 배포
+11. 로컬·원격 migration 버전, Edge Function 목록과 `verify_jwt` 모드의
    정확한 일치 확인
-10. source commit과 worktree를 다시 확인하고 migration·function 목록과 파일
+12. source commit과 worktree를 다시 확인하고 migration·function 목록과 파일
    hash 증빙 업로드
 
 원격에만 남은 함수는 자동 삭제하지 않는다. 해당 함수의 호출자와 운영

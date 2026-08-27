@@ -17,7 +17,7 @@
 | 메모리 | 카드 이미지·그림·캘린더를 반복 탐색한 뒤 메모리가 계속 증가하지 않으며 OS 강제 종료가 없음 |
 | 백그라운드 | 녹음, 알림, 위젯 동기화 이후 앱 복귀가 정상이고 비정상적인 배터리·네트워크 반복 작업이 없음 |
 | 안정성 | 검증 세션 동안 crash와 ANR이 0건임 |
-| 크기 | Release App Bundle의 크기 분석 보고서를 보관하고 이전 출시 후보보다 설명되지 않은 증가가 없음 |
+| 크기 | 로컬에서 생성한 Release App Bundle 크기 분석 보고서를 보관하고 이전 출시 후보보다 설명되지 않은 증가가 없음 |
 | Android 16KB | BundleConfig·ELF 정렬 자동 검증을 통과하고 16KB 환경에서 설치·시작·핵심 기능이 정상임 |
 
 Android의 시작 시간 값은 Android vitals가 과도한 시작으로 분류하는
@@ -110,10 +110,11 @@ Flutter DevTools Performance view에서 UI·Raster frame, shader compilation,
 crash, ANR, startup, slow rendering, partial wake lock 알림을 활성화한다.
 
 Release App Bundle의 Dart·asset 크기 분석은 다음 명령으로 생성한다.
-`Android release candidate` workflow는 표준 제출 AAB를 먼저 증빙에 복사한
-뒤 단일 `android-arm64` 분석 빌드를 별도로 실행하고, 분석 JSON과 SHA-256을
-같은 artifact에 보관한다. 이 JSON은 릴리스 간 Dart·asset 구성 변화를
-비교하는 자료이며 Play Console의 기기별 다운로드 크기를 대신하지 않는다.
+이 명령은 단일 `android-arm64` 분석 빌드를 별도로 만드는 고비용 검증이므로
+GitHub Actions가 아니라 로컬에서 필요할 때 실행한다. 생성된 JSON은 릴리스
+간 Dart·asset 구성 변화를 비교하는 자료이며 Play Console의 기기별 다운로드
+크기를 대신하지 않는다. 제출 후보 AAB는 `Android release candidate`가 별도로
+한 번 빌드하고 검증한다.
 
 ```powershell
 cd apps/mobile

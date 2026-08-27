@@ -149,8 +149,10 @@ Actions의 `Android release candidate`를 실행할 때 branch로 `main`을
 완성된 AAB와 mapping 파일을 `internal` 트랙의 완료 상태 릴리스로 게시한다.
 선택하지 않으면 기존과 동일하게 검증 artifact만 생성한다. 선택한 branch,
 확인한 commit과 workflow commit이 다르면
-서명 설정을 읽기 전에 중단한다. 작업은 포맷·분석·테스트를 모두 통과한 뒤
-서명된 AAB를 만들고 다음 파일을 90일 동안 하나의 artifact로 보관한다.
+서명 설정을 읽기 전에 중단한다. 포맷·분석·Flutter·Android 네이티브·
+에뮬레이터 검증은 먼저 `.\scripts\verify_mobile_local.ps1`로 수행한다.
+릴리스 작업은 이를 반복하지 않고 서명된 AAB를 한 번 만들고 다음 파일을
+90일 동안 하나의 artifact로 보관한다.
 
 - `danjjan-android-build-<BUILD_NUMBER>.aab`
 - AAB의 SHA-256
@@ -158,7 +160,6 @@ Actions의 `Android release candidate`를 실행할 때 branch로 `main`을
 - 병합된 Release manifest와 SHA-256
 - 업로드 키 JAR 서명·인증서 검증 보고서와 SHA-256
 - 16KB BundleConfig·ELF 정렬 검증 보고서와 SHA-256
-- Flutter Dart·asset 코드 크기 분석 JSON과 SHA-256
 - commit SHA, 앱 version, build number, 생성 시각
 
 워크플로는 `flutter pub get` 직후와 최종 artifact 업로드 직전에
@@ -178,12 +179,11 @@ Play Console 업로드 인증서 지문 일치, 현재 유효 여부를 다시 �
 
 AAB 내부의 native debug symbol과 ProGuard mapping뿐 아니라 BundleConfig의
 `PAGE_ALIGNMENT_16K`와 모든 `.so` 파일의 ELF LOAD 정렬도 확인한다. 표준
-AAB를 증빙 폴더에 먼저 보존한 뒤 별도의 종료형 `--analyze-size` 빌드에서
-코드 크기 분석 JSON을 생성하므로, 분석용 빌드가 제출 후보 AAB를 대체하지
-않는다. 분석 빌드는 Flutter 도구 계약에 따라 단일 `android-arm64` ABI를
-대상으로 하며 제출 AAB의 전체 다운로드 크기가 아니라 릴리스 간 코드·asset
-크기 변화 비교에 사용한다. 로컬 AAB는 다음 종료형 명령으로 같은 정렬
-검사를 실행할 수 있다.
+AAB의 서명과 정렬 검증은 릴리스 작업에 남겨 실제 제출 artifact를 직접
+확인한다. 별도 AAB를 다시 만드는 `--analyze-size` 코드 크기 분석은 GitHub
+Actions에서 실행하지 않으며, 필요할 때
+`docs/release/mobile-performance-baseline.md`의 로컬 명령으로 수행한다.
+로컬 AAB는 다음 종료형 명령으로 같은 정렬 검사를 실행할 수 있다.
 
 ```powershell
 cd apps/mobile
@@ -275,8 +275,10 @@ scripts/build_ios_release_candidate.sh 1 <main의-40자-commit-SHA>
 스크립트는 macOS와 양의 build number, 40자 소문자 commit SHA, 현재
 branch가 `main`이고 HEAD가 입력한 SHA와 같은지, Xcode 26 이상, iOS 26 SDK
 이상, 필수 값, 10자리 Apple Team ID, Supabase·정책 웹의 HTTPS를 검증한다.
-이후 Dart 포맷·전체 분석·테스트를 거쳐 App Store 배포 방식이 명시된
-`flutter build ipa --release --export-method app-store`를 실행하고 다음
+포맷·분석·Flutter 테스트·시뮬레이터 빌드는 먼저
+`./scripts/verify_ios_local.sh`로 수행한다. 릴리스 스크립트는 이를 반복하지
+않고 App Store 배포 방식이 명시된
+`flutter build ipa --release --export-method app-store`를 한 번 실행한 뒤 다음
 증빙을 `apps/mobile/build/release-evidence/ios-build-<BUILD_NUMBER>`에
 만든다.
 
@@ -324,11 +326,11 @@ Mac에서 Release 아카이브를 만든 뒤 Organizer에서 다음을 확인한
 저장소에는 `DEVELOPMENT_TEAM`을 하드코딩하지 않는다. 팀 선택과 App ID
 capability 활성화는 Apple 계정 권한이 있는 담당자가 수행한다.
 
-일반 CI의 `iOS native build`는 Xcode 26 환경에서 무서명 시뮬레이터
-컴파일만 검증한다. 서명·업로드는 일반 CI와 분리된 수동
-`iOS release candidate`에서만 실행한다. 해당 workflow는 `ios-release`
-Environment 승인, 정확한 `main` commit, Apple Distribution 인증서와
-Runner·위젯의 App Store Connect profile을 모두 요구한다.
+iOS 무서명 시뮬레이터 컴파일은 Mac의 `verify_ios_local.sh`에서만 검증한다.
+서명·업로드는 일반 CI와 분리된 수동 `iOS release candidate`에서만 실행한다.
+해당 workflow는 `ios-release` Environment 승인, 정확한 `main` commit,
+Apple Distribution 인증서와 Runner·위젯의 App Store Connect profile을
+모두 요구한다.
 
 참고:
 
