@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { matchesGlob } from 'node:path';
 import test from 'node:test';
 
 const workflowUrl = new URL('../../.github/workflows/ci.yml', import.meta.url);
@@ -37,6 +38,37 @@ function filter(source, filterId) {
   );
 }
 
+function parseFilters(source) {
+  const filters = new Map();
+  let currentFilter;
+
+  for (const line of source.split('\n')) {
+    if (line.length === 0) {
+      continue;
+    }
+
+    const header = /^([a-z][a-z0-9_]*):$/.exec(line);
+    if (header) {
+      currentFilter = header[1];
+      filters.set(currentFilter, []);
+      continue;
+    }
+
+    const rule = /^  - '([^']+)'$/.exec(line);
+    assert.ok(rule && currentFilter, `unsupported filter line: ${line}`);
+    filters.get(currentFilter).push(rule[1]);
+  }
+
+  return filters;
+}
+
+function matchingFilters(filters, path) {
+  return [...filters]
+    .filter(([, rules]) => rules.some((rule) => matchesGlob(path, rule)))
+    .map(([name]) => name)
+    .sort();
+}
+
 test('CI detects component changes with a commit-pinned action', async () => {
   const source = await load(workflowUrl);
   const changes = job(source, 'changes');
@@ -53,6 +85,7 @@ test('CI detects component changes with a commit-pinned action', async () => {
   for (const output of [
     'ci_config',
     'mobile',
+    'android',
     'android_integration',
     'ios',
     'release_contracts',
@@ -96,6 +129,24 @@ test('CI gates expensive jobs by component while manual runs stay complete', asy
   assert.match(
     job(source, 'ios-build'),
     /github\.event_name == 'push'.*github\.event_name == 'workflow_dispatch'/s,
+  );
+});
+
+test('Flutter runs Android-only steps only for Android changes', async () => {
+  const source = await load(workflowUrl);
+  const mobile = job(source, 'mobile');
+
+  assert.match(
+    mobile,
+    /uses: actions\/setup-java@[^\n]+\n\s+if:.*outputs\.android/,
+  );
+  assert.match(
+    mobile,
+    /name: Test Android native code\n\s+if:.*outputs\.android/,
+  );
+  assert.match(
+    mobile,
+    /name: Build Android debug APK\n\s+if:.*outputs\.android/,
   );
 });
 
@@ -143,7 +194,12 @@ test('CI path filters preserve cross-component dependencies', async () => {
 
   assert.match(filter(source, 'ci_config'), /\.github\/workflows\/ci\.yml/);
   assert.match(filter(source, 'ci_config'), /\.github\/ci-paths\.yml/);
-  assert.match(filter(source, 'mobile'), /apps\/mobile\/\*\*/);
+  const mobile = filter(source, 'mobile');
+  assert.match(mobile, /apps\/mobile\/lib\/\*\*/);
+  assert.match(mobile, /apps\/mobile\/test\/\*\*/);
+  assert.match(mobile, /apps\/mobile\/tool\/\*\*/);
+  assert.doesNotMatch(mobile, /'apps\/mobile\/\*\*'/);
+  assert.match(filter(source, 'android'), /apps\/mobile\/android\/\*\*/);
   assert.match(
     filter(source, 'android_integration'),
     /apps\/mobile\/integration_test\/\*\*/,
@@ -160,6 +216,53 @@ test('CI path filters preserve cross-component dependencies', async () => {
   const database = filter(source, 'database');
   assert.match(database, /supabase\/migrations\/\*\*/);
   assert.match(database, /supabase\/tests\/database\/\*\*/);
+});
+
+test('CI routes representative paths to the minimum required checks', async () => {
+  const filters = parseFilters(await load(filtersUrl));
+  const cases = new Map([
+    ['services/ai-api/eval/question.ts', ['ai']],
+    ['services/ai-api/src/domain/question.ts', ['ai', 'edge']],
+    [
+      'apps/mobile/ios/Runner/AppDelegate.swift',
+      ['ios', 'mobile', 'release_contracts'],
+    ],
+    [
+      'apps/mobile/android/app/build.gradle.kts',
+      ['android', 'android_integration', 'mobile'],
+    ],
+    [
+      'apps/mobile/lib/main.dart',
+      ['android', 'android_integration', 'ios', 'mobile'],
+    ],
+    ['apps/mobile/test/widget_test.dart', ['mobile']],
+    ['apps/mobile/tool/verify_store_assets.dart', ['mobile']],
+    ['apps/mobile/README.md', []],
+    ['apps/mobile/windows/runner/main.cpp', []],
+    [
+      '.github/workflows/android-release.yml',
+      ['mobile', 'release_contracts'],
+    ],
+    [
+      'scripts/check_ios_release_mac.sh',
+      ['mobile', 'release_contracts'],
+    ],
+    ['store-assets/google-play/app-icon-512.png', ['mobile']],
+    [
+      'docs/release/store-listing-copy-ko.md',
+      ['mobile', 'release_contracts'],
+    ],
+    ['supabase/migrations/20260101000000_example.sql', [
+      'database',
+      'release_contracts',
+    ]],
+    ['supabase/functions/example/index.ts', ['edge', 'release_contracts']],
+    ['docs/architecture.md', []],
+  ]);
+
+  for (const [path, expected] of cases) {
+    assert.deepEqual(matchingFilters(filters, path), expected, path);
+  }
 });
 
 test('CI pins every external action to a commit', async () => {
