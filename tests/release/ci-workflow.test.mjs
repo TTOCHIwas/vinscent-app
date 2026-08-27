@@ -85,27 +85,32 @@ test('CI detects component changes with a commit-pinned action', async () => {
   for (const output of [
     'ci_config',
     'mobile',
-    'android',
-    'android_integration',
-    'ios',
     'release_contracts',
     'ai',
     'policy',
     'edge',
-    'database',
   ]) {
     assert.match(changes, new RegExp(`^      ${output}:`, 'm'));
   }
+
+  for (const removedOutput of [
+    'android',
+    'android_integration',
+    'ios',
+    'database',
+  ]) {
+    assert.doesNotMatch(
+      changes,
+      new RegExp(`^      ${removedOutput}:`, 'm'),
+    );
+  }
 });
 
-test('CI gates expensive jobs by component while manual runs stay complete', async () => {
+test('CI gates lightweight jobs by component', async () => {
   const source = await load(workflowUrl);
   const expectedScopes = new Map([
     ['mobile', 'mobile'],
-    ['android-integration', 'android_integration'],
-    ['ios-build', 'ios'],
     ['edge-functions', 'edge'],
-    ['database', 'database'],
   ]);
 
   assert.doesNotMatch(source, /^\s+paths(?:-ignore)?:/m);
@@ -126,27 +131,34 @@ test('CI gates expensive jobs by component while manual runs stay complete', asy
     );
   }
 
-  assert.match(
-    job(source, 'ios-build'),
-    /github\.event_name == 'push'.*github\.event_name == 'workflow_dispatch'/s,
-  );
 });
 
-test('Flutter runs Android-only steps only for Android changes', async () => {
+test('CI runs expensive platform validation only by manual request', async () => {
   const source = await load(workflowUrl);
-  const mobile = job(source, 'mobile');
 
+  for (const jobId of ['android-integration', 'ios-build', 'database']) {
+    const block = job(source, jobId);
+    assert.match(block, /^    needs: changes$/m, jobId);
+    assert.match(
+      block,
+      /^    if: github\.event_name == 'workflow_dispatch'$/m,
+      jobId,
+    );
+    assert.doesNotMatch(block, /needs\.changes\.outputs\./, jobId);
+  }
+
+  const mobile = job(source, 'mobile');
   assert.match(
     mobile,
-    /uses: actions\/setup-java@[^\n]+\n\s+if:.*outputs\.android/,
+    /uses: actions\/setup-java@[^\n]+\n\s+if: github\.event_name == 'workflow_dispatch'/,
   );
   assert.match(
     mobile,
-    /name: Test Android native code\n\s+if:.*outputs\.android/,
+    /name: Test Android native code\n\s+if: github\.event_name == 'workflow_dispatch'/,
   );
   assert.match(
     mobile,
-    /name: Build Android debug APK\n\s+if:.*outputs\.android/,
+    /name: Build Android debug APK\n\s+if: github\.event_name == 'workflow_dispatch'/,
   );
 });
 
@@ -199,12 +211,10 @@ test('CI path filters preserve cross-component dependencies', async () => {
   assert.match(mobile, /apps\/mobile\/test\/\*\*/);
   assert.match(mobile, /apps\/mobile\/tool\/\*\*/);
   assert.doesNotMatch(mobile, /'apps\/mobile\/\*\*'/);
-  assert.match(filter(source, 'android'), /apps\/mobile\/android\/\*\*/);
-  assert.match(
-    filter(source, 'android_integration'),
-    /apps\/mobile\/integration_test\/\*\*/,
+  assert.doesNotMatch(
+    source,
+    /^(?:android|android_integration|ios|database):$/m,
   );
-  assert.match(filter(source, 'ios'), /apps\/mobile\/ios\/\*\*/);
   assert.match(filter(source, 'ai'), /services\/ai-api\/\*\*/);
   assert.match(filter(source, 'policy'), /apps\/policy-web\/\*\*/);
 
@@ -212,10 +222,6 @@ test('CI path filters preserve cross-component dependencies', async () => {
   assert.match(edge, /supabase\/functions\/\*\*/);
   assert.match(edge, /supabase\/tests\/functions\/\*\*/);
   assert.match(edge, /services\/ai-api\/src\/\*\*/);
-
-  const database = filter(source, 'database');
-  assert.match(database, /supabase\/migrations\/\*\*/);
-  assert.match(database, /supabase\/tests\/database\/\*\*/);
 });
 
 test('CI routes representative paths to the minimum required checks', async () => {
@@ -225,16 +231,10 @@ test('CI routes representative paths to the minimum required checks', async () =
     ['services/ai-api/src/domain/question.ts', ['ai', 'edge']],
     [
       'apps/mobile/ios/Runner/AppDelegate.swift',
-      ['ios', 'mobile', 'release_contracts'],
+      ['mobile', 'release_contracts'],
     ],
-    [
-      'apps/mobile/android/app/build.gradle.kts',
-      ['android', 'android_integration', 'mobile'],
-    ],
-    [
-      'apps/mobile/lib/main.dart',
-      ['android', 'android_integration', 'ios', 'mobile'],
-    ],
+    ['apps/mobile/android/app/build.gradle.kts', ['mobile']],
+    ['apps/mobile/lib/main.dart', ['mobile']],
     ['apps/mobile/test/widget_test.dart', ['mobile']],
     ['apps/mobile/tool/verify_store_assets.dart', ['mobile']],
     ['apps/mobile/README.md', []],
@@ -252,10 +252,10 @@ test('CI routes representative paths to the minimum required checks', async () =
       'docs/release/store-listing-copy-ko.md',
       ['mobile', 'release_contracts'],
     ],
-    ['supabase/migrations/20260101000000_example.sql', [
-      'database',
-      'release_contracts',
-    ]],
+    [
+      'supabase/migrations/20260101000000_example.sql',
+      ['release_contracts'],
+    ],
     ['supabase/functions/example/index.ts', ['edge', 'release_contracts']],
     ['docs/architecture.md', []],
   ]);
