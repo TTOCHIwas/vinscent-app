@@ -27,14 +27,10 @@ jobs:
     outputs:
       ci_config: ${{ steps.filter.outputs.ci_config }}
       mobile: ${{ steps.filter.outputs.mobile }}
-      android: ${{ steps.filter.outputs.android }}
-      android_integration: ${{ steps.filter.outputs.android_integration }}
-      ios: ${{ steps.filter.outputs.ios }}
       release_contracts: ${{ steps.filter.outputs.release_contracts }}
       ai: ${{ steps.filter.outputs.ai }}
       policy: ${{ steps.filter.outputs.policy }}
       edge: ${{ steps.filter.outputs.edge }}
-      database: ${{ steps.filter.outputs.database }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -62,7 +58,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android == 'true'
+        if: github.event_name == 'workflow_dispatch'
         with:
           distribution: temurin
           java-version: "17"
@@ -84,17 +80,17 @@ jobs:
       - name: Test Flutter
         run: flutter test --no-pub
       - name: Test Android native code
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android == 'true'
+        if: github.event_name == 'workflow_dispatch'
         working-directory: apps/mobile/android
         run: ./gradlew :app:testDebugUnitTest
       - name: Build Android debug APK
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android == 'true'
+        if: github.event_name == 'workflow_dispatch'
         run: flutter build apk --debug --no-pub
 
   android-integration:
     name: Android integration
     needs: changes
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android_integration == 'true'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -146,7 +142,7 @@ jobs:
   ios-build:
     name: iOS native build
     needs: changes
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.ios == 'true')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     timeout-minutes: 30
     defaults:
@@ -238,7 +234,7 @@ jobs:
   database:
     name: Supabase database
     needs: changes
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.database == 'true'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
