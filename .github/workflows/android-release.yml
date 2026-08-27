@@ -38,7 +38,7 @@ jobs:
   build:
     name: Signed Android App Bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     environment: android-release
     defaults:
       run:
@@ -164,6 +164,34 @@ jobs:
         run: flutter analyze --no-pub
       - name: Test Flutter
         run: flutter test --no-pub
+      - name: Test Android native code
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:testDebugUnitTest
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test production Android startup
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-boot-timeout: 600
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader_indirect
+            -no-snapshot
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
+          working-directory: apps/mobile
+          script: flutter test integration_test/app_startup_test.dart --no-pub
       - name: Restore Android upload key
         env:
           DANJJAN_UPLOAD_KEYSTORE_BASE64: ${{ secrets.DANJJAN_UPLOAD_KEYSTORE_BASE64 }}
