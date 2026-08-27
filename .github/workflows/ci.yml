@@ -27,6 +27,7 @@ jobs:
     outputs:
       ci_config: ${{ steps.filter.outputs.ci_config }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      android: ${{ steps.filter.outputs.android }}
       android_integration: ${{ steps.filter.outputs.android_integration }}
       ios: ${{ steps.filter.outputs.ios }}
       release_contracts: ${{ steps.filter.outputs.release_contracts }}
@@ -61,6 +62,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android == 'true'
         with:
           distribution: temurin
           java-version: "17"
@@ -82,9 +84,11 @@ jobs:
       - name: Test Flutter
         run: flutter test --no-pub
       - name: Test Android native code
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android == 'true'
         working-directory: apps/mobile/android
         run: ./gradlew :app:testDebugUnitTest
       - name: Build Android debug APK
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.ci_config == 'true' || needs.changes.outputs.android == 'true'
         run: flutter build apk --debug --no-pub
 
   android-integration:

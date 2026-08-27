@@ -3,7 +3,34 @@ ci_config:
   - '.github/ci-paths.yml'
 
 mobile:
-  - 'apps/mobile/**'
+  - 'apps/mobile/lib/**'
+  - 'apps/mobile/test/**'
+  - 'apps/mobile/integration_test/**'
+  - 'apps/mobile/tool/**'
+  - 'apps/mobile/android/**'
+  - 'apps/mobile/ios/**'
+  - 'apps/mobile/assets/**'
+  - 'apps/mobile/pubspec.yaml'
+  - 'apps/mobile/pubspec.lock'
+  - 'apps/mobile/analysis_options.yaml'
+  - 'apps/mobile/.metadata'
+  - '.github/workflows/android-release.yml'
+  - '.github/workflows/store-assets.yml'
+  - 'scripts/verify_release_source.sh'
+  - 'scripts/build_ios_release_candidate.sh'
+  - 'scripts/check_ios_release_mac.sh'
+  - 'scripts/install_ios_signing_assets.sh'
+  - '.gitignore'
+  - 'docs/release/store-listing-copy-ko.md'
+  - 'store-assets/**'
+
+android:
+  - 'apps/mobile/lib/**'
+  - 'apps/mobile/android/**'
+  - 'apps/mobile/assets/**'
+  - 'apps/mobile/pubspec.yaml'
+  - 'apps/mobile/pubspec.lock'
+  - 'apps/mobile/.metadata'
 
 android_integration:
   - 'apps/mobile/lib/**'
@@ -12,6 +39,7 @@ android_integration:
   - 'apps/mobile/assets/**'
   - 'apps/mobile/pubspec.yaml'
   - 'apps/mobile/pubspec.lock'
+  - 'apps/mobile/.metadata'
 
 ios:
   - 'apps/mobile/lib/**'
@@ -19,6 +47,7 @@ ios:
   - 'apps/mobile/assets/**'
   - 'apps/mobile/pubspec.yaml'
   - 'apps/mobile/pubspec.lock'
+  - 'apps/mobile/.metadata'
 
 release_contracts:
   - '.github/workflows/**'
