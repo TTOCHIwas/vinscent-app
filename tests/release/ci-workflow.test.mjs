@@ -218,6 +218,10 @@ test('CI path filters preserve cross-component dependencies', async () => {
   assert.match(filter(source, 'ai'), /services\/ai-api\/\*\*/);
   assert.match(filter(source, 'policy'), /apps\/policy-web\/\*\*/);
 
+  const releaseContracts = filter(source, 'release_contracts');
+  assert.match(releaseContracts, /apps\/mobile\/\.env\.example/);
+  assert.match(releaseContracts, /\.gitattributes/);
+
   const edge = filter(source, 'edge');
   assert.match(edge, /supabase\/functions\/\*\*/);
   assert.match(edge, /supabase\/tests\/functions\/\*\*/);
@@ -247,6 +251,8 @@ test('CI routes representative paths to the minimum required checks', async () =
       'scripts/check_ios_release_mac.sh',
       ['mobile', 'release_contracts'],
     ],
+    ['apps/mobile/.env.example', ['release_contracts']],
+    ['.gitattributes', ['release_contracts']],
     ['store-assets/google-play/app-icon-512.png', ['mobile']],
     [
       'docs/release/store-listing-copy-ko.md',
