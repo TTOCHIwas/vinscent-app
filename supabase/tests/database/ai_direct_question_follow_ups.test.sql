@@ -291,9 +291,27 @@ select is(
   'dismissal creates no shared recommendation'
 );
 
+insert into public.ai_focused_questions (
+  id,
+  couple_id,
+  question_id,
+  status
+)
+select
+  '5a000000-0000-0000-0000-000000000010',
+  '27000000-0000-0000-0000-000000000001',
+  q.id,
+  'completed'
+from public.questions as q
+where q.curriculum_version = 1
+  and q.is_active
+order by q.curriculum_position, q.id
+limit 1;
+
 insert into public.ai_runs (
   id,
   couple_id,
+  focused_question_id,
   task,
   provider,
   model,
@@ -306,6 +324,7 @@ values
   (
     '57000000-0000-0000-0000-000000000010',
     '27000000-0000-0000-0000-000000000001',
+    '5a000000-0000-0000-0000-000000000010',
     'generate_personalized_question',
     'test',
     'test-model',
@@ -317,6 +336,7 @@ values
   (
     '57000000-0000-0000-0000-000000000011',
     '27000000-0000-0000-0000-000000000001',
+    '5a000000-0000-0000-0000-000000000010',
     'generate_personalized_question',
     'test',
     'test-model',
