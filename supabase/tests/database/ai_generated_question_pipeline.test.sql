@@ -423,6 +423,7 @@ insert into public.ai_runs (
   id,
   job_id,
   couple_id,
+  focused_question_id,
   task,
   provider,
   model,
@@ -431,10 +432,11 @@ insert into public.ai_runs (
   safety_status,
   completed_at
 )
-values (
+select
   '63000000-0000-0000-0000-000000000010',
-  '83000000-0000-0000-0000-000000000010',
-  '23000000-0000-0000-0000-000000000001',
+  aipj.id,
+  aipj.couple_id,
+  aipj.focused_question_id,
   'generate_general_question',
   'test',
   'test-model',
@@ -442,7 +444,8 @@ values (
   'succeeded',
   'passed',
   now()
-);
+from public.ai_processing_jobs as aipj
+where aipj.id = '83000000-0000-0000-0000-000000000010';
 
 insert into public.questions (
   id,
