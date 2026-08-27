@@ -45,13 +45,20 @@ test('Windows local mobile gate runs every expensive Android check', async () =>
   assert.match(source, /DeviceId/);
 });
 
-test('Windows local database gate preserves an already running stack', async () => {
+test('Windows local database gate rebuilds migrations and preserves a running stack', async () => {
   const source = await load(databaseScriptUrl);
+  const startIndex = source.indexOf('Invoke-SupabaseChecked @("db", "start")');
+  const resetIndex = source.indexOf(
+    'Invoke-SupabaseChecked @("db", "reset", "--local", "--no-seed")',
+  );
+  const testIndex = source.indexOf('Invoke-SupabaseChecked @("test", "db")');
 
   assert.match(source, /supabase@2\.109\.1/);
   assert.match(source, /status[\s\S]*--output[\s\S]*json/);
   assert.match(source, /db[\s\S]*start/);
-  assert.match(source, /test[\s\S]*db/);
+  assert.ok(startIndex >= 0);
+  assert.ok(resetIndex > startIndex);
+  assert.ok(testIndex > resetIndex);
   assert.match(source, /db[\s\S]*lint[\s\S]*--local[\s\S]*--level[\s\S]*error/);
   assert.match(source, /finally/);
   assert.match(source, /stop[\s\S]*--no-backup/);
