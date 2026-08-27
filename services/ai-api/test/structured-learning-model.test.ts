@@ -1908,6 +1908,60 @@ test('personalized question prompt treats exposed and pending questions as negat
   );
 });
 
+test('personalized question prompt marks desired activities as unconfirmed events', async () => {
+  let capturedPrompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async ({ prompt }) => {
+      capturedPrompt = prompt;
+      return {
+        value: {
+          question_text: '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '함께 가고 싶은 식당 분위기를 알아보기 위해',
+        },
+        usage: {
+          inputTokenCount: null,
+          outputTokenCount: null,
+          latencyMs: 1,
+        },
+      };
+    },
+  });
+
+  await model.generatePersonalizedQuestion({
+    ...context,
+    question: {
+      ...context.question,
+      text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        participantKey: 'partner_a',
+        text: '두 번째 앱 테스트 올려버리기',
+      },
+      {
+        answerId: 'answer-b',
+        participantKey: 'partner_b',
+        text: '같이 맛있는 고기 먹기',
+      },
+    ],
+  });
+
+  assert.equal(
+    capturedPrompt.includes(
+      '"current_answer_evidence":{"kind":"intention_or_hypothetical"',
+    ),
+    true,
+  );
+  assert.equal(
+    capturedPrompt.includes('이미 일어난 사건의 근거가 아니야'),
+    true,
+  );
+});
+
 test('prompt strategies keep Korean context while changing compact-model controls', async () => {
   const requests: StructuredGenerationRequest[] = [];
   const client = {

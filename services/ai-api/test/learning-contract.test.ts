@@ -1177,6 +1177,81 @@ test('개인화 질문은 짧은 구어 질문에 맞지 않는 격식 번역투
   }));
 });
 
+test('개인화 질문은 희망 답변을 이미 일어난 사건으로 바꾸지 않는다', () => {
+  const intentionContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-a',
+        text: '두 번째 앱 테스트 올려버리기',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-b',
+        text: '같이 맛있는 고기 먹기',
+      },
+    ],
+  });
+
+  assert.throws(
+    () => validatePersonalizedQuestion({
+      questionKey: 'personalized_generated_meal_ab12cd34',
+      text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '고기를 먹으러 갔을 때의 분위기를 알아보기 위해',
+    }, intentionContext),
+    (error: unknown) =>
+      error instanceof PersonalizedQuestionValidationError
+      && error.code === 'unsupported_presupposition',
+  );
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_meal_cd34ef56',
+    text: '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '함께 가고 싶은 식당 분위기를 알아보기 위해',
+  }, intentionContext));
+});
+
+test('개인화 질문은 실제 경험을 묻는 원 질문의 사건 맥락을 이어갈 수 있다', () => {
+  const experienceContext = anonymizeCompletedQuestionContext({
+    ...context,
+    question: {
+      ...context.question,
+      text: '최근 둘이 고기 먹으러 갔을 때 기억에 남은 메뉴는 뭐야?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-a',
+        text: '직접 구워 먹은 갈비',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-b',
+        text: '마지막에 먹은 냉면',
+      },
+    ],
+  });
+
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_meal_ef56gh78',
+    text: '그때 식당 분위기는 어땠어?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '함께 식사한 경험의 다른 면을 알아보기 위해',
+  }, experienceContext));
+});
+
 test('개인화 질문은 현재 질문이나 최근 질문을 표현만 바꿔 반복하지 않는다', () => {
   const candidate = {
     questionKey: 'personalized_generated_movie_ab12cd34',

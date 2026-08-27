@@ -1778,6 +1778,78 @@ test('processor regenerates a personalized question that repeats a recently expo
   );
 });
 
+test('processor regenerates a personalized question that turns an intention into a past event', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-false-event', 'generate_personalized_question'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-real-a',
+        text: '두 번째 앱 테스트 올려버리기',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-real-b',
+        text: '같이 맛있는 고기 먹기',
+      },
+    ],
+  };
+  const optionsSeen: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const unsupportedQuestion =
+    '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?';
+  const model = modelWith({
+    async generatePersonalizedQuestion(_context, options) {
+      optionsSeen.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      const text = optionsSeen.length === 1
+        ? unsupportedQuestion
+        : '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?';
+      return result({
+        questionKey: 'personalized_generated_meal_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '함께 가고 싶은 식당 분위기를 알아보기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.equal(summary.succeeded, 1);
+  assert.deepEqual(optionsSeen, [
+    { rejectedText: null, rejectionCode: null },
+    {
+      rejectedText: unsupportedQuestion,
+      rejectionCode: 'unsupported_presupposition',
+    },
+  ]);
+  assert.equal(
+    repository.successes[0]?.output.question_text,
+    '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?',
+  );
+});
+
 test('processor retries structurally invalid personalized question once', async () => {
   const repository = new FakeRepository([
     job('job-invalid-personalized-structure', 'generate_personalized_question'),

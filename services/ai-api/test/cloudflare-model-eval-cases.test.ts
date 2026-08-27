@@ -124,6 +124,13 @@ test('개인화 질문 평가는 현재 질문 반복과 직전 답변 맥락 �
     mood: null,
     rationale: '함께 보고 싶은 영화를 알아보기 위해',
   }), /missing one of|forbidden pattern/u);
+  assert.throws(() => continuity.validate({
+    questionKey: 'personalized_generated_false_meal_event',
+    text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '고기를 먹으러 갔을 때의 분위기를 알아보기 위해',
+  }), /unsupported_presupposition/u);
   assert.doesNotThrow(() => continuity.validate({
     questionKey: 'personalized_generated_after_test',
     text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
