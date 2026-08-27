@@ -18,6 +18,7 @@ const mobileEnvExampleUrl = new URL(
   '../../apps/mobile/.env.example',
   import.meta.url,
 );
+const attributesUrl = new URL('../../.gitattributes', import.meta.url);
 
 async function load(url) {
   return (await readFile(url, 'utf8')).replaceAll('\r\n', '\n');
@@ -69,6 +70,12 @@ test('Mac local iOS gate runs Flutter checks and a simulator build', async () =>
     source,
     /flutter build ios --simulator --debug --no-codesign --no-pub/,
   );
+});
+
+test('Mac local iOS gate keeps LF line endings across checkouts', async () => {
+  const source = await load(attributesUrl);
+
+  assert.match(source, /^scripts\/verify_ios_local\.sh text eol=lf$/m);
 });
 
 test('mobile environment template covers every compile-time setting', async () => {
