@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(24);
+select plan(27);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -644,7 +644,7 @@ select
   'generate_personalized_question',
   'fixture',
   'fixture',
-  'personalized-question-v6',
+  'personalized-question-v8',
   'succeeded',
   'passed',
   now()
@@ -685,6 +685,98 @@ values (
   '68000000-0000-0000-0000-000000000011',
   '62000000-0000-0000-0000-000000000010',
   'latest context regression test'
+);
+
+insert into public.ai_runs (
+  id,
+  couple_id,
+  daily_question_id,
+  task,
+  provider,
+  model,
+  prompt_version,
+  status,
+  safety_status,
+  completed_at
+)
+select
+  '62000000-0000-0000-0000-000000000011',
+  '22000000-0000-0000-0000-000000000001',
+  dq.id,
+  'generate_personalized_question',
+  'fixture',
+  'fixture',
+  'personalized-question-v7',
+  'succeeded',
+  'passed',
+  now()
+from public.daily_questions as dq
+join public.questions as q on q.id = dq.question_id
+where dq.couple_id = '22000000-0000-0000-0000-000000000001'
+  and q.curriculum_position = 24;
+
+insert into public.questions (
+  id,
+  source,
+  question_key,
+  question_text,
+  category,
+  is_active,
+  personalized_for_couple_id,
+  generated_by_run_id
+)
+values (
+  '68000000-0000-0000-0000-000000000012',
+  'ai',
+  'personalized_stale_prompt_ab12cd34',
+  '다음 주말에도 둘이 고기를 먹었을 때 분위기는 어땠어?',
+  'daily_life',
+  true,
+  '22000000-0000-0000-0000-000000000001',
+  '62000000-0000-0000-0000-000000000011'
+);
+
+insert into public.ai_question_recommendations (
+  couple_id,
+  question_id,
+  source_run_id,
+  reason
+)
+values (
+  '22000000-0000-0000-0000-000000000001',
+  '68000000-0000-0000-0000-000000000012',
+  '62000000-0000-0000-0000-000000000011',
+  'stale prompt regression test'
+);
+
+select is(
+  (
+    select aiqr.status
+    from public.ai_question_recommendations as aiqr
+    where aiqr.question_id = '68000000-0000-0000-0000-000000000012'
+  ),
+  'expired',
+  'stale personalized prompt candidate is rejected at queue insertion'
+);
+
+select is(
+  (
+    select q.is_active
+    from public.questions as q
+    where q.id = '68000000-0000-0000-0000-000000000012'
+  ),
+  false,
+  'unused question from a stale personalized prompt is deactivated'
+);
+
+select is(
+  (
+    select aiqr.status
+    from public.ai_question_recommendations as aiqr
+    where aiqr.question_id = '68000000-0000-0000-0000-000000000011'
+  ),
+  'pending',
+  'rejecting a stale prompt candidate preserves the current candidate'
 );
 
 create temporary table personalized_context
