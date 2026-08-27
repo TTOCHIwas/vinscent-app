@@ -36,7 +36,9 @@ import {
   buildGeneratedQuestionKey,
 } from '../domain/generated-question-key.ts';
 import {
-  describePersonalizedAnswerEvidence,
+  isConsistentPersonalizedQuestionGroundingDecision,
+  personalizedQuestionGroundingReasonCodes,
+  type PersonalizedQuestionGroundingDecision,
 } from '../domain/personalized-question-grounding.ts';
 import {
   classifyDirectQuestionResponse,
@@ -87,9 +89,9 @@ const compactVisibleKoreanRules = [
 const personalizedQuestionFreshnessRulesKorean = [
   '- recent_exposed_questions와 pending_question_candidates는 반복 방지를 위한 금지 목록일 뿐이야. 질문 근거나 이어갈 단서로 사용하지 마.',
   '- current_question, recent_exposed_questions, pending_question_candidates와 같은 의미나 주제의 질문을 만들지 마.',
-  '- current_question이 current_answers의 사실 범위를 정해. 답변의 소재만 떼어 사실 수준을 높이지 마.',
-  '- 희망, 계획, 가정에 대한 답은 이미 일어난 사건의 근거가 아니야. 이어갈 때도 조건형, 희망, 계획, 선호의 범위를 유지해.',
-  '- 이미 일어난 일을 전제하는 질문은 current_answer_evidence.kind가 reported_experience일 때만 만들어.',
+  '- current_question은 current_answers의 맥락일 뿐이고, 질문에 쓴 사건 자체는 그 사건이 실제로 일어났다는 근거가 아니야.',
+  '- current_answers의 정확한 의미를 읽어. 희망, 계획, 가정, 부정, 모름은 이미 일어난 사건의 근거가 아니야.',
+  '- 이미 일어난 일을 전제하려면 current_answers가 같은 사건을 직접 확인해야 해. 불확실하면 조건형, 희망, 계획, 선호 질문으로 유지해.',
   '- 오늘, 내일, 이번 주말, 다음 주말처럼 후보가 노출될 때 의미가 달라지는 상대 날짜 표현을 쓰지 마.',
   '- 영화는 보다, 활동은 해보다처럼 대상에 맞는 자연스러운 동사를 써.',
   '- 질문은 짧은 일상 구어로 써. 에 있어서, 와 관련하여, 에 기반하여, 에 의해 같은 보고서 표현을 쓰지 마.',
@@ -98,9 +100,9 @@ const personalizedQuestionFreshnessRulesKorean = [
 const personalizedQuestionFreshnessRulesEnglish = [
   '- recent_exposed_questions and pending_question_candidates are negative-only anti-repeat lists. Never use them as evidence or continuation cues.',
   '- Do not generate a question with the same meaning or topic as current_question, recent_exposed_questions, or pending_question_candidates.',
-  '- current_question defines the factual scope of current_answers. Never raise an answer cue to a stronger factual claim.',
-  '- An answer to a desire, plan, or hypothetical question is not evidence that the activity happened. Preserve its conditional, intended, or preferred status.',
-  '- Presuppose a completed event only when current_answer_evidence.kind is reported_experience.',
+  '- current_question provides context for current_answers, but current_question alone is not evidence that its event happened.',
+  '- Read the exact semantics of current_answers. A desire, plan, hypothetical, denial, uncertainty, or unknown response is not evidence that an activity happened.',
+  '- Presuppose a completed event only when current_answers directly confirm that same event. When uncertain, preserve conditional, intended, planned, or preferred status.',
   '- Avoid relative dates whose meaning can expire before delivery, including today, tomorrow, this weekend, and next weekend.',
   '- Use a natural Korean predicate for the object, such as watching a movie and trying an activity.',
   '- Use short everyday Korean. Avoid formal translationese such as 에 있어서, 와 관련하여, 에 기반하여, and 에 의해.',
@@ -139,6 +141,7 @@ const generationProfiles = {
   feedback: { temperature: 0.4, maxOutputTokens: 256 },
   feedbackRepair: { temperature: 0.1, maxOutputTokens: 192 },
   question: { temperature: 0.3, maxOutputTokens: 384 },
+  grounding: { temperature: 0, maxOutputTokens: 96 },
   directAnswer: { temperature: 0.2, maxOutputTokens: 512 },
   followUp: { temperature: 0.2, maxOutputTokens: 384 },
   proactive: { temperature: 0.4, maxOutputTokens: 512 },
@@ -154,6 +157,17 @@ const generatedQuestionSchema = objectSchema({
   mood: { type: ['string', 'null'] },
   rationale: { type: 'string' },
 }, ['question_text', 'category', 'mood', 'rationale']);
+
+const personalizedQuestionGroundingSchema = objectSchema({
+  verdict: {
+    type: 'string',
+    enum: ['supported', 'unsupported'],
+  },
+  reason_code: {
+    type: 'string',
+    enum: [...personalizedQuestionGroundingReasonCodes],
+  },
+}, ['verdict', 'reason_code']);
 
 const directQuestionAnswerSchema = objectSchema({
   answer_status: {
@@ -292,6 +306,48 @@ export class StructuredLearningModel implements LearningModelPort {
       mood: requireNullableString(output, 'mood', 100),
       rationale: requireString(output, 'rationale', 500),
     });
+  }
+
+  async evaluatePersonalizedQuestionGrounding(
+    context: AnonymizedCompletedQuestionContext,
+    candidate: PersonalizedQuestionCandidate,
+  ): Promise<LearningModelResult<PersonalizedQuestionGroundingDecision>> {
+    const result = await this.#generateStructured(buildStructuredRequest(
+      buildPersonalizedQuestionGroundingPrompt(context, candidate),
+      personalizedQuestionGroundingSchema,
+      generationProfiles.grounding,
+      hybridSystemInstruction,
+    ));
+
+    try {
+      const output = requireRecord(
+        result.value,
+        'personalized_question_grounding.output.invalid',
+      );
+      const verdict = requireEnum(
+        output,
+        'verdict',
+        ['supported', 'unsupported'] as const,
+        'personalized_question_grounding.verdict.invalid',
+      );
+      const decision: PersonalizedQuestionGroundingDecision = {
+        supported: verdict === 'supported',
+        reasonCode: requireEnum(
+          output,
+          'reason_code',
+          personalizedQuestionGroundingReasonCodes,
+          'personalized_question_grounding.reason_code.invalid',
+        ),
+      };
+      if (!isConsistentPersonalizedQuestionGroundingDecision(decision)) {
+        throwInvalidOutput(
+          'personalized_question_grounding.verdict_reason_mismatch',
+        );
+      }
+      return withUsage(result, decision);
+    } catch (error) {
+      throw attachParsingUsage(error, result.usage, result.diagnostics);
+    }
   }
 
   async answerDirectQuestion(
@@ -864,9 +920,6 @@ function buildPersonalizedQuestionPrompt(
       domain: context.question.domain,
     },
     current_answers: context.answers,
-    current_answer_evidence: describePersonalizedAnswerEvidence(
-      context.question.text,
-    ),
     confirmed_profile: context.confirmedMemories,
     recent_completed_questions: context.recentCompletedQuestions,
     recent_exposed_questions: context.recentExposedQuestionTexts ?? [],
@@ -909,6 +962,46 @@ function buildPersonalizedQuestionPrompt(
       '- rejected_question가 있으면 표현만 바꾸지 말고 retry_correction을 반영한 다른 질문을 만들어.',
     ].join('\n'),
     data,
+  );
+}
+
+function buildPersonalizedQuestionGroundingPrompt(
+  context: AnonymizedCompletedQuestionContext,
+  candidate: PersonalizedQuestionCandidate,
+): string {
+  return buildTaskPrompt(
+    [
+      'Task: Decide whether candidate_question can be shown without asserting an unsupported completed shared event.',
+      'Judge only factual grounding. Do not rewrite the question and do not judge style, novelty, safety, or usefulness.',
+      'Evidence boundary:',
+      '- current_question gives context to current_answers. current_question alone is never evidence that an event happened.',
+      '- Only current_answers can confirm whether the same completed shared event happened.',
+      '- A concrete answer that supplies the detail requested by current_question, without denial or uncertainty, pragmatically confirms that source event.',
+      '- A desire, plan, hypothetical, denial, or uncertainty does not confirm a completed event.',
+      '- The event must match in action and object. Evidence about one event cannot support a different event.',
+      '- If either answer denies or is unsure about the shared event, treat the event as unconfirmed.',
+      '- When evidence is ambiguous, choose unsupported.',
+      'Decision labels:',
+      '- supported + no_completed_event: candidate_question asks a preference, plan, condition, or other question without assuming a completed event.',
+      '- supported + answers_confirm_same_event: current_answers directly confirm the same completed shared event.',
+      '- unsupported + answers_do_not_confirm_event: candidate_question assumes a completed event but current_answers only express a desire, plan, hypothetical, unknown, or unrelated detail.',
+      '- unsupported + answers_contradict_event: current_answers deny or contradict the assumed event.',
+      '- unsupported + different_event: current_answers confirm an experience, but not the event assumed by candidate_question.',
+      'Examples:',
+      '- A plan answer "같이 고기 먹기" does not support "고기 먹으러 갔을 때 어땠어?".',
+      '- An answer "우리는 안 갔어" contradicts a candidate that assumes the trip happened.',
+      '- Confirmed movie details do not support a candidate that assumes a Jeju trip happened.',
+      '- Answers "갈비" and "마지막에 먹은 냉면" to a question about a shared meal confirm that meal event.',
+      '- "고기 먹으러 간다면 어떤 식당이 좋아?" has no completed-event presupposition.',
+    ].join('\n'),
+    {
+      current_question: context.question.text,
+      current_answers: context.answers.map((answer) => ({
+        participant: answer.participantKey,
+        text: answer.text,
+      })),
+      candidate_question: candidate.text,
+    },
   );
 }
 

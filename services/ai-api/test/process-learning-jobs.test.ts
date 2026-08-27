@@ -1954,9 +1954,9 @@ test('processor retries structurally invalid personalized question once', async 
     { rejectedText: null, rejectionCode: 'candidate_validation_failed' },
   ]);
   assert.deepEqual(repository.successes[0]?.usage, {
-    inputTokenCount: 35,
-    outputTokenCount: 10,
-    latencyMs: 200,
+    inputTokenCount: 55,
+    outputTokenCount: 20,
+    latencyMs: 320,
   });
 });
 

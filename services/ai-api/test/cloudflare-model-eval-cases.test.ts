@@ -155,6 +155,10 @@ test('개인화 질문 의미 근거 평가는 계획, 부정, 다른 사건을 
   const confirmed = cases.find(
     (item) => item.name === 'grounding_accepts_confirmed_same_event',
   );
+  const confirmedByDetails = cases.find(
+    (item) =>
+      item.name === 'grounding_accepts_event_details_as_confirmation',
+  );
   const conditional = cases.find(
     (item) => item.name === 'grounding_accepts_conditional_preference',
   );
@@ -163,6 +167,7 @@ test('개인화 질문 의미 근거 평가는 계획, 부정, 다른 사건을 
   assert.ok(denied);
   assert.ok(unrelated);
   assert.ok(confirmed);
+  assert.ok(confirmedByDetails);
   assert.ok(conditional);
   assert.doesNotThrow(() => intention.validate({
     supported: false,
@@ -177,6 +182,10 @@ test('개인화 질문 의미 근거 평가는 계획, 부정, 다른 사건을 
     reasonCode: 'different_event',
   }));
   assert.doesNotThrow(() => confirmed.validate({
+    supported: true,
+    reasonCode: 'answers_confirm_same_event',
+  }));
+  assert.doesNotThrow(() => confirmedByDetails.validate({
     supported: true,
     reasonCode: 'answers_confirm_same_event',
   }));

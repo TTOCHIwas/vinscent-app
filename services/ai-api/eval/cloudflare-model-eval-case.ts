@@ -9,6 +9,7 @@ export type ModelEvaluationTask =
   | 'couple_feedback'
   | 'general_question'
   | 'personalized_question'
+  | 'personalized_question_grounding'
   | 'direct_answer'
   | 'direct_question_follow_up'
   | 'proactive_suggestion';

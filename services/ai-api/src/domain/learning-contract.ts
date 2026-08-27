@@ -8,9 +8,6 @@ import {
   areQuestionsAboutSameTopic,
   areQuestionsNearDuplicate,
 } from './question-duplicate-detector.ts';
-import {
-  hasUnsupportedPastEventPresupposition,
-} from './personalized-question-grounding.ts';
 import { preservesQuestionScope } from './question-scope-preservation.ts';
 import {
   KoreanOutputPolicyError,
@@ -1136,18 +1133,6 @@ export function validatePersonalizedQuestion(
   ) {
     throw new PersonalizedQuestionValidationError(
       'volatile_time_reference',
-    );
-  }
-
-  if (
-    context !== undefined
-    && hasUnsupportedPastEventPresupposition(
-      context.question.text,
-      candidate.text,
-    )
-  ) {
-    throw new PersonalizedQuestionValidationError(
-      'unsupported_presupposition',
     );
   }
 

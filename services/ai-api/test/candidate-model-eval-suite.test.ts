@@ -12,18 +12,18 @@ test('candidate smoke suite covers every service task once', () => {
   const allCases = createModelEvaluationCases();
   const smokeCases = selectCandidateModelEvaluationCases(allCases, 'smoke');
 
-  assert.equal(smokeCases.length, 8);
+  assert.equal(smokeCases.length, 9);
   assert.equal(
     new Set(smokeCases.map((item) => item.task)).size,
     smokeCases.length,
   );
 });
 
-test('candidate full suite preserves all 50 evaluation cases', () => {
+test('candidate full suite preserves all 56 evaluation cases', () => {
   const allCases = createModelEvaluationCases();
   const fullCases = selectCandidateModelEvaluationCases(allCases, 'full');
 
-  assert.equal(fullCases.length, 50);
+  assert.equal(fullCases.length, 56);
   assert.notEqual(fullCases, allCases);
   assert.deepEqual(fullCases, allCases);
 });

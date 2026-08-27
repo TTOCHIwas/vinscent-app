@@ -29,6 +29,10 @@ import {
 import {
   areQuestionsNearDuplicate,
 } from '../src/domain/question-duplicate-detector.ts';
+import {
+  isConsistentPersonalizedQuestionGroundingDecision,
+  type PersonalizedQuestionGroundingDecision,
+} from '../src/domain/personalized-question-grounding.ts';
 import type {
   CoupleFeedbackGenerationOptions,
   DirectQuestionFollowUpGenerationOptions,
@@ -102,6 +106,7 @@ export function createModelEvaluationCases():
     ...createFeedbackCases(),
     ...createGeneralQuestionCases(),
     ...createPersonalizedQuestionCases(),
+    ...createPersonalizedQuestionGroundingCases(),
     ...createDirectAnswerCases(),
     ...createDirectQuestionFollowUpCases(),
     ...createProactiveSuggestionCases(),
@@ -932,6 +937,150 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
         validateQuestionText(question.text);
         requireTerms(question.text, options.requiredTerms ?? []);
         forbidPatterns(question.text, options.forbiddenPatterns ?? []);
+      },
+    };
+  });
+}
+
+function createPersonalizedQuestionGroundingCases(): ModelEvaluationCase[] {
+  const scenarios: Array<ScenarioMetadata & {
+    context: CompletedQuestionContext;
+    candidateText: string;
+    expectedDecision: PersonalizedQuestionGroundingDecision;
+  }> = [
+    {
+      name: 'grounding_rejects_intention_as_past_event',
+      scenario: '희망 답변을 이미 함께한 외식 경험으로 바꾸는 후속 질문',
+      source: 'production_regression',
+      expectation: '고기를 먹고 싶다는 답을 실제 외식 경험의 근거로 취급하지 않아',
+      context: completedContext({
+        questionText: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+        domain: 'daily_life',
+        answerA: '두 번째 앱 테스트 올려버리기',
+        answerB: '같이 맛있는 고기 먹기',
+      }),
+      candidateText: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+      expectedDecision: {
+        supported: false,
+        reasonCode: 'answers_do_not_confirm_event',
+      },
+    },
+    {
+      name: 'grounding_rejects_denied_source_premise',
+      scenario: '원 질문이 가정한 여행을 두 답변이 부정한 상태',
+      source: 'production_regression',
+      expectation: '원 질문의 문장보다 답변의 명시적 부정을 우선해',
+      context: completedContext({
+        questionText: '최근 둘이 제주도 여행했을 때 어디가 좋았어?',
+        domain: 'daily_life',
+        answerA: '우리는 제주도에 안 갔어',
+        answerB: '같이 여행한 적 없어',
+      }),
+      candidateText: '그때 제주도에서 둘이 뭐 먹었어?',
+      expectedDecision: {
+        supported: false,
+        reasonCode: 'answers_contradict_event',
+      },
+    },
+    {
+      name: 'grounding_rejects_unrelated_past_event',
+      scenario: '영화 경험 답변으로 제주도 여행을 전제하는 질문',
+      source: 'production_regression',
+      expectation: '실제 경험 답변이 있어도 행동과 대상이 다른 사건은 근거로 삼지 않아',
+      context: completedContext({
+        questionText: '최근 둘이 같이 영화 봤을 때 무슨 장르였어?',
+        domain: 'daily_life',
+        answerA: '같이 존윅 봤어',
+        answerB: '액션 영화를 봤어',
+      }),
+      candidateText: '둘이 제주도 여행했을 때 어디가 가장 좋았어?',
+      expectedDecision: {
+        supported: false,
+        reasonCode: 'different_event',
+      },
+    },
+    {
+      name: 'grounding_accepts_confirmed_same_event',
+      scenario: '두 답변이 같은 영화 경험을 직접 확인한 후속 질문',
+      source: 'representative_boundary',
+      expectation: '두 답변이 확인한 같은 사건의 다른 면을 묻는 질문은 허용해',
+      context: completedContext({
+        questionText: '최근 둘이 같이 영화 봤을 때 무슨 장르였어?',
+        domain: 'daily_life',
+        answerA: '같이 존윅 봤어',
+        answerB: '영화관에서 액션 영화를 봤어',
+      }),
+      candidateText: '그때 영화관 분위기는 어땠어?',
+      expectedDecision: {
+        supported: true,
+        reasonCode: 'answers_confirm_same_event',
+      },
+    },
+    {
+      name: 'grounding_accepts_event_details_as_confirmation',
+      scenario: '원 질문이 묻는 식사 세부사항을 두 답변이 짧게 제공한 상태',
+      source: 'representative_boundary',
+      expectation: '부정과 모름 없이 요청된 세부사항을 답했다면 같은 사건을 실용적으로 확인한 것으로 봐',
+      context: completedContext({
+        questionText: '최근 둘이 고기 먹으러 갔을 때 기억에 남은 메뉴는 뭐야?',
+        domain: 'daily_life',
+        answerA: '직접 구워 먹은 갈비',
+        answerB: '마지막에 먹은 냉면',
+      }),
+      candidateText: '그때 식당 분위기는 어땠어?',
+      expectedDecision: {
+        supported: true,
+        reasonCode: 'answers_confirm_same_event',
+      },
+    },
+    {
+      name: 'grounding_accepts_conditional_preference',
+      scenario: '희망 답변의 사실 수준을 유지한 조건형 질문',
+      source: 'representative_boundary',
+      expectation: '이미 일어난 일을 전제하지 않는 선호 질문은 허용해',
+      context: completedContext({
+        questionText: '둘이 같이 해보고 싶은 건 뭐야?',
+        domain: 'daily_life',
+        answerA: '앱 테스트 완료하기',
+        answerB: '같이 고기 먹기',
+      }),
+      candidateText: '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?',
+      expectedDecision: {
+        supported: true,
+        reasonCode: 'no_completed_event',
+      },
+    },
+  ];
+
+  return scenarios.map((options) => {
+    const context = anonymizeCompletedQuestionContext(options.context);
+    const candidate: PersonalizedQuestionCandidate = {
+      questionKey: 'personalized_grounding_eval_ab12cd34',
+      text: options.candidateText,
+      category: 'daily_life',
+      mood: null,
+      rationale: '후속 질문의 사실 근거를 평가해',
+    };
+    return {
+      ...metadata(options),
+      task: 'personalized_question_grounding' as const,
+      run: (model) => model.evaluatePersonalizedQuestionGrounding(
+        context,
+        candidate,
+      ),
+      validate: (value: unknown) => {
+        const decision = value as PersonalizedQuestionGroundingDecision;
+        if (!isConsistentPersonalizedQuestionGroundingDecision(decision)) {
+          throw new Error('inconsistent personalized grounding decision');
+        }
+        if (
+          decision.supported !== options.expectedDecision.supported
+          || decision.reasonCode !== options.expectedDecision.reasonCode
+        ) {
+          throw new Error(
+            `expected ${JSON.stringify(options.expectedDecision)}, received ${JSON.stringify(decision)}`,
+          );
+        }
       },
     };
   });

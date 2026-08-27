@@ -346,7 +346,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v7', async () => {
+    return modelJob('personalized-question-v8', async () => {
       let rejectedText: string | null = null;
       let rejectionCode:
         PersonalizedQuestionGenerationOptions['rejectionCode'] = null;
@@ -384,16 +384,6 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
 
         try {
           validatePersonalizedQuestion(result.value, context);
-          return {
-            output: {
-              question_key: result.value.questionKey,
-              question_text: result.value.text,
-              category: result.value.category,
-              mood: result.value.mood,
-              rationale: result.value.rationale,
-            },
-            usage: combinedUsage,
-          };
         } catch (error) {
           if (attempt === 1) {
             throw error;
@@ -403,7 +393,51 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
             result.value.text,
             rejectionCode,
           );
+          continue;
         }
+
+        let groundingResult: Awaited<
+          ReturnType<
+            LearningModelPort['evaluatePersonalizedQuestionGrounding']
+          >
+        >;
+        try {
+          groundingResult = await this.#model
+            .evaluatePersonalizedQuestionGrounding(context, result.value);
+        } catch (error) {
+          if (error instanceof LearningModelError) {
+            combinedUsage = combineUsage(combinedUsage, error.usage);
+            throw copyModelErrorWithUsage(error, combinedUsage);
+          }
+          throw error;
+        }
+        combinedUsage = combineUsage(combinedUsage, groundingResult.usage);
+
+        if (!groundingResult.value.supported) {
+          const groundingError = new PersonalizedQuestionValidationError(
+            'unsupported_presupposition',
+          );
+          if (attempt === 1) {
+            throw groundingError;
+          }
+          rejectionCode = groundingError.code;
+          rejectedText = rejectedModelTextForRetry(
+            result.value.text,
+            rejectionCode,
+          );
+          continue;
+        }
+
+        return {
+          output: {
+            question_key: result.value.questionKey,
+            question_text: result.value.text,
+            category: result.value.category,
+            mood: result.value.mood,
+            rationale: result.value.rationale,
+          },
+          usage: combinedUsage,
+        };
       }
 
       throw new Error('personalized question generation exhausted');

@@ -18,6 +18,9 @@ import type {
 import type {
   KoreanOutputPolicyErrorCode,
 } from '../domain/korean-output-policy.ts';
+import type {
+  PersonalizedQuestionGroundingDecision,
+} from '../domain/personalized-question-grounding.ts';
 
 export interface FoundationQuestionRecommendation {
   questionKey: string;
@@ -149,6 +152,11 @@ export interface LearningModelPort {
     context: AnonymizedCompletedQuestionContext,
     options?: PersonalizedQuestionGenerationOptions,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>>;
+
+  evaluatePersonalizedQuestionGrounding(
+    context: AnonymizedCompletedQuestionContext,
+    candidate: PersonalizedQuestionCandidate,
+  ): Promise<LearningModelResult<PersonalizedQuestionGroundingDecision>>;
 
   answerDirectQuestion(
     context: DirectQuestionContext,
