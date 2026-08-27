@@ -14,6 +14,7 @@ const expectedTasks: ModelEvaluationTask[] = [
   'couple_feedback',
   'general_question',
   'personalized_question',
+  'personalized_question_grounding',
   'direct_answer',
   'direct_question_follow_up',
   'proactive_suggestion',
@@ -124,19 +125,68 @@ test('개인화 질문 평가는 현재 질문 반복과 직전 답변 맥락 �
     mood: null,
     rationale: '함께 보고 싶은 영화를 알아보기 위해',
   }), /missing one of|forbidden pattern/u);
-  assert.throws(() => continuity.validate({
+  assert.doesNotThrow(() => continuity.validate({
     questionKey: 'personalized_generated_false_meal_event',
     text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
     category: 'daily_life',
     mood: null,
     rationale: '고기를 먹으러 갔을 때의 분위기를 알아보기 위해',
-  }), /unsupported_presupposition/u);
+  }));
   assert.doesNotThrow(() => continuity.validate({
     questionKey: 'personalized_generated_after_test',
     text: '앱 테스트를 끝내고 둘이 먹고 싶은 메뉴는 뭐야?',
     category: 'daily_life',
     mood: null,
     rationale: '직전 계획 다음에 이어질 작은 보상을 알아보기 위해',
+  }));
+});
+
+test('개인화 질문 의미 근거 평가는 계획, 부정, 다른 사건을 구분한다', () => {
+  const cases = createCloudflareModelEvaluationCases();
+  const intention = cases.find(
+    (item) => item.name === 'grounding_rejects_intention_as_past_event',
+  );
+  const denied = cases.find(
+    (item) => item.name === 'grounding_rejects_denied_source_premise',
+  );
+  const unrelated = cases.find(
+    (item) => item.name === 'grounding_rejects_unrelated_past_event',
+  );
+  const confirmed = cases.find(
+    (item) => item.name === 'grounding_accepts_confirmed_same_event',
+  );
+  const conditional = cases.find(
+    (item) => item.name === 'grounding_accepts_conditional_preference',
+  );
+
+  assert.ok(intention);
+  assert.ok(denied);
+  assert.ok(unrelated);
+  assert.ok(confirmed);
+  assert.ok(conditional);
+  assert.doesNotThrow(() => intention.validate({
+    supported: false,
+    reasonCode: 'answers_do_not_confirm_event',
+  }));
+  assert.doesNotThrow(() => denied.validate({
+    supported: false,
+    reasonCode: 'answers_contradict_event',
+  }));
+  assert.doesNotThrow(() => unrelated.validate({
+    supported: false,
+    reasonCode: 'different_event',
+  }));
+  assert.doesNotThrow(() => confirmed.validate({
+    supported: true,
+    reasonCode: 'answers_confirm_same_event',
+  }));
+  assert.doesNotThrow(() => conditional.validate({
+    supported: true,
+    reasonCode: 'no_completed_event',
+  }));
+  assert.throws(() => intention.validate({
+    supported: true,
+    reasonCode: 'answers_do_not_confirm_event',
   }));
 });
 

@@ -246,6 +246,13 @@ test('processor handles every learning job and restores IDs only at persistence'
         rationale: 'Their preferred ways of spending time differ.',
       });
     },
+    async evaluatePersonalizedQuestionGrounding(context) {
+      seenModelContexts.push(context);
+      return result({
+        supported: true,
+        reasonCode: 'no_completed_event',
+      });
+    },
     async answerDirectQuestion(context) {
       seenDirectContexts.push(context);
       return result({
@@ -353,7 +360,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
       {
         jobId: 'job-personalized',
-        promptVersion: 'personalized-question-v7',
+        promptVersion: 'personalized-question-v8',
       },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
@@ -1808,6 +1815,11 @@ test('processor regenerates a personalized question that turns an intention into
   }> = [];
   const unsupportedQuestion =
     '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?';
+  const groundingInputs: Array<{
+    sourceQuestion: string;
+    answers: string[];
+    candidateQuestion: string;
+  }> = [];
   const model = modelWith({
     async generatePersonalizedQuestion(_context, options) {
       optionsSeen.push({
@@ -1824,6 +1836,22 @@ test('processor regenerates a personalized question that turns an intention into
         mood: null,
         rationale: '함께 가고 싶은 식당 분위기를 알아보기 위해',
       });
+    },
+    async evaluatePersonalizedQuestionGrounding(context, candidate) {
+      groundingInputs.push({
+        sourceQuestion: context.question.text,
+        answers: context.answers.map((answer) => answer.text),
+        candidateQuestion: candidate.text,
+      });
+      return result(candidate.text === unsupportedQuestion
+        ? {
+          supported: false,
+          reasonCode: 'answers_do_not_confirm_event',
+        }
+        : {
+          supported: true,
+          reasonCode: 'no_completed_event',
+        });
     },
   });
   const processor = new LearningJobProcessor({
@@ -1844,10 +1872,33 @@ test('processor regenerates a personalized question that turns an intention into
       rejectionCode: 'unsupported_presupposition',
     },
   ]);
+  assert.deepEqual(groundingInputs, [
+    {
+      sourceQuestion: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      answers: [
+        '두 번째 앱 테스트 올려버리기',
+        '같이 맛있는 고기 먹기',
+      ],
+      candidateQuestion: unsupportedQuestion,
+    },
+    {
+      sourceQuestion: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      answers: [
+        '두 번째 앱 테스트 올려버리기',
+        '같이 맛있는 고기 먹기',
+      ],
+      candidateQuestion: '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?',
+    },
+  ]);
   assert.equal(
     repository.successes[0]?.output.question_text,
     '둘이 고기 먹으러 간다면 어떤 분위기의 식당이 좋아?',
   );
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 80,
+    outputTokenCount: 40,
+    latencyMs: 480,
+  });
 });
 
 test('processor retries structurally invalid personalized question once', async () => {
@@ -2403,6 +2454,12 @@ function modelWith(
         category: 'personalized',
         mood: null,
         rationale: 'Default rationale.',
+      });
+    },
+    async evaluatePersonalizedQuestionGrounding() {
+      return result({
+        supported: true,
+        reasonCode: 'no_completed_event',
       });
     },
     async answerDirectQuestion() {

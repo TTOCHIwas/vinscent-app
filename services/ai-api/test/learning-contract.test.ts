@@ -1177,7 +1177,7 @@ test('개인화 질문은 짧은 구어 질문에 맞지 않는 격식 번역투
   }));
 });
 
-test('개인화 질문은 희망 답변을 이미 일어난 사건으로 바꾸지 않는다', () => {
+test('개인화 질문 형식 검증은 답변의 사실 근거를 판정하지 않는다', () => {
   const intentionContext = anonymizeCompletedQuestionContext({
     ...context,
     question: {
@@ -1199,18 +1199,13 @@ test('개인화 질문은 희망 답변을 이미 일어난 사건으로 바꾸�
     ],
   });
 
-  assert.throws(
-    () => validatePersonalizedQuestion({
-      questionKey: 'personalized_generated_meal_ab12cd34',
-      text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
-      category: 'daily_life',
-      mood: null,
-      rationale: '고기를 먹으러 갔을 때의 분위기를 알아보기 위해',
-    }, intentionContext),
-    (error: unknown) =>
-      error instanceof PersonalizedQuestionValidationError
-      && error.code === 'unsupported_presupposition',
-  );
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    questionKey: 'personalized_generated_meal_ab12cd34',
+    text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '고기를 먹으러 갔을 때의 분위기를 알아보기 위해',
+  }, intentionContext));
 
   assert.doesNotThrow(() => validatePersonalizedQuestion({
     questionKey: 'personalized_generated_meal_cd34ef56',

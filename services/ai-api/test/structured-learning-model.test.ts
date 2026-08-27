@@ -1908,7 +1908,7 @@ test('personalized question prompt treats exposed and pending questions as negat
   );
 });
 
-test('personalized question prompt marks desired activities as unconfirmed events', async () => {
+test('personalized question prompt keeps the exact answers without regex evidence labels', async () => {
   let capturedPrompt = '';
   const model = new StructuredLearningModel({
     generateStructured: async ({ prompt }) => {
@@ -1950,15 +1950,117 @@ test('personalized question prompt marks desired activities as unconfirmed event
     ],
   });
 
+  assert.equal(capturedPrompt.includes('current_answer_evidence'), false);
+  assert.equal(capturedPrompt.includes('같이 맛있는 고기 먹기'), true);
   assert.equal(
-    capturedPrompt.includes(
-      '"current_answer_evidence":{"kind":"intention_or_hypothetical"',
-    ),
+    capturedPrompt.includes('current_question alone is not evidence'),
     true,
   );
-  assert.equal(
-    capturedPrompt.includes('이미 일어난 사건의 근거가 아니야'),
-    true,
+});
+
+test('personalized question grounding evaluates the candidate from current answers', async () => {
+  let capturedRequest: StructuredGenerationRequest | null = null;
+  const model = new StructuredLearningModel({
+    generateStructured: async (request) => {
+      capturedRequest = request;
+      return {
+        value: {
+          verdict: 'unsupported',
+          reason_code: 'answers_do_not_confirm_event',
+        },
+        usage: {
+          inputTokenCount: 72,
+          outputTokenCount: 8,
+          latencyMs: 40,
+        },
+      };
+    },
+  });
+  const groundingContext: AnonymizedCompletedQuestionContext = {
+    ...context,
+    question: {
+      ...context.question,
+      text: '다음 주말에 둘이 같이 해보고 싶은 건 뭐야?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        participantKey: 'partner_a',
+        text: '두 번째 앱 테스트 올려버리기',
+      },
+      {
+        answerId: 'answer-b',
+        participantKey: 'partner_b',
+        text: '같이 맛있는 고기 먹기',
+      },
+    ],
+  };
+
+  const result = await model.evaluatePersonalizedQuestionGrounding(
+    groundingContext,
+    {
+      questionKey: 'personalized_generated_meal_ab12cd34',
+      text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '고기를 먹으러 갔을 때의 분위기를 알아보기 위해',
+    },
+  );
+
+  assert.deepEqual(result.value, {
+    supported: false,
+    reasonCode: 'answers_do_not_confirm_event',
+  });
+  assert.deepEqual(result.usage, {
+    inputTokenCount: 72,
+    outputTokenCount: 8,
+    latencyMs: 40,
+  });
+  assert.ok(capturedRequest);
+  assert.equal(capturedRequest.temperature, 0);
+  assert.ok(capturedRequest.maxOutputTokens <= 128);
+  assert.match(
+    capturedRequest.prompt,
+    /current_question alone is never evidence/iu,
+  );
+  assert.match(
+    capturedRequest.prompt,
+    /desire, plan, hypothetical, denial, or uncertainty/iu,
+  );
+  assert.match(capturedRequest.prompt, /같이 맛있는 고기 먹기/u);
+  assert.match(
+    capturedRequest.prompt,
+    /요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어\?/u,
+  );
+});
+
+test('personalized question grounding rejects inconsistent verdict pairs', async () => {
+  const model = new StructuredLearningModel({
+    generateStructured: async () => ({
+      value: {
+        verdict: 'supported',
+        reason_code: 'different_event',
+      },
+      usage: {
+        inputTokenCount: 20,
+        outputTokenCount: 4,
+        latencyMs: 10,
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => model.evaluatePersonalizedQuestionGrounding(context, {
+      questionKey: 'personalized_generated_trip_ab12cd34',
+      text: '둘이 제주도 여행했을 때 어디가 가장 좋았어?',
+      category: 'daily_life',
+      mood: null,
+      rationale: '여행 경험을 알아보기 위해',
+    }),
+    (error: unknown) =>
+      error instanceof LearningModelError
+      && error.code === 'model_invalid_output',
   );
 });
 
