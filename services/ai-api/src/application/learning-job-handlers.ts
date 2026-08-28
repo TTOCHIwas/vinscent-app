@@ -353,7 +353,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v9', async () => {
+    return modelJob('personalized-question-v10', async () => {
       let rejectedText: string | null = null;
       let rejectionCode:
         PersonalizedQuestionGenerationOptions['rejectionCode'] = null;
@@ -475,89 +475,117 @@ async function generatePersonalizedQuestionFallback(
   usage: LearningModelUsage,
   rejectionCodes: readonly PersonalizedQuestionRejectionCode[],
 ): Promise<LearningJobExecution> {
-  let result: Awaited<
-    ReturnType<LearningModelPort['generateGeneralQuestion']>
-  >;
-  try {
-    result = await model.generateGeneralQuestion(
-      buildGeneralQuestionFallbackContext(context),
-    );
-  } catch (error) {
-    if (error instanceof LearningModelError) {
-      throw copyModelErrorWithUsage(
-        error,
-        combineUsage(usage, error.usage),
+  const fallbackContext = buildGeneralQuestionFallbackContext(context);
+  let combinedUsage = usage;
+  let rejectedText: string | null = null;
+  let rejectionCode: PersonalizedQuestionRejectionCode | null = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let result: Awaited<
+      ReturnType<LearningModelPort['generateGeneralQuestion']>
+    >;
+    try {
+      result = await model.generateGeneralQuestion(
+        fallbackContext,
+        { rejectedText, rejectionCode },
       );
+    } catch (error) {
+      if (error instanceof LearningModelError) {
+        throw copyModelErrorWithUsage(
+          error,
+          combineUsage(combinedUsage, error.usage),
+        );
+      }
+      throw error;
     }
-    throw error;
-  }
+    combinedUsage = combineUsage(combinedUsage, result.usage);
 
-  let combinedUsage = combineUsage(usage, result.usage);
-  let candidate: PersonalizedQuestionCandidate;
-  try {
-    validateGeneralQuestion(result.value);
-    candidate = {
-      ...result.value,
-      questionKey: result.value.questionKey.replace(
-        /^general_/u,
-        'personalized_fallback_',
-      ),
+    let candidate: PersonalizedQuestionCandidate;
+    try {
+      validateGeneralQuestion(result.value);
+      candidate = {
+        ...result.value,
+        questionKey: result.value.questionKey.replace(
+          /^general_/u,
+          'personalized_fallback_',
+        ),
+      };
+      validatePersonalizedQuestion(candidate, context);
+    } catch (error) {
+      const currentRejectionCode = personalizedQuestionRejectionCode(error);
+      if (attempt === 1) {
+        throw new LearningJobExecutionError({
+          code: personalizedQuestionFallbackFailureCode(
+            rejectionCodes,
+            currentRejectionCode,
+          ),
+          retryable: false,
+          usage: combinedUsage,
+          cause: error,
+        });
+      }
+      rejectedText = rejectedModelTextForRetry(
+        result.value.text,
+        currentRejectionCode,
+      );
+      rejectionCode = currentRejectionCode;
+      continue;
+    }
+
+    let groundingResult: Awaited<
+      ReturnType<LearningModelPort['evaluatePersonalizedQuestionGrounding']>
+    >;
+    try {
+      groundingResult = await model.evaluatePersonalizedQuestionGrounding(
+        context,
+        candidate,
+      );
+    } catch (error) {
+      if (error instanceof LearningModelError) {
+        combinedUsage = combineUsage(combinedUsage, error.usage);
+        throw copyModelErrorWithUsage(error, combinedUsage);
+      }
+      throw error;
+    }
+    combinedUsage = combineUsage(combinedUsage, groundingResult.usage);
+
+    if (!groundingResult.value.supported) {
+      const currentRejectionCode = 'unsupported_presupposition';
+      if (attempt === 1) {
+        throw new LearningJobExecutionError({
+          code: personalizedQuestionFallbackFailureCode(
+            rejectionCodes,
+            currentRejectionCode,
+          ),
+          retryable: false,
+          usage: combinedUsage,
+        });
+      }
+      rejectedText = rejectedModelTextForRetry(
+        candidate.text,
+        currentRejectionCode,
+      );
+      rejectionCode = currentRejectionCode;
+      continue;
+    }
+
+    return {
+      output: {
+        question_key: candidate.questionKey,
+        question_text: candidate.text,
+        category: candidate.category,
+        mood: candidate.mood,
+        rationale: candidate.rationale,
+      },
+      usage: combinedUsage,
+      diagnostics: [{
+        kind: 'personalized_question_fallback',
+        rejectionCodes: [...rejectionCodes],
+      }],
     };
-    validatePersonalizedQuestion(candidate, context);
-  } catch (error) {
-    throw new LearningJobExecutionError({
-      code: personalizedQuestionFallbackFailureCode(
-        rejectionCodes,
-        'invalid',
-      ),
-      retryable: false,
-      usage: combinedUsage,
-      cause: error,
-    });
   }
 
-  let groundingResult: Awaited<
-    ReturnType<LearningModelPort['evaluatePersonalizedQuestionGrounding']>
-  >;
-  try {
-    groundingResult = await model.evaluatePersonalizedQuestionGrounding(
-      context,
-      candidate,
-    );
-  } catch (error) {
-    if (error instanceof LearningModelError) {
-      combinedUsage = combineUsage(combinedUsage, error.usage);
-      throw copyModelErrorWithUsage(error, combinedUsage);
-    }
-    throw error;
-  }
-  combinedUsage = combineUsage(combinedUsage, groundingResult.usage);
-
-  if (!groundingResult.value.supported) {
-    throw new LearningJobExecutionError({
-      code: personalizedQuestionFallbackFailureCode(
-        rejectionCodes,
-        'unsupported',
-      ),
-      retryable: false,
-      usage: combinedUsage,
-    });
-  }
-
-  return {
-    output: {
-      question_key: candidate.questionKey,
-      question_text: candidate.text,
-      category: candidate.category,
-      mood: candidate.mood,
-      rationale: candidate.rationale,
-    },
-    usage: combinedUsage,
-    diagnostics: [{
-      kind: 'personalized_question_fallback',
-      rejectionCodes: [...rejectionCodes],
-    }],
-  };
+  throw new Error('personalized question fallback exhausted');
 }
 
 function buildGeneralQuestionFallbackContext(
@@ -662,9 +690,9 @@ function personalizedQuestionFailureCode(
 
 function personalizedQuestionFallbackFailureCode(
   rejectionCodes: readonly PersonalizedQuestionRejectionCode[],
-  reason: 'invalid' | 'unsupported',
+  fallbackRejectionCode: PersonalizedQuestionRejectionCode,
 ): string {
-  return `${personalizedQuestionFailureCode(rejectionCodes)}_fallback_${reason}`;
+  return `${personalizedQuestionFailureCode(rejectionCodes)}_fallback_${fallbackRejectionCode}`;
 }
 
 class AnswerUserQuestionHandler implements LearningJobHandler {

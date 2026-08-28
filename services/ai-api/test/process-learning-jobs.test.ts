@@ -360,7 +360,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
     {
       jobId: 'job-personalized',
-      promptVersion: 'personalized-question-v9',
+      promptVersion: 'personalized-question-v10',
     },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
@@ -2008,7 +2008,7 @@ test('processor falls back to a general question after both personalized candida
     jobId: 'job-personalized-grounding-rejected',
     runId: 'run-job-personalized-grounding-rejected',
     jobAttempt: 1,
-    promptVersion: 'personalized-question-v9',
+    promptVersion: 'personalized-question-v10',
     rejectionCodes: [
       'unsupported_presupposition',
       'unsupported_presupposition',

@@ -112,6 +112,9 @@ export interface PersonalizedQuestionGenerationOptions {
     | null;
 }
 
+export type GeneralQuestionGenerationOptions =
+  PersonalizedQuestionGenerationOptions;
+
 export interface ProactiveSuggestionGenerationOptions {
   rejectedText: string | null;
   rejectionCode:
@@ -146,6 +149,7 @@ export interface LearningModelPort {
 
   generateGeneralQuestion(
     context: GeneralQuestionContext,
+    options?: GeneralQuestionGenerationOptions,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>>;
 
   generatePersonalizedQuestion(

@@ -3,6 +3,7 @@ import {
   type CoupleFeedbackGenerationOptions,
   type DirectQuestionFollowUpGenerationOptions,
   type FoundationQuestionRecommendation,
+  type GeneralQuestionGenerationOptions,
   type LearningModelErrorCode,
   type LearningModelPort,
   type LearningModelResult,
@@ -264,9 +265,10 @@ export class StructuredLearningModel implements LearningModelPort {
 
   async generateGeneralQuestion(
     context: GeneralQuestionContext,
+    options?: GeneralQuestionGenerationOptions,
   ): Promise<LearningModelResult<PersonalizedQuestionCandidate>> {
     const result = await this.#generateStructured(buildStructuredRequest(
-      buildGeneralQuestionPrompt(context),
+      buildGeneralQuestionPrompt(context, options),
       generatedQuestionSchema,
       generationProfiles.question,
     ));
@@ -548,7 +550,31 @@ function allowedProactiveSuggestionKinds(
   return ['date_idea', 'card_idea'];
 }
 
-function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
+function buildGeneralQuestionPrompt(
+  context: GeneralQuestionContext,
+  options?: GeneralQuestionGenerationOptions,
+): string {
+  const data: Record<string, unknown> = {
+    foundation_progress: {
+      completed_count: context.foundationProgress.completedCount,
+      total_count: context.foundationProgress.totalCount,
+    },
+    recent_questions: context.recentQuestions.map((question) => ({
+      question_key: question.questionKey,
+      text: question.text,
+      category: question.category,
+      mood: question.mood,
+      domain: question.domain,
+    })),
+  };
+  if (options?.rejectionCode !== null && options?.rejectionCode !== undefined) {
+    data.rejected_question = options.rejectedText;
+    data.rejection_code = options.rejectionCode;
+    data.retry_correction = personalizedQuestionRetryCorrection(
+      options.rejectionCode,
+    );
+  }
+
   return buildTaskPrompt(
     [
       '목표: 두 사람이 같은 입장에서 답할 수 있는 한국어 질문 하나를 만들어.',
@@ -561,20 +587,9 @@ function buildGeneralQuestionPrompt(context: GeneralQuestionContext): string {
       '- 질문을 만들어 달라는 메타 질문은 만들지 마.',
       '- question_text는 반드시 물음표로 끝나야 해.',
       '- rationale에는 최근 질문과 겹치지 않는 이유만 짧게 써.',
+      '- rejected_question가 있으면 같은 표현과 주제를 반복하지 말고 retry_correction을 반영해.',
     ].join('\n'),
-    {
-      foundation_progress: {
-        completed_count: context.foundationProgress.completedCount,
-        total_count: context.foundationProgress.totalCount,
-      },
-      recent_questions: context.recentQuestions.map((question) => ({
-        question_key: question.questionKey,
-        text: question.text,
-        category: question.category,
-        mood: question.mood,
-        domain: question.domain,
-      })),
-    },
+    data,
   );
 }
 

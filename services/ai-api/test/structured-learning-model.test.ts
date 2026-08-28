@@ -1407,6 +1407,43 @@ test('general question prompt contains history metadata but no answer or memory'
   );
 });
 
+test('general question retry prompt includes the rejected candidate and correction', async () => {
+  let prompt = '';
+  const model = new StructuredLearningModel({
+    generateStructured: async (request) => {
+      prompt = request.prompt;
+      return {
+        value: {
+          question_text: '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?',
+          category: 'daily_life',
+          mood: null,
+          rationale: '최근 질문과 겹치지 않는 가벼운 주제야',
+        },
+        usage: {
+          inputTokenCount: 10,
+          outputTokenCount: 5,
+          latencyMs: 20,
+        },
+      };
+    },
+  });
+
+  await model.generateGeneralQuestion(generalQuestionContext, {
+    rejectedText: '둘이 영화를 볼 때 어떤 장르를 가장 좋아해?',
+    rejectionCode: 'repeated_topic',
+  });
+
+  assert.equal(
+    prompt.includes('둘이 영화를 볼 때 어떤 장르를 가장 좋아해?'),
+    true,
+  );
+  assert.equal(prompt.includes('repeated_topic'), true);
+  assert.equal(
+    prompt.includes('최근 노출 질문과 대기 후보의 주제로 돌아가지 마'),
+    true,
+  );
+});
+
 test('generated question keys are owned by the server', async () => {
   const requests: StructuredGenerationRequest[] = [];
   const outputs = [
