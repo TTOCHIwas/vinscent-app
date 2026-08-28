@@ -1901,6 +1901,80 @@ test('processor regenerates a personalized question that turns an intention into
   });
 });
 
+test('processor preserves both personalized grounding rejection codes', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-grounding-rejected', 'generate_personalized_question'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+      domain: 'daily_life',
+    },
+    answers: [
+      {
+        answerId: 'answer-a',
+        userId: 'user-real-a',
+        text: '맛있었는데 고기 먹은 지는 한참 됐어',
+      },
+      {
+        answerId: 'answer-b',
+        userId: 'user-real-b',
+        text: '같이 갔다고 쓴 적은 없는 것 같아',
+      },
+    ],
+  };
+  let generationCount = 0;
+  const model = modelWith({
+    async generatePersonalizedQuestion() {
+      generationCount += 1;
+      const text = generationCount === 1
+        ? '그때 고기 먹은 식당에서 뭐가 가장 좋았어?'
+        : '고기 먹고 돌아오는 길에는 무슨 얘기를 했어?';
+      return result({
+        questionKey: 'personalized_generated_meal_ab12cd34',
+        text,
+        category: 'daily_life',
+        mood: null,
+        rationale: '함께한 식사 경험을 더 알아보기 위해',
+      });
+    },
+    async evaluatePersonalizedQuestionGrounding() {
+      return result({
+        supported: false,
+        reasonCode: 'answers_contradict_event',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 0,
+    retried: 0,
+    failed: 1,
+  });
+  assert.equal(
+    repository.failures[0]?.errorCode,
+    'personalized_question_rejected_a1_unsupported_presupposition_a2_unsupported_presupposition',
+  );
+  assert.equal(repository.failures[0]?.retryable, false);
+  assert.deepEqual(repository.failures[0]?.usage, {
+    inputTokenCount: 80,
+    outputTokenCount: 40,
+    latencyMs: 480,
+  });
+});
+
 test('processor retries structurally invalid personalized question once', async () => {
   const repository = new FakeRepository([
     job('job-invalid-personalized-structure', 'generate_personalized_question'),
