@@ -35,7 +35,9 @@ export interface LearningJobBatchSummary {
 }
 
 export interface LearningJobOperationalDiagnostic {
-  event: 'ai_learning_feedback_fallback';
+  event:
+    | 'ai_learning_feedback_fallback'
+    | 'ai_learning_personalized_question_fallback';
   jobId: string;
   runId: string;
   jobAttempt: number;
@@ -194,11 +196,10 @@ export class LearningJobProcessor {
     diagnostics: readonly LearningJobExecutionDiagnostic[] | undefined,
   ): void {
     for (const diagnostic of diagnostics ?? []) {
-      if (diagnostic.kind !== 'couple_feedback_fallback') {
-        continue;
-      }
       reportDiagnosticSafely(this.#onDiagnostic, {
-        event: 'ai_learning_feedback_fallback',
+        event: diagnostic.kind === 'couple_feedback_fallback'
+          ? 'ai_learning_feedback_fallback'
+          : 'ai_learning_personalized_question_fallback',
         jobId,
         runId,
         jobAttempt,

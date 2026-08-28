@@ -9,8 +9,14 @@ export interface CoupleFeedbackFallbackDiagnostic {
   rejectionCodes: readonly string[];
 }
 
+export interface PersonalizedQuestionFallbackDiagnostic {
+  kind: 'personalized_question_fallback';
+  rejectionCodes: readonly string[];
+}
+
 export type LearningJobExecutionDiagnostic =
-  CoupleFeedbackFallbackDiagnostic;
+  | CoupleFeedbackFallbackDiagnostic
+  | PersonalizedQuestionFallbackDiagnostic;
 
 export interface LearningJobExecution {
   output: Record<string, unknown>;

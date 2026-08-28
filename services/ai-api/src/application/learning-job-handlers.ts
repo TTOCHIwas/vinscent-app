@@ -6,9 +6,12 @@ import {
   repairCoupleFeedbackPunctuation,
   resolveCoupleFeedbackFallback,
   resolveMemoryCandidates,
+  type AnonymizedCompletedQuestionContext,
   type DirectQuestionAnswer,
   type DirectQuestionContext,
   type DirectQuestionFollowUpValidationCode,
+  type GeneralQuestionContext,
+  type PersonalizedQuestionCandidate,
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
   validateDirectQuestionFollowUp,
@@ -350,7 +353,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v8', async () => {
+    return modelJob('personalized-question-v9', async () => {
       let rejectedText: string | null = null;
       let rejectionCode:
         PersonalizedQuestionGenerationOptions['rejectionCode'] = null;
@@ -396,12 +399,12 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
           );
           rejectionCodes.push(currentRejectionCode);
           if (attempt === 1) {
-            throw new LearningJobExecutionError({
-              code: personalizedQuestionFailureCode(rejectionCodes),
-              retryable: false,
-              usage: combinedUsage,
-              cause: error,
-            });
+            return generatePersonalizedQuestionFallback(
+              this.#model,
+              context,
+              combinedUsage,
+              rejectionCodes,
+            );
           }
           rejectionCode = currentRejectionCode;
           rejectedText = rejectedModelTextForRetry(
@@ -434,12 +437,12 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
           );
           rejectionCodes.push(groundingError.code);
           if (attempt === 1) {
-            throw new LearningJobExecutionError({
-              code: personalizedQuestionFailureCode(rejectionCodes),
-              retryable: false,
-              usage: combinedUsage,
-              cause: groundingError,
-            });
+            return generatePersonalizedQuestionFallback(
+              this.#model,
+              context,
+              combinedUsage,
+              rejectionCodes,
+            );
           }
           rejectionCode = groundingError.code;
           rejectedText = rejectedModelTextForRetry(
@@ -464,6 +467,155 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       throw new Error('personalized question generation exhausted');
     });
   }
+}
+
+async function generatePersonalizedQuestionFallback(
+  model: LearningModelPort,
+  context: AnonymizedCompletedQuestionContext,
+  usage: LearningModelUsage,
+  rejectionCodes: readonly PersonalizedQuestionRejectionCode[],
+): Promise<LearningJobExecution> {
+  let result: Awaited<
+    ReturnType<LearningModelPort['generateGeneralQuestion']>
+  >;
+  try {
+    result = await model.generateGeneralQuestion(
+      buildGeneralQuestionFallbackContext(context),
+    );
+  } catch (error) {
+    if (error instanceof LearningModelError) {
+      throw copyModelErrorWithUsage(
+        error,
+        combineUsage(usage, error.usage),
+      );
+    }
+    throw error;
+  }
+
+  let combinedUsage = combineUsage(usage, result.usage);
+  let candidate: PersonalizedQuestionCandidate;
+  try {
+    validateGeneralQuestion(result.value);
+    candidate = {
+      ...result.value,
+      questionKey: result.value.questionKey.replace(
+        /^general_/u,
+        'personalized_fallback_',
+      ),
+    };
+    validatePersonalizedQuestion(candidate, context);
+  } catch (error) {
+    throw new LearningJobExecutionError({
+      code: personalizedQuestionFallbackFailureCode(
+        rejectionCodes,
+        'invalid',
+      ),
+      retryable: false,
+      usage: combinedUsage,
+      cause: error,
+    });
+  }
+
+  let groundingResult: Awaited<
+    ReturnType<LearningModelPort['evaluatePersonalizedQuestionGrounding']>
+  >;
+  try {
+    groundingResult = await model.evaluatePersonalizedQuestionGrounding(
+      context,
+      candidate,
+    );
+  } catch (error) {
+    if (error instanceof LearningModelError) {
+      combinedUsage = combineUsage(combinedUsage, error.usage);
+      throw copyModelErrorWithUsage(error, combinedUsage);
+    }
+    throw error;
+  }
+  combinedUsage = combineUsage(combinedUsage, groundingResult.usage);
+
+  if (!groundingResult.value.supported) {
+    throw new LearningJobExecutionError({
+      code: personalizedQuestionFallbackFailureCode(
+        rejectionCodes,
+        'unsupported',
+      ),
+      retryable: false,
+      usage: combinedUsage,
+    });
+  }
+
+  return {
+    output: {
+      question_key: candidate.questionKey,
+      question_text: candidate.text,
+      category: candidate.category,
+      mood: candidate.mood,
+      rationale: candidate.rationale,
+    },
+    usage: combinedUsage,
+    diagnostics: [{
+      kind: 'personalized_question_fallback',
+      rejectionCodes: [...rejectionCodes],
+    }],
+  };
+}
+
+function buildGeneralQuestionFallbackContext(
+  context: AnonymizedCompletedQuestionContext,
+): GeneralQuestionContext {
+  const recentQuestions: GeneralQuestionContext['recentQuestions'] = [];
+  const seenTexts = new Set<string>();
+  const addQuestion = (
+    questionKey: string,
+    text: string,
+    domain: GeneralQuestionContext['recentQuestions'][number]['domain'],
+  ): void => {
+    const normalizedText = text.trim().normalize('NFC');
+    if (
+      normalizedText.length === 0
+      || seenTexts.has(normalizedText)
+      || recentQuestions.length >= 30
+    ) {
+      return;
+    }
+    seenTexts.add(normalizedText);
+    recentQuestions.push({
+      questionKey,
+      text: normalizedText,
+      category: domain ?? 'daily_life',
+      mood: null,
+      domain,
+    });
+  };
+
+  addQuestion(
+    `fallback_source_${context.question.questionId}`,
+    context.question.text,
+    context.question.domain,
+  );
+  for (const [index, text] of (context.pendingQuestionTexts ?? []).entries()) {
+    addQuestion(`fallback_pending_${index + 1}`, text, null);
+  }
+  for (
+    const [index, text] of (context.recentExposedQuestionTexts ?? []).entries()
+  ) {
+    addQuestion(`fallback_exposed_${index + 1}`, text, null);
+  }
+  for (const recent of context.recentCompletedQuestions) {
+    addQuestion(
+      `fallback_completed_${recent.question.dailyQuestionId}`,
+      recent.question.text,
+      recent.question.domain,
+    );
+  }
+
+  return {
+    foundationProgress: {
+      completedCount: context.foundationProgress.completedCount,
+      totalCount: context.foundationProgress.totalCount,
+    },
+    recentQuestions,
+  };
 }
 
 function coupleFeedbackRejectionCode(
@@ -506,6 +658,13 @@ function personalizedQuestionFailureCode(
     );
   }
   return `personalized_question_rejected_a1_${rejectionCodes[0]}_a2_${rejectionCodes[1]}`;
+}
+
+function personalizedQuestionFallbackFailureCode(
+  rejectionCodes: readonly PersonalizedQuestionRejectionCode[],
+  reason: 'invalid' | 'unsupported',
+): string {
+  return `${personalizedQuestionFailureCode(rejectionCodes)}_fallback_${reason}`;
 }
 
 class AnswerUserQuestionHandler implements LearningJobHandler {

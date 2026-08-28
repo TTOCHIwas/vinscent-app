@@ -358,10 +358,10 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-feedback', promptVersion: 'feedback-v11' },
       { jobId: 'job-rank', promptVersion: 'question-ranking-v3' },
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
-      {
-        jobId: 'job-personalized',
-        promptVersion: 'personalized-question-v8',
-      },
+    {
+      jobId: 'job-personalized',
+      promptVersion: 'personalized-question-v9',
+    },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
   );
