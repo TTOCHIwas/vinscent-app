@@ -59,6 +59,10 @@ type CoupleFeedbackRejectionCode = NonNullable<
   CoupleFeedbackGenerationOptions['rejectionCode']
 >;
 
+type PersonalizedQuestionRejectionCode = NonNullable<
+  PersonalizedQuestionGenerationOptions['rejectionCode']
+>;
+
 export function createDefaultLearningJobHandlerRegistry(
   options: DefaultLearningJobHandlerOptions,
 ): LearningJobHandlerRegistry {
@@ -350,6 +354,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       let rejectedText: string | null = null;
       let rejectionCode:
         PersonalizedQuestionGenerationOptions['rejectionCode'] = null;
+      const rejectionCodes: PersonalizedQuestionRejectionCode[] = [];
       let combinedUsage: LearningModelUsage | null = null;
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -376,6 +381,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
           }
           rejectedText = null;
           rejectionCode = 'candidate_validation_failed';
+          rejectionCodes.push(rejectionCode);
           continue;
         }
         combinedUsage = combinedUsage === null
@@ -385,10 +391,19 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
         try {
           validatePersonalizedQuestion(result.value, context);
         } catch (error) {
+          const currentRejectionCode = personalizedQuestionRejectionCode(
+            error,
+          );
+          rejectionCodes.push(currentRejectionCode);
           if (attempt === 1) {
-            throw error;
+            throw new LearningJobExecutionError({
+              code: personalizedQuestionFailureCode(rejectionCodes),
+              retryable: false,
+              usage: combinedUsage,
+              cause: error,
+            });
           }
-          rejectionCode = personalizedQuestionRejectionCode(error);
+          rejectionCode = currentRejectionCode;
           rejectedText = rejectedModelTextForRetry(
             result.value.text,
             rejectionCode,
@@ -417,8 +432,14 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
           const groundingError = new PersonalizedQuestionValidationError(
             'unsupported_presupposition',
           );
+          rejectionCodes.push(groundingError.code);
           if (attempt === 1) {
-            throw groundingError;
+            throw new LearningJobExecutionError({
+              code: personalizedQuestionFailureCode(rejectionCodes),
+              retryable: false,
+              usage: combinedUsage,
+              cause: groundingError,
+            });
           }
           rejectionCode = groundingError.code;
           rejectedText = rejectedModelTextForRetry(
@@ -474,6 +495,17 @@ function personalizedQuestionRejectionCode(
     return error.code;
   }
   return koreanOutputRejectionCode(error) ?? 'candidate_validation_failed';
+}
+
+function personalizedQuestionFailureCode(
+  rejectionCodes: readonly PersonalizedQuestionRejectionCode[],
+): string {
+  if (rejectionCodes.length !== 2) {
+    throw new RangeError(
+      'personalized question rejection history must contain 2 codes',
+    );
+  }
+  return `personalized_question_rejected_a1_${rejectionCodes[0]}_a2_${rejectionCodes[1]}`;
 }
 
 class AnswerUserQuestionHandler implements LearningJobHandler {
