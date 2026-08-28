@@ -2030,6 +2030,109 @@ test('processor falls back to a general question after both personalized candida
   });
 });
 
+test('processor repairs one rejected general fallback candidate', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-fallback-repair', 'generate_personalized_question'),
+  ]);
+  repository.completedContext = {
+    ...completedContext,
+    question: {
+      ...completedContext.question,
+      text: '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+      domain: 'daily_life',
+    },
+    recentExposedQuestionTexts: [
+      '주말에 둘이 같이 영화 보러 갈 때 어떤 영화 장르를 좋아해?',
+    ],
+  };
+  let personalizedGenerationCount = 0;
+  const fallbackOptions: Array<{
+    rejectedText: string | null;
+    rejectionCode: string | null;
+  }> = [];
+  const model = modelWith({
+    async generatePersonalizedQuestion() {
+      personalizedGenerationCount += 1;
+      return result({
+        questionKey: 'personalized_generated_meal_ab12cd34',
+        text: personalizedGenerationCount === 1
+          ? '그때 고기 먹은 식당에서 뭐가 가장 좋았어?'
+          : '고기 먹고 돌아오는 길에는 무슨 얘기를 했어?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '함께한 식사 경험을 더 알아보기 위해',
+      });
+    },
+    async generateGeneralQuestion(_context, options) {
+      fallbackOptions.push({
+        rejectedText: options?.rejectedText ?? null,
+        rejectionCode: options?.rejectionCode ?? null,
+      });
+      const firstAttempt = fallbackOptions.length === 1;
+      return result({
+        questionKey: firstAttempt
+          ? 'general_movie_taste_ab12cd34'
+          : 'general_shared_rest_cd34ef56',
+        text: firstAttempt
+          ? '둘이 영화를 볼 때 어떤 장르를 가장 좋아해?'
+          : '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: null,
+        rationale: firstAttempt
+          ? '영화 취향을 알아보기 위해'
+          : '최근 질문과 겹치지 않는 가벼운 주제야',
+      });
+    },
+    async evaluatePersonalizedQuestionGrounding(_context, candidate) {
+      return result(candidate.text === '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?'
+        ? {
+          supported: true,
+          reasonCode: 'no_completed_event',
+        }
+        : {
+          supported: false,
+          reasonCode: 'answers_contradict_event',
+        });
+    },
+  });
+  const diagnostics: LearningJobOperationalDiagnostic[] = [];
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+    onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 1,
+    retried: 0,
+    failed: 0,
+  });
+  assert.deepEqual(fallbackOptions, [
+    { rejectedText: null, rejectionCode: null },
+    {
+      rejectedText: '둘이 영화를 볼 때 어떤 장르를 가장 좋아해?',
+      rejectionCode: 'repeated_topic',
+    },
+  ]);
+  assert.equal(
+    repository.successes[0]?.output.question_text,
+    '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?',
+  );
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 140,
+    outputTokenCount: 70,
+    latencyMs: 840,
+  });
+  assert.equal(diagnostics[0]?.event, 'ai_learning_personalized_question_fallback');
+  assert.equal(diagnostics[0]?.promptVersion, 'personalized-question-v10');
+});
+
 test('processor retries structurally invalid personalized question once', async () => {
   const repository = new FakeRepository([
     job('job-invalid-personalized-structure', 'generate_personalized_question'),
