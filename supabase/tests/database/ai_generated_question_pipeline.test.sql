@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(23);
+select plan(28);
 
 insert into auth.users (
   id,
@@ -577,6 +577,154 @@ select is(
   ),
   false,
   'the stale automatic question is deactivated'
+);
+
+insert into public.ai_personalization_states (
+  couple_id,
+  curriculum_version,
+  activated_at
+)
+select
+  '23000000-0000-0000-0000-000000000001',
+  aiqc.version,
+  now()
+from public.ai_question_curricula as aiqc
+where aiqc.status = 'active'
+order by aiqc.version desc
+limit 1
+on conflict (couple_id, curriculum_version) do update
+set activated_at = excluded.activated_at;
+
+insert into public.daily_story_loops (
+  id,
+  couple_id,
+  couple_date,
+  status,
+  story_edit_locked_at
+)
+values (
+  '33000000-0000-0000-0000-000000000020',
+  '23000000-0000-0000-0000-000000000001',
+  current_date - 2,
+  'question_preparing',
+  now()
+);
+
+insert into public.story_loop_cards (
+  id,
+  story_loop_id,
+  couple_id,
+  couple_date,
+  author_user_id,
+  preview_path,
+  scene_data_path,
+  has_drawing
+)
+values
+  (
+    '43000000-0000-0000-0000-000000000020',
+    '33000000-0000-0000-0000-000000000020',
+    '23000000-0000-0000-0000-000000000001',
+    current_date - 2,
+    '13000000-0000-0000-0000-000000000001',
+    '23000000-0000-0000-0000-000000000001/loops/recovery/a/preview.png',
+    '23000000-0000-0000-0000-000000000001/loops/recovery/a/scene.json',
+    true
+  ),
+  (
+    '43000000-0000-0000-0000-000000000021',
+    '33000000-0000-0000-0000-000000000020',
+    '23000000-0000-0000-0000-000000000001',
+    current_date - 2,
+    '13000000-0000-0000-0000-000000000002',
+    '23000000-0000-0000-0000-000000000001/loops/recovery/b/preview.png',
+    '23000000-0000-0000-0000-000000000001/loops/recovery/b/scene.json',
+    true
+  );
+
+insert into public.ai_processing_jobs (
+  id,
+  couple_id,
+  focused_question_id,
+  job_type,
+  status,
+  deduplication_key,
+  attempts,
+  max_attempts,
+  completed_at,
+  last_error
+)
+select
+  '83000000-0000-0000-0000-000000000020',
+  '23000000-0000-0000-0000-000000000001',
+  aifq.id,
+  'generate_personalized_question',
+  'failed',
+  'story-loop:33000000-0000-0000-0000-000000000020:'
+    || 'generate_personalized_question:1',
+  1,
+  5,
+  now(),
+  'personalized_question_fallback_invalid'
+from public.ai_focused_questions as aifq
+where aifq.couple_id = '23000000-0000-0000-0000-000000000001'
+order by aifq.created_at desc, aifq.id
+limit 1;
+
+select ok(
+  private.ensure_ai_question_job_for_story_loop(
+    '23000000-0000-0000-0000-000000000001',
+    '33000000-0000-0000-0000-000000000020'
+  ) is not null,
+  'one terminal generation failure receives one bounded recovery job'
+);
+select is(
+  (
+    select dsl.status
+    from public.daily_story_loops as dsl
+    where dsl.id = '33000000-0000-0000-0000-000000000020'
+  ),
+  'question_preparing',
+  'the story loop keeps waiting while its recovery job is active'
+);
+
+update public.ai_processing_jobs
+set
+  status = 'failed',
+  attempts = 1,
+  completed_at = now(),
+  last_error = 'personalized_question_fallback_invalid'
+where deduplication_key =
+  'story-loop:33000000-0000-0000-0000-000000000020:'
+    || 'generate_personalized_question:2';
+
+select is(
+  private.ensure_ai_question_job_for_story_loop(
+    '23000000-0000-0000-0000-000000000001',
+    '33000000-0000-0000-0000-000000000020'
+  ),
+  null::uuid,
+  'two terminal generation failures do not enqueue a third job'
+);
+select is(
+  (
+    select dsl.status
+    from public.daily_story_loops as dsl
+    where dsl.id = '33000000-0000-0000-0000-000000000020'
+  ),
+  'question_generated',
+  'the bounded failure path publishes a reviewed fallback question'
+);
+select is(
+  (
+    select q.source
+    from public.daily_questions as dq
+    join public.questions as q on q.id = dq.question_id
+    where dq.story_loop_id =
+      '33000000-0000-0000-0000-000000000020'
+  ),
+  'curated',
+  'the bounded failure path uses the reviewed curated question pool'
 );
 
 select * from finish();
