@@ -1901,7 +1901,7 @@ test('processor regenerates a personalized question that turns an intention into
   });
 });
 
-test('processor preserves both personalized grounding rejection codes', async () => {
+test('processor falls back to a general question after both personalized candidates are ungrounded', async () => {
   const repository = new FakeRepository([
     job('job-personalized-grounding-rejected', 'generate_personalized_question'),
   ]);
@@ -1926,6 +1926,7 @@ test('processor preserves both personalized grounding rejection codes', async ()
     ],
   };
   let generationCount = 0;
+  const fallbackContexts: GeneralQuestionContext[] = [];
   const model = modelWith({
     async generatePersonalizedQuestion() {
       generationCount += 1;
@@ -1940,38 +1941,92 @@ test('processor preserves both personalized grounding rejection codes', async ()
         rationale: '함께한 식사 경험을 더 알아보기 위해',
       });
     },
-    async evaluatePersonalizedQuestionGrounding() {
+    async generateGeneralQuestion(context) {
+      fallbackContexts.push(context);
       return result({
-        supported: false,
-        reasonCode: 'answers_contradict_event',
+        questionKey: 'general_shared_rest_ab12cd34',
+        text: '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?',
+        category: 'daily_life',
+        mood: null,
+        rationale: '최근 질문과 겹치지 않는 가벼운 주제야',
       });
     },
+    async evaluatePersonalizedQuestionGrounding(_context, candidate) {
+      return result(candidate.text === '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?'
+        ? {
+          supported: true,
+          reasonCode: 'no_completed_event',
+        }
+        : {
+          supported: false,
+          reasonCode: 'answers_contradict_event',
+        });
+    },
   });
+  const diagnostics: LearningJobOperationalDiagnostic[] = [];
   const processor = new LearningJobProcessor({
     repository,
     model,
     workerId: 'test-worker',
     provider: 'cloudflare',
     modelName: 'mistral-test',
+    onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
   });
 
   const summary = await processor.processBatch(1);
 
   assert.deepEqual(summary, {
     claimed: 1,
-    succeeded: 0,
+    succeeded: 1,
     retried: 0,
-    failed: 1,
+    failed: 0,
   });
+  assert.equal(repository.failures.length, 0);
+  assert.deepEqual(repository.successes[0]?.output, {
+    question_key: 'personalized_fallback_shared_rest_ab12cd34',
+    question_text: '둘이 쉬는 날 새로 해보고 싶은 건 뭐야?',
+    category: 'daily_life',
+    mood: null,
+    rationale: '최근 질문과 겹치지 않는 가벼운 주제야',
+  });
+  assert.deepEqual(repository.successes[0]?.usage, {
+    inputTokenCount: 120,
+    outputTokenCount: 60,
+    latencyMs: 720,
+  });
+  assert.equal(fallbackContexts.length, 1);
   assert.equal(
-    repository.failures[0]?.errorCode,
-    'personalized_question_rejected_a1_unsupported_presupposition_a2_unsupported_presupposition',
+    JSON.stringify(fallbackContexts).includes('맛있었는데'),
+    false,
   );
-  assert.equal(repository.failures[0]?.retryable, false);
-  assert.deepEqual(repository.failures[0]?.usage, {
-    inputTokenCount: 80,
-    outputTokenCount: 40,
-    latencyMs: 480,
+  assert.equal(
+    JSON.stringify(fallbackContexts).includes('같이 갔다고'),
+    false,
+  );
+  assert.deepEqual(diagnostics, [{
+    event: 'ai_learning_personalized_question_fallback',
+    jobId: 'job-personalized-grounding-rejected',
+    runId: 'run-job-personalized-grounding-rejected',
+    jobAttempt: 1,
+    promptVersion: 'personalized-question-v9',
+    rejectionCodes: [
+      'unsupported_presupposition',
+      'unsupported_presupposition',
+    ],
+  }]);
+  assert.equal(
+    JSON.stringify(diagnostics).includes('고기'),
+    false,
+  );
+  assert.ok(
+    fallbackContexts[0]?.recentQuestions.some(
+      (question) => question.text ===
+        '요즘 둘이 같이 고기 먹으러 갔을 때 어떤 분위기였어?',
+    ),
+  );
+  assert.deepEqual(fallbackContexts[0]?.foundationProgress, {
+    completedCount: 1,
+    totalCount: 24,
   });
 });
 
