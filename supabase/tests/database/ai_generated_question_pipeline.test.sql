@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(28);
+select plan(29);
 
 insert into auth.users (
   id,
@@ -725,6 +725,16 @@ select is(
   ),
   'curated',
   'the bounded failure path uses the reviewed curated question pool'
+);
+select ok(
+  (
+    select q.fallback_position is not null
+    from public.daily_questions as dq
+    join public.questions as q on q.id = dq.question_id
+    where dq.story_loop_id =
+      '33000000-0000-0000-0000-000000000020'
+  ),
+  'the bounded failure path uses the dedicated fallback sequence'
 );
 
 select * from finish();

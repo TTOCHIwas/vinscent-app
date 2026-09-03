@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(14);
+select plan(17);
 
 select has_column(
   'public',
@@ -18,6 +18,7 @@ select is(
     from public.questions as q
     where q.fallback_position is not null
       and q.is_active
+      and left(q.question_key, 12) = 'fallback_v1_'
   ),
   191::bigint,
   'the reviewed fallback pool contains exactly 191 active questions'
@@ -40,6 +41,7 @@ select is(
     from public.questions as q
     where q.fallback_position is not null
       and q.is_active
+      and left(q.question_key, 12) = 'fallback_v1_'
   ),
   10,
   'the fallback sequence starts at position 10'
@@ -51,9 +53,43 @@ select is(
     from public.questions as q
     where q.fallback_position is not null
       and q.is_active
+      and left(q.question_key, 12) = 'fallback_v1_'
   ),
   1910,
   'the fallback sequence leaves insertion gaps through position 1910'
+);
+
+select is(
+  (
+    select count(*)
+    from public.questions as q
+    where q.question_key like 'fallback_v1_general_%'
+      and q.is_active
+  ),
+  96::bigint,
+  'the fallback pool contains all 96 reviewed general questions'
+);
+
+select is(
+  (
+    select count(*)
+    from public.questions as q
+    where q.question_key like 'fallback_v1_memory_%'
+      and q.is_active
+  ),
+  48::bigint,
+  'the fallback pool contains all 48 reviewed memory questions'
+);
+
+select is(
+  (
+    select count(*)
+    from public.questions as q
+    where q.question_key like 'fallback_v1_relationship_%'
+      and q.is_active
+  ),
+  47::bigint,
+  'the fallback pool contains all 47 reviewed relationship questions'
 );
 
 select ok(
@@ -92,6 +128,7 @@ select ok(
       from public.questions as q
       where q.fallback_position is not null
         and q.is_active
+        and left(q.question_key, 12) = 'fallback_v1_'
     ) as ordered_fallbacks
     where ordered_fallbacks.previous_position is not null
       and ordered_fallbacks.fallback_position
@@ -258,7 +295,7 @@ insert into public.questions (
 )
 select
   '67000000-0000-0000-0000-000000000001',
-  'ai',
+  'curated',
   'fallback_category_guard_fixture',
   '직전 질문 분류 회피를 확인하는 테스트 질문',
   q.category,
@@ -271,14 +308,18 @@ insert into public.daily_questions (
   couple_id,
   question_id,
   assigned_date,
-  status
+  status,
+  created_at,
+  updated_at
 )
 values (
   '47000000-0000-0000-0000-000000000001',
   '27000000-0000-0000-0000-000000000001',
   '67000000-0000-0000-0000-000000000001',
   current_date - 4,
-  'pending'
+  'pending',
+  now() + interval '1 minute',
+  now() + interval '1 minute'
 );
 
 create temporary table category_guarded_assignment
@@ -357,7 +398,12 @@ select is(
     where dq.couple_id = '27000000-0000-0000-0000-000000000002'
       and q.fallback_position is not null
   ),
-  191::bigint,
+  (
+    select count(*)
+    from public.questions as q
+    where q.fallback_position is not null
+      and q.is_active
+  ),
   'pool exhaustion fixture exposes every fallback exactly once'
 );
 
