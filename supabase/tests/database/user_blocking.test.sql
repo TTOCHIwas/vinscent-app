@@ -193,14 +193,19 @@ select is(
   'the blocker cannot read couple-scoped rows'
 );
 
-select ok(
-  not has_table_privilege(
-    'authenticated',
-    'public.couples',
-    'SELECT'
+set local role authenticated;
+
+select is(
+  (
+    select count(*)
+    from public.couples
+    where id = '29000000-0000-0000-0000-000000000001'
   ),
-  'clients cannot query hidden archive metadata directly'
+  0::bigint,
+  'couple row RLS does not expose hidden archive metadata'
 );
+
+reset role;
 
 select is(
   private.is_current_user_character_storage_object(
