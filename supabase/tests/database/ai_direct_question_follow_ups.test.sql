@@ -328,7 +328,7 @@ values
     'generate_personalized_question',
     'test',
     'test-model',
-    'personalized-question-v6',
+    'personalized-question-v8',
     'succeeded',
     'passed',
     now()
@@ -340,7 +340,7 @@ values
     'generate_personalized_question',
     'test',
     'test-model',
-    'personalized-question-v6',
+    'personalized-question-v8',
     'succeeded',
     'passed',
     now()
