@@ -303,11 +303,10 @@ select
 from public.questions as q
 where q.fallback_position = 30;
 
-insert into public.daily_questions (
+insert into public.ai_focused_questions (
   id,
   couple_id,
   question_id,
-  assigned_date,
   status,
   created_at,
   updated_at
@@ -316,8 +315,7 @@ values (
   '47000000-0000-0000-0000-000000000001',
   '27000000-0000-0000-0000-000000000001',
   '67000000-0000-0000-0000-000000000001',
-  current_date - 4,
-  'pending',
+  'answered_by_one',
   now() + interval '1 minute',
   now() + interval '1 minute'
 );
@@ -346,31 +344,27 @@ select is(
 select is(
   (
     select count(*)
-    from public.daily_questions as dq
-    join public.questions as q on q.id = dq.question_id
-    where dq.couple_id = '27000000-0000-0000-0000-000000000001'
+    from public.ai_focused_questions as aifq
+    join public.questions as q on q.id = aifq.question_id
+    where aifq.couple_id = '27000000-0000-0000-0000-000000000001'
       and q.fallback_position = 30
   ),
   0::bigint,
   'skipping a category does not mark that fallback as exposed'
 );
 
-insert into public.daily_questions (
+insert into public.ai_focused_questions (
   couple_id,
   question_id,
-  assigned_date,
   status
 )
 select
   '27000000-0000-0000-0000-000000000002',
   ordered_fallback.question_id,
-  current_date - ordered_fallback.sequence_number,
-  'pending'
+  'answered_by_one'
 from (
   select
-    q.id as question_id,
-    row_number() over (order by q.fallback_position)::integer
-      as sequence_number
+    q.id as question_id
   from public.questions as q
   where q.fallback_position is not null
     and q.is_active
@@ -392,10 +386,10 @@ select is(
 
 select is(
   (
-    select count(distinct dq.question_id)
-    from public.daily_questions as dq
-    join public.questions as q on q.id = dq.question_id
-    where dq.couple_id = '27000000-0000-0000-0000-000000000002'
+    select count(distinct aifq.question_id)
+    from public.ai_focused_questions as aifq
+    join public.questions as q on q.id = aifq.question_id
+    where aifq.couple_id = '27000000-0000-0000-0000-000000000002'
       and q.fallback_position is not null
   ),
   (
