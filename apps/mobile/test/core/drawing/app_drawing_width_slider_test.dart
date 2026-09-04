@@ -63,29 +63,31 @@ void main() {
     });
   }
 
-  testWidgets('track widens upward and thumb paints at real pen size', (
-    tester,
-  ) async {
-    const extent = 360.0;
-    const width =
-        (AppDrawingStyle.minStrokeWidth + AppDrawingStyle.maxStrokeWidth) / 2;
-    final captureKey = GlobalKey();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: RepaintBoundary(
-              key: captureKey,
-              child: ColoredBox(
-                color: Colors.black,
-                child: SizedBox(
-                  height: 220,
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: AppDrawingWidthSlider(
-                      canvasExtent: extent,
-                      value: width,
-                      onChanged: (_) {},
+  for (final background in [Colors.black, Colors.white]) {
+    testWidgets('track remains tapered and visible on $background', (
+      tester,
+    ) async {
+      const extent = 360.0;
+      const width =
+          (AppDrawingStyle.minStrokeWidth + AppDrawingStyle.maxStrokeWidth) / 2;
+      final captureKey = GlobalKey();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: RepaintBoundary(
+                key: captureKey,
+                child: ColoredBox(
+                  color: background,
+                  child: SizedBox(
+                    height: 220,
+                    child: RotatedBox(
+                      quarterTurns: 3,
+                      child: AppDrawingWidthSlider(
+                        canvasExtent: extent,
+                        value: width,
+                        onChanged: (_) {},
+                      ),
                     ),
                   ),
                 ),
@@ -93,29 +95,45 @@ void main() {
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final boundary =
-        captureKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    ui.Image? snapshot;
-    ByteData? rgba;
-    await tester.runAsync(() async {
-      snapshot = await boundary.toImage(pixelRatio: 1);
-      rgba = await snapshot!.toByteData(format: ui.ImageByteFormat.rawRgba);
-    });
-    addTearDown(snapshot!.dispose);
-    int litPixels(int row, int threshold) {
-      var count = 0;
-      for (var x = 0; x < snapshot!.width; x++) {
-        if (rgba!.getUint8((row * snapshot!.width + x) * 4) > threshold) {
-          count++;
+      );
+      await tester.pumpAndSettle();
+      final boundary =
+          captureKey.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary;
+      ui.Image? snapshot;
+      ByteData? rgba;
+      await tester.runAsync(() async {
+        snapshot = await boundary.toImage(pixelRatio: 1);
+        rgba = await snapshot!.toByteData(format: ui.ImageByteFormat.rawRgba);
+      });
+      addTearDown(snapshot!.dispose);
+      int litPixels(int row, int threshold) {
+        var count = 0;
+        for (var x = 0; x < snapshot!.width; x++) {
+          if (rgba!.getUint8((row * snapshot!.width + x) * 4) > threshold) {
+            count++;
+          }
         }
+        return count;
       }
-      return count;
-    }
 
-    expect(litPixels(48, 40), greaterThan(litPixels(172, 40)));
-    expect(litPixels(110, 240), closeTo(width * extent, 2));
-  });
+      if (background == Colors.black) {
+        expect(litPixels(48, 40), greaterThan(litPixels(172, 40)));
+        expect(litPixels(110, 240), closeTo(width * extent, 2));
+      } else {
+        int outlineWidth(int row) {
+          final pixels = <int>[];
+          for (var x = 0; x < snapshot!.width; x++) {
+            if (rgba!.getUint8((row * snapshot!.width + x) * 4) < 240) {
+              pixels.add(x);
+            }
+          }
+          expect(pixels, isNotEmpty);
+          return pixels.last - pixels.first;
+        }
+
+        expect(outlineWidth(48), greaterThan(outlineWidth(172)));
+      }
+    });
+  }
 }

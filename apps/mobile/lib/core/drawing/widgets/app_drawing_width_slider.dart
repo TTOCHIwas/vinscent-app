@@ -105,5 +105,12 @@ class _TaperedStrokeTrack extends SliderTrackShape with BaseSliderTrackShape {
       end: sliderTheme.inactiveTrackColor,
     ).evaluate(enableAnimation)!;
     context.canvas.drawPath(path, Paint()..color = color);
+    context.canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.black38
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.75,
+    );
   }
 }
