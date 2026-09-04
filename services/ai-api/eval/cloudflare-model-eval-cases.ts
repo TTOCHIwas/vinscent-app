@@ -772,7 +772,6 @@ function generalQuestionCase(options: ScenarioMetadata & {
     validate: (value) => {
       const question = value as PersonalizedQuestionCandidate;
       validateGeneralQuestion(question);
-      validateQuestionText(question.text);
       requireNotRecentQuestion(
         question.text,
         options.context.recentQuestions.map((recent) => recent.text),
@@ -934,7 +933,6 @@ function createPersonalizedQuestionCases(): ModelEvaluationCase[] {
       validate: (value: unknown) => {
         const question = value as PersonalizedQuestionCandidate;
         validatePersonalizedQuestion(question, context);
-        validateQuestionText(question.text);
         requireTerms(question.text, options.requiredTerms ?? []);
         forbidPatterns(question.text, options.forbiddenPatterns ?? []);
       },
@@ -1373,7 +1371,6 @@ function followUpCase(options: FollowUpScenario): ModelEvaluationCase {
     validate: (value) => {
       const question = value as DirectQuestionFollowUpCandidate;
       validateDirectQuestionFollowUp(options.context, question);
-      validateQuestionText(question.text);
       requireTerms(question.text, options.requiredTerms);
       forbidPatterns(question.text, options.forbiddenPatterns ?? []);
       if (
@@ -1786,13 +1783,6 @@ function requireNoEvidence(
 function requireNoSafeMemory(candidates: ModelMemoryCandidate[]): void {
   if (candidates.some((candidate) => candidate.sensitiveCategory === 'none')) {
     throw new Error('unexpected non-sensitive memory candidate');
-  }
-}
-
-function validateQuestionText(value: string): void {
-  requireKoreanText(value, 'generated question');
-  if (!value.endsWith('?')) {
-    throw new Error('generated question must end with a question mark');
   }
 }
 

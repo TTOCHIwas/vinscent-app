@@ -1099,7 +1099,7 @@ export function validatePersonalizedQuestion(
     | 'pendingQuestionTexts'
   >,
 ): void {
-  validateGeneratedQuestion(candidate);
+  validateGeneratedConversationPrompt(candidate);
 
   if (
     /(?:패턴|경향|성향)[^?]{0,24}(?:맞는지|확인|파악|분석|알아보)/u.test(candidate.text)
@@ -1156,7 +1156,7 @@ export function validatePersonalizedQuestion(
 export function validateGeneralQuestion(
   candidate: PersonalizedQuestionCandidate,
 ): void {
-  validateGeneratedQuestion(candidate);
+  validateGeneratedConversationPrompt(candidate);
 
   if (!/^general_[a-z0-9_]+_[a-z0-9]{8}$/.test(candidate.questionKey)) {
     throw new Error('general question key has an invalid format');
@@ -1350,14 +1350,31 @@ function containsCertainWeatherClaim(value: string): boolean {
     .test(value);
 }
 
-function validateGeneratedQuestion(
+const responseInvitingPromptEndingPattern = /(?:봐|줘|보자)\.$/u;
+const sentenceTerminalPattern = /[.!?。！？…]/u;
+
+function validateGeneratedConversationPrompt(
   candidate: PersonalizedQuestionCandidate,
 ): void {
   requireNonBlank(candidate.questionKey, 'generated question key', 120);
   requireNonBlank(candidate.text, 'generated question', 300);
   validateKoreanCharacterText(candidate.text, 'generated question');
-  if (!candidate.text.trimEnd().endsWith('?')) {
-    throw new Error('generated question must end with a question mark');
+
+  const text = candidate.text.trim();
+  const finalCharacter = text.at(-1);
+  const isQuestion = finalCharacter === '?';
+  const isResponseInvitation = finalCharacter === '.'
+    && responseInvitingPromptEndingPattern.test(text);
+  const hasEarlierSentenceTerminal = sentenceTerminalPattern.test(
+    text.slice(0, -1),
+  );
+  if (
+    (!isQuestion && !isResponseInvitation)
+    || hasEarlierSentenceTerminal
+  ) {
+    throw new Error(
+      'generated conversation prompt must be one question or response invitation',
+    );
   }
   requireNonBlank(candidate.category, 'generated question category', 100);
   requireNonBlank(candidate.rationale, 'generated question rationale', 500);

@@ -644,7 +644,7 @@ select
   'generate_personalized_question',
   'fixture',
   'fixture',
-  'personalized-question-v8',
+  'personalized-question-v11',
   'succeeded',
   'passed',
   now()
@@ -706,7 +706,7 @@ select
   'generate_personalized_question',
   'fixture',
   'fixture',
-  'personalized-question-v7',
+  'personalized-question-v10',
   'succeeded',
   'passed',
   now()

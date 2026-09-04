@@ -1398,7 +1398,7 @@ test('general question prompt contains history metadata but no answer or memory'
   assert.equal(prompt.includes('confirmed_profile'), false);
   assert.equal(prompt.includes('current_answers'), false);
   assert.equal(
-    prompt.includes('질문을 만들어 달라는 메타 질문은 만들지 마'),
+    prompt.includes('질문이나 문장을 만들어 달라는 메타 문장은 만들지 마'),
     true,
   );
   assert.equal(
@@ -1439,7 +1439,7 @@ test('general question retry prompt includes the rejected candidate and correcti
   );
   assert.equal(prompt.includes('repeated_topic'), true);
   assert.equal(
-    prompt.includes('최근 노출 질문과 대기 후보의 주제로 돌아가지 마'),
+    prompt.includes('최근 노출 문장과 대기 후보의 주제로 돌아가지 마'),
     true,
   );
 });
@@ -1939,7 +1939,7 @@ test('personalized question prompt treats exposed and pending questions as negat
   assert.equal(capturedPrompt.includes('pending_question_candidates'), true);
   assert.equal(
     capturedPrompt.includes(
-      '반복 방지를 위한 금지 목록일 뿐이야. 질문 근거나 이어갈 단서로 사용하지 마',
+      '반복 방지를 위한 금지 목록일 뿐이야. 생성 근거나 이어갈 단서로 사용하지 마',
     ),
     true,
   );
@@ -2085,6 +2085,10 @@ test('personalized question grounding evaluates the candidate from current answe
     capturedRequest.prompt,
     /desire, plan, hypothetical, denial, or uncertainty/iu,
   );
+  assert.match(
+    capturedRequest.prompt,
+    /interrogative and a gentle response invitation/iu,
+  );
   assert.match(capturedRequest.prompt, /같이 맛있는 고기 먹기/u);
   assert.match(
     capturedRequest.prompt,
@@ -2191,6 +2195,7 @@ test('prompt strategies keep Korean context while changing compact-model control
   assert.equal(hybrid.prompt.includes('Decision order:'), true);
   assert.equal(hybrid.prompt.includes('두 번째 앱 테스트 올려버리기'), true);
   assert.equal(hybrid.prompt.includes('Write question_text in natural Korean banmal'), true);
+  assert.equal(hybrid.prompt.includes('gentle response invitation'), true);
   assert.equal(refinedKorean.prompt.includes('두 번째 앱 테스트 올려버리기'), true);
   assert.equal(refinedKorean.prompt.includes('CONTINUE'), false);
   assert.equal(refinedKorean.prompt.includes('EXPLORE'), false);
@@ -2202,6 +2207,12 @@ test('prompt strategies keep Korean context while changing compact-model control
     refinedKorean.prompt.includes('category에는 내부 판단 단계'),
     true,
   );
+  for (const request of [structuredKorean, refinedKorean]) {
+    assert.equal(
+      request.prompt.includes('질문형은 ?로, 부드러운 요청형은 .으로 끝내'),
+      true,
+    );
+  }
 });
 
 test('refined Korean feedback prompt uses decision rules without copyable answers', async () => {

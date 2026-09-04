@@ -87,26 +87,42 @@ const compactVisibleKoreanRules = [
   '존댓말 끝맺음인 요, 세요, 습니다를 쓰지 마.',
 ] as const;
 
+const generatedConversationPromptRulesKorean = [
+  '- question_text는 두 사람이 바로 답하거나 이야기를 시작할 수 있는 자연스러운 한국어 반말 한 문장이야.',
+  '- 질문형은 ?로, 부드러운 요청형은 .으로 끝내.',
+  '- 질문형 끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"',
+  '- 요청형 끝맺음 예: "이름을 붙여봐.", "한 문장으로 적어봐."',
+  '- 요청형은 답변란에서 떠올리기, 적기, 정리하기, 표현하기, 고르기만 부담 없이 권해. 앱 밖에서 무언가를 실제로 하라고 지시하지 마.',
+  '- 단순한 사실, 해석, 평가를 말하는 서술문이나 느낌표로 끝나는 문장은 만들지 마.',
+] as const;
+
+const generatedConversationPromptRulesEnglish = [
+  '- Write question_text in natural Korean banmal as exactly one conversation prompt that both partners can answer.',
+  '- It may be an interrogative ending in "?" or a gentle response invitation ending in ".".',
+  '- For a response invitation, only invite the partners to recall, write, organize, express, or choose something in the answer field. Never direct an action outside the app.',
+  '- Never return a declarative statement, interpretation, evaluation, or a sentence ending in !.',
+] as const;
+
 const personalizedQuestionFreshnessRulesKorean = [
-  '- recent_exposed_questions와 pending_question_candidates는 반복 방지를 위한 금지 목록일 뿐이야. 질문 근거나 이어갈 단서로 사용하지 마.',
-  '- current_question, recent_exposed_questions, pending_question_candidates와 같은 의미나 주제의 질문을 만들지 마.',
-  '- current_question은 current_answers의 맥락일 뿐이고, 질문에 쓴 사건 자체는 그 사건이 실제로 일어났다는 근거가 아니야.',
+  '- recent_exposed_questions와 pending_question_candidates는 반복 방지를 위한 금지 목록일 뿐이야. 생성 근거나 이어갈 단서로 사용하지 마.',
+  '- current_question, recent_exposed_questions, pending_question_candidates와 같은 의미나 주제의 문장을 만들지 마.',
+  '- current_question은 current_answers의 맥락일 뿐이고, current_question에 나온 사건 자체는 그 사건이 실제로 일어났다는 근거가 아니야.',
   '- current_answers의 정확한 의미를 읽어. 희망, 계획, 가정, 부정, 모름은 이미 일어난 사건의 근거가 아니야.',
-  '- 이미 일어난 일을 전제하려면 current_answers가 같은 사건을 직접 확인해야 해. 불확실하면 조건형, 희망, 계획, 선호 질문으로 유지해.',
+  '- 이미 일어난 일을 전제하려면 current_answers가 같은 사건을 직접 확인해야 해. 불확실하면 조건형, 희망, 계획, 선호를 묻거나 적게 하는 문장으로 유지해.',
   '- 오늘, 내일, 이번 주말, 다음 주말처럼 후보가 노출될 때 의미가 달라지는 상대 날짜 표현을 쓰지 마.',
   '- 영화는 보다, 활동은 해보다처럼 대상에 맞는 자연스러운 동사를 써.',
-  '- 질문은 짧은 일상 구어로 써. 에 있어서, 와 관련하여, 에 기반하여, 에 의해 같은 보고서 표현을 쓰지 마.',
+  '- 문장은 짧은 일상 구어로 써. 에 있어서, 와 관련하여, 에 기반하여, 에 의해 같은 보고서 표현을 쓰지 마.',
 ] as const;
 
 const personalizedQuestionFreshnessRulesEnglish = [
   '- recent_exposed_questions and pending_question_candidates are negative-only anti-repeat lists. Never use them as evidence or continuation cues.',
-  '- Do not generate a question with the same meaning or topic as current_question, recent_exposed_questions, or pending_question_candidates.',
+  '- Do not generate a prompt with the same meaning or topic as current_question, recent_exposed_questions, or pending_question_candidates.',
   '- current_question provides context for current_answers, but current_question alone is not evidence that its event happened.',
   '- Read the exact semantics of current_answers. A desire, plan, hypothetical, denial, uncertainty, or unknown response is not evidence that an activity happened.',
-  '- Presuppose a completed event only when current_answers directly confirm that same event. When uncertain, preserve conditional, intended, planned, or preferred status.',
+  '- Presuppose a completed event only when current_answers directly confirm that same event. When uncertain, preserve conditional, intended, planned, or preferred status in either an interrogative or response invitation.',
   '- Avoid relative dates whose meaning can expire before delivery, including today, tomorrow, this weekend, and next weekend.',
   '- Use a natural Korean predicate for the object, such as watching a movie and trying an activity.',
-  '- Use short everyday Korean. Avoid formal translationese such as 에 있어서, 와 관련하여, 에 기반하여, and 에 의해.',
+  '- Use a short everyday Korean sentence. Avoid formal translationese such as 에 있어서, 와 관련하여, 에 기반하여, and 에 의해.',
 ] as const;
 
 const maximumMemoryCandidates = 3;
@@ -577,16 +593,16 @@ function buildGeneralQuestionPrompt(
 
   return buildTaskPrompt(
     [
-      '목표: 두 사람이 같은 입장에서 답할 수 있는 한국어 질문 하나를 만들어.',
+      '목표: 두 사람이 같은 입장에서 답할 수 있는 한국어 대화 문장 하나를 만들어.',
       '규칙:',
       '- 아직 개인화 전이므로 두 사람의 취향이나 성향을 안다고 암시하지 마.',
-      '- recent_questions와 주제, 장면, 카테고리, 표현이 겹치지 않는 일상 또는 관계 질문을 골라.',
+      '- recent_questions와 주제, 장면, 카테고리, 표현이 겹치지 않는 일상 또는 관계 대화 문장을 골라.',
       '- 사생활이나 민감 정보를 요구하지 않고 서로를 조금 더 알아갈 수 있어야 해.',
-      '- 진단, 관계 평가, 숨은 의도, 성격 단정을 묻지 마.',
+      '- 진단, 관계 평가, 숨은 의도, 성격 단정을 묻거나 적게 하지 마.',
       '- 고정 질문과 같은 친근한 반말을 사용해.',
-      '- 질문을 만들어 달라는 메타 질문은 만들지 마.',
-      '- question_text는 반드시 물음표로 끝나야 해.',
-      '- rationale에는 최근 질문과 겹치지 않는 이유만 짧게 써.',
+      '- 질문이나 문장을 만들어 달라는 메타 문장은 만들지 마.',
+      ...generatedConversationPromptRulesKorean,
+      '- rationale에는 최근 문장과 겹치지 않는 이유만 짧게 써.',
       '- rejected_question가 있으면 같은 표현과 주제를 반복하지 말고 retry_correction을 반영해.',
     ].join('\n'),
     data,
@@ -962,19 +978,18 @@ function buildPersonalizedQuestionPrompt(
 
   return buildTaskPrompt(
     [
-      '목표: 아직 확인되지 않았거나 불확실한 일상·관계 패턴을 알아볼 한국어 질문 하나를 만들어.',
+      '목표: 아직 확인되지 않았거나 불확실한 일상·관계 패턴을 알아볼 한국어 대화 문장 하나를 만들어.',
       'confirmed_profile, current_answers, 최근 6개 completed question만 사용해.',
-      '두 사람이 같은 입장에서 편하게 답할 수 있는 중립적이고 열린 질문이어야 해.',
-      '민감 주제, 진단, 관계 평가, 숨은 의도, 성격 단정은 묻지 마.',
+      '두 사람이 같은 입장에서 편하게 답할 수 있는 중립적이고 열린 질문 또는 요청문이어야 해.',
+      '민감 주제, 진단, 관계 평가, 숨은 의도, 성격 단정은 묻거나 적게 하지 마.',
       '고정 질문과 같은 친근한 반말을 사용해.',
-      '- 사용자에게 패턴, 경향, 성향을 확인하거나 파악하는 방법을 묻지 마. 구체적인 상황, 장면, 선택을 바로 물어.',
+      '- 사용자에게 패턴, 경향, 성향을 확인하거나 파악하는 방법을 묻지 마. 구체적인 상황, 장면, 선택을 바로 묻거나 적게 해.',
       '- 나쁜 예: "서로의 평소 패턴이 어떻게 맞는지 확인해보려면 어떤 방식이 좋을까?"',
       ...personalizedQuestionFreshnessRulesKorean,
       ...compactVisibleKoreanRules,
-      '끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"',
-      'question_text는 반드시 물음표로 끝나야 해.',
+      ...generatedConversationPromptRulesKorean,
       'rationale에는 어떤 빈 정보를 확인하는지만 짧게 써.',
-      '- rejected_question가 있으면 표현만 바꾸지 말고 retry_correction을 반영한 다른 질문을 만들어.',
+      '- rejected_question가 있으면 표현만 바꾸지 말고 retry_correction을 반영한 다른 대화 문장을 만들어.',
     ].join('\n'),
     data,
   );
@@ -987,7 +1002,8 @@ function buildPersonalizedQuestionGroundingPrompt(
   return buildTaskPrompt(
     [
       'Task: Decide whether candidate_question can be shown without asserting an unsupported completed shared event.',
-      'Judge only factual grounding. Do not rewrite the question and do not judge style, novelty, safety, or usefulness.',
+      'Judge only factual grounding. Do not rewrite the prompt and do not judge style, novelty, safety, or usefulness.',
+      'Treat an interrogative and a gentle response invitation by the same factual evidence rules.',
       'Evidence boundary:',
       '- current_question gives context to current_answers. current_question alone is never evidence that an event happened.',
       '- Only current_answers can confirm whether the same completed shared event happened.',
@@ -997,7 +1013,7 @@ function buildPersonalizedQuestionGroundingPrompt(
       '- If either answer denies or is unsure about the shared event, treat the event as unconfirmed.',
       '- When evidence is ambiguous, choose unsupported.',
       'Decision labels:',
-      '- supported + no_completed_event: candidate_question asks a preference, plan, condition, or other question without assuming a completed event.',
+      '- supported + no_completed_event: candidate_question asks or invites a response about a preference, plan, condition, or other topic without assuming a completed event.',
       '- supported + answers_confirm_same_event: current_answers directly confirm the same completed shared event.',
       '- unsupported + answers_do_not_confirm_event: candidate_question assumes a completed event but current_answers only express a desire, plan, hypothetical, unknown, or unrelated detail.',
       '- unsupported + answers_contradict_event: current_answers deny or contradict the assumed event.',
@@ -1022,22 +1038,22 @@ function buildPersonalizedQuestionGroundingPrompt(
 
 function buildRefinedPersonalizedQuestionTask(): string {
   return [
-    '목표: 두 사람이 같은 입장에서 편하게 답할 수 있는 안전하고 열린 한국어 질문 하나를 만들어.',
+    '목표: 두 사람이 같은 입장에서 편하게 답할 수 있는 안전하고 열린 한국어 대화 문장 하나를 만들어.',
     '판단 순서:',
     '1. current_question과 current_answers를 가장 최근 대화 한 묶음으로 읽어.',
     '2. current_answers에서 구체적이고 안전한 단서를 찾고 current_question으로 이미 확인된 정보와 아직 비어 있는 정보를 나눠.',
-    '3. 현재 답의 단서로 다른 정보를 자연스럽게 물을 수 있으면 그 맥락을 이어가. 같은 정보를 표현이나 시간만 바꿔 다시 묻지 마.',
+    '3. 현재 답의 단서로 다른 반응을 자연스럽게 이끌 수 있으면 그 맥락을 이어가. 같은 정보를 표현이나 시간만 바꿔 다시 요구하지 마.',
     '4. 이어갈 구체적 단서가 없을 때만 confirmed_profile과 recent_completed_questions에서 아직 다루지 않은 일상·관계 주제를 골라.',
     '연결과 새로움:',
     '- 현재 답에 이어갈 수 있는 구체적인 단서가 있는데 무관한 주제로 이동하지 마.',
-    '- 두 답에 서로 다른 단서가 있으면 하나를 공통 취향으로 합치지 말고 둘 다 같은 입장에서 답할 수 있는 새 정보만 물어.',
-    '- current_question과 recent_completed_questions의 의미를 반복하지 마. 시간 표현만 추가하거나 바꾼 질문도 반복이야.',
+    '- 두 답에 서로 다른 단서가 있으면 하나를 공통 취향으로 합치지 말고 둘 다 같은 입장에서 답할 수 있는 새 정보만 다뤄.',
+    '- current_question과 recent_completed_questions의 의미를 반복하지 마. 시간 표현만 추가하거나 바꾼 문장도 반복이야.',
     ...personalizedQuestionFreshnessRulesKorean,
     '- 지시문에 있는 문장을 답으로 복사하지 말고 <data>의 내용에서만 질문을 구성해.',
-    '- 사용자에게 패턴이나 관계를 분석하라고 하지 말고 구체적인 상황, 장면, 선택, 선호, 경험을 바로 물어.',
+    '- 사용자에게 패턴이나 관계를 분석하라고 하지 말고 구체적인 상황, 장면, 선택, 선호, 경험을 바로 묻거나 적게 해.',
     '안전과 말투:',
     '- 민감 주제, 진단, 관계 평가, 숨은 의도, 성격 단정을 피해야 해.',
-    '- question_text는 자연스러운 한국어 반말 질문 한 문장이며 반드시 ?로 끝나야 해.',
+    ...generatedConversationPromptRulesKorean,
     '- 두 사람 모두 편하게 답할 수 있어야 하고 참여자 표기와 기억 주인을 드러내면 안 돼.',
     '- 한자, 일본어 문자, 이모지, 존댓말을 쓰지 마.',
     '출력 메타데이터:',
@@ -1053,22 +1069,22 @@ function buildStructuredPersonalizedQuestionTask(
 ): string {
   if (strategy === 'hybrid_english_korean') {
     return [
-      'Task: Generate exactly one safe, open question that both partners can answer from the same position.',
+      'Task: Generate exactly one safe, open conversation prompt that both partners can answer from the same position.',
       'Decision order:',
       '1. Treat current_question and current_answers as the latest conversation turn.',
       '2. Extract concrete, safe cues from current_answers and identify information already answered by current_question.',
-      '3. Choose CONTINUE when a cue supports a genuinely new angle. The new question must connect to that cue without asking for the same information again.',
-      '4. Choose EXPLORE only when no useful cue can be continued. Ask about one uncovered everyday or relationship pattern not present in confirmed_profile or recent_completed_questions.',
+      '3. Choose CONTINUE when a cue supports a genuinely new angle. The new prompt must connect to that cue without requesting the same information again.',
+      '4. Choose EXPLORE only when no useful cue can be continued. Invite a response about one uncovered everyday or relationship pattern not present in confirmed_profile or recent_completed_questions.',
       'Continuity and novelty:',
       '- Prefer CONTINUE over EXPLORE.',
       '- Do not switch to an unrelated topic while a concrete current-answer cue can be continued safely.',
-      '- Do not repeat or semantically rephrase current_question or any recent_completed_questions, including versions changed only by time words.',
+      '- Do not repeat or semantically rephrase current_question or any recent_completed_questions, including prompts changed only by time words.',
       ...personalizedQuestionFreshnessRulesEnglish,
       '- Do not copy a sentence from these instructions. Construct the question only from <data>.',
-      '- Ask about a concrete situation, scene, choice, preference, or experience. Never ask users to analyze their patterns or relationship.',
+      '- Invite a response about a concrete situation, scene, choice, preference, or experience. Never ask users to analyze their patterns or relationship.',
       'Safety and voice:',
       '- Avoid sensitive topics, diagnosis, relationship evaluation, hidden intent, and personality claims.',
-      '- Write question_text in natural Korean banmal as one neutral question ending with ?.',
+      ...generatedConversationPromptRulesEnglish,
       '- Both partners must be able to answer comfortably. Do not expose participant labels or memory ownership.',
       '- Do not use Chinese characters, Japanese scripts, emoji, or honorific endings.',
       '- Write rationale briefly in Korean, naming only the new information gap. Do not mention internal strategy labels.',
@@ -1077,22 +1093,22 @@ function buildStructuredPersonalizedQuestionTask(
   }
 
   return [
-    '작업: 두 사람이 같은 입장에서 답할 수 있는 안전하고 열린 질문 하나를 만들어.',
+    '작업: 두 사람이 같은 입장에서 답할 수 있는 안전하고 열린 대화 문장 하나를 만들어.',
     '판단 순서:',
     '1. current_question과 current_answers를 가장 최근 대화로 다뤄.',
     '2. current_answers에서 구체적이고 안전한 단서를 찾고 current_question으로 이미 확인한 정보를 구분해.',
-    '3. 단서에서 새로운 관점으로 자연스럽게 이어갈 수 있으면 CONTINUE를 선택해. 같은 정보를 다시 묻지 말고 그 단서와 연결된 다른 빈 정보를 물어.',
-    '4. 이어갈 단서가 없을 때만 EXPLORE를 선택해. confirmed_profile과 recent_completed_questions에 없는 일상·관계 패턴 하나를 물어.',
+    '3. 단서에서 새로운 관점으로 자연스럽게 이어갈 수 있으면 CONTINUE를 선택해. 같은 정보를 다시 요구하지 말고 그 단서와 연결된 다른 빈 정보를 다뤄.',
+    '4. 이어갈 단서가 없을 때만 EXPLORE를 선택해. confirmed_profile과 recent_completed_questions에 없는 일상·관계 패턴 하나에 답하게 해.',
     '연결과 새로움:',
     '- EXPLORE보다 CONTINUE를 우선해.',
     '- 현재 답의 구체적인 단서를 안전하게 이어갈 수 있는데 무관한 주제로 바꾸지 마.',
-    '- current_question과 recent_completed_questions를 의미상 반복하지 마. 시간 표현만 추가하거나 바꾼 질문도 반복이야.',
+    '- current_question과 recent_completed_questions를 의미상 반복하지 마. 시간 표현만 추가하거나 바꾼 문장도 반복이야.',
     ...personalizedQuestionFreshnessRulesKorean,
     '- 이 지시문의 문장을 복사하지 말고 <data>에 있는 내용만으로 질문을 구성해.',
-    '- 구체적인 상황, 장면, 선택, 선호, 경험을 바로 물어. 사용자에게 패턴이나 관계를 분석하라고 하지 마.',
+    '- 구체적인 상황, 장면, 선택, 선호, 경험에 바로 답하게 해. 사용자에게 패턴이나 관계를 분석하라고 하지 마.',
     '안전과 말투:',
     '- 민감 주제, 진단, 관계 평가, 숨은 의도, 성격 단정을 피해야 해.',
-    '- question_text는 자연스러운 한국어 반말 질문 하나이며 반드시 ?로 끝나야 해.',
+    ...generatedConversationPromptRulesKorean,
     '- 두 사람 모두 편하게 답할 수 있어야 하고 참여자 표기와 기억 주인을 드러내면 안 돼.',
     '- 한자, 일본어 문자, 이모지, 존댓말을 쓰지 마.',
     '- rationale은 새로 확인할 빈 정보만 한국어로 짧게 써. 내부 전략 이름은 쓰지 마.',
@@ -1104,19 +1120,19 @@ function personalizedQuestionRetryCorrection(
   code: NonNullable<PersonalizedQuestionGenerationOptions['rejectionCode']>,
 ): string {
   if (code === 'meta_language') {
-    return '분석과 설문을 떠올리게 하는 단어를 모두 빼고, 둘이 실제로 있을 법한 구체적인 장면을 바로 물어.';
+    return '분석과 설문을 떠올리게 하는 단어를 모두 빼고, 둘이 실제로 있을 법한 구체적인 장면에 바로 답하게 해.';
   }
   if (code === 'duplicate_question') {
-    return '현재 질문과 최근 질문의 표현만 바꾸지 마. 이미 확인한 정보와 다른 빈 정보를 묻는 새 관점의 질문을 만들어.';
+    return '현재 질문과 최근 문장의 표현만 바꾸지 마. 이미 확인한 정보와 다른 빈 정보를 다루는 새 관점의 대화 문장을 만들어.';
   }
   if (code === 'repeated_topic') {
-    return '최근 노출 질문과 대기 후보의 주제로 돌아가지 마. 현재 답에서 이어갈 수 있는 다른 정보나 아직 다루지 않은 주제를 물어.';
+    return '최근 노출 문장과 대기 후보의 주제로 돌아가지 마. 현재 답에서 이어갈 수 있는 다른 정보나 아직 다루지 않은 주제에 답하게 해.';
   }
   if (code === 'volatile_time_reference') {
-    return '노출 시점에 의미가 달라지는 상대 날짜 표현을 모두 빼고 언제 보여도 자연스러운 질문을 만들어.';
+    return '노출 시점에 의미가 달라지는 상대 날짜 표현을 모두 빼고 언제 보여도 자연스러운 대화 문장을 만들어.';
   }
   if (code === 'unsupported_presupposition') {
-    return 'current_question이 답변에 부여한 사실 범위를 보존해. 희망, 계획, 가정의 답을 이미 일어난 일로 바꾸지 말고 조건형이나 선호 질문으로 다시 만들어.';
+    return 'current_question이 답변에 부여한 사실 범위를 보존해. 희망, 계획, 가정의 답을 이미 일어난 일로 바꾸지 말고 조건형이나 선호를 다루는 문장으로 다시 만들어.';
   }
   if (code === 'unnatural_question') {
     return '목적어에 맞는 자연스러운 한국어 동사를 사용하고, 같은 표현을 다른 목적어에 기계적으로 붙이거나 보고서식 번역투를 쓰지 마.';
@@ -1124,7 +1140,7 @@ function personalizedQuestionRetryCorrection(
   if (code === 'strategy_leak') {
     return '내부 판단 단계와 지시문 단어를 category, mood, rationale에 쓰지 마. 질문 주제에 맞는 사용자용 메타데이터만 만들어.';
   }
-  return '거절된 질문을 반복하지 말고 질문 형식과 안전 규칙을 다시 적용해.';
+  return '거절된 문장을 반복하지 말고 질문형 또는 부드러운 요청형의 한 문장 규칙과 안전 규칙을 다시 적용해.';
 }
 
 function buildDirectQuestionPrompt(context: DirectQuestionContext): string {

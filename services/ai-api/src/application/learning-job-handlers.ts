@@ -321,7 +321,7 @@ class GenerateGeneralQuestionHandler implements LearningJobHandler {
       job.jobId,
     );
 
-    return modelJob('general-question-v2', async () => {
+    return modelJob('general-question-v3', async () => {
       const result = await this.#model.generateGeneralQuestion(context);
       validateGeneralQuestion(result.value);
       return {
@@ -353,7 +353,7 @@ class GeneratePersonalizedQuestionHandler implements LearningJobHandler {
       await this.#repository.loadContext(job.jobId),
     );
 
-    return modelJob('personalized-question-v10', async () => {
+    return modelJob('personalized-question-v11', async () => {
       let rejectedText: string | null = null;
       let rejectionCode:
         PersonalizedQuestionGenerationOptions['rejectionCode'] = null;

@@ -357,7 +357,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-memory', promptVersion: 'memory-v8' },
       { jobId: 'job-feedback', promptVersion: 'feedback-v11' },
       { jobId: 'job-rank', promptVersion: 'question-ranking-v3' },
-      { jobId: 'job-general', promptVersion: 'general-question-v2' },
+      { jobId: 'job-general', promptVersion: 'general-question-v3' },
     {
       jobId: 'job-personalized',
       promptVersion: 'personalized-question-v11',
@@ -1577,6 +1577,50 @@ test('processor uses a safe fallback after repeated mixed-certainty feedback vio
     outputTokenCount: 20,
     latencyMs: 240,
   });
+});
+
+test('processor persists a response-inviting personalized conversation prompt', async () => {
+  const repository = new FakeRepository([
+    job('job-personalized-response-invitation', 'generate_personalized_question'),
+  ]);
+  const model = modelWith({
+    async generatePersonalizedQuestion() {
+      return result({
+        questionKey: 'personalized_generated_memory_ab12cd34',
+        text: '둘의 추억 하나에 영화 제목처럼 이름을 붙여봐.',
+        category: 'shared_memory',
+        mood: null,
+        rationale: '둘이 기억하는 장면의 의미를 더 알아보기 위해',
+      });
+    },
+  });
+  const processor = new LearningJobProcessor({
+    repository,
+    model,
+    workerId: 'test-worker',
+    provider: 'cloudflare',
+    modelName: 'mistral-test',
+  });
+
+  const summary = await processor.processBatch(1);
+
+  assert.deepEqual(summary, {
+    claimed: 1,
+    succeeded: 1,
+    retried: 0,
+    failed: 0,
+  });
+  assert.deepEqual(repository.successes[0]?.output, {
+    question_key: 'personalized_generated_memory_ab12cd34',
+    question_text: '둘의 추억 하나에 영화 제목처럼 이름을 붙여봐.',
+    category: 'shared_memory',
+    mood: null,
+    rationale: '둘이 기억하는 장면의 의미를 더 알아보기 위해',
+  });
+  assert.equal(
+    repository.startedRuns[0]?.promptVersion,
+    'personalized-question-v11',
+  );
 });
 
 test('processor regenerates a personalized question that exposes analysis language', async () => {
