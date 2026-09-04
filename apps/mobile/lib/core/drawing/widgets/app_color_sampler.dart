@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-class StoryCardColorSampleBuffer {
-  StoryCardColorSampleBuffer({
+class AppColorSampleBuffer {
+  AppColorSampleBuffer({
     required this.width,
     required this.height,
     required this.rgbaBytes,
@@ -39,23 +39,25 @@ class StoryCardColorSampleBuffer {
   }
 }
 
-class StoryCardColorSampler extends StatefulWidget {
-  const StoryCardColorSampler({
+class AppColorSampler extends StatefulWidget {
+  const AppColorSampler({
     super.key,
     required this.sampleBuffer,
     required this.canvasRect,
     required this.onColorSelected,
+    this.keyPrefix = 'drawing',
   });
 
-  final StoryCardColorSampleBuffer sampleBuffer;
+  final AppColorSampleBuffer sampleBuffer;
   final Rect canvasRect;
   final ValueChanged<Color> onColorSelected;
+  final String keyPrefix;
 
   @override
-  State<StoryCardColorSampler> createState() => _StoryCardColorSamplerState();
+  State<AppColorSampler> createState() => _AppColorSamplerState();
 }
 
-class _StoryCardColorSamplerState extends State<StoryCardColorSampler> {
+class _AppColorSamplerState extends State<AppColorSampler> {
   int? _activePointer;
   late Offset _position;
   late Color _sampledColor;
@@ -68,7 +70,7 @@ class _StoryCardColorSamplerState extends State<StoryCardColorSampler> {
   }
 
   @override
-  void didUpdateWidget(covariant StoryCardColorSampler oldWidget) {
+  void didUpdateWidget(covariant AppColorSampler oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.canvasRect != widget.canvasRect ||
         oldWidget.sampleBuffer != widget.sampleBuffer) {
@@ -127,11 +129,9 @@ class _StoryCardColorSamplerState extends State<StoryCardColorSampler> {
                   child: Semantics(
                     label: '선택 중인 색상',
                     child: CustomPaint(
-                      key: const ValueKey(
-                        'story-card-drawing-eyedropper-color',
-                      ),
+                      key: ValueKey('${widget.keyPrefix}-eyedropper-color'),
                       size: const Size(indicatorWidth, indicatorHeight),
-                      painter: _StoryCardColorIndicatorPainter(
+                      painter: _ColorIndicatorPainter(
                         color: _sampledColor,
                         pointsDown: showAbove,
                       ),
@@ -203,11 +203,8 @@ class _StoryCardColorSamplerState extends State<StoryCardColorSampler> {
   }
 }
 
-class _StoryCardColorIndicatorPainter extends CustomPainter {
-  const _StoryCardColorIndicatorPainter({
-    required this.color,
-    required this.pointsDown,
-  });
+class _ColorIndicatorPainter extends CustomPainter {
+  const _ColorIndicatorPainter({required this.color, required this.pointsDown});
 
   final Color color;
   final bool pointsDown;
@@ -268,7 +265,7 @@ class _StoryCardColorIndicatorPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _StoryCardColorIndicatorPainter oldDelegate) {
+  bool shouldRepaint(covariant _ColorIndicatorPainter oldDelegate) {
     return oldDelegate.color != color || oldDelegate.pointsDown != pointsDown;
   }
 }

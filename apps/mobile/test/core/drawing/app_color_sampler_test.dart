@@ -2,11 +2,11 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vinscent/features/story_loops/presentation/widgets/story_card_color_sampler.dart';
+import 'package:vinscent/core/drawing/widgets/app_color_sampler.dart';
 
 void main() {
   const canvasRect = Rect.fromLTWH(10, 20, 100, 200);
-  final sample = StoryCardColorSampleBuffer(
+  final sample = AppColorSampleBuffer(
     width: 2,
     height: 2,
     rgbaBytes: Uint8List.fromList([
@@ -61,11 +61,7 @@ void main() {
 
   test('rejects malformed pixel buffers', () {
     expect(
-      () => StoryCardColorSampleBuffer(
-        width: 2,
-        height: 2,
-        rgbaBytes: Uint8List(4),
-      ),
+      () => AppColorSampleBuffer(width: 2, height: 2, rgbaBytes: Uint8List(4)),
       throwsArgumentError,
     );
   });

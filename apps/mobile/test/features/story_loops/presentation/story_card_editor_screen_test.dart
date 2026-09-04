@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
+import 'package:vinscent/core/drawing/widgets/app_color_sampler.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
@@ -443,11 +444,11 @@ void main() {
       findsNothing,
     );
 
-    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
-    final gesture = await tester.startGesture(tester.getCenter(canvas));
+    final sampledCanvas = tester.widget<AppColorSampler>(sampler).canvasRect;
+    final gesture = await tester.startGesture(sampledCanvas.center);
     await tester.pump();
     await gesture.up();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(sampler, findsNothing);
     final controls = tester.widget<StoryCardDrawingControls>(
@@ -478,7 +479,7 @@ void main() {
     await tester.pump();
 
     await tester.binding.handlePopRoute();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
       find.byKey(const ValueKey('story-card-drawing-eyedropper-overlay')),

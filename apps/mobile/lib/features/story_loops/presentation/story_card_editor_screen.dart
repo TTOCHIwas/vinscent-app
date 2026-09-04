@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../application/story_card_editor_controller.dart';
 import '../application/story_card_editor_session.dart';
@@ -16,7 +17,6 @@ import '../data/story_card_scene.dart';
 import '../data/story_loop_write_failure.dart';
 import 'widgets/story_card_caption_input_overlay.dart';
 import 'widgets/story_card_camera_stage.dart';
-import 'widgets/story_card_color_sampler.dart';
 import 'widgets/story_card_drawing_controls.dart';
 import 'widgets/story_card_editor_action_bar.dart';
 import 'widgets/story_card_editor_canvas.dart';
@@ -62,7 +62,6 @@ class _StoryCardEditorContent extends ConsumerStatefulWidget {
 
 class _StoryCardEditorContentState
     extends ConsumerState<_StoryCardEditorContent> {
-  final _editorStackKey = GlobalKey();
   final _previewKey = GlobalKey();
   final _textTrashTargetKey = GlobalKey();
 
@@ -82,10 +81,7 @@ class _StoryCardEditorContentState
   bool _isCaptionInputActive = false;
   bool _isDraggingText = false;
   bool _isTextOverTrash = false;
-  StoryCardColorSampleBuffer? _colorSampleBuffer;
-  Rect? _colorSamplerCanvasRect;
-  bool _isPreparingColorSampler = false;
-  int _colorSamplerRequestId = 0;
+  bool _isPickingColor = false;
   bool _isSaving = false;
   bool _isDeleting = false;
 
@@ -111,8 +107,7 @@ class _StoryCardEditorContentState
   bool get _canSave =>
       !_isTextInputActive &&
       !_isCaptionInputActive &&
-      _colorSampleBuffer == null &&
-      !_isPreparingColorSampler &&
+      !_isPickingColor &&
       !_isSaving &&
       !_isDeleting &&
       _draft.hasContent;
@@ -142,7 +137,6 @@ class _StoryCardEditorContentState
     return ColoredBox(
       color: Colors.black,
       child: Stack(
-        key: _editorStackKey,
         fit: StackFit.expand,
         children: [
           SafeArea(
@@ -211,9 +205,7 @@ class _StoryCardEditorContentState
                 ),
               ),
             ),
-          if (_session.tool == StoryCardEditorTool.drawing &&
-              _colorSampleBuffer == null &&
-              !_isPreparingColorSampler)
+          if (_session.tool == StoryCardEditorTool.drawing && !_isPickingColor)
             Positioned.fill(
               child: SafeArea(
                 child: StoryCardDrawingControls(
@@ -239,23 +231,11 @@ class _StoryCardEditorContentState
                     });
                   },
                   onUndoPressed: _undoLastStroke,
-                  onEyedropperPressed: _isPreparingColorSampler
-                      ? null
-                      : _enterColorSampler,
+                  onEyedropperPressed: _enterColorSampler,
                   onDonePressed: _completeDrawing,
                 ),
               ),
             ),
-          if (_colorSampleBuffer case final sampleBuffer?)
-            if (_colorSamplerCanvasRect case final canvasRect?)
-              Positioned.fill(
-                child: StoryCardColorSampler(
-                  key: const ValueKey('story-card-drawing-eyedropper-overlay'),
-                  sampleBuffer: sampleBuffer,
-                  canvasRect: canvasRect,
-                  onColorSelected: _selectSampledColor,
-                ),
-              ),
           if (_isDraggingText)
             SafeArea(
               child: Align(
@@ -295,8 +275,8 @@ class _StoryCardEditorContentState
   }
 
   Future<void> _handleBack() async {
-    if (_colorSampleBuffer != null || _isPreparingColorSampler) {
-      _cancelColorSampler();
+    if (_isPickingColor) {
+      setState(() => _isPickingColor = false);
       return;
     }
     if (_isTextInputActive) {
@@ -381,9 +361,6 @@ class _StoryCardEditorContentState
 
   void _selectTool(StoryCardEditorTool tool) {
     setState(() {
-      if (tool != StoryCardEditorTool.drawing) {
-        _clearColorSamplerState();
-      }
       _session = _session.selectTool(tool);
     });
   }
@@ -413,98 +390,25 @@ class _StoryCardEditorContentState
   Future<void> _enterColorSampler() async {
     if (_session.tool != StoryCardEditorTool.drawing ||
         _activePointer != null ||
-        _isPreparingColorSampler ||
-        _colorSampleBuffer != null) {
+        _isPickingColor) {
       return;
     }
-
-    final requestId = ++_colorSamplerRequestId;
+    setState(() => _isPickingColor = true);
+    final color = await showAppCanvasColorPicker(
+      context: context,
+      canvasKey: _previewKey,
+      backgroundColor: Colors.black,
+      keyPrefix: 'story-card-drawing',
+      canOpen: () => mounted && _isPickingColor,
+    );
+    if (!mounted) return;
     setState(() {
-      _isPreparingColorSampler = true;
+      _isPickingColor = false;
+      if (color != null) {
+        _selectedColor = color;
+        _selectedDrawingTool = StoryCardDrawingTool.pen;
+      }
     });
-
-    ui.Image? snapshot;
-    try {
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted || requestId != _colorSamplerRequestId) {
-        return;
-      }
-
-      final boundary = _previewKey.currentContext?.findRenderObject();
-      final editorBox = _editorStackKey.currentContext?.findRenderObject();
-      if (boundary is! RenderRepaintBoundary || editorBox is! RenderBox) {
-        throw StateError('Story card canvas is unavailable.');
-      }
-
-      snapshot = await boundary.toImage(pixelRatio: 1);
-      final byteData = await snapshot.toByteData(
-        format: ui.ImageByteFormat.rawRgba,
-      );
-      if (byteData == null) {
-        throw StateError('Story card canvas capture failed.');
-      }
-
-      final canvasTopLeft = boundary.localToGlobal(
-        Offset.zero,
-        ancestor: editorBox,
-      );
-      final canvasRect = canvasTopLeft & boundary.size;
-      final sampleBuffer = StoryCardColorSampleBuffer(
-        width: snapshot.width,
-        height: snapshot.height,
-        rgbaBytes: Uint8List.fromList(
-          byteData.buffer.asUint8List(
-            byteData.offsetInBytes,
-            byteData.lengthInBytes,
-          ),
-        ),
-      );
-
-      if (!mounted ||
-          requestId != _colorSamplerRequestId ||
-          _session.tool != StoryCardEditorTool.drawing) {
-        return;
-      }
-      setState(() {
-        _isPreparingColorSampler = false;
-        _colorSampleBuffer = sampleBuffer;
-        _colorSamplerCanvasRect = canvasRect;
-      });
-    } catch (_) {
-      if (mounted && requestId == _colorSamplerRequestId) {
-        setState(() {
-          _isPreparingColorSampler = false;
-        });
-        _showSnackBar('색상을 가져오지 못했어요.');
-      }
-    } finally {
-      snapshot?.dispose();
-    }
-  }
-
-  void _selectSampledColor(Color color) {
-    if (_colorSampleBuffer == null) {
-      return;
-    }
-    setState(() {
-      _selectedColor = color;
-      _selectedDrawingTool = StoryCardDrawingTool.pen;
-      _clearColorSamplerState();
-    });
-  }
-
-  void _cancelColorSampler() {
-    if (_colorSampleBuffer == null && !_isPreparingColorSampler) {
-      return;
-    }
-    setState(_clearColorSamplerState);
-  }
-
-  void _clearColorSamplerState() {
-    _colorSamplerRequestId += 1;
-    _isPreparingColorSampler = false;
-    _colorSampleBuffer = null;
-    _colorSamplerCanvasRect = null;
   }
 
   void _selectTextTool() {
