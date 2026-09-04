@@ -1402,7 +1402,7 @@ test('general question prompt contains history metadata but no answer or memory'
     true,
   );
   assert.equal(
-    prompt.includes('question_text는 반드시 물음표로 끝나야 해'),
+    prompt.includes('질문형은 ?로, 부드러운 요청형은 .으로 끝내'),
     true,
   );
 });
@@ -1830,11 +1830,11 @@ test('compact-model prompts include explicit Korean style examples', async () =>
   await model.generateDirectQuestionFollowUp(directContext);
 
   assert.equal(
-    prompts[0]?.includes('끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"'),
+    prompts[0]?.includes('질문형 끝맺음 예: "뭐야?", "언제야?", "어떤 모습이야?"'),
     true,
   );
   assert.equal(
-    prompts[0]?.includes('question_text는 반드시 물음표로 끝나야 해'),
+    prompts[0]?.includes('요청형 끝맺음 예: "이름을 붙여봐.", "한 문장으로 적어봐."'),
     true,
   );
   assert.equal(

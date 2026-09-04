@@ -360,7 +360,7 @@ test('processor handles every learning job and restores IDs only at persistence'
       { jobId: 'job-general', promptVersion: 'general-question-v2' },
     {
       jobId: 'job-personalized',
-      promptVersion: 'personalized-question-v10',
+      promptVersion: 'personalized-question-v11',
     },
       { jobId: 'job-direct', promptVersion: 'direct-question-v9' },
     ],
@@ -2008,7 +2008,7 @@ test('processor falls back to a general question after both personalized candida
     jobId: 'job-personalized-grounding-rejected',
     runId: 'run-job-personalized-grounding-rejected',
     jobAttempt: 1,
-    promptVersion: 'personalized-question-v10',
+    promptVersion: 'personalized-question-v11',
     rejectionCodes: [
       'unsupported_presupposition',
       'unsupported_presupposition',
@@ -2130,7 +2130,7 @@ test('processor repairs one rejected general fallback candidate', async () => {
     latencyMs: 840,
   });
   assert.equal(diagnostics[0]?.event, 'ai_learning_personalized_question_fallback');
-  assert.equal(diagnostics[0]?.promptVersion, 'personalized-question-v10');
+  assert.equal(diagnostics[0]?.promptVersion, 'personalized-question-v11');
 });
 
 test('processor retries structurally invalid personalized question once', async () => {

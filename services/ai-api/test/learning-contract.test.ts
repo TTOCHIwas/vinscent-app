@@ -12,6 +12,7 @@ import {
   validateCoupleFeedback,
   validateDirectQuestionAnswer,
   validateDirectQuestionFollowUp,
+  validateGeneralQuestion,
   validateMemoryCandidates,
   validatePersonalizedQuestion,
   validateProactiveSuggestion,
@@ -339,8 +340,8 @@ test('공용 후속 질문은 한국어 표현만 바꾼 의미 중복을 거부
   ));
 });
 
-test('생성 질문은 실제 질문 형식으로 끝나야 한다', () => {
-  const candidate = {
+test('일일 생성 문장은 답할 수 있는 질문 또는 부드러운 요청 한 문장이어야 한다', () => {
+  const personalizedCandidate = {
     questionKey: 'personalized_generated_ab12cd34',
     text: '다음에 편하게 말할 수 있는 일상 패턴 하나를 알려줘',
     category: 'daily_life',
@@ -349,13 +350,52 @@ test('생성 질문은 실제 질문 형식으로 끝나야 한다', () => {
   };
 
   assert.throws(
-    () => validatePersonalizedQuestion(candidate),
-    /question mark/i,
+    () => validatePersonalizedQuestion(personalizedCandidate),
+    /conversation prompt/i,
   );
   assert.doesNotThrow(() => validatePersonalizedQuestion({
-    ...candidate,
+    ...personalizedCandidate,
     text: '평소에 가장 편안한 일상은 어떤 모습이야?',
   }));
+  assert.doesNotThrow(() => validatePersonalizedQuestion({
+    ...personalizedCandidate,
+    text: '둘의 추억 하나에 영화 제목처럼 이름을 붙여봐.',
+  }));
+  assert.doesNotThrow(() => validateGeneralQuestion({
+    ...personalizedCandidate,
+    questionKey: 'general_shared_memory_ab12cd34',
+    text: '서로에게 건네고 싶은 말을 한 문장으로 남겨줘.',
+  }));
+
+  for (const text of [
+    '둘은 함께 영화를 좋아해.',
+    '둘의 추억을 떠올려봐. 가장 좋은 장면을 적어봐.',
+    '둘의 추억을 하나 골라봐!',
+  ]) {
+    assert.throws(
+      () => validatePersonalizedQuestion({
+        ...personalizedCandidate,
+        text,
+      }),
+      /conversation prompt/i,
+    );
+  }
+});
+
+test('비공개 질문의 직접 후속 질문은 요청문이 아니라 물음표 질문을 유지한다', () => {
+  assert.throws(
+    () => validateDirectQuestionFollowUp(
+      directQuestionContext,
+      {
+        questionKey: 'direct_follow_up_shared_rest_ab12cd34',
+        text: '쉬는 날 함께 하고 싶은 일을 하나 적어봐.',
+        category: 'daily_life',
+        mood: null,
+        rationale: '쉬는 날 선호를 확인할 근거가 아직 부족해',
+      },
+    ),
+    /invalid_question/i,
+  );
 });
 
 test('proactive suggestions enforce card, weather, and tone boundaries', () => {
