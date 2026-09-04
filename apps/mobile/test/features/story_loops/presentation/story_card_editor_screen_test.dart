@@ -480,6 +480,37 @@ void main() {
     expect(saveButton().onPressed, isNotNull);
   });
 
+  testWidgets('drawing completion has no tool selection background', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingEmptyDraft());
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+
+    final doneFinder = find.byKey(const ValueKey('story-card-drawing-done'));
+    final done = tester.widget<IconButton>(doneFinder);
+    expect(done.color, Colors.white);
+    expect(
+      done.style?.backgroundColor?.resolve({}) ?? Colors.transparent,
+      Colors.transparent,
+    );
+    expect(done.style?.side?.resolve({}) ?? BorderSide.none, BorderSide.none);
+    expect(tester.getSize(doneFinder), const Size.square(48));
+    expect(done.tooltip, '그리기 완료');
+
+    final pen = tester.widget<IconButton>(
+      find.byKey(const ValueKey('story-card-drawing-pen')),
+    );
+    expect(pen.style?.backgroundColor?.resolve({}), Colors.white);
+    await tester.tap(doneFinder);
+    await tester.pump();
+    expect(find.byType(StoryCardDrawingControls), findsNothing);
+    expect(
+      find.byKey(const ValueKey('story-card-editor-header')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('drawing mode uses immersive edge controls without crop', (
     tester,
   ) async {
