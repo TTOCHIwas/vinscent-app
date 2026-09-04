@@ -205,7 +205,7 @@ class _StoryCardEditorContentState
                 ),
               ),
             ),
-          if (_session.tool == StoryCardEditorTool.drawing && !_isPickingColor)
+          if (_session.tool == StoryCardEditorTool.drawing)
             Positioned.fill(
               child: SafeArea(
                 child: StoryCardDrawingControls(
@@ -252,6 +252,12 @@ class _StoryCardEditorContentState
           if (_isTextInputActive)
             StoryCardTextInputOverlay(
               maxLength: _remainingTextCharacterLimit,
+              onPickColor: () => showAppCanvasColorPicker(
+                context: context,
+                canvasKey: _previewKey,
+                backgroundColor: Colors.black,
+                keyPrefix: 'story-card-text-input',
+              ),
               onCancelled: _cancelTextInput,
               onSubmitted: _submitTextInput,
             ),
@@ -387,11 +393,11 @@ class _StoryCardEditorContentState
     );
   }
 
-  Future<void> _enterColorSampler() async {
+  Future<Color?> _enterColorSampler() async {
     if (_session.tool != StoryCardEditorTool.drawing ||
         _activePointer != null ||
         _isPickingColor) {
-      return;
+      return null;
     }
     setState(() => _isPickingColor = true);
     final color = await showAppCanvasColorPicker(
@@ -401,14 +407,9 @@ class _StoryCardEditorContentState
       keyPrefix: 'story-card-drawing',
       canOpen: () => mounted && _isPickingColor,
     );
-    if (!mounted) return;
-    setState(() {
-      _isPickingColor = false;
-      if (color != null) {
-        _selectedColor = color;
-        _selectedDrawingTool = StoryCardDrawingTool.pen;
-      }
-    });
+    if (!mounted) return null;
+    setState(() => _isPickingColor = false);
+    return color;
   }
 
   void _selectTextTool() {

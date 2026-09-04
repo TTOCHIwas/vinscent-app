@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
+import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
@@ -43,6 +44,7 @@ class _RecordingSlotArtworkEditorScreenState
   static const _maxCanvasSize = 512.0;
 
   late final AppDrawingController _drawingController;
+  final _colorSamplingKey = GlobalKey();
   CoupleRecordingSlot? _slot;
   bool _isLoading = true;
   bool _loadFailed = false;
@@ -435,11 +437,22 @@ class _RecordingSlotArtworkEditorScreenState
                         selectedColor: _drawingController.selectedColor,
                         selectedStrokeWidth:
                             _drawingController.selectedStrokeWidth,
-                        isReadOnly: isReadOnly || _loadFailed,
+                        isReadOnly:
+                            isReadOnly ||
+                            _isLoading ||
+                            _loadFailed ||
+                            _isSaving,
                         canUndo: _canUndo,
                         canClear: _canClear,
                         onToolChanged: _drawingController.selectTool,
                         onColorChanged: _drawingController.selectColor,
+                        onPickColor: () => showAppCanvasColorPicker(
+                          context: context,
+                          canvasKey: _colorSamplingKey,
+                          backgroundColor: AppColors.background,
+                          keyPrefix: 'recording-artwork',
+                          canOpen: () => mounted && !_isReadOnly && !_isSaving,
+                        ),
                         onStrokeWidthChanged:
                             _drawingController.selectStrokeWidth,
                         onUndoPressed: _undoLastStroke,
@@ -469,12 +482,18 @@ class _RecordingSlotArtworkEditorScreenState
       );
     }
 
-    return AppDrawingCanvas(
-      strokes: _drawingController.visibleStrokes,
-      isReadOnly: isReadOnly,
-      onStrokeStart: _startStroke,
-      onStrokeUpdate: _updateStroke,
-      onStrokeEnd: _endStroke,
+    return RepaintBoundary(
+      key: _colorSamplingKey,
+      child: ColoredBox(
+        color: const Color(0xFFF0F0F0),
+        child: AppDrawingCanvas(
+          strokes: _drawingController.visibleStrokes,
+          isReadOnly: isReadOnly,
+          onStrokeStart: _startStroke,
+          onStrokeUpdate: _updateStroke,
+          onStrokeEnd: _endStroke,
+        ),
+      ),
     );
   }
 }

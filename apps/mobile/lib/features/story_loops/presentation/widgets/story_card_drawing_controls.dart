@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/assets/app_icons.dart';
+import '../../../../core/drawing/widgets/app_color_palette.dart';
 import '../../../../core/presentation/widgets/app_svg_icon.dart';
 import '../../data/story_card_scene.dart';
 
@@ -27,7 +28,7 @@ class StoryCardDrawingControls extends StatelessWidget {
   final ValueChanged<Color> onColorChanged;
   final ValueChanged<double> onStrokeWidthChanged;
   final VoidCallback onUndoPressed;
-  final VoidCallback? onEyedropperPressed;
+  final Future<Color?> Function()? onEyedropperPressed;
   final VoidCallback onDonePressed;
 
   @override
@@ -130,30 +131,15 @@ class StoryCardDrawingControls extends StatelessWidget {
             height: 72,
             child: ColoredBox(
               color: const Color(0x33000000),
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: AppColorPalette(
+                  keyPrefix: 'story-card-drawing',
+                  selectedColor: selectedColor,
+                  showSelection: selectedTool == StoryCardDrawingTool.pen,
+                  onColorChanged: onColorChanged,
+                  onPickColor: onEyedropperPressed,
                 ),
-                itemCount: storyCardColorPalette.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return _EyedropperButton(onPressed: onEyedropperPressed);
-                  }
-                  final color = storyCardColorPalette[index - 1];
-                  return _ColorSwatch(
-                    swatchKey: ValueKey(
-                      'story-card-drawing-color-${index - 1}',
-                    ),
-                    color: color,
-                    isSelected:
-                        selectedTool == StoryCardDrawingTool.pen &&
-                        color == selectedColor,
-                    onPressed: () => onColorChanged(color),
-                  );
-                },
               ),
             ),
           ),
@@ -191,77 +177,6 @@ class _DrawingIconButton extends StatelessWidget {
         backgroundColor: isSelected ? Colors.white : const Color(0x52000000),
         disabledBackgroundColor: const Color(0x33000000),
         side: BorderSide(color: isSelected ? Colors.white : Colors.white38),
-      ),
-    );
-  }
-}
-
-class _EyedropperButton extends StatelessWidget {
-  const _EyedropperButton({required this.onPressed});
-
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: 52,
-      child: IconButton(
-        key: const ValueKey('story-card-drawing-eyedropper'),
-        tooltip: '스포이드',
-        onPressed: onPressed,
-        icon: const Icon(Icons.colorize_outlined),
-        color: Colors.black,
-        disabledColor: Colors.black38,
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-    );
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  const _ColorSwatch({
-    required this.swatchKey,
-    required this.color,
-    required this.isSelected,
-    required this.onPressed,
-  });
-
-  final Key swatchKey;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: 52,
-      child: Material(
-        color: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: InkWell(
-          key: swatchKey,
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.all(5),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(
-                  color: isSelected ? Colors.white : Colors.white70,
-                  width: isSelected ? 3 : 1.5,
-                ),
-                boxShadow: isSelected
-                    ? const [BoxShadow(color: Color(0x66000000), blurRadius: 4)]
-                    : null,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

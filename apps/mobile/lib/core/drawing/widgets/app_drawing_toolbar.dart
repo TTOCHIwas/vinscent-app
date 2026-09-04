@@ -6,6 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../app_drawing.dart';
 import '../app_drawing_style.dart';
+import 'app_color_palette.dart';
 
 class AppDrawingToolbar extends StatelessWidget {
   const AppDrawingToolbar({
@@ -18,6 +19,7 @@ class AppDrawingToolbar extends StatelessWidget {
     required this.canClear,
     required this.onToolChanged,
     required this.onColorChanged,
+    required this.onPickColor,
     required this.onStrokeWidthChanged,
     required this.onUndoPressed,
     required this.onClearPressed,
@@ -32,6 +34,7 @@ class AppDrawingToolbar extends StatelessWidget {
   final bool canClear;
   final ValueChanged<AppDrawingTool> onToolChanged;
   final ValueChanged<Color> onColorChanged;
+  final Future<Color?> Function() onPickColor;
   final ValueChanged<double> onStrokeWidthChanged;
   final VoidCallback onUndoPressed;
   final VoidCallback onClearPressed;
@@ -90,27 +93,12 @@ class AppDrawingToolbar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (
-                    var index = 0;
-                    index < AppDrawingStyle.colorPalette.length;
-                    index++
-                  )
-                    _ColorSwatch(
-                      swatchKey: ValueKey('$keyPrefix-color-$index'),
-                      color: AppDrawingStyle.colorPalette[index],
-                      isEnabled: !isReadOnly,
-                      isSelected:
-                          selectedTool == AppDrawingTool.pen &&
-                          AppDrawingStyle.colorPalette[index] == selectedColor,
-                      onTap: () =>
-                          onColorChanged(AppDrawingStyle.colorPalette[index]),
-                    ),
-                ],
+              AppColorPalette(
+                selectedColor: selectedColor,
+                showSelection: selectedTool == AppDrawingTool.pen,
+                onColorChanged: isReadOnly ? null : onColorChanged,
+                onPickColor: isReadOnly ? null : onPickColor,
+                keyPrefix: keyPrefix,
               ),
               const SizedBox(height: 4),
               _StrokeWidthSlider(
@@ -156,61 +144,6 @@ class _ToolbarIconButton extends StatelessWidget {
             ? AppColors.actionPrimary
             : const Color(0x85000000),
         disabledBackgroundColor: const Color(0x52000000),
-      ),
-    );
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  const _ColorSwatch({
-    required this.swatchKey,
-    required this.color,
-    required this.isEnabled,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final Key swatchKey;
-  final Color color;
-  final bool isEnabled;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: isEnabled ? 1 : 0.45,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          key: swatchKey,
-          onTap: isEnabled ? onTap : null,
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 28,
-            height: 28,
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected ? Colors.white : Colors.white54,
-                width: isSelected ? 2 : 1,
-              ),
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: color == AppColors.white
-                      ? Colors.black26
-                      : Colors.transparent,
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/drawing/app_drawing_controller.dart';
 import '../../../../core/drawing/widgets/app_drawing_canvas.dart';
+import '../../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'calendar_event_form_style.dart';
@@ -90,7 +91,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
   }
 }
 
-class _DrawingEditor extends StatelessWidget {
+class _DrawingEditor extends StatefulWidget {
   const _DrawingEditor({
     required this.controller,
     required this.isEnabled,
@@ -102,7 +103,16 @@ class _DrawingEditor extends StatelessWidget {
   final VoidCallback onClearDrawing;
 
   @override
+  State<_DrawingEditor> createState() => _DrawingEditorState();
+}
+
+class _DrawingEditorState extends State<_DrawingEditor> {
+  final _colorSamplingKey = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final isEnabled = widget.isEnabled;
     return Column(
       children: [
         Expanded(
@@ -115,15 +125,18 @@ class _DrawingEditor extends StatelessWidget {
               return Center(
                 child: SizedBox.square(
                   dimension: canvasSize,
-                  child: ColoredBox(
-                    color: AppColors.formSurface,
-                    child: AppDrawingCanvas(
-                      key: const Key('calendar-event-drawing-canvas'),
-                      strokes: controller.visibleStrokes,
-                      isReadOnly: !isEnabled,
-                      onStrokeStart: controller.startStroke,
-                      onStrokeUpdate: controller.updateStroke,
-                      onStrokeEnd: controller.endStroke,
+                  child: RepaintBoundary(
+                    key: _colorSamplingKey,
+                    child: ColoredBox(
+                      color: AppColors.formSurface,
+                      child: AppDrawingCanvas(
+                        key: const Key('calendar-event-drawing-canvas'),
+                        strokes: controller.visibleStrokes,
+                        isReadOnly: !isEnabled,
+                        onStrokeStart: controller.startStroke,
+                        onStrokeUpdate: controller.updateStroke,
+                        onStrokeEnd: controller.endStroke,
+                      ),
                     ),
                   ),
                 ),
@@ -144,9 +157,16 @@ class _DrawingEditor extends StatelessWidget {
             canClear: isEnabled && controller.canClear,
             onToolChanged: controller.selectTool,
             onColorChanged: controller.selectColor,
+            onPickColor: () => showAppCanvasColorPicker(
+              context: context,
+              canvasKey: _colorSamplingKey,
+              backgroundColor: AppColors.background,
+              keyPrefix: 'calendar-event-drawing',
+              canOpen: () => mounted && widget.isEnabled,
+            ),
             onStrokeWidthChanged: controller.selectStrokeWidth,
             onUndoPressed: controller.undo,
-            onClearPressed: onClearDrawing,
+            onClearPressed: widget.onClearDrawing,
           ),
         ),
       ],

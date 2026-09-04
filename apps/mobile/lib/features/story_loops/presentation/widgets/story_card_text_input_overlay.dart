@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../../core/drawing/widgets/app_color_palette.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../data/story_card_scene.dart';
 
 class StoryCardTextInputOverlay extends StatefulWidget {
   const StoryCardTextInputOverlay({
@@ -9,11 +10,13 @@ class StoryCardTextInputOverlay extends StatefulWidget {
     required this.maxLength,
     required this.onCancelled,
     required this.onSubmitted,
+    required this.onPickColor,
   });
 
   final int maxLength;
   final VoidCallback onCancelled;
   final void Function(String text, Color color) onSubmitted;
+  final Future<Color?> Function() onPickColor;
 
   @override
   State<StoryCardTextInputOverlay> createState() =>
@@ -123,11 +126,13 @@ class _StoryCardTextInputOverlayState extends State<StoryCardTextInputOverlay> {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOut,
-              left: 16,
-              right: 16,
+              left: 8,
+              right: 8,
               bottom: keyboardInset + 12,
               child: TextFieldTapRegion(
-                child: _StoryCardTextColorPalette(
+                child: AppColorPalette(
+                  keyPrefix: 'story-card-text-input',
+                  onPickColor: _pickColor,
                   selectedColor: _selectedColor,
                   onColorChanged: (color) {
                     setState(() {
@@ -146,59 +151,21 @@ class _StoryCardTextInputOverlayState extends State<StoryCardTextInputOverlay> {
   void _submit() {
     widget.onSubmitted(_controller.text, _selectedColor);
   }
-}
 
-class _StoryCardTextColorPalette extends StatelessWidget {
-  const _StoryCardTextColorPalette({
-    required this.selectedColor,
-    required this.onColorChanged,
-  });
-
-  final Color selectedColor;
-  final ValueChanged<Color> onColorChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xC9000000),
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        height: 52,
-        child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          scrollDirection: Axis.horizontal,
-          itemCount: storyCardColorPalette.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 10),
-          itemBuilder: (context, index) {
-            final color = storyCardColorPalette[index];
-            final isSelected = color == selectedColor;
-            return Tooltip(
-              message: '텍스트 색상 ${index + 1}',
-              child: Semantics(
-                selected: isSelected,
-                button: true,
-                child: GestureDetector(
-                  key: ValueKey('story-card-text-input-color-$index'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onColorChanged(color),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color,
-                      border: Border.all(
-                        color: isSelected ? Colors.white : Colors.white54,
-                        width: isSelected ? 3 : 1,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
+  Future<Color?> _pickColor() async {
+    final selection = _controller.selection;
+    _focusNode.unfocus();
+    try {
+      await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+      if (!mounted) return null;
+      return await widget.onPickColor();
+    } finally {
+      if (mounted) {
+        if (selection.isValid && selection.end <= _controller.text.length) {
+          _controller.selection = selection;
+        }
+        _focusNode.requestFocus();
+      }
+    }
   }
 }

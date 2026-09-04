@@ -10,6 +10,7 @@ import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/app_drawing_painter.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
+import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
@@ -40,6 +41,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
   static const _exportSize = 512;
 
   late final AppDrawingController _drawingController;
+  final _colorSamplingKey = GlobalKey();
   String _originalDrawingJson = AppDrawingData.empty().toJsonString();
   bool _isLoadingDrawing = true;
   bool _loadFailed = false;
@@ -515,13 +517,19 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                                       ? _CharacterLoadFailure(
                                           onRetry: _retryLoadExistingDrawing,
                                         )
-                                      : AppDrawingCanvas(
-                                          strokes:
-                                              _drawingController.visibleStrokes,
-                                          isReadOnly: _isDrawingReadOnly,
-                                          onStrokeStart: _startStroke,
-                                          onStrokeUpdate: _updateStroke,
-                                          onStrokeEnd: _endStroke,
+                                      : RepaintBoundary(
+                                          key: _colorSamplingKey,
+                                          child: ColoredBox(
+                                            color: AppColors.white,
+                                            child: AppDrawingCanvas(
+                                              strokes: _drawingController
+                                                  .visibleStrokes,
+                                              isReadOnly: _isDrawingReadOnly,
+                                              onStrokeStart: _startStroke,
+                                              onStrokeUpdate: _updateStroke,
+                                              onStrokeEnd: _endStroke,
+                                            ),
+                                          ),
                                         ),
                                 ),
                               ),
@@ -543,6 +551,13 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                             canClear: _canClear,
                             onToolChanged: _drawingController.selectTool,
                             onColorChanged: _drawingController.selectColor,
+                            onPickColor: () => showAppCanvasColorPicker(
+                              context: context,
+                              canvasKey: _colorSamplingKey,
+                              backgroundColor: AppColors.background,
+                              keyPrefix: 'character-drawing',
+                              canOpen: () => mounted && !_isDrawingReadOnly,
+                            ),
                             onStrokeWidthChanged:
                                 _drawingController.selectStrokeWidth,
                             onUndoPressed: _undoLastStroke,

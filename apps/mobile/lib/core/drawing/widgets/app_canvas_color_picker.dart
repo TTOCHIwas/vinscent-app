@@ -19,6 +19,7 @@ Future<Color?> showAppCanvasColorPicker({
   try {
     await WidgetsBinding.instance.endOfFrame;
     if (!context.mounted || canOpen?.call() == false) return null;
+    if (!navigator.mounted) return null;
 
     final boundary = canvasKey.currentContext?.findRenderObject();
     final overlay = navigator.overlay?.context.findRenderObject();
