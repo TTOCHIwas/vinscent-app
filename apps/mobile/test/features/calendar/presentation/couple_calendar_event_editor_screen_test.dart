@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vinscent/core/drawing/app_drawing_controller.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
@@ -13,8 +15,50 @@ import 'package:vinscent/features/calendar/presentation/widgets/couple_calendar_
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 
 import '../../../support/couple_fixtures.dart';
+import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
+  testWidgets('samples event canvas without adding drawing data', (
+    tester,
+  ) async {
+    final drawing = AppDrawingController();
+    final memo = TextEditingController();
+    addTearDown(drawing.dispose);
+    addTearDown(memo.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListenableBuilder(
+            listenable: drawing,
+            builder: (context, _) => CoupleCalendarEventExtrasForm(
+              memoController: memo,
+              drawingController: drawing,
+              mode: CalendarEventExtrasMode.drawing,
+              canEdit: true,
+              isSaving: false,
+              onModeChanged: (_) {},
+              onClearDrawing: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final sampler = await openColorPicker(
+      tester,
+      buttonPrefix: 'calendar-event-drawing',
+    );
+    await tester.tapAt(sampler.canvasRect.center);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .selectedColor,
+      AppColors.formSurface,
+    );
+    expect(drawing.visibleStrokes, isEmpty);
+  });
+
   testWidgets('creates a shared event without requiring a drawing', (
     tester,
   ) async {

@@ -14,8 +14,50 @@ import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
+import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
+  for (final cancel in [false, true]) {
+    testWidgets(
+      'text eyedropper preserves draft and selection on ${cancel ? 'cancel' : 'selection'}',
+      (tester) async {
+        await _pumpEditor(tester, draft: _existingRedPhotoDraft());
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.text_fields));
+        await tester.pumpAndSettle();
+        final inputFinder = find.byKey(const ValueKey('story-card-text-input'));
+        await tester.enterText(inputFinder, '함께 남긴 하루');
+        final input = tester.widget<TextField>(inputFinder);
+        const selection = TextSelection.collapsed(offset: 3);
+        input.controller!.selection = selection;
+        await tester.pump();
+        final picker = await openColorPicker(
+          tester,
+          buttonPrefix: 'story-card-text-input',
+        );
+        expect(inputFinder, findsNothing);
+        expect(tester.testTextInput.isVisible, isFalse);
+        if (cancel) {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tapAt(picker.canvasRect.center);
+        }
+        await tester.pumpAndSettle();
+        final restored = tester.widget<TextField>(inputFinder);
+        expect(restored.controller!.text, '함께 남긴 하루');
+        expect(restored.controller!.selection, selection);
+        expect(restored.focusNode!.hasFocus, isTrue);
+        expect(
+          restored.style!.color,
+          cancel ? Colors.white : const Color(0xFFFF0000),
+        );
+      },
+    );
+  }
+
   testWidgets('keeps the editor header at the top of the screen', (
     tester,
   ) async {
@@ -422,14 +464,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.brush_outlined));
     await tester.pump();
-    await tester.tap(
-      find.byKey(const ValueKey('story-card-drawing-eyedropper')),
-    );
-    await tester.pump();
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
+    await openColorPicker(tester, buttonPrefix: 'story-card-drawing');
 
     final sampler = find.byKey(
       const ValueKey('story-card-drawing-eyedropper-overlay'),
@@ -469,14 +504,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.brush_outlined));
     await tester.pump();
-    await tester.tap(
-      find.byKey(const ValueKey('story-card-drawing-eyedropper')),
-    );
-    await tester.pump();
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
+    await openColorPicker(tester, buttonPrefix: 'story-card-drawing');
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();

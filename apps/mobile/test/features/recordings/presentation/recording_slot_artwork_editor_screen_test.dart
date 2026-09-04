@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
@@ -14,8 +15,35 @@ import 'package:vinscent/features/recordings/data/couple_recording_repository.da
 import 'package:vinscent/features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
 
 import '../../../support/couple_fixtures.dart';
+import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
+  testWidgets('samples slot canvas without creating a stroke', (tester) async {
+    final repository = _FakeRecordingRepository();
+    final router = _createRouter(
+      const RecordingSlotArtworkEditorScreen(slotId: 'slot-1'),
+    );
+    await _pumpEditor(tester, repository: repository, router: router);
+    final sampler = await openColorPicker(
+      tester,
+      buttonPrefix: 'character-drawing',
+      overlayPrefix: 'recording-artwork',
+    );
+    await tester.tapAt(sampler.canvasRect.center);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .selectedColor,
+      const Color(0xFFF0F0F0),
+    );
+    expect(
+      tester.widget<AppDrawingCanvas>(find.byType(AppDrawingCanvas)).strokes,
+      isEmpty,
+    );
+    expect(_saveButton(tester).onPressed, isNull);
+  });
+
   testWidgets('saves a slot drawing as WebP and gzip artifacts', (
     tester,
   ) async {

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
 import 'package:vinscent/core/presentation/widgets/app_page_header.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
@@ -23,8 +24,41 @@ import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 
 import '../../../support/couple_fixtures.dart';
+import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
+  testWidgets('samples the character without adding or saving strokes', (
+    tester,
+  ) async {
+    final repository = _FakeCoupleCharacterRepository();
+    await _pumpCharacterEditor(tester, repository);
+    await tester.tap(find.byKey(const ValueKey('character-drawing-color-3')));
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 0));
+    await tester.pump();
+    final strokes = tester
+        .widget<AppDrawingCanvas>(find.byType(AppDrawingCanvas))
+        .strokes;
+    await tester.tap(find.byKey(const ValueKey('character-drawing-eraser')));
+    await tester.pump();
+    final sampler = await openColorPicker(
+      tester,
+      buttonPrefix: 'character-drawing',
+    );
+    await tester.tapAt(sampler.canvasRect.center);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .selectedColor,
+      AppDrawingStyle.colorPalette[3],
+    );
+    expect(
+      tester.widget<AppDrawingCanvas>(find.byType(AppDrawingCanvas)).strokes,
+      strokes,
+    );
+    expect(repository.savedImageBytes, isNull);
+  });
+
   testWidgets('saves drawn character as PNG and drawing JSON', (tester) async {
     final repository = _FakeCoupleCharacterRepository();
 
