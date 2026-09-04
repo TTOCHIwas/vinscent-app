@@ -39,6 +39,31 @@ class StoryCardDrawingControls extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.topCenter,
+            child: Material(
+              color: const Color(0x33000000),
+              child: SizedBox(
+                height: AppDrawingToolbar.height,
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: AppDrawingToolButton(
+                      buttonKey: const ValueKey('story-card-drawing-done'),
+                      tooltip: '그리기 완료',
+                      icon: const Icon(Icons.check_rounded, size: 26),
+                      isSelected: true,
+                      onPressed: onDonePressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: AppDrawingStyleControls.height,
             child: AppDrawingToolbar(
               keyPrefix: 'story-card-drawing',
               selectedTool: selectedTool == StoryCardDrawingTool.pen
@@ -52,19 +77,13 @@ class StoryCardDrawingControls extends StatelessWidget {
                     : StoryCardDrawingTool.eraser,
               ),
               onUndoPressed: onUndoPressed,
-              trailing: AppDrawingToolButton(
-                buttonKey: const ValueKey('story-card-drawing-done'),
-                tooltip: '그리기 완료',
-                icon: const Icon(Icons.check_rounded, size: 26),
-                isSelected: true,
-                onPressed: onDonePressed,
-              ),
             ),
           ),
           Align(
             alignment: Alignment.bottomCenter,
             child: AppDrawingStyleControls(
               keyPrefix: 'story-card-drawing',
+              previewClearance: AppDrawingToolbar.height,
               canvasExtent: applyBoxFit(
                 BoxFit.contain,
                 const Size(storyCardCanvasAspectRatio, 1),
