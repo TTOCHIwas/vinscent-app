@@ -51,6 +51,17 @@ void main() {
     });
   }
 
+  testWidgets('width preview stays above the bottom drawing tools', (tester) async {
+    await _pumpCharacterEditor(tester, _FakeCoupleCharacterRepository());
+    final gesture = await tester.startGesture(tester.getCenter(find.byType(Slider)));
+    await tester.pump();
+    final preview = tester.getRect(find.byKey(const Key('drawing-width-preview')));
+    final tools = tester.getRect(find.byKey(const Key('character-drawing-toolbar')));
+    await gesture.up();
+    await tester.pump();
+    expect(preview.bottom, lessThanOrEqualTo(tools.top - 8));
+  });
+
   testWidgets('samples the character without adding or saving strokes', (
     tester,
   ) async {
