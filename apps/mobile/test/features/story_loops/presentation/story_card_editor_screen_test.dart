@@ -85,10 +85,7 @@ void main() {
       if (initialCanvas.height <= tools.top - contentTop - 24) {
         expect(drawingCanvas.size, initialCanvas.size);
       }
-      expect(
-        drawingCanvas.center.dy,
-        lessThan(initialCanvas.center.dy),
-      );
+      expect(drawingCanvas.center.dy, lessThan(initialCanvas.center.dy));
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(Slider)),
       );

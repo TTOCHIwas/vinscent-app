@@ -140,25 +140,30 @@ class _StoryCardEditorContentState
         fit: StackFit.expand,
         children: [
           SafeArea(
-            child: Center(
-              child: AspectRatio(
-                key: const ValueKey('story-card-editor-canvas'),
-                aspectRatio: storyCardCanvasAspectRatio,
-                child: RepaintBoundary(
-                  key: _previewKey,
-                  child: StoryCardEditorCanvas(
-                    backgroundImage: _backgroundImage,
-                    scene: _draft.scene,
-                    visibleStrokes: _visibleStrokes,
-                    interactionMode: _session.tool,
-                    onStrokeStart: _startStroke,
-                    onStrokeUpdate: _updateStroke,
-                    onStrokeEnd: _endStroke,
-                    onBackgroundScaleStart: _startBackgroundTransform,
-                    onBackgroundScaleUpdate: _updateBackgroundTransform,
-                    onTextLayerScaleStart: _startTextLayerTransform,
-                    onTextLayerScaleUpdate: _updateTextLayerTransform,
-                    onTextLayerScaleEnd: _endTextLayerTransform,
+            child: Padding(
+              padding: _session.tool == StoryCardEditorTool.drawing
+                  ? StoryCardDrawingControls.canvasInsets
+                  : EdgeInsets.zero,
+              child: Center(
+                child: AspectRatio(
+                  key: const ValueKey('story-card-editor-canvas'),
+                  aspectRatio: storyCardCanvasAspectRatio,
+                  child: RepaintBoundary(
+                    key: _previewKey,
+                    child: StoryCardEditorCanvas(
+                      backgroundImage: _backgroundImage,
+                      scene: _draft.scene,
+                      visibleStrokes: _visibleStrokes,
+                      interactionMode: _session.tool,
+                      onStrokeStart: _startStroke,
+                      onStrokeUpdate: _updateStroke,
+                      onStrokeEnd: _endStroke,
+                      onBackgroundScaleStart: _startBackgroundTransform,
+                      onBackgroundScaleUpdate: _updateBackgroundTransform,
+                      onTextLayerScaleStart: _startTextLayerTransform,
+                      onTextLayerScaleUpdate: _updateTextLayerTransform,
+                      onTextLayerScaleEnd: _endTextLayerTransform,
+                    ),
                   ),
                 ),
               ),

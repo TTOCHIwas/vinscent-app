@@ -20,6 +20,11 @@ class StoryCardDrawingControls extends StatelessWidget {
     required this.onDonePressed,
   });
 
+  static const canvasInsets = EdgeInsets.only(
+    top: AppDrawingToolbar.height + 12,
+    bottom: AppDrawingToolbar.height + AppDrawingStyleControls.height + 12,
+  );
+
   final StoryCardDrawingTool selectedTool;
   final Color selectedColor;
   final double selectedStrokeWidth;
@@ -87,7 +92,7 @@ class StoryCardDrawingControls extends StatelessWidget {
               canvasExtent: applyBoxFit(
                 BoxFit.contain,
                 const Size(storyCardCanvasAspectRatio, 1),
-                constraints.biggest,
+                constraints.deflate(canvasInsets).biggest,
               ).destination.shortestSide,
               selectedColor: selectedColor,
               selectedStrokeWidth: selectedStrokeWidth,
