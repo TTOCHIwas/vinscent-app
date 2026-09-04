@@ -45,22 +45,46 @@ void main() {
       final widthControl = tester.getRect(
         find.byKey(const ValueKey('story-card-drawing-width-control')),
       );
-      final topControls = tester.getRect(
-        find.byKey(const ValueKey('story-card-drawing-top-controls')),
+      final tools = tester.getRect(
+        find.byKey(const ValueKey('story-card-drawing-toolbar')),
       );
       final palette = tester.getRect(
         find.byKey(const ValueKey('story-card-drawing-color-palette')),
       );
       expect(widthControl.height, 48);
       expect(widthControl.width, greaterThan(screen.width * 0.8));
-      expect(widthControl.top, greaterThanOrEqualTo(topControls.bottom));
+      expect(tools.bottom, widthControl.top);
+      expect(tools.width, screen.width);
       expect(widthControl.bottom, palette.top);
       expect(widthControl.center.dx, palette.center.dx);
+      final drawingBounds = tester.getRect(
+        find.byType(StoryCardDrawingControls),
+      );
+      final done = tester.getRect(
+        find.byKey(const ValueKey('story-card-drawing-done')),
+      );
+      expect(done.top, drawingBounds.top + 4);
+      expect(done.right, drawingBounds.right - 12);
+      for (final tool in ['pen', 'eraser', 'undo']) {
+        final button = tester.getRect(
+          find.byKey(ValueKey('story-card-drawing-$tool')),
+        );
+        expect(button.center.dy, tools.center.dy);
+      }
       expect(
         tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
         initialCanvas,
       );
-      await tester.drag(find.byType(Slider), const Offset(120, 0));
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(Slider)),
+      );
+      await gesture.moveBy(const Offset(120, 0));
+      await tester.pumpAndSettle();
+      final preview = tester.getRect(
+        find.byKey(const ValueKey('drawing-width-preview')),
+      );
+      expect(preview.bottom, lessThanOrEqualTo(tools.top - 8));
+      await gesture.up();
       await tester.pumpAndSettle();
       expect(
         tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
