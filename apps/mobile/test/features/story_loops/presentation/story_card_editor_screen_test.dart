@@ -12,6 +12,7 @@ import 'package:vinscent/features/story_loops/application/story_card_editor_cont
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
 
 void main() {
   testWidgets('keeps the editor header at the top of the screen', (
@@ -32,6 +33,7 @@ void main() {
     );
     expect(find.byTooltip('카드 올리기'), findsOneWidget);
     expect(find.text('올리기'), findsNothing);
+    expect(find.text('오늘의 스토리'), findsNothing);
   });
 
   testWidgets('uses a 4:5 polaroid frame in the editor', (tester) async {
@@ -331,10 +333,13 @@ void main() {
     await tester.dragFrom(center - const Offset(30, 30), const Offset(60, 60));
     await tester.pump();
 
+    await tester.tap(find.byKey(const ValueKey('story-card-drawing-done')));
+    await tester.pump();
+
     expect(saveButton().onPressed, isNotNull);
   });
 
-  testWidgets('drawing mode exposes eraser undo and done without crop', (
+  testWidgets('drawing mode uses immersive edge controls without crop', (
     tester,
   ) async {
     await _pumpEditor(tester, draft: _existingPhotoDraft());
@@ -344,7 +349,28 @@ void main() {
 
     expect(find.byKey(const ValueKey('story-card-drawing-eraser')), findsOne);
     expect(find.byKey(const ValueKey('story-card-drawing-undo')), findsOne);
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-eyedropper')),
+      findsOne,
+    );
     expect(find.byKey(const ValueKey('story-card-drawing-done')), findsOne);
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-top-controls')),
+      findsOne,
+    );
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-width-control')),
+      findsOne,
+    );
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-color-palette')),
+      findsOne,
+    );
+    expect(
+      find.byKey(const ValueKey('story-card-editor-header')),
+      findsNothing,
+    );
+    expect(find.byIcon(Icons.text_fields), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('story-card-drawing-done')),
@@ -364,6 +390,101 @@ void main() {
       tester.widget<AppSvgIcon>(eraserIcon).assetName,
       'assets/icons/eraser_black.svg',
     );
+
+    final screenWidth = tester.getSize(find.byType(Scaffold)).width;
+    expect(
+      tester
+          .getSize(
+            find.byKey(const ValueKey('story-card-drawing-top-controls')),
+          )
+          .width,
+      screenWidth,
+    );
+    expect(
+      tester
+          .getSize(
+            find.byKey(const ValueKey('story-card-drawing-color-palette')),
+          )
+          .width,
+      screenWidth,
+    );
+  });
+
+  testWidgets('eyedropper samples the card and restores drawing controls', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingRedPhotoDraft());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-drawing-eyedropper')),
+    );
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    final sampler = find.byKey(
+      const ValueKey('story-card-drawing-eyedropper-overlay'),
+    );
+    expect(sampler, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-top-controls')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-color-palette')),
+      findsNothing,
+    );
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final gesture = await tester.startGesture(tester.getCenter(canvas));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    expect(sampler, findsNothing);
+    final controls = tester.widget<StoryCardDrawingControls>(
+      find.byType(StoryCardDrawingControls),
+    );
+    expect(controls.selectedColor, const Color(0xFFFF0000));
+    expect(controls.selectedTool, StoryCardDrawingTool.pen);
+  });
+
+  testWidgets('back cancels eyedropper without leaving drawing mode', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingRedPhotoDraft());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-drawing-eyedropper')),
+    );
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-eyedropper-overlay')),
+      findsNothing,
+    );
+    expect(find.byType(StoryCardDrawingControls), findsOneWidget);
   });
 
   testWidgets('undo removes the last completed drawing stroke', (tester) async {
