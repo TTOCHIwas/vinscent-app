@@ -37,6 +37,9 @@ void main() {
       final canvas = tester.getSize(
         find.byKey(const ValueKey('story-card-editor-canvas')),
       );
+      final drawingCanvas = tester.getRect(
+        find.byKey(const ValueKey('story-card-editor-canvas')),
+      );
       final slider = tester.widget<AppDrawingWidthSlider>(
         find.byType(AppDrawingWidthSlider),
       );
@@ -71,9 +74,20 @@ void main() {
         );
         expect(button.center.dy, tools.center.dy);
       }
+      final contentTop = done.bottom + 4;
+      expect(drawingCanvas.top, greaterThanOrEqualTo(contentTop + 12));
+      expect(drawingCanvas.bottom, lessThanOrEqualTo(tools.top - 12));
       expect(
-        tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
-        initialCanvas,
+        drawingCanvas.center.dy,
+        closeTo((contentTop + tools.top) / 2, 0.001),
+      );
+      expect(drawingCanvas.center.dx, initialCanvas.center.dx);
+      if (initialCanvas.height <= tools.top - contentTop - 24) {
+        expect(drawingCanvas.size, initialCanvas.size);
+      }
+      expect(
+        drawingCanvas.center.dy,
+        lessThan(initialCanvas.center.dy),
       );
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(Slider)),
@@ -88,12 +102,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
-        initialCanvas,
+        drawingCanvas,
       );
       final controls = tester.widget<StoryCardDrawingControls>(
         find.byType(StoryCardDrawingControls),
       );
       expect(controls.canUndo, isFalse);
+      await tester.tap(find.byKey(const ValueKey('story-card-drawing-done')));
+      await tester.pump();
+      expect(
+        tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
+        initialCanvas,
+      );
       expect(tester.takeException(), isNull);
     });
   }
@@ -545,6 +565,9 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.brush_outlined));
     await tester.pump();
+    final drawingCanvas = tester.getRect(
+      find.byKey(const ValueKey('story-card-editor-canvas')),
+    );
     await openColorPicker(tester, buttonPrefix: 'story-card-drawing');
 
     final sampler = find.byKey(
@@ -562,6 +585,7 @@ void main() {
     expect(find.byType(AppDrawingWidthSlider), findsNothing);
 
     final sampledCanvas = tester.widget<AppColorSampler>(sampler).canvasRect;
+    expect(sampledCanvas, drawingCanvas);
     final gesture = await tester.startGesture(sampledCanvas.center);
     await tester.pump();
     await gesture.up();
@@ -573,6 +597,10 @@ void main() {
     );
     expect(controls.selectedColor, const Color(0xFFFF0000));
     expect(controls.selectedTool, StoryCardDrawingTool.pen);
+    expect(
+      tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
+      drawingCanvas,
+    );
   });
 
   testWidgets('back cancels eyedropper without leaving drawing mode', (
