@@ -20,7 +20,7 @@ void main() {
               child: StatefulBuilder(
                 builder: (context, setState) => SizedBox(
                   key: const ValueKey('control'),
-                  height: 220,
+                  height: 300,
                   child: RotatedBox(
                     quarterTurns: 3,
                     child: AppDrawingWidthSlider(
@@ -46,7 +46,7 @@ void main() {
         closeTo(width * extent, 0.0001),
       );
       expect(initialBounds.width, greaterThanOrEqualTo(48));
-      await tester.dragFrom(initialBounds.center, const Offset(0, -110));
+      await tester.dragFrom(initialBounds.center, const Offset(0, -150));
       await tester.pumpAndSettle();
       expect(width, AppDrawingStyle.maxStrokeWidth);
       expect(tester.getRect(control), initialBounds);
@@ -56,7 +56,9 @@ void main() {
         largeThumb.enabledThumbRadius * 2,
         closeTo(width * extent, 0.0001),
       );
-      await tester.dragFrom(initialBounds.center, const Offset(0, 110));
+      expect(largeThumb.pressedElevation, greaterThan(largeThumb.elevation));
+      expect(theme().overlayColor, Colors.transparent);
+      await tester.dragFrom(initialBounds.center, const Offset(0, 150));
       await tester.pumpAndSettle();
       expect(width, AppDrawingStyle.minStrokeWidth);
       expect(tester.takeException(), isNull);
@@ -64,29 +66,31 @@ void main() {
   }
 
   for (final background in [Colors.black, Colors.white]) {
-    testWidgets('track remains tapered and visible on $background', (
-      tester,
-    ) async {
-      const extent = 360.0;
-      const width =
-          (AppDrawingStyle.minStrokeWidth + AppDrawingStyle.maxStrokeWidth) / 2;
-      final captureKey = GlobalKey();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: RepaintBoundary(
-                key: captureKey,
-                child: ColoredBox(
-                  color: background,
-                  child: SizedBox(
-                    height: 220,
-                    child: RotatedBox(
-                      quarterTurns: 3,
-                      child: AppDrawingWidthSlider(
-                        canvasExtent: extent,
-                        value: width,
-                        onChanged: (_) {},
+    testWidgets(
+      'thin track and directional dots remain visible on $background',
+      (tester) async {
+        const extent = 360.0;
+        const width =
+            (AppDrawingStyle.minStrokeWidth + AppDrawingStyle.maxStrokeWidth) /
+            2;
+        final captureKey = GlobalKey();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: RepaintBoundary(
+                  key: captureKey,
+                  child: ColoredBox(
+                    color: background,
+                    child: SizedBox(
+                      height: 300,
+                      child: RotatedBox(
+                        quarterTurns: 3,
+                        child: AppDrawingWidthSlider(
+                          canvasExtent: extent,
+                          value: width,
+                          onChanged: (_) {},
+                        ),
                       ),
                     ),
                   ),
@@ -94,46 +98,37 @@ void main() {
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final boundary =
-          captureKey.currentContext!.findRenderObject()!
-              as RenderRepaintBoundary;
-      ui.Image? snapshot;
-      ByteData? rgba;
-      await tester.runAsync(() async {
-        snapshot = await boundary.toImage(pixelRatio: 1);
-        rgba = await snapshot!.toByteData(format: ui.ImageByteFormat.rawRgba);
-      });
-      addTearDown(snapshot!.dispose);
-      int litPixels(int row, int threshold) {
-        var count = 0;
-        for (var x = 0; x < snapshot!.width; x++) {
-          if (rgba!.getUint8((row * snapshot!.width + x) * 4) > threshold) {
-            count++;
-          }
-        }
-        return count;
-      }
-
-      if (background == Colors.black) {
-        expect(litPixels(48, 40), greaterThan(litPixels(172, 40)));
-        expect(litPixels(110, 240), closeTo(width * extent, 2));
-      } else {
-        int outlineWidth(int row) {
-          final pixels = <int>[];
+        );
+        await tester.pumpAndSettle();
+        final boundary =
+            captureKey.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+        ui.Image? snapshot;
+        ByteData? rgba;
+        await tester.runAsync(() async {
+          snapshot = await boundary.toImage(pixelRatio: 1);
+          rgba = await snapshot!.toByteData(format: ui.ImageByteFormat.rawRgba);
+        });
+        addTearDown(snapshot!.dispose);
+        int contrastingPixels(int row) {
+          var count = 0;
           for (var x = 0; x < snapshot!.width; x++) {
-            if (rgba!.getUint8((row * snapshot!.width + x) * 4) < 240) {
-              pixels.add(x);
+            final red = rgba!.getUint8((row * snapshot!.width + x) * 4);
+            if (background == Colors.black ? red > 64 : red < 210) {
+              count++;
             }
           }
-          expect(pixels, isNotEmpty);
-          return pixels.last - pixels.first;
+          return count;
         }
 
-        expect(outlineWidth(48), greaterThan(outlineWidth(172)));
-      }
-    });
+        expect(contrastingPixels(48), closeTo(2, 1));
+        expect(contrastingPixels(252), contrastingPixels(48));
+        expect(contrastingPixels(24), greaterThan(contrastingPixels(276)));
+        expect(contrastingPixels(276), greaterThan(0));
+        if (background == Colors.black) {
+          expect(contrastingPixels(150), closeTo(width * extent, 2));
+        }
+      },
+    );
   }
 }

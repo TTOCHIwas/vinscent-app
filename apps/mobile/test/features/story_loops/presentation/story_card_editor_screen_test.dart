@@ -39,6 +39,18 @@ void main() {
       );
       expect(slider.canvasExtent, closeTo(canvas.shortestSide, 0.001));
       expect(canvas.width / canvas.height, closeTo(4 / 5, 0.001));
+      final widthControl = tester.getRect(
+        find.byKey(const ValueKey('story-card-drawing-width-control')),
+      );
+      final topControls = tester.getRect(
+        find.byKey(const ValueKey('story-card-drawing-top-controls')),
+      );
+      final palette = tester.getRect(
+        find.byKey(const ValueKey('story-card-drawing-color-palette')),
+      );
+      expect(widthControl.height, screen.height > 460 ? 300 : lessThan(300));
+      expect(widthControl.top, greaterThanOrEqualTo(topControls.bottom));
+      expect(widthControl.bottom, lessThanOrEqualTo(palette.top));
       expect(tester.takeException(), isNull);
     });
   }
