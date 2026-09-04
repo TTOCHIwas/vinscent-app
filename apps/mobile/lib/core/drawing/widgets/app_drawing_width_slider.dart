@@ -18,7 +18,6 @@ class AppDrawingWidthSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final minDiameter = AppDrawingStyle.minStrokeWidth * canvasExtent;
     final maxDiameter = AppDrawingStyle.maxStrokeWidth * canvasExtent;
     final width = value.clamp(
       AppDrawingStyle.minStrokeWidth,
@@ -31,19 +30,19 @@ class AppDrawingWidthSlider extends StatelessWidget {
         label: '굵기',
         child: SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            trackHeight: maxDiameter,
-            trackShape: _TaperedStrokeTrack(minDiameter: minDiameter),
-            activeTrackColor: Colors.white38,
-            inactiveTrackColor: Colors.white38,
-            disabledInactiveTrackColor: Colors.white12,
+            trackHeight: 2,
+            trackShape: const _DirectionalStrokeTrack(),
+            activeTrackColor: const Color(0xFF929292),
+            inactiveTrackColor: const Color(0xFF929292),
+            disabledInactiveTrackColor: const Color(0xFFB3B3B3),
             thumbColor: Colors.white,
             disabledThumbColor: Colors.white54,
-            overlayColor: Colors.white12,
+            overlayColor: Colors.transparent,
             thumbShape: RoundSliderThumbShape(
               enabledThumbRadius: width * canvasExtent / 2,
               disabledThumbRadius: width * canvasExtent / 2,
-              elevation: 1,
-              pressedElevation: 1,
+              elevation: 0.5,
+              pressedElevation: 4,
             ),
             overlayShape: RoundSliderOverlayShape(
               overlayRadius: controlExtent / 2,
@@ -63,10 +62,9 @@ class AppDrawingWidthSlider extends StatelessWidget {
   }
 }
 
-class _TaperedStrokeTrack extends SliderTrackShape with BaseSliderTrackShape {
-  const _TaperedStrokeTrack({required this.minDiameter});
-
-  final double minDiameter;
+class _DirectionalStrokeTrack extends SliderTrackShape
+    with BaseSliderTrackShape {
+  const _DirectionalStrokeTrack();
 
   @override
   void paint(
@@ -88,29 +86,25 @@ class _TaperedStrokeTrack extends SliderTrackShape with BaseSliderTrackShape {
       isEnabled: isEnabled,
       isDiscrete: isDiscrete,
     );
-    final leftRadius = textDirection == TextDirection.ltr
-        ? minDiameter / 2
-        : rect.height / 2;
-    final rightRadius = textDirection == TextDirection.ltr
-        ? rect.height / 2
-        : minDiameter / 2;
-    final path = Path()
-      ..moveTo(rect.left, rect.center.dy - leftRadius)
-      ..lineTo(rect.right, rect.center.dy - rightRadius)
-      ..lineTo(rect.right, rect.center.dy + rightRadius)
-      ..lineTo(rect.left, rect.center.dy + leftRadius)
-      ..close();
     final color = ColorTween(
       begin: sliderTheme.disabledInactiveTrackColor,
       end: sliderTheme.inactiveTrackColor,
     ).evaluate(enableAnimation)!;
-    context.canvas.drawPath(path, Paint()..color = color);
-    context.canvas.drawPath(
-      path,
-      Paint()
-        ..color = Colors.black38
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.75,
+    final paint = Paint()..color = color;
+    final canvas = context.canvas;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(1)),
+      paint,
+    );
+    canvas.drawCircle(
+      rect.centerLeft,
+      textDirection == TextDirection.ltr ? 1.5 : 3.5,
+      paint,
+    );
+    canvas.drawCircle(
+      rect.centerRight,
+      textDirection == TextDirection.ltr ? 3.5 : 1.5,
+      paint,
     );
   }
 }

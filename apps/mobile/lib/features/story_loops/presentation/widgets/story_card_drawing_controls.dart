@@ -98,7 +98,7 @@ class StoryCardDrawingControls extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 4),
                 child: SizedBox(
                   key: const ValueKey('story-card-drawing-width-control'),
-                  height: (constraints.maxHeight - 160).clamp(96.0, 220.0),
+                  height: (constraints.maxHeight - 160).clamp(96.0, 300.0),
                   child: RotatedBox(
                     quarterTurns: 3,
                     child: AppDrawingWidthSlider(
