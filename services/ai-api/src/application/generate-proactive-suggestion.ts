@@ -1,18 +1,13 @@
-import {
-  ProactiveSuggestionValidationError,
-  validateProactiveSuggestion,
-  type PersonalizationMemoryContext,
-  type PersonalizationRecentQuestionContext,
-  type ProactiveSuggestionCandidate,
-  type ProactiveSuggestionContext,
-  type ProactiveWeatherContext,
+import type {
+  PersonalizationMemoryContext,
+  PersonalizationRecentQuestionContext,
+  ProactiveSuggestionCandidate,
+  ProactiveWeatherContext,
 } from '../domain/learning-contract.ts';
 import {
-  LearningModelError,
-  type LearningModelResult,
-  type ProactiveSuggestionGenerationOptions,
-} from './learning-model-port.ts';
-import { rejectedModelTextForRetry } from './model-output-retry.ts';
+  CuratedProactiveSuggestionSelector,
+  type CuratedProactiveSuggestionSelectionContext,
+} from './curated-proactive-suggestion-selector.ts';
 
 export interface ProactiveSuggestionBaseContext {
   localDate: string;
@@ -36,11 +31,10 @@ export interface ProactiveSuggestionQuota {
   claimGeneration(userId: string, contextDate: string): Promise<boolean>;
 }
 
-export interface ProactiveSuggestionModel {
-  generateProactiveSuggestion(
-    context: ProactiveSuggestionContext,
-    options?: ProactiveSuggestionGenerationOptions,
-  ): Promise<LearningModelResult<ProactiveSuggestionCandidate>>;
+export interface ProactiveSuggestionSelector {
+  select(
+    context: CuratedProactiveSuggestionSelectionContext,
+  ): ProactiveSuggestionCandidate;
 }
 
 export interface ProactiveSuggestionWeatherRequest {
@@ -85,7 +79,7 @@ export class ProactiveSuggestionContextError extends Error {
 interface GenerateProactiveSuggestionOptions {
   contextSource: ProactiveSuggestionContextSource;
   quota: ProactiveSuggestionQuota;
-  model: ProactiveSuggestionModel;
+  selector?: ProactiveSuggestionSelector;
   weatherClient: ProactiveSuggestionWeatherClient | null;
   now?: () => Date;
   generateId?: () => string;
@@ -94,7 +88,7 @@ interface GenerateProactiveSuggestionOptions {
 export class GenerateProactiveSuggestionUseCase {
   readonly #contextSource: ProactiveSuggestionContextSource;
   readonly #quota: ProactiveSuggestionQuota;
-  readonly #model: ProactiveSuggestionModel;
+  readonly #selector: ProactiveSuggestionSelector;
   readonly #weatherClient: ProactiveSuggestionWeatherClient | null;
   readonly #now: () => Date;
   readonly #generateId: () => string;
@@ -102,7 +96,8 @@ export class GenerateProactiveSuggestionUseCase {
   constructor(options: GenerateProactiveSuggestionOptions) {
     this.#contextSource = options.contextSource;
     this.#quota = options.quota;
-    this.#model = options.model;
+    this.#selector = options.selector
+      ?? new CuratedProactiveSuggestionSelector();
     this.#weatherClient = options.weatherClient;
     this.#now = options.now ?? (() => new Date());
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
@@ -126,19 +121,14 @@ export class GenerateProactiveSuggestionUseCase {
       generatedAt,
       baseContext,
     );
-    const context: ProactiveSuggestionContext = {
+    const candidate = this.#selector.select({
+      userId,
       localDate: baseContext.localDate,
       localHour: baseContext.localHour,
       hasCardToday: baseContext.hasCardToday,
-      confirmedMemories: baseContext.confirmedMemories,
-      recentCompletedQuestions: baseContext.recentCompletedQuestions,
+      recordingAvailable: true,
       weather,
-    };
-    const candidate = await this.#generateValidCandidate(
-      context,
-      userId,
-      baseContext.localDate,
-    );
+    });
 
     const lifetimeMinutes = candidate.kind === 'sunset_card' ? 45 : 180;
     const desiredValidUntil = new Date(
@@ -164,61 +154,6 @@ export class GenerateProactiveSuggestionUseCase {
       contextDate: baseContext.localDate,
       hasCardToday: baseContext.hasCardToday,
     };
-  }
-
-  async #generateValidCandidate(
-    context: ProactiveSuggestionContext,
-    userId: string,
-    contextDate: string,
-  ): Promise<ProactiveSuggestionCandidate> {
-    let rejectedText: string | null = null;
-    let rejectionCode: ProactiveSuggestionGenerationOptions['rejectionCode'] =
-      null;
-
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      if (attempt > 0) {
-        await this.#claimGeneration(userId, contextDate);
-      }
-      let result: LearningModelResult<ProactiveSuggestionCandidate>;
-      try {
-        result = await this.#model.generateProactiveSuggestion(
-          context,
-          { rejectedText, rejectionCode },
-        );
-      } catch (error) {
-        if (
-          !(error instanceof LearningModelError)
-          || error.code !== 'model_invalid_output'
-        ) {
-          throw error;
-        }
-        if (attempt === 1) {
-          return buildProactiveSuggestionFallback(context);
-        }
-        rejectedText = null;
-        rejectionCode = 'invalid_structure';
-        continue;
-      }
-
-      try {
-        validateProactiveSuggestion(context, result.value);
-        return result.value;
-      } catch (error) {
-        const validationCode = error instanceof ProactiveSuggestionValidationError
-          ? error.code
-          : 'candidate_validation_failed';
-        if (attempt === 1) {
-          return buildProactiveSuggestionFallback(context);
-        }
-        rejectedText = rejectedModelTextForRetry(
-          result.value.text,
-          validationCode,
-        );
-        rejectionCode = validationCode;
-      }
-    }
-
-    throw new Error('proactive suggestion generation exhausted');
   }
 
   async #claimGeneration(userId: string, contextDate: string): Promise<void> {
@@ -250,88 +185,6 @@ export class GenerateProactiveSuggestionUseCase {
       return null;
     }
   }
-}
-
-function buildProactiveSuggestionFallback(
-  context: ProactiveSuggestionContext,
-): ProactiveSuggestionCandidate {
-  const candidate = resolveProactiveSuggestionFallback(context);
-  validateProactiveSuggestion(context, candidate);
-  return candidate;
-}
-
-function resolveProactiveSuggestionFallback(
-  context: ProactiveSuggestionContext,
-): ProactiveSuggestionCandidate {
-  const weather = context.weather;
-
-  if (context.hasCardToday) {
-    if (weather?.condition === 'hot' ||
-      (weather?.apparentTemperatureC ?? -Infinity) >= 32) {
-      return {
-        text: '밖에서 오래 보내기 부담스러울 수 있으니 가까운 실내에서 함께 쉬는 건 어때?',
-        kind: 'date_idea',
-      };
-    }
-    if (weather?.precipitationPossible === true) {
-      return {
-        text: '날씨가 달라질 수 있으니 가까운 실내에서 함께 느긋하게 보내면 좋겠다',
-        kind: 'date_idea',
-      };
-    }
-    if (weather?.condition === 'cold') {
-      return {
-        text: '쌀쌀하게 느껴질 수 있는 날엔 가까운 실내에서 따뜻한 차를 함께 마시는 건 어때?',
-        kind: 'date_idea',
-      };
-    }
-    return {
-      text: '오늘은 둘이 좋아하는 간식을 천천히 나눠 먹으며 쉬는 건 어때?',
-      kind: 'date_idea',
-    };
-  }
-
-  if (weather?.nearSunset === true) {
-    return {
-      text: '곧 노을 질 시간인데 하늘이 괜찮다면 사진 한 장 찍어서 카드로 남겨도 예쁘겠다',
-      kind: 'sunset_card',
-    };
-  }
-  if (weather?.condition === 'hot' ||
-    (weather?.apparentTemperatureC ?? -Infinity) >= 32) {
-    return {
-      text: '밖에서 오래 보내기 부담스러울 수 있으니 가까운 실내에서 함께 쉬는 건 어때?',
-      kind: 'date_idea',
-    };
-  }
-  if (weather?.condition === 'rain_possible') {
-    return {
-      text: '비 소식은 달라질 수 있으니 가까운 실내에서 함께 느긋하게 보내면 좋겠다',
-      kind: 'date_idea',
-    };
-  }
-  if (weather?.condition === 'snow_possible') {
-    return {
-      text: '눈 소식은 달라질 수 있으니 가까운 실내에서 따뜻하게 쉬면 좋겠다',
-      kind: 'date_idea',
-    };
-  }
-  if (weather?.precipitationPossible === true) {
-    return {
-      text: '날씨가 달라질 수 있으니 가까운 실내에서 함께 느긋하게 보내면 좋겠다',
-      kind: 'date_idea',
-    };
-  }
-  if (weather?.condition === 'cold') {
-    return {
-      text: '쌀쌀하게 느껴질 수 있는 날엔 가까운 실내에서 따뜻한 차를 함께 마시는 건 어때?',
-      kind: 'date_idea',
-    };
-  }
-  return {
-    text: '오늘 함께한 작은 장면 하나를 사진이나 카드로 남겨도 예쁘겠다',
-    kind: 'card_idea',
-  };
 }
 
 function clampToLocalDate(
