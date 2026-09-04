@@ -53,12 +53,15 @@ class StoryCardDrawingControls extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: AppDrawingToolButton(
-                      buttonKey: const ValueKey('story-card-drawing-done'),
-                      tooltip: '그리기 완료',
-                      icon: const Icon(Icons.check_rounded, size: 26),
-                      isSelected: true,
-                      onPressed: onDonePressed,
+                    child: SizedBox.square(
+                      dimension: 48,
+                      child: IconButton(
+                        key: const ValueKey('story-card-drawing-done'),
+                        tooltip: '그리기 완료',
+                        color: Colors.white,
+                        icon: const Icon(Icons.check_rounded, size: 26),
+                        onPressed: onDonePressed,
+                      ),
                     ),
                   ),
                 ),
