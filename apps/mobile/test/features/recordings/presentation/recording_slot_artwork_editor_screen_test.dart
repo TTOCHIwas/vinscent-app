@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
@@ -94,7 +95,7 @@ void main() {
       tester
           .widget<AppDrawingStyleControls>(find.byType(AppDrawingStyleControls))
           .selectedColor,
-      const Color(0xFFF0F0F0),
+      AppColors.formSurface,
     );
     expect(
       tester.widget<AppDrawingCanvas>(find.byType(AppDrawingCanvas)).strokes,

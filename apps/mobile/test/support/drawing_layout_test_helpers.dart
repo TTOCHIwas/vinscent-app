@@ -19,6 +19,10 @@ void expectSharedDrawingLayout(
     find.byKey(ValueKey('$keyPrefix-width-control')),
   );
   final canvasRect = tester.getRect(canvas);
+  expect(
+    tester.element(canvas).findAncestorWidgetOfExactType<ColoredBox>()?.color,
+    AppColors.formSurface,
+  );
   final slider = tester.widget<AppDrawingWidthSlider>(
     find.byType(AppDrawingWidthSlider),
   );
