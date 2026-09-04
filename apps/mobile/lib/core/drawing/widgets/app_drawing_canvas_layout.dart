@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'app_drawing_style_controls.dart';
+import 'app_drawing_toolbar.dart';
 
 class AppDrawingCanvasLayout extends StatelessWidget {
   const AppDrawingCanvasLayout({
@@ -10,12 +11,14 @@ class AppDrawingCanvasLayout extends StatelessWidget {
     required this.canvas,
     required this.maxCanvasSize,
     required this.controlsBuilder,
+    required this.toolbar,
     this.canvasRegionKey,
   });
 
   final Widget canvas;
   final double maxCanvasSize;
   final Widget Function(double canvasExtent) controlsBuilder;
+  final AppDrawingToolbar toolbar;
   final Key? canvasRegionKey;
 
   @override
@@ -28,7 +31,10 @@ class AppDrawingCanvasLayout extends StatelessWidget {
             maxCanvasSize,
             math.min(
               constraints.maxWidth - 32,
-              constraints.maxHeight - AppDrawingStyleControls.height - 32,
+              constraints.maxHeight -
+                  AppDrawingStyleControls.height -
+                  AppDrawingToolbar.height -
+                  32,
             ),
           ),
         );
@@ -46,6 +52,7 @@ class AppDrawingCanvasLayout extends StatelessWidget {
                 ),
               ),
             ),
+            toolbar,
             controlsBuilder(canvasExtent),
           ],
         );

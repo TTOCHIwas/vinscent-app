@@ -4,8 +4,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_color_palette.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 
 void main() {
+  for (final brightness in Brightness.values) {
+    testWidgets('white swatch stays visible on $brightness surface', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AppColorPalette(
+              brightness: brightness,
+              keyPrefix: 'test',
+              selectedColor: Colors.white,
+              onColorChanged: (_) {},
+              onPickColor: () async => null,
+            ),
+          ),
+        ),
+      );
+      final swatch = find.byKey(
+        ValueKey(
+          'test-color-${AppDrawingStyle.colorPalette.indexOf(Colors.white)}',
+        ),
+      );
+      final ring = tester.widget<Container>(
+        find.descendant(of: swatch, matching: find.byType(Container)),
+      );
+      final border = (ring.decoration! as BoxDecoration).border! as Border;
+      expect(
+        border.top.color,
+        brightness == Brightness.light ? AppColors.textPrimary : Colors.white,
+      );
+      final sampler = tester.widget<IconButton>(
+        find.byKey(const Key('test-eyedropper')),
+      );
+      expect(
+        sampler.style!.side!.resolve({})!.color,
+        brightness == Brightness.light
+            ? AppColors.wireframeBorder
+            : Colors.white54,
+      );
+    });
+  }
+
   testWidgets('keeps the eyedropper fixed while only colors scroll', (
     tester,
   ) async {

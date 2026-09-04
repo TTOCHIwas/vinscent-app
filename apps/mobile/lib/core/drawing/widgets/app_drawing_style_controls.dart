@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_colors.dart';
+
 import 'app_color_palette.dart';
 import 'app_drawing_width_slider.dart';
 
@@ -14,6 +16,7 @@ class AppDrawingStyleControls extends StatelessWidget {
     required this.onPickColor,
     required this.onStrokeWidthChanged,
     required this.keyPrefix,
+    this.brightness = Brightness.dark,
   });
 
   static const height = 120.0;
@@ -26,11 +29,14 @@ class AppDrawingStyleControls extends StatelessWidget {
   final Future<Color?> Function()? onPickColor;
   final ValueChanged<double>? onStrokeWidthChanged;
   final String keyPrefix;
+  final Brightness brightness;
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xCC000000),
+      color: brightness == Brightness.light
+          ? AppColors.background
+          : const Color(0xCC000000),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -38,6 +44,7 @@ class AppDrawingStyleControls extends StatelessWidget {
             key: ValueKey('$keyPrefix-width-control'),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: AppDrawingWidthSlider(
+              brightness: brightness,
               canvasExtent: canvasExtent,
               value: selectedStrokeWidth,
               onChanged: onStrokeWidthChanged,
@@ -50,6 +57,7 @@ class AppDrawingStyleControls extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: AppColorPalette(
+                brightness: brightness,
                 keyPrefix: keyPrefix,
                 selectedColor: selectedColor,
                 showSelection: showColorSelection,

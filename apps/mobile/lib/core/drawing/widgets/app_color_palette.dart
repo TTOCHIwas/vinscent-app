@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../app_drawing_style.dart';
+import '../../theme/app_colors.dart';
 
 class AppColorPalette extends StatefulWidget {
   const AppColorPalette({
@@ -11,6 +12,7 @@ class AppColorPalette extends StatefulWidget {
     required this.onPickColor,
     required this.keyPrefix,
     this.showSelection = true,
+    this.brightness = Brightness.dark,
   });
 
   final Color selectedColor;
@@ -18,6 +20,7 @@ class AppColorPalette extends StatefulWidget {
   final Future<Color?> Function()? onPickColor;
   final String keyPrefix;
   final bool showSelection;
+  final Brightness brightness;
 
   @override
   State<AppColorPalette> createState() => _AppColorPaletteState();
@@ -40,6 +43,8 @@ class _AppColorPaletteState extends State<AppColorPalette> {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = widget.brightness == Brightness.light;
+    final borderColor = isLight ? AppColors.wireframeBorder : Colors.white54;
     final isEnabled = widget.onColorChanged != null && !_isPicking;
     final iconColor = widget.selectedColor.computeLuminance() > 0.35
         ? Colors.black
@@ -68,7 +73,7 @@ class _AppColorPaletteState extends State<AppColorPalette> {
                   disabledForegroundColor: iconColor.withValues(alpha: 0.45),
                   backgroundColor: widget.selectedColor,
                   disabledBackgroundColor: widget.selectedColor,
-                  side: const BorderSide(color: Colors.white54),
+                  side: BorderSide(color: borderColor),
                 ),
               ),
             ),
@@ -109,7 +114,9 @@ class _AppColorPaletteState extends State<AppColorPalette> {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: isSelected
-                                        ? Colors.white
+                                        ? isLight
+                                              ? AppColors.textPrimary
+                                              : Colors.white
                                         : Colors.transparent,
                                     width: 2,
                                   ),
@@ -118,7 +125,7 @@ class _AppColorPaletteState extends State<AppColorPalette> {
                                   decoration: BoxDecoration(
                                     color: color,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white54),
+                                    border: Border.all(color: borderColor),
                                   ),
                                 ),
                               ),

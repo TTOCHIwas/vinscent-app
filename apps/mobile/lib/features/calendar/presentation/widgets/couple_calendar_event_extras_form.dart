@@ -7,7 +7,6 @@ import '../../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../../core/drawing/widgets/app_drawing_canvas_layout.dart';
 import '../../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
-import '../../../../core/presentation/widgets/app_back_button.dart';
 import '../../../../core/presentation/widgets/app_page_header.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'calendar_event_form_style.dart';
@@ -53,43 +52,20 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
           )
         : const Icon(Icons.check_rounded);
     return Material(
-      color: isDrawing ? Colors.black : AppColors.background,
+      color: AppColors.background,
       child: Column(
         key: const Key('calendar-event-extras-step'),
         children: [
-          if (isDrawing)
-            AppDrawingToolbar(
-              keyPrefix: 'calendar-event-drawing',
-              selectedTool: drawingController.selectedTool,
-              isReadOnly: !_isEnabled,
-              canUndo: drawingController.canUndo,
-              canClear: drawingController.canClear,
-              onToolChanged: drawingController.selectTool,
-              onUndoPressed: drawingController.undo,
-              onClearPressed: onClearDrawing,
-              leading: AppBackButton(
-                onPressed: onBackPressed,
-                color: Colors.white,
-              ),
-              trailing: AppDrawingToolButton(
-                buttonKey: const Key('calendar-event-save'),
-                tooltip: '일정 저장',
-                isSelected: true,
-                onPressed: _isEnabled ? onSavePressed : null,
-                icon: saveIcon,
-              ),
-            )
-          else
-            AppPageHeader(
-              title: '',
-              onBackPressed: onBackPressed,
-              action: IconButton(
-                key: const Key('calendar-event-save'),
-                tooltip: '일정 저장',
-                onPressed: _isEnabled ? onSavePressed : null,
-                icon: saveIcon,
-              ),
+          AppPageHeader(
+            title: '',
+            onBackPressed: onBackPressed,
+            action: IconButton(
+              key: const Key('calendar-event-save'),
+              tooltip: '일정 저장',
+              onPressed: _isEnabled ? onSavePressed : null,
+              icon: saveIcon,
             ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: SizedBox(
@@ -109,15 +85,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
                 ],
                 selected: {mode},
                 showSelectedIcon: false,
-                style: isDrawing
-                    ? CalendarEventFormStyle.segmentedButton.copyWith(
-                        foregroundColor: WidgetStateProperty.resolveWith(
-                          (states) => states.contains(WidgetState.selected)
-                              ? AppColors.onBrandAction
-                              : Colors.white70,
-                        ),
-                      )
-                    : CalendarEventFormStyle.segmentedButton,
+                style: CalendarEventFormStyle.segmentedButton,
                 onSelectionChanged: _isEnabled
                     ? (selection) => onModeChanged(selection.single)
                     : null,
@@ -129,6 +97,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
                 ? _DrawingEditor(
                     controller: drawingController,
                     isEnabled: _isEnabled,
+                    onClearDrawing: onClearDrawing,
                   )
                 : Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -154,10 +123,15 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
 }
 
 class _DrawingEditor extends StatefulWidget {
-  const _DrawingEditor({required this.controller, required this.isEnabled});
+  const _DrawingEditor({
+    required this.controller,
+    required this.isEnabled,
+    required this.onClearDrawing,
+  });
 
   final AppDrawingController controller;
   final bool isEnabled;
+  final VoidCallback onClearDrawing;
 
   @override
   State<_DrawingEditor> createState() => _DrawingEditorState();
@@ -171,6 +145,17 @@ class _DrawingEditorState extends State<_DrawingEditor> {
     final controller = widget.controller;
     final isEnabled = widget.isEnabled;
     return AppDrawingCanvasLayout(
+      toolbar: AppDrawingToolbar(
+        brightness: Brightness.light,
+        keyPrefix: 'calendar-event-drawing',
+        selectedTool: controller.selectedTool,
+        isReadOnly: !isEnabled,
+        canUndo: controller.canUndo,
+        canClear: controller.canClear,
+        onToolChanged: controller.selectTool,
+        onUndoPressed: controller.undo,
+        onClearPressed: widget.onClearDrawing,
+      ),
       canvasRegionKey: const Key('calendar-event-drawing-canvas-region'),
       maxCanvasSize: CoupleCalendarEventExtrasForm._maxCanvasSize,
       canvas: RepaintBoundary(
@@ -188,6 +173,7 @@ class _DrawingEditorState extends State<_DrawingEditor> {
         ),
       ),
       controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+        brightness: Brightness.light,
         keyPrefix: 'calendar-event-drawing',
         canvasExtent: canvasExtent,
         selectedColor: controller.selectedColor,
@@ -198,7 +184,7 @@ class _DrawingEditorState extends State<_DrawingEditor> {
             ? () => showAppCanvasColorPicker(
                 context: context,
                 canvasKey: _colorSamplingKey,
-                backgroundColor: Colors.black,
+                backgroundColor: AppColors.background,
                 keyPrefix: 'calendar-event-drawing',
                 canOpen: () => mounted && widget.isEnabled,
               )

@@ -9,7 +9,7 @@ import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas_layout.dart';
 import '../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
-import '../../../core/presentation/widgets/app_back_button.dart';
+import '../../../core/presentation/widgets/app_page_header.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
@@ -361,28 +361,17 @@ class _RecordingSlotArtworkEditorScreenState
     final drawingReadOnly =
         isReadOnly || _isLoading || _loadFailed || _isSaving;
     return Material(
-      color: Colors.black,
+      color: AppColors.background,
       child: SafeArea(
         top: false,
         child: Column(
           children: [
-            AppDrawingToolbar(
-              keyPrefix: 'recording-artwork',
-              selectedTool: _drawingController.selectedTool,
-              isReadOnly: drawingReadOnly,
-              canUndo: _canUndo,
-              canClear: _canClear,
-              onToolChanged: _drawingController.selectTool,
-              onUndoPressed: _undoLastStroke,
-              onClearPressed: _confirmClearCanvas,
-              leading: AppBackButton(
-                onPressed: _closeEditor,
-                color: Colors.white,
-              ),
-              trailing: AppDrawingToolButton(
-                buttonKey: const ValueKey('recording-slot-artwork-save'),
+            AppPageHeader(
+              title: '',
+              onBackPressed: _closeEditor,
+              action: IconButton(
+                key: const ValueKey('recording-slot-artwork-save'),
                 tooltip: '저장',
-                isSelected: true,
                 onPressed: _canSave ? _save : null,
                 icon: _isSaving
                     ? const SizedBox.square(
@@ -397,7 +386,7 @@ class _RecordingSlotArtworkEditorScreenState
                 padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
                   '보관 중에는 슬롯 그림을 읽기 전용으로만 볼 수 있어요.',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: AppColors.textMuted),
                 ),
               ),
             if (widget.isCreating)
@@ -410,23 +399,34 @@ class _RecordingSlotArtworkEditorScreenState
                   autofocus: true,
                   maxLength: 20,
                   textInputAction: TextInputAction.done,
-                  style: AppTextStyles.homeBody.copyWith(color: Colors.white),
+                  style: AppTextStyles.homeBody,
                   decoration: const InputDecoration(
                     hintText: '슬롯 제목',
-                    hintStyle: TextStyle(color: Colors.white54),
+                    hintStyle: TextStyle(color: AppColors.textMuted),
                     counterText: '',
                     filled: false,
                     enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white38),
+                      borderSide: BorderSide(color: AppColors.settingsDivider),
                     ),
                     focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70),
+                      borderSide: BorderSide(color: AppColors.settingsDivider),
                     ),
                   ),
                 ),
               ),
             Expanded(
               child: AppDrawingCanvasLayout(
+                toolbar: AppDrawingToolbar(
+                  brightness: Brightness.light,
+                  keyPrefix: 'recording-artwork',
+                  selectedTool: _drawingController.selectedTool,
+                  isReadOnly: drawingReadOnly,
+                  canUndo: _canUndo,
+                  canClear: _canClear,
+                  onToolChanged: _drawingController.selectTool,
+                  onUndoPressed: _undoLastStroke,
+                  onClearPressed: _confirmClearCanvas,
+                ),
                 canvasRegionKey: const ValueKey(
                   'recording-artwork-canvas-region',
                 ),
@@ -439,6 +439,7 @@ class _RecordingSlotArtworkEditorScreenState
                   ),
                 ),
                 controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+                  brightness: Brightness.light,
                   keyPrefix: 'recording-artwork',
                   canvasExtent: canvasExtent,
                   selectedColor: _drawingController.selectedColor,
@@ -453,7 +454,7 @@ class _RecordingSlotArtworkEditorScreenState
                       : () => showAppCanvasColorPicker(
                           context: context,
                           canvasKey: _colorSamplingKey,
-                          backgroundColor: Colors.black,
+                          backgroundColor: AppColors.background,
                           keyPrefix: 'recording-artwork',
                           canOpen: () => mounted && !_isReadOnly && !_isSaving,
                         ),

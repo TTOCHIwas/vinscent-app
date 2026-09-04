@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../assets/app_icons.dart';
 import '../../presentation/widgets/app_svg_icon.dart';
+import '../../theme/app_colors.dart';
 import '../app_drawing.dart';
 
 class AppDrawingToolbar extends StatelessWidget {
@@ -17,7 +18,10 @@ class AppDrawingToolbar extends StatelessWidget {
     this.leading,
     this.trailing,
     required this.keyPrefix,
+    this.brightness = Brightness.dark,
   });
+
+  static const height = 56.0;
 
   final AppDrawingTool selectedTool;
   final bool isReadOnly;
@@ -29,11 +33,13 @@ class AppDrawingToolbar extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final String keyPrefix;
+  final Brightness brightness;
 
   @override
   Widget build(BuildContext context) {
     final tools = [
       AppDrawingToolButton(
+        brightness: brightness,
         buttonKey: ValueKey('$keyPrefix-pen'),
         tooltip: '펜',
         icon: const Icon(Icons.edit),
@@ -41,6 +47,7 @@ class AppDrawingToolbar extends StatelessWidget {
         onPressed: isReadOnly ? null : () => onToolChanged(AppDrawingTool.pen),
       ),
       AppDrawingToolButton(
+        brightness: brightness,
         buttonKey: ValueKey('$keyPrefix-eraser'),
         tooltip: '지우개',
         icon: const AppSvgIcon(AppIcons.eraser),
@@ -50,25 +57,21 @@ class AppDrawingToolbar extends StatelessWidget {
             : () => onToolChanged(AppDrawingTool.eraser),
       ),
       AppDrawingToolButton(
+        brightness: brightness,
         buttonKey: ValueKey('$keyPrefix-undo'),
         tooltip: '되돌리기',
         icon: const Icon(Icons.undo),
         onPressed: !isReadOnly && canUndo ? onUndoPressed : null,
       ),
-      if (onClearPressed != null)
-        AppDrawingToolButton(
-          buttonKey: ValueKey('$keyPrefix-clear'),
-          tooltip: '전체 삭제',
-          icon: const Icon(Icons.delete_outline),
-          onPressed: !isReadOnly && canClear ? onClearPressed : null,
-        ),
     ];
     return Material(
       key: ValueKey('$keyPrefix-toolbar'),
-      color: const Color(0x33000000),
+      color: brightness == Brightness.light
+          ? AppColors.background
+          : const Color(0x33000000),
       child: SizedBox(
         key: ValueKey('$keyPrefix-top-controls'),
-        height: 56,
+        height: height,
         width: double.infinity,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -103,6 +106,16 @@ class AppDrawingToolbar extends StatelessWidget {
                   },
                 ),
               ),
+              if (onClearPressed != null) ...[
+                const SizedBox(width: 24),
+                AppDrawingToolButton(
+                  brightness: brightness,
+                  buttonKey: ValueKey('$keyPrefix-clear'),
+                  tooltip: '전체 삭제',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: !isReadOnly && canClear ? onClearPressed : null,
+                ),
+              ],
               ?trailing,
             ],
           ),
@@ -120,6 +133,7 @@ class AppDrawingToolButton extends StatelessWidget {
     required this.icon,
     required this.onPressed,
     this.isSelected = false,
+    this.brightness = Brightness.dark,
   });
 
   final Key buttonKey;
@@ -127,9 +141,11 @@ class AppDrawingToolButton extends StatelessWidget {
   final Widget icon;
   final VoidCallback? onPressed;
   final bool isSelected;
+  final Brightness brightness;
 
   @override
   Widget build(BuildContext context) {
+    final isLight = brightness == Brightness.light;
     return SizedBox.square(
       dimension: 48,
       child: IconButton(
@@ -137,13 +153,29 @@ class AppDrawingToolButton extends StatelessWidget {
         tooltip: tooltip,
         onPressed: onPressed,
         icon: icon,
-        color: isSelected ? Colors.black : Colors.white,
-        disabledColor: Colors.white38,
+        color: isLight
+            ? AppColors.textPrimary
+            : isSelected
+            ? Colors.black
+            : Colors.white,
+        disabledColor: isLight
+            ? AppColors.actionDisabledContent
+            : Colors.white38,
         style: IconButton.styleFrom(
           shape: const CircleBorder(),
-          backgroundColor: isSelected ? Colors.white : const Color(0x52000000),
-          disabledBackgroundColor: const Color(0x33000000),
-          side: BorderSide(color: isSelected ? Colors.white : Colors.white38),
+          backgroundColor: isLight
+              ? isSelected
+                    ? AppColors.formSurface
+                    : Colors.transparent
+              : isSelected
+              ? Colors.white
+              : const Color(0x52000000),
+          disabledBackgroundColor: isLight
+              ? Colors.transparent
+              : const Color(0x33000000),
+          side: isLight
+              ? BorderSide.none
+              : BorderSide(color: isSelected ? Colors.white : Colors.white38),
         ),
       ),
     );

@@ -14,7 +14,7 @@ import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas_layout.dart';
 import '../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
-import '../../../core/presentation/widgets/app_back_button.dart';
+import '../../../core/presentation/widgets/app_page_header.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
@@ -442,46 +442,33 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
         }
       },
       child: Material(
-        color: Colors.black,
+        color: AppColors.background,
         child: SafeArea(
           top: widget.isInitialSetup,
           child: Column(
             children: [
-              AppDrawingToolbar(
-                keyPrefix: 'character-drawing',
-                selectedTool: _drawingController.selectedTool,
-                isReadOnly: _isDrawingReadOnly,
-                canUndo: _canUndo,
-                canClear: _canClear,
-                onToolChanged: _drawingController.selectTool,
-                onUndoPressed: _undoLastStroke,
-                onClearPressed: _confirmClearCanvas,
+              AppPageHeader(
+                title: '',
+                onBackPressed: widget.isInitialSetup ? null : _requestClose,
                 leading: widget.isInitialSetup
                     ? TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                        ),
                         onPressed: _canSkip ? _useDefaultCharacter : null,
                         child: const Text('건너뛰기'),
                       )
-                    : AppBackButton(
-                        onPressed: _requestClose,
-                        color: Colors.white,
-                      ),
-                trailing: Row(
+                    : null,
+                action: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (reportTargetId != null)
-                      AppDrawingToolButton(
-                        buttonKey: const ValueKey('character-editor-report'),
+                      IconButton(
+                        key: const ValueKey('character-editor-report'),
                         tooltip: '캐릭터 신고',
                         icon: const Icon(Icons.flag_outlined),
                         onPressed: () => _reportCharacter(reportTargetId),
                       ),
-                    AppDrawingToolButton(
-                      buttonKey: const ValueKey('character-editor-save'),
+                    IconButton(
+                      key: const ValueKey('character-editor-save'),
                       tooltip: '저장',
-                      isSelected: true,
                       onPressed: _canSave ? _save : null,
                       icon: _isSaving
                           ? const SizedBox.square(
@@ -498,11 +485,22 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                   padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Text(
                     '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: AppColors.textMuted),
                   ),
                 ),
               Expanded(
                 child: AppDrawingCanvasLayout(
+                  toolbar: AppDrawingToolbar(
+                    brightness: Brightness.light,
+                    keyPrefix: 'character-drawing',
+                    selectedTool: _drawingController.selectedTool,
+                    isReadOnly: _isDrawingReadOnly,
+                    canUndo: _canUndo,
+                    canClear: _canClear,
+                    onToolChanged: _drawingController.selectTool,
+                    onUndoPressed: _undoLastStroke,
+                    onClearPressed: _confirmClearCanvas,
+                  ),
                   canvasRegionKey: const ValueKey(
                     'character-drawing-canvas-region',
                   ),
@@ -535,6 +533,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                     ),
                   ),
                   controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+                    brightness: Brightness.light,
                     keyPrefix: 'character-drawing',
                     canvasExtent: canvasExtent,
                     selectedColor: _drawingController.selectedColor,
@@ -549,7 +548,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                         : () => showAppCanvasColorPicker(
                             context: context,
                             canvasKey: _colorSamplingKey,
-                            backgroundColor: Colors.black,
+                            backgroundColor: AppColors.background,
                             keyPrefix: 'character-drawing',
                             canOpen: () => mounted && !_isDrawingReadOnly,
                           ),

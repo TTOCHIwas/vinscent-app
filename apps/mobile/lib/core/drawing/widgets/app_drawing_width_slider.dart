@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_drawing_style.dart';
+import '../../theme/app_colors.dart';
 
 class AppDrawingWidthSlider extends StatefulWidget {
   const AppDrawingWidthSlider({
@@ -8,11 +9,13 @@ class AppDrawingWidthSlider extends StatefulWidget {
     required this.canvasExtent,
     required this.value,
     required this.onChanged,
+    this.brightness = Brightness.dark,
   });
 
   final double canvasExtent;
   final double value;
   final ValueChanged<double>? onChanged;
+  final Brightness brightness;
 
   @override
   State<AppDrawingWidthSlider> createState() => _AppDrawingWidthSliderState();
@@ -24,6 +27,10 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = widget.brightness == Brightness.light;
+    final trackColor = isLight ? AppColors.textMuted : Colors.white70;
+    final inactiveColor = isLight ? AppColors.settingsDivider : Colors.white38;
+    final disabledColor = isLight ? AppColors.actionDisabled : Colors.white24;
     final width = widget.value.clamp(
       AppDrawingStyle.minStrokeWidth,
       AppDrawingStyle.maxStrokeWidth,
@@ -32,7 +39,7 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
       height: 48,
       child: Row(
         children: [
-          const _StrokeWidthMark(thickness: 1.5),
+          _StrokeWidthMark(thickness: 1.5, color: trackColor),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -56,12 +63,14 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
                         data: SliderTheme.of(context).copyWith(
                           trackHeight: 2,
                           trackShape: const RoundedRectSliderTrackShape(),
-                          activeTrackColor: Colors.white70,
-                          inactiveTrackColor: Colors.white38,
-                          disabledActiveTrackColor: Colors.white24,
-                          disabledInactiveTrackColor: Colors.white24,
+                          activeTrackColor: trackColor,
+                          inactiveTrackColor: inactiveColor,
+                          disabledActiveTrackColor: disabledColor,
+                          disabledInactiveTrackColor: disabledColor,
                           thumbColor: Colors.white,
-                          disabledThumbColor: Colors.white54,
+                          disabledThumbColor: isLight
+                              ? AppColors.actionDisabled
+                              : Colors.white54,
                           overlayColor: Colors.transparent,
                           thumbShape: const RoundSliderThumbShape(
                             enabledThumbRadius: 10,
@@ -122,7 +131,7 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
               },
             ),
           ),
-          const _StrokeWidthMark(thickness: 6),
+          _StrokeWidthMark(thickness: 6, color: trackColor),
         ],
       ),
     );
@@ -130,9 +139,10 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
 }
 
 class _StrokeWidthMark extends StatelessWidget {
-  const _StrokeWidthMark({required this.thickness});
+  const _StrokeWidthMark({required this.thickness, required this.color});
 
   final double thickness;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +154,7 @@ class _StrokeWidthMark extends StatelessWidget {
             width: 16,
             height: thickness,
             decoration: BoxDecoration(
-              color: Colors.white70,
+              color: color,
               borderRadius: BorderRadius.circular(thickness / 2),
             ),
           ),

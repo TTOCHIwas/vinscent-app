@@ -2,9 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_width_slider.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 
 void main() {
   const preview = ValueKey('drawing-width-preview');
+
+  for (final brightness in Brightness.values) {
+    testWidgets('width track is visible on $brightness surface', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AppDrawingWidthSlider(
+              brightness: brightness,
+              canvasExtent: 320,
+              value: AppDrawingStyle.normalStrokeWidth,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+      final theme = SliderTheme.of(tester.element(find.byType(Slider)));
+      expect(
+        theme.activeTrackColor,
+        brightness == Brightness.light ? AppColors.textMuted : Colors.white70,
+      );
+      expect(
+        theme.inactiveTrackColor,
+        brightness == Brightness.light
+            ? AppColors.settingsDivider
+            : Colors.white38,
+      );
+      expect(theme.thumbColor, Colors.white);
+    });
+  }
 
   for (final extent in [320.0, 600.0, 900.0]) {
     testWidgets('stable handle and transient actual-size preview at $extent', (

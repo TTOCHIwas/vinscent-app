@@ -36,10 +36,14 @@ void expectSharedDrawingLayout(
   expect(undo.left, greaterThanOrEqualTo(eraser.right));
   expect(clear.left - undo.right, greaterThanOrEqualTo(24));
   expect(clear.center.dy, pen.center.dy);
-  final surface = tester.widget<ColoredBox>(find.descendant(
-    of: find.byType(AppDrawingStyleControls),
-    matching: find.byType(ColoredBox),
-  ).first);
+  final surface = tester.widget<ColoredBox>(
+    find
+        .descendant(
+          of: find.byType(AppDrawingStyleControls),
+          matching: find.byType(ColoredBox),
+        )
+        .first,
+  );
   expect(surface.color, AppColors.background);
   expect(width.height, 48);
   expect(canvasRect.width, closeTo(canvasRect.height, .001));
