@@ -29,6 +29,9 @@ void main() {
       await tester.binding.setSurfaceSize(screen);
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await _pumpEditor(tester, draft: _existingEmptyDraft());
+      final initialCanvas = tester.getRect(
+        find.byKey(const ValueKey('story-card-editor-canvas')),
+      );
       await tester.tap(find.byIcon(Icons.brush_outlined));
       await tester.pump();
       final canvas = tester.getSize(
@@ -48,9 +51,25 @@ void main() {
       final palette = tester.getRect(
         find.byKey(const ValueKey('story-card-drawing-color-palette')),
       );
-      expect(widthControl.height, screen.height > 460 ? 300 : lessThan(300));
+      expect(widthControl.height, 48);
+      expect(widthControl.width, greaterThan(screen.width * 0.8));
       expect(widthControl.top, greaterThanOrEqualTo(topControls.bottom));
-      expect(widthControl.bottom, lessThanOrEqualTo(palette.top));
+      expect(widthControl.bottom, palette.top);
+      expect(widthControl.center.dx, palette.center.dx);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
+        initialCanvas,
+      );
+      await tester.drag(find.byType(Slider), const Offset(120, 0));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(const ValueKey('story-card-editor-canvas'))),
+        initialCanvas,
+      );
+      final controls = tester.widget<StoryCardDrawingControls>(
+        find.byType(StoryCardDrawingControls),
+      );
+      expect(controls.canUndo, isFalse);
       expect(tester.takeException(), isNull);
     });
   }
@@ -516,6 +535,7 @@ void main() {
       find.byKey(const ValueKey('story-card-drawing-color-palette')),
       findsNothing,
     );
+    expect(find.byType(AppDrawingWidthSlider), findsNothing);
 
     final sampledCanvas = tester.widget<AppColorSampler>(sampler).canvasRect;
     final gesture = await tester.startGesture(sampledCanvas.center);
