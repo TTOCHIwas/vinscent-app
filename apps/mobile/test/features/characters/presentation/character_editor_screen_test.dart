@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image/image.dart' as image;
 import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
@@ -133,6 +134,7 @@ void main() {
     expect(repository.savedImageBytes, isNotNull);
     expect(repository.savedDrawingDataJson, contains('"strokes"'));
     expect(repository.savedImageBytes!.take(4), [137, 80, 78, 71]);
+    expect(image.decodePng(repository.savedImageBytes!)!.getPixel(0, 0).a, 0);
     expect(router.routeInformationProvider.value.uri.path, '/settings');
     expect(find.text('settings'), findsOneWidget);
   });

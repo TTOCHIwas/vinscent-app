@@ -434,7 +434,7 @@ class _RecordingSlotArtworkEditorScreenState
                 canvas: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ColoredBox(
-                    color: const Color(0xFFF0F0F0),
+                    color: AppColors.formSurface,
                     child: _buildCanvas(isReadOnly),
                   ),
                 ),
@@ -487,7 +487,7 @@ class _RecordingSlotArtworkEditorScreenState
     return RepaintBoundary(
       key: _colorSamplingKey,
       child: ColoredBox(
-        color: const Color(0xFFF0F0F0),
+        color: AppColors.formSurface,
         child: AppDrawingCanvas(
           strokes: _drawingController.visibleStrokes,
           isReadOnly: isReadOnly,

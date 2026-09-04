@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image/image.dart' as image;
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
@@ -157,6 +158,7 @@ void main() {
     expect(repository.savedSlotId, 'slot-1');
     expect(repository.savedSlotRevision, 4);
     expect(repository.savedPreviewBytes!.take(4), [82, 73, 70, 70]);
+    expect(image.decodeWebP(repository.savedPreviewBytes!)!.getPixel(0, 0).a, 0);
     expect(gzip.decode(repository.savedDrawingDataBytes!), isNotEmpty);
     expect(router.routeInformationProvider.value.uri.path, '/home/recordings');
   });

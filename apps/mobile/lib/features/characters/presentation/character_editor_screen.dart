@@ -508,7 +508,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                   canvas: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: ColoredBox(
-                      color: AppColors.white,
+                      color: AppColors.formSurface,
                       child: _isLoadingDrawing
                           ? const Center(
                               child: AppLoadingIndicator(strokeWidth: 2),
@@ -520,7 +520,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                           : RepaintBoundary(
                               key: _colorSamplingKey,
                               child: ColoredBox(
-                                color: AppColors.white,
+                                color: AppColors.formSurface,
                                 child: AppDrawingCanvas(
                                   strokes: _drawingController.visibleStrokes,
                                   isReadOnly: _isDrawingReadOnly,
