@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/widgets/app_back_button.dart';
-import '../../../../core/theme/app_text_styles.dart';
 
 class StoryCardEditorHeader extends StatelessWidget {
   const StoryCardEditorHeader({
@@ -39,7 +38,6 @@ class StoryCardEditorHeader extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              const Text('오늘의 스토리', style: AppTextStyles.storyEditorTitle),
               Align(
                 alignment: Alignment.centerRight,
                 child: Row(

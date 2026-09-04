@@ -502,11 +502,17 @@ void main() {
     await tester.dragFrom(center - const Offset(30, 0), const Offset(60, 0));
     await tester.pump();
 
+    await tester.tap(find.byKey(const ValueKey('story-card-drawing-done')));
+    await tester.pump();
     expect(saveButton().onPressed, isNotNull);
 
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('story-card-drawing-undo')));
     await tester.pump();
 
+    await tester.tap(find.byKey(const ValueKey('story-card-drawing-done')));
+    await tester.pump();
     expect(saveButton().onPressed, isNull);
   });
 
