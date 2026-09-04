@@ -173,6 +173,7 @@ class _DrawingEditorState extends State<_DrawingEditor> {
         ),
       ),
       controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+        previewClearance: AppDrawingToolbar.height,
         brightness: Brightness.light,
         keyPrefix: 'calendar-event-drawing',
         canvasExtent: canvasExtent,

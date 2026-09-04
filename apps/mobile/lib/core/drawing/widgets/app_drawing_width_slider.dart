@@ -10,12 +10,14 @@ class AppDrawingWidthSlider extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.brightness = Brightness.dark,
+    this.previewClearance = 0,
   });
 
   final double canvasExtent;
   final double value;
   final ValueChanged<double>? onChanged;
   final Brightness brightness;
+  final double previewClearance;
 
   @override
   State<AppDrawingWidthSlider> createState() => _AppDrawingWidthSliderState();
@@ -99,7 +101,7 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
                     ),
                     if (_isAdjusting && widget.onChanged != null)
                       Positioned(
-                        bottom: 72,
+                        bottom: 72 + widget.previewClearance,
                         left: (thumbX - diameter / 2).clamp(
                           0.0,
                           (constraints.maxWidth - diameter).clamp(

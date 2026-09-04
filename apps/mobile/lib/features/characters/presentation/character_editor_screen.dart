@@ -533,6 +533,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                     ),
                   ),
                   controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+                    previewClearance: AppDrawingToolbar.height,
                     brightness: Brightness.light,
                     keyPrefix: 'character-drawing',
                     canvasExtent: canvasExtent,

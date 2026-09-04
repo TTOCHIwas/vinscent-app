@@ -17,6 +17,7 @@ class AppDrawingStyleControls extends StatelessWidget {
     required this.onStrokeWidthChanged,
     required this.keyPrefix,
     this.brightness = Brightness.dark,
+    this.previewClearance = 0,
   });
 
   static const height = 120.0;
@@ -30,6 +31,7 @@ class AppDrawingStyleControls extends StatelessWidget {
   final ValueChanged<double>? onStrokeWidthChanged;
   final String keyPrefix;
   final Brightness brightness;
+  final double previewClearance;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,7 @@ class AppDrawingStyleControls extends StatelessWidget {
             key: ValueKey('$keyPrefix-width-control'),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: AppDrawingWidthSlider(
+              previewClearance: previewClearance,
               brightness: brightness,
               canvasExtent: canvasExtent,
               value: selectedStrokeWidth,

@@ -439,6 +439,7 @@ class _RecordingSlotArtworkEditorScreenState
                   ),
                 ),
                 controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+                  previewClearance: AppDrawingToolbar.height,
                   brightness: Brightness.light,
                   keyPrefix: 'recording-artwork',
                   canvasExtent: canvasExtent,
