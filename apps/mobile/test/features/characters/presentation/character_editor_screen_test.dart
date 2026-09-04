@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/app_drawing_style.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
-import 'package:vinscent/core/presentation/widgets/app_page_header.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_failure.dart';
@@ -72,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .widget<AppDrawingStyleControls>(find.byType(AppDrawingStyleControls))
           .selectedColor,
       AppDrawingStyle.colorPalette[3],
     );
@@ -87,7 +87,9 @@ void main() {
     final repository = _FakeCoupleCharacterRepository();
 
     await _pumpCharacterEditor(tester, repository);
-    final router = GoRouter.of(tester.element(find.text('캐릭터 그리기')));
+    final router = GoRouter.of(
+      tester.element(find.byType(CharacterEditorScreen)),
+    );
 
     expect(_saveButton(tester).onPressed, isNull);
 
@@ -352,14 +354,14 @@ void main() {
     expect(find.text('settings'), findsOneWidget);
   });
 
-  testWidgets('uses the shared page header and standard back icon size', (
+  testWidgets('uses the shared drawing toolbar and standard back icon size', (
     tester,
   ) async {
     final repository = _FakeCoupleCharacterRepository();
 
     await _pumpCharacterEditor(tester, repository);
 
-    expect(find.byType(AppPageHeader), findsOneWidget);
+    expect(find.byType(AppDrawingToolbar), findsOneWidget);
     expect(
       tester
           .widget<IconButton>(

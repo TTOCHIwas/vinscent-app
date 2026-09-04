@@ -241,32 +241,21 @@ class _CoupleCalendarEventEditorScreenState
         }
       },
       child: AppPageLayout(
-        header: AppPageHeader(
-          title: _step == _CalendarEventEditorStep.basic
-              ? widget.isCreating
-                    ? '일정 추가'
-                    : '일정 수정'
-              : '꾸미기',
-          onBackPressed: _handleBackPressed,
-          action: _step == _CalendarEventEditorStep.basic
-              ? IconButton(
+        bodyPadding: _step == _CalendarEventEditorStep.extras
+            ? EdgeInsets.zero
+            : const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        header: _step == _CalendarEventEditorStep.extras
+            ? const SizedBox.shrink()
+            : AppPageHeader(
+                title: widget.isCreating ? '일정 추가' : '일정 수정',
+                onBackPressed: _handleBackPressed,
+                action: IconButton(
                   key: const Key('calendar-event-next'),
                   tooltip: '다음',
                   onPressed: _canSave && canEdit ? _showExtrasStep : null,
                   icon: const Icon(Icons.chevron_right_rounded),
-                )
-              : IconButton(
-                  key: const Key('calendar-event-save'),
-                  tooltip: '일정 저장',
-                  onPressed: _canSave && canEdit ? _save : null,
-                  icon: _isSaving
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_rounded),
                 ),
-        ),
+              ),
         child: _isLoading
             ? const Center(child: AppLoadingIndicator(strokeWidth: 2))
             : _loadFailed
@@ -318,6 +307,8 @@ class _CoupleCalendarEventEditorScreenState
                         onReminderTimePressed: _pickReminderTime,
                       )
                     : CoupleCalendarEventExtrasForm(
+                        onBackPressed: _handleBackPressed,
+                        onSavePressed: _canSave && canEdit ? _save : null,
                         memoController: _memoController,
                         drawingController: _drawingController,
                         mode: _extrasMode,

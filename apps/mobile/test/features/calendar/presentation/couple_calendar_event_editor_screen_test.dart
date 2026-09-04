@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -5,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/app_drawing_controller.dart';
-import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
 import 'package:vinscent/core/presentation/widgets/app_back_button.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
@@ -86,7 +89,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .widget<AppDrawingStyleControls>(find.byType(AppDrawingStyleControls))
           .selectedColor,
       AppColors.formSurface,
     );
@@ -337,6 +340,61 @@ void main() {
     );
   });
 
+  testWidgets('preserves strokes across memo mode and saves both', (
+    tester,
+  ) async {
+    final repository = _FakeCalendarEventRepository();
+    final router = _eventEditorRouter();
+    await tester.pumpWidget(
+      _eventEditorApp(router: router, repository: repository),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('calendar-event-title-field')),
+      '산책',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('calendar-event-next')));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(AppDrawingCanvas), const Offset(50, 20));
+    await tester.pump();
+    final strokes = tester
+        .widget<AppDrawingCanvas>(find.byType(AppDrawingCanvas))
+        .strokes;
+    expect(strokes, hasLength(1));
+    await tester.tap(find.byKey(const Key('calendar-event-mode-memo')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('calendar-event-memo-field')),
+      '함께 걷기',
+    );
+    await tester.tap(find.byKey(const Key('calendar-event-mode-drawing')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<AppDrawingCanvas>(find.byType(AppDrawingCanvas)).strokes,
+      strokes,
+    );
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('calendar-event-save')));
+      for (
+        var attempt = 0;
+        attempt < 100 && repository.lastRequest == null;
+        attempt++
+      ) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+    expect(repository.lastRequest?.title, '산책');
+    expect(repository.lastRequest?.memo, '함께 걷기');
+    expect(repository.lastPreviewBytes, isNotEmpty);
+    final data =
+        jsonDecode(utf8.decode(gzip.decode(repository.lastDrawingDataBytes!)))
+            as Map<String, dynamic>;
+    expect(data['strokes'], hasLength(1));
+    expect(router.routeInformationProvider.value.uri.path, '/calendar');
+  });
+
   testWidgets('keeps reminders available for a past yearly event', (
     tester,
   ) async {
@@ -490,6 +548,7 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
   final List<Object?> _fetchResults;
   CoupleCalendarEventSaveRequest? lastRequest;
   Uint8List? lastPreviewBytes;
+  Uint8List? lastDrawingDataBytes;
 
   @override
   Future<void> deleteEvent({
@@ -532,6 +591,7 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
   }) async {
     lastRequest = request;
     lastPreviewBytes = previewBytes;
+    lastDrawingDataBytes = drawingDataBytes;
     return CoupleCalendarEvent(
       id: request.eventId,
       coupleId: coupleId,

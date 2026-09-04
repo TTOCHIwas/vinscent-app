@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_canvas.dart';
-import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
@@ -47,6 +47,36 @@ void main() {
     });
   }
 
+  testWidgets('keeps slot title and drawing controls usable with keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    addTearDown(tester.view.reset);
+    await _pumpEditor(
+      tester,
+      repository: _FakeRecordingRepository.creating(),
+      router: _createRouter(
+        const RecordingSlotArtworkEditorScreen.create(slotIndex: 1),
+      ),
+    );
+    expect(find.byKey(const Key('recording-slot-title-field')), findsOneWidget);
+    expectSharedDrawingLayout(
+      tester,
+      keyPrefix: 'recording-artwork',
+      canvas: find.byType(AppDrawingCanvas),
+    );
+    expect(
+      tester
+          .getBottomRight(
+            find.byKey(const Key('recording-artwork-color-palette')),
+          )
+          .dy,
+      lessThanOrEqualTo(460),
+    );
+  });
+
   testWidgets('samples slot canvas without creating a stroke', (tester) async {
     final repository = _FakeRecordingRepository();
     final router = _createRouter(
@@ -55,14 +85,14 @@ void main() {
     await _pumpEditor(tester, repository: repository, router: router);
     final sampler = await openColorPicker(
       tester,
-      buttonPrefix: 'character-drawing',
+      buttonPrefix: 'recording-artwork',
       overlayPrefix: 'recording-artwork',
     );
     await tester.tapAt(sampler.canvasRect.center);
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .widget<AppDrawingStyleControls>(find.byType(AppDrawingStyleControls))
           .selectedColor,
       const Color(0xFFF0F0F0),
     );
@@ -108,7 +138,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('슬롯 그림'), findsOneWidget);
+    expect(find.text('슬롯 그림'), findsNothing);
     expect(_saveButton(tester).onPressed, isNull);
 
     await tester.drag(find.byType(AppDrawingCanvas), const Offset(80, 40));
@@ -140,7 +170,7 @@ void main() {
 
     await _pumpEditor(tester, repository: repository, router: router);
 
-    expect(find.text('슬롯 만들기'), findsOneWidget);
+    expect(find.text('슬롯 만들기'), findsNothing);
     expect(_saveButton(tester).onPressed, isNull);
 
     await tester.enterText(

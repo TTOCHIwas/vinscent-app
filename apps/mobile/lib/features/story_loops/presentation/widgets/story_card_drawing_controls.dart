@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/assets/app_icons.dart';
-import '../../../../core/drawing/widgets/app_color_palette.dart';
-import '../../../../core/drawing/widgets/app_drawing_width_slider.dart';
-import '../../../../core/presentation/widgets/app_svg_icon.dart';
+import '../../../../core/drawing/app_drawing.dart';
+import '../../../../core/drawing/widgets/app_drawing_style_controls.dart';
+import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../data/story_card_scene.dart';
 
 class StoryCardDrawingControls extends StatelessWidget {
@@ -35,138 +34,51 @@ class StoryCardDrawingControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Align(
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                key: const ValueKey('story-card-drawing-top-controls'),
-                width: double.infinity,
-                height: 56,
-                child: ColoredBox(
-                  color: const Color(0x33000000),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        _DrawingIconButton(
-                          buttonKey: const ValueKey('story-card-drawing-pen'),
-                          tooltip: '펜',
-                          icon: const Icon(Icons.edit),
-                          isSelected: selectedTool == StoryCardDrawingTool.pen,
-                          onPressed: () =>
-                              onToolChanged(StoryCardDrawingTool.pen),
-                        ),
-                        const SizedBox(width: 6),
-                        _DrawingIconButton(
-                          buttonKey: const ValueKey(
-                            'story-card-drawing-eraser',
-                          ),
-                          tooltip: '지우개',
-                          icon: const AppSvgIcon(AppIcons.eraser),
-                          isSelected:
-                              selectedTool == StoryCardDrawingTool.eraser,
-                          onPressed: () =>
-                              onToolChanged(StoryCardDrawingTool.eraser),
-                        ),
-                        const SizedBox(width: 6),
-                        _DrawingIconButton(
-                          buttonKey: const ValueKey('story-card-drawing-undo'),
-                          tooltip: '되돌리기',
-                          icon: const Icon(Icons.undo),
-                          onPressed: canUndo ? onUndoPressed : null,
-                        ),
-                        const Spacer(),
-                        _DrawingIconButton(
-                          buttonKey: const ValueKey('story-card-drawing-done'),
-                          tooltip: '그리기 완료',
-                          icon: const Icon(Icons.check_rounded, size: 26),
-                          isSelected: true,
-                          onPressed: onDonePressed,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+      builder: (context, constraints) => Stack(
+        fit: StackFit.expand,
+        children: [
+          Align(
+            alignment: Alignment.topCenter,
+            child: AppDrawingToolbar(
+              keyPrefix: 'story-card-drawing',
+              selectedTool: selectedTool == StoryCardDrawingTool.pen
+                  ? AppDrawingTool.pen
+                  : AppDrawingTool.eraser,
+              isReadOnly: false,
+              canUndo: canUndo,
+              onToolChanged: (tool) => onToolChanged(
+                tool == AppDrawingTool.pen
+                    ? StoryCardDrawingTool.pen
+                    : StoryCardDrawingTool.eraser,
+              ),
+              onUndoPressed: onUndoPressed,
+              trailing: AppDrawingToolButton(
+                buttonKey: const ValueKey('story-card-drawing-done'),
+                tooltip: '그리기 완료',
+                icon: const Icon(Icons.check_rounded, size: 26),
+                isSelected: true,
+                onPressed: onDonePressed,
               ),
             ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: ColoredBox(
-                color: const Color(0xCC000000),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      key: const ValueKey('story-card-drawing-width-control'),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: AppDrawingWidthSlider(
-                        canvasExtent: applyBoxFit(
-                          BoxFit.contain,
-                          const Size(storyCardCanvasAspectRatio, 1),
-                          constraints.biggest,
-                        ).destination.shortestSide,
-                        value: selectedStrokeWidth,
-                        onChanged: onStrokeWidthChanged,
-                      ),
-                    ),
-                    SizedBox(
-                      key: const ValueKey('story-card-drawing-color-palette'),
-                      width: double.infinity,
-                      height: 72,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: AppColorPalette(
-                          keyPrefix: 'story-card-drawing',
-                          selectedColor: selectedColor,
-                          showSelection:
-                              selectedTool == StoryCardDrawingTool.pen,
-                          onColorChanged: onColorChanged,
-                          onPickColor: onEyedropperPressed,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: AppDrawingStyleControls(
+              keyPrefix: 'story-card-drawing',
+              canvasExtent: applyBoxFit(
+                BoxFit.contain,
+                const Size(storyCardCanvasAspectRatio, 1),
+                constraints.biggest,
+              ).destination.shortestSide,
+              selectedColor: selectedColor,
+              selectedStrokeWidth: selectedStrokeWidth,
+              showColorSelection: selectedTool == StoryCardDrawingTool.pen,
+              onColorChanged: onColorChanged,
+              onPickColor: onEyedropperPressed,
+              onStrokeWidthChanged: onStrokeWidthChanged,
             ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _DrawingIconButton extends StatelessWidget {
-  const _DrawingIconButton({
-    required this.buttonKey,
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-    this.isSelected = false,
-  });
-
-  final Key buttonKey;
-  final String tooltip;
-  final Widget icon;
-  final VoidCallback? onPressed;
-  final bool isSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      key: buttonKey,
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: icon,
-      color: isSelected ? Colors.black : Colors.white,
-      disabledColor: Colors.white38,
-      style: IconButton.styleFrom(
-        backgroundColor: isSelected ? Colors.white : const Color(0x52000000),
-        disabledBackgroundColor: const Color(0x33000000),
-        side: BorderSide(color: isSelected ? Colors.white : Colors.white38),
+          ),
+        ],
       ),
     );
   }

@@ -6,6 +6,8 @@ import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
+import '../../../core/drawing/widgets/app_drawing_canvas_layout.dart';
+import '../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
@@ -356,115 +358,113 @@ class _RecordingSlotArtworkEditorScreenState
         .maybeWhen(data: (value) => value, orElse: () => null);
     final isReadOnly = couple == null || !couple.canEditSharedData;
 
+    final drawingReadOnly =
+        isReadOnly || _isLoading || _loadFailed || _isSaving;
     return Material(
-      color: AppColors.background,
-      child: Column(
-        children: [
-          _ArtworkEditorHeader(
-            title: widget.isCreating ? '슬롯 만들기' : '슬롯 그림',
-            canSave: _canSave,
-            isSaving: _isSaving,
-            onBackPressed: _closeEditor,
-            onSavePressed: _save,
-          ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  if (couple?.isArchivedReadOnly ?? false)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Text(
-                        '보관 중에는 슬롯 그림을 읽기 전용으로만 볼 수 있어요.',
-                        style: AppTextStyles.homeCharacterLabel.copyWith(
-                          color: AppColors.textMuted,
-                        ),
-                      ),
+      color: Colors.black,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            AppDrawingToolbar(
+              keyPrefix: 'recording-artwork',
+              selectedTool: _drawingController.selectedTool,
+              isReadOnly: drawingReadOnly,
+              canUndo: _canUndo,
+              canClear: _canClear,
+              onToolChanged: _drawingController.selectTool,
+              onUndoPressed: _undoLastStroke,
+              onClearPressed: _confirmClearCanvas,
+              leading: AppBackButton(
+                onPressed: _closeEditor,
+                color: Colors.white,
+              ),
+              trailing: AppDrawingToolButton(
+                buttonKey: const ValueKey('recording-slot-artwork-save'),
+                tooltip: '저장',
+                isSelected: true,
+                onPressed: _canSave ? _save : null,
+                icon: _isSaving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_rounded),
+              ),
+            ),
+            if (couple?.isArchivedReadOnly ?? false)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Text(
+                  '보관 중에는 슬롯 그림을 읽기 전용으로만 볼 수 있어요.',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+            if (widget.isCreating)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: TextField(
+                  key: const ValueKey('recording-slot-title-field'),
+                  controller: _titleController,
+                  enabled: _createdSlot == null && !_isSaving,
+                  autofocus: true,
+                  maxLength: 20,
+                  textInputAction: TextInputAction.done,
+                  style: AppTextStyles.homeBody.copyWith(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: '슬롯 제목',
+                    hintStyle: TextStyle(color: Colors.white54),
+                    counterText: '',
+                    filled: false,
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white38),
                     ),
-                  if (widget.isCreating)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: TextField(
-                        key: const ValueKey('recording-slot-title-field'),
-                        controller: _titleController,
-                        enabled: _createdSlot == null && !_isSaving,
-                        autofocus: true,
-                        maxLength: 20,
-                        textInputAction: TextInputAction.done,
-                        decoration: const InputDecoration(
-                          hintText: '슬롯 제목',
-                          counterText: '',
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Padding(
-                      key: const ValueKey('recording-artwork-canvas-region'),
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: _maxCanvasSize,
-                            maxHeight: _maxCanvasSize,
-                          ),
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0F0F0),
-                                border: Border.all(
-                                  color: AppColors.wireframeBorder,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(7),
-                                child: _buildCanvas(isReadOnly),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 520),
-                      child: AppDrawingToolbar(
-                        selectedTool: _drawingController.selectedTool,
-                        selectedColor: _drawingController.selectedColor,
-                        selectedStrokeWidth:
-                            _drawingController.selectedStrokeWidth,
-                        isReadOnly:
-                            isReadOnly ||
-                            _isLoading ||
-                            _loadFailed ||
-                            _isSaving,
-                        canUndo: _canUndo,
-                        canClear: _canClear,
-                        onToolChanged: _drawingController.selectTool,
-                        onColorChanged: _drawingController.selectColor,
-                        onPickColor: () => showAppCanvasColorPicker(
+                ),
+              ),
+            Expanded(
+              child: AppDrawingCanvasLayout(
+                canvasRegionKey: const ValueKey(
+                  'recording-artwork-canvas-region',
+                ),
+                maxCanvasSize: _maxCanvasSize,
+                canvas: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ColoredBox(
+                    color: const Color(0xFFF0F0F0),
+                    child: _buildCanvas(isReadOnly),
+                  ),
+                ),
+                controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+                  keyPrefix: 'recording-artwork',
+                  canvasExtent: canvasExtent,
+                  selectedColor: _drawingController.selectedColor,
+                  selectedStrokeWidth: _drawingController.selectedStrokeWidth,
+                  showColorSelection:
+                      _drawingController.selectedTool == AppDrawingTool.pen,
+                  onColorChanged: drawingReadOnly
+                      ? null
+                      : _drawingController.selectColor,
+                  onPickColor: drawingReadOnly
+                      ? null
+                      : () => showAppCanvasColorPicker(
                           context: context,
                           canvasKey: _colorSamplingKey,
-                          backgroundColor: AppColors.background,
+                          backgroundColor: Colors.black,
                           keyPrefix: 'recording-artwork',
                           canOpen: () => mounted && !_isReadOnly && !_isSaving,
                         ),
-                        onStrokeWidthChanged:
-                            _drawingController.selectStrokeWidth,
-                        onUndoPressed: _undoLastStroke,
-                        onClearPressed: _confirmClearCanvas,
-                      ),
-                    ),
-                  ),
-                ],
+                  onStrokeWidthChanged: drawingReadOnly
+                      ? null
+                      : _drawingController.selectStrokeWidth,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -492,59 +492,6 @@ class _RecordingSlotArtworkEditorScreenState
           onStrokeStart: _startStroke,
           onStrokeUpdate: _updateStroke,
           onStrokeEnd: _endStroke,
-        ),
-      ),
-    );
-  }
-}
-
-class _ArtworkEditorHeader extends StatelessWidget {
-  const _ArtworkEditorHeader({
-    required this.title,
-    required this.canSave,
-    required this.isSaving,
-    required this.onBackPressed,
-    required this.onSavePressed,
-  });
-
-  final String title;
-  final bool canSave;
-  final bool isSaving;
-  final VoidCallback onBackPressed;
-  final VoidCallback onSavePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppBackButton(onPressed: onBackPressed),
-            ),
-            Text(title, style: AppTextStyles.shellTitle),
-            Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(
-                width: 72,
-                child: IconButton(
-                  key: const ValueKey('recording-slot-artwork-save'),
-                  tooltip: '저장',
-                  onPressed: canSave ? onSavePressed : null,
-                  icon: isSaving
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_rounded),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -11,10 +11,12 @@ import '../../../core/drawing/app_drawing_controller.dart';
 import '../../../core/drawing/app_drawing_painter.dart';
 import '../../../core/drawing/widgets/app_drawing_canvas.dart';
 import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
+import '../../../core/drawing/widgets/app_drawing_canvas_layout.dart';
+import '../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
+import '../../../core/presentation/widgets/app_back_button.dart';
 import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
-import '../../../core/presentation/widgets/app_page_header.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -439,133 +441,121 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
           unawaited(_requestClose());
         }
       },
-      child: ColoredBox(
-        color: AppColors.background,
+      child: Material(
+        color: Colors.black,
         child: SafeArea(
           top: widget.isInitialSetup,
-          bottom: false,
           child: Column(
             children: [
-              _CharacterEditorHeader(
-                canSave: _canSave,
-                canSkip: _canSkip,
-                showSkip: widget.isInitialSetup,
-                isSaving: _isSaving,
-                onBackPressed: _requestClose,
-                onSkipPressed: _useDefaultCharacter,
-                onSavePressed: _save,
-                onReportPressed: reportTargetId != null
-                    ? () => _reportCharacter(reportTargetId)
-                    : null,
-              ),
-              Expanded(
-                child: SafeArea(
-                  top: false,
-                  child: Column(
-                    children: [
-                      if (isArchivedReadOnly)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              border: Border.all(
-                                color: AppColors.wireframeBorder,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
-                              style: AppTextStyles.homeCharacterLabel.copyWith(
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ),
+              AppDrawingToolbar(
+                keyPrefix: 'character-drawing',
+                selectedTool: _drawingController.selectedTool,
+                isReadOnly: _isDrawingReadOnly,
+                canUndo: _canUndo,
+                canClear: _canClear,
+                onToolChanged: _drawingController.selectTool,
+                onUndoPressed: _undoLastStroke,
+                onClearPressed: _confirmClearCanvas,
+                leading: widget.isInitialSetup
+                    ? TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
                         ),
-                      Expanded(
-                        child: Padding(
-                          key: const ValueKey(
-                            'character-drawing-canvas-region',
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: _exportSize.toDouble(),
-                                maxHeight: _exportSize.toDouble(),
-                              ),
-                              child: AspectRatio(
-                                aspectRatio: 1,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white,
-                                    border: Border.all(
-                                      color: AppColors.wireframeBorder,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: _isLoadingDrawing
-                                      ? const Center(
-                                          child: AppLoadingIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : _loadFailed
-                                      ? _CharacterLoadFailure(
-                                          onRetry: _retryLoadExistingDrawing,
-                                        )
-                                      : RepaintBoundary(
-                                          key: _colorSamplingKey,
-                                          child: ColoredBox(
-                                            color: AppColors.white,
-                                            child: AppDrawingCanvas(
-                                              strokes: _drawingController
-                                                  .visibleStrokes,
-                                              isReadOnly: _isDrawingReadOnly,
-                                              onStrokeStart: _startStroke,
-                                              onStrokeUpdate: _updateStroke,
-                                              onStrokeEnd: _endStroke,
-                                            ),
-                                          ),
-                                        ),
+                        onPressed: _canSkip ? _useDefaultCharacter : null,
+                        child: const Text('건너뛰기'),
+                      )
+                    : AppBackButton(
+                        onPressed: _requestClose,
+                        color: Colors.white,
+                      ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (reportTargetId != null)
+                      AppDrawingToolButton(
+                        buttonKey: const ValueKey('character-editor-report'),
+                        tooltip: '캐릭터 신고',
+                        icon: const Icon(Icons.flag_outlined),
+                        onPressed: () => _reportCharacter(reportTargetId),
+                      ),
+                    AppDrawingToolButton(
+                      buttonKey: const ValueKey('character-editor-save'),
+                      tooltip: '저장',
+                      isSelected: true,
+                      onPressed: _canSave ? _save : null,
+                      icon: _isSaving
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              if (isArchivedReadOnly)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Text(
+                    '보관 중에는 기존 캐릭터를 읽기 전용으로만 볼 수 있어요.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+              Expanded(
+                child: AppDrawingCanvasLayout(
+                  canvasRegionKey: const ValueKey(
+                    'character-drawing-canvas-region',
+                  ),
+                  maxCanvasSize: _exportSize.toDouble(),
+                  canvas: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: ColoredBox(
+                      color: AppColors.white,
+                      child: _isLoadingDrawing
+                          ? const Center(
+                              child: AppLoadingIndicator(strokeWidth: 2),
+                            )
+                          : _loadFailed
+                          ? _CharacterLoadFailure(
+                              onRetry: _retryLoadExistingDrawing,
+                            )
+                          : RepaintBoundary(
+                              key: _colorSamplingKey,
+                              child: ColoredBox(
+                                color: AppColors.white,
+                                child: AppDrawingCanvas(
+                                  strokes: _drawingController.visibleStrokes,
+                                  isReadOnly: _isDrawingReadOnly,
+                                  onStrokeStart: _startStroke,
+                                  onStrokeUpdate: _updateStroke,
+                                  onStrokeEnd: _endStroke,
                                 ),
                               ),
                             ),
+                    ),
+                  ),
+                  controlsBuilder: (canvasExtent) => AppDrawingStyleControls(
+                    keyPrefix: 'character-drawing',
+                    canvasExtent: canvasExtent,
+                    selectedColor: _drawingController.selectedColor,
+                    selectedStrokeWidth: _drawingController.selectedStrokeWidth,
+                    showColorSelection:
+                        _drawingController.selectedTool == AppDrawingTool.pen,
+                    onColorChanged: _isDrawingReadOnly
+                        ? null
+                        : _drawingController.selectColor,
+                    onPickColor: _isDrawingReadOnly
+                        ? null
+                        : () => showAppCanvasColorPicker(
+                            context: context,
+                            canvasKey: _colorSamplingKey,
+                            backgroundColor: Colors.black,
+                            keyPrefix: 'character-drawing',
+                            canOpen: () => mounted && !_isDrawingReadOnly,
                           ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 520),
-                          child: AppDrawingToolbar(
-                            selectedTool: _drawingController.selectedTool,
-                            selectedColor: _drawingController.selectedColor,
-                            selectedStrokeWidth:
-                                _drawingController.selectedStrokeWidth,
-                            isReadOnly: _isDrawingReadOnly,
-                            canUndo: _canUndo,
-                            canClear: _canClear,
-                            onToolChanged: _drawingController.selectTool,
-                            onColorChanged: _drawingController.selectColor,
-                            onPickColor: () => showAppCanvasColorPicker(
-                              context: context,
-                              canvasKey: _colorSamplingKey,
-                              backgroundColor: AppColors.background,
-                              keyPrefix: 'character-drawing',
-                              canOpen: () => mounted && !_isDrawingReadOnly,
-                            ),
-                            onStrokeWidthChanged:
-                                _drawingController.selectStrokeWidth,
-                            onUndoPressed: _undoLastStroke,
-                            onClearPressed: _confirmClearCanvas,
-                          ),
-                        ),
-                      ),
-                    ],
+                    onStrokeWidthChanged: _isDrawingReadOnly
+                        ? null
+                        : _drawingController.selectStrokeWidth,
                   ),
                 ),
               ),
@@ -605,71 +595,6 @@ class _CharacterLoadFailure extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextButton(onPressed: onRetry, child: const Text('다시 시도')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CharacterEditorHeader extends StatelessWidget {
-  const _CharacterEditorHeader({
-    required this.canSave,
-    required this.canSkip,
-    required this.showSkip,
-    required this.isSaving,
-    required this.onBackPressed,
-    required this.onSkipPressed,
-    required this.onSavePressed,
-    this.onReportPressed,
-  });
-
-  final bool canSave;
-  final bool canSkip;
-  final bool showSkip;
-  final bool isSaving;
-  final VoidCallback onBackPressed;
-  final VoidCallback onSkipPressed;
-  final VoidCallback onSavePressed;
-  final VoidCallback? onReportPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPageHeader(
-      title: '캐릭터 그리기',
-      onBackPressed: showSkip ? null : onBackPressed,
-      leading: showSkip
-          ? SizedBox(
-              width: 84,
-              child: TextButton(
-                onPressed: canSkip ? onSkipPressed : null,
-                child: const Text('건너뛰기'),
-              ),
-            )
-          : null,
-      action: SizedBox(
-        width: onReportPressed == null ? 72 : 96,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            if (onReportPressed case final onReportPressed?)
-              IconButton(
-                key: const ValueKey('character-editor-report'),
-                tooltip: '캐릭터 신고',
-                onPressed: onReportPressed,
-                icon: const Icon(Icons.flag_outlined),
-              ),
-            IconButton(
-              key: const ValueKey('character-editor-save'),
-              tooltip: '저장',
-              onPressed: canSave ? onSavePressed : null,
-              icon: isSaving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_rounded),
-            ),
           ],
         ),
       ),
