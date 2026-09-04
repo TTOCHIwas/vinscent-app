@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 import 'package:vinscent/core/drawing/widgets/app_color_sampler.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_width_slider.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
@@ -17,6 +18,31 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_dr
 import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
+  for (final screen in [
+    const Size(360, 800),
+    const Size(900, 1200),
+    const Size(800, 360),
+  ]) {
+    testWidgets('stroke preview uses actual 4:5 canvas dimensions on $screen', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(screen);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _pumpEditor(tester, draft: _existingEmptyDraft());
+      await tester.tap(find.byIcon(Icons.brush_outlined));
+      await tester.pump();
+      final canvas = tester.getSize(
+        find.byKey(const ValueKey('story-card-editor-canvas')),
+      );
+      final slider = tester.widget<AppDrawingWidthSlider>(
+        find.byType(AppDrawingWidthSlider),
+      );
+      expect(slider.canvasExtent, closeTo(canvas.shortestSide, 0.001));
+      expect(canvas.width / canvas.height, closeTo(4 / 5, 0.001));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final cancel in [false, true]) {
     testWidgets(
       'text eyedropper preserves draft and selection on ${cancel ? 'cancel' : 'selection'}',
