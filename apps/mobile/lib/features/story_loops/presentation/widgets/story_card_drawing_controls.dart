@@ -93,45 +93,42 @@ class StoryCardDrawingControls extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: SizedBox(
-                  key: const ValueKey('story-card-drawing-width-control'),
-                  height: (constraints.maxHeight - 160).clamp(96.0, 300.0),
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: AppDrawingWidthSlider(
-                      canvasExtent: applyBoxFit(
-                        BoxFit.contain,
-                        const Size(storyCardCanvasAspectRatio, 1),
-                        constraints.biggest,
-                      ).destination.shortestSide,
-                      value: selectedStrokeWidth,
-                      onChanged: onStrokeWidthChanged,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Align(
               alignment: Alignment.bottomCenter,
-              child: SizedBox(
-                key: const ValueKey('story-card-drawing-color-palette'),
-                width: double.infinity,
-                height: 72,
-                child: ColoredBox(
-                  color: const Color(0x33000000),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: AppColorPalette(
-                      keyPrefix: 'story-card-drawing',
-                      selectedColor: selectedColor,
-                      showSelection: selectedTool == StoryCardDrawingTool.pen,
-                      onColorChanged: onColorChanged,
-                      onPickColor: onEyedropperPressed,
+              child: ColoredBox(
+                color: const Color(0xCC000000),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      key: const ValueKey('story-card-drawing-width-control'),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: AppDrawingWidthSlider(
+                        canvasExtent: applyBoxFit(
+                          BoxFit.contain,
+                          const Size(storyCardCanvasAspectRatio, 1),
+                          constraints.biggest,
+                        ).destination.shortestSide,
+                        value: selectedStrokeWidth,
+                        onChanged: onStrokeWidthChanged,
+                      ),
                     ),
-                  ),
+                    SizedBox(
+                      key: const ValueKey('story-card-drawing-color-palette'),
+                      width: double.infinity,
+                      height: 72,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: AppColorPalette(
+                          keyPrefix: 'story-card-drawing',
+                          selectedColor: selectedColor,
+                          showSelection:
+                              selectedTool == StoryCardDrawingTool.pen,
+                          onColorChanged: onColorChanged,
+                          onPickColor: onEyedropperPressed,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
