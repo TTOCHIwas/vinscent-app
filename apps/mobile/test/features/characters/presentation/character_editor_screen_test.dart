@@ -25,8 +25,32 @@ import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/color_picker_test_helpers.dart';
+import '../../../support/drawing_layout_test_helpers.dart';
 
 void main() {
+  for (final size in [
+    const Size(320, 700),
+    const Size(900, 1200),
+    const Size(800, 360),
+  ]) {
+    testWidgets('shared drawing layout for character on $size', (tester) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _pumpCharacterEditor(tester, _FakeCoupleCharacterRepository());
+      expect(find.text('캐릭터 그리기'), findsNothing);
+      expectSharedDrawingLayout(
+        tester,
+        keyPrefix: 'character-drawing',
+        canvas: find.byType(AppDrawingCanvas),
+      );
+      expect(
+        find.byKey(const ValueKey('character-editor-save')),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('뒤로가기'), findsOneWidget);
+    });
+  }
+
   testWidgets('samples the character without adding or saving strokes', (
     tester,
   ) async {

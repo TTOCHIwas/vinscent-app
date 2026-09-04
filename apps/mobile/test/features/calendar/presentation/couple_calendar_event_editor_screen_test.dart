@@ -16,8 +16,42 @@ import 'package:vinscent/features/couple/application/couple_controller.dart';
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/color_picker_test_helpers.dart';
+import '../../../support/drawing_layout_test_helpers.dart';
 
 void main() {
+  for (final size in [
+    const Size(320, 700),
+    const Size(900, 1200),
+    const Size(800, 360),
+  ]) {
+    testWidgets('shared drawing layout for event on $size', (tester) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _eventEditorApp(
+          router: _eventEditorRouter(),
+          repository: _FakeCalendarEventRepository(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('calendar-event-title-field')),
+        '함께 산책',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('calendar-event-next')));
+      await tester.pumpAndSettle();
+      expect(find.text('꾸미기'), findsNothing);
+      expectSharedDrawingLayout(
+        tester,
+        keyPrefix: 'calendar-event-drawing',
+        canvas: find.byKey(const Key('calendar-event-drawing-canvas')),
+      );
+      expect(find.byKey(const Key('calendar-event-save')), findsOneWidget);
+      expect(find.byKey(const Key('calendar-event-mode-memo')), findsOneWidget);
+    });
+  }
+
   testWidgets('samples event canvas without adding drawing data', (
     tester,
   ) async {

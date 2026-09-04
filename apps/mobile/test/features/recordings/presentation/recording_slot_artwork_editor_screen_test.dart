@@ -16,8 +16,37 @@ import 'package:vinscent/features/recordings/presentation/recording_slot_artwork
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/color_picker_test_helpers.dart';
+import '../../../support/drawing_layout_test_helpers.dart';
 
 void main() {
+  for (final size in [
+    const Size(320, 700),
+    const Size(900, 1200),
+    const Size(800, 360),
+  ]) {
+    testWidgets('shared drawing layout for recording on $size', (tester) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _pumpEditor(
+        tester,
+        repository: _FakeRecordingRepository(),
+        router: _createRouter(
+          const RecordingSlotArtworkEditorScreen(slotId: 'slot-1'),
+        ),
+      );
+      expect(find.text('슬롯 그림'), findsNothing);
+      expectSharedDrawingLayout(
+        tester,
+        keyPrefix: 'recording-artwork',
+        canvas: find.byType(AppDrawingCanvas),
+      );
+      expect(
+        find.byKey(const ValueKey('recording-slot-artwork-save')),
+        findsOneWidget,
+      );
+    });
+  }
+
   testWidgets('samples slot canvas without creating a stroke', (tester) async {
     final repository = _FakeRecordingRepository();
     final router = _createRouter(
