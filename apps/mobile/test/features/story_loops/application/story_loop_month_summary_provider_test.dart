@@ -78,6 +78,31 @@ void main() {
     expect(result.first.cardCount, 1);
     expect(repository.requestedMonths, [DateTime(2026, 7)]);
   });
+
+  test('indexes month summaries once with stable date keys', () async {
+    final date = DateTime(2026, 7, 6);
+    final repository = FakeStoryLoopReadRepository(
+      monthSummaries: {
+        DateTime(2026, 7): [sampleMonthSummaryDay(coupleDate: date)],
+      },
+    );
+    final container = _container(
+      couple: activeCouple(
+        relationshipStartDate: DateTime(2026, 7, 1),
+        currentDate: date,
+      ),
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    final provider = storyLoopMonthSummaryByDateProvider(DateTime(2026, 7));
+    final first = await container.read(provider.future);
+    final second = container.read(provider).requireValue;
+
+    expect(first[date]?.cardCount, 1);
+    expect(identical(first, second), isTrue);
+    expect(repository.requestedMonths, [DateTime(2026, 7)]);
+  });
 }
 
 ProviderContainer _container({

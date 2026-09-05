@@ -111,6 +111,38 @@ void main() {
     expect(hasOccurrence, isTrue);
     expect(gateway.requestedDates, [DateTime(2026, 5, 10)]);
   });
+
+  test('groups month events once into stable date buckets', () async {
+    final date = DateTime(2026, 5, 10);
+    final repository = _FakeCalendarEventRepository(
+      events: [
+        _calendarEvent(id: 'first', date: date),
+        _calendarEvent(id: 'second', date: date),
+      ],
+    );
+    final container = ProviderContainer(
+      overrides: [
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => activeCouple(
+            relationshipStartDate: DateTime(2026, 5, 1),
+            currentDate: date,
+          ),
+        ),
+        coupleCalendarEventRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final provider = coupleCalendarEventsByDateProvider(DateTime(2026, 5));
+    final first = await container.read(provider.future);
+    final second = container.read(provider).requireValue;
+
+    expect(first[date]?.map((event) => event.id), ['first', 'second']);
+    expect(identical(first, second), isTrue);
+    expect(repository.requestedRanges, [
+      (DateTime(2026, 5, 1), DateTime(2026, 5, 31)),
+    ]);
+  });
 }
 
 class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
