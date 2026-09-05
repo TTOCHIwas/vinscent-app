@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class AppBottomBar extends StatelessWidget {
   });
 
   static const _surfaceRadius = 100.0;
+  static const _baseBottomGap = 18.0;
 
   final double height;
   final String currentLocation;
@@ -29,15 +31,44 @@ class AppBottomBar extends StatelessWidget {
   final bool showCalendarAttention;
   final bool showAiAttention;
 
+  static double bottomGapFor({
+    required TargetPlatform platform,
+    required double bottomInset,
+  }) {
+    if (platform == TargetPlatform.iOS) {
+      return math.max(_baseBottomGap, bottomInset);
+    }
+    return _baseBottomGap + bottomInset;
+  }
+
+  static double layoutHeightFor({
+    required double height,
+    required TargetPlatform platform,
+    required double bottomInset,
+  }) {
+    return height -
+        _baseBottomGap +
+        bottomGapFor(platform: platform, bottomInset: bottomInset);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final platform = Theme.of(context).platform;
+    final bottomGap = bottomGapFor(
+      platform: platform,
+      bottomInset: bottomInset,
+    );
 
     return SizedBox(
-      height: height + bottomInset,
+      height: layoutHeightFor(
+        height: height,
+        platform: platform,
+        bottomInset: bottomInset,
+      ),
       width: double.infinity,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 8, 18, 18 + bottomInset),
+        padding: EdgeInsets.fromLTRB(18, 8, 18, bottomGap),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(_surfaceRadius),

@@ -12,6 +12,7 @@ import '../../data/ai_direct_question_repository.dart';
 import '../ai_direct_question_composer_controller.dart';
 import '../../../characters/presentation/widgets/couple_character_avatar.dart';
 import '../../../shell/presentation/app_shell.dart';
+import '../../../shell/presentation/widgets/app_bottom_bar.dart';
 import 'ai_direct_question_entry_view.dart';
 import 'ai_direct_question_input_dock.dart';
 import 'ai_learning_error_message.dart';
@@ -98,8 +99,11 @@ class _DirectQuestionComposerContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final latestQuestion = history.questions.firstOrNull;
     final keyboardVisible = AppKeyboardVisibility.of(context);
-    final bottomNavigationClearance =
-        AppShell.bottomBarHeight + MediaQuery.viewPaddingOf(context).bottom;
+    final bottomNavigationClearance = AppBottomBar.layoutHeightFor(
+      height: AppShell.bottomBarHeight,
+      platform: Theme.of(context).platform,
+      bottomInset: MediaQuery.viewPaddingOf(context).bottom,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
