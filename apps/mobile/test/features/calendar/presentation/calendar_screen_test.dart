@@ -777,7 +777,9 @@ void main() {
       );
       expect(find.text('함께 걷기'), findsOneWidget);
       expect(repository.requestedMonths, [DateTime(2026, 5)]);
-      expect(eventRequests, [(startDate: date, endDate: date)]);
+      expect(eventRequests, [
+        (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+      ]);
     },
   );
 
@@ -852,7 +854,6 @@ void main() {
       expect(repository.requestedMonths, isEmpty);
       expect(eventRequests, [
         (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
-        (startDate: date, endDate: date),
       ]);
     },
   );
@@ -874,7 +875,7 @@ void main() {
 
       expect(repository.requestedMonths, isEmpty);
       expect(eventRequests, [
-        (startDate: DateTime(2026, 5, 10), endDate: DateTime(2026, 5, 10)),
+        (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
       ]);
       await tester.tap(find.byKey(const Key('calendar-cell-preview-filter')));
       await tester.pump();
@@ -888,7 +889,7 @@ void main() {
 
       expect(repository.requestedMonths, [DateTime(2026, 5)]);
       expect(eventRequests, [
-        (startDate: DateTime(2026, 5, 10), endDate: DateTime(2026, 5, 10)),
+        (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
       ]);
     },
   );
