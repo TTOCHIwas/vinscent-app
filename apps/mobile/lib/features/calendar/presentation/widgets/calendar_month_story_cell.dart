@@ -44,6 +44,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDateMarkerFilled = isToday || isSelected;
     final visibleCards = _visibleCards(summary);
     final previewCacheExtent = math.max(
       1.0,
@@ -95,29 +96,23 @@ class CalendarMonthStoryCell extends StatelessWidget {
                       dimension: _dateMarkerSize,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: isSelected
+                          color: isToday
+                              ? AppColors.brandAccent
+                              : isSelected
                               ? AppColors.actionPrimary
                               : Colors.transparent,
                           shape: BoxShape.circle,
-                          border: isToday
-                              ? Border.all(
-                                  color: AppColors.attention,
-                                  width: 1.5,
-                                )
-                              : null,
                         ),
                         child: Center(
                           child: Text(
                             '${date.day}',
                             style: AppTypography.applyToStyle(
                               AppTextStyles.homeCharacterLabel.copyWith(
-                                color: isSelected
+                                color: isDateMarkerFilled
                                     ? AppColors.textInverse
-                                    : isToday
-                                    ? AppColors.attention
                                     : textColor,
                                 fontSize: 12,
-                                fontWeight: isSelected
+                                fontWeight: isDateMarkerFilled
                                     ? FontWeight.w600
                                     : FontWeight.w400,
                                 height: 1,

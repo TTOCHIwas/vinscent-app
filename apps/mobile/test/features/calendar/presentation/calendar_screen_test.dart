@@ -93,7 +93,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAccent),
     );
   });
 
@@ -223,7 +223,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAccent),
     );
   });
 
@@ -440,7 +440,7 @@ void main() {
           const ValueKey('calendar-month-story-cell-empty-2026-05-10'),
         ),
       ).map((decoration) => decoration.color),
-      contains(AppColors.actionPrimary),
+      contains(AppColors.brandAccent),
     );
 
     await tester.fling(swipeRegion, const Offset(-300, 0), 1000);
