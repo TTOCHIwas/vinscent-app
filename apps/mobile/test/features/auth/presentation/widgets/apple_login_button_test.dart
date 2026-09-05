@@ -40,7 +40,15 @@ void main() {
     expect(tester.takeException(), isNull);
     final buttonRect = tester.getRect(find.byType(SignInWithAppleButton));
     final labelRect = tester.getRect(find.text('Apple로 로그인'));
-    expect(buttonRect.contains(labelRect.topLeft), isTrue);
-    expect(buttonRect.contains(labelRect.bottomRight), isTrue);
+    expect(labelRect.left, greaterThanOrEqualTo(buttonRect.left));
+    expect(labelRect.right, lessThanOrEqualTo(buttonRect.right));
+    expect(labelRect.top, greaterThanOrEqualTo(buttonRect.top));
+    expect(labelRect.bottom, lessThanOrEqualTo(buttonRect.bottom));
+    expect(
+      MediaQuery.textScalerOf(
+        tester.element(find.text('Apple로 로그인')),
+      ).scale(1),
+      lessThanOrEqualTo(1.3),
+    );
   });
 }
