@@ -651,9 +651,7 @@ Future<void> _pump(
                   : mediaQuery.padding.copyWith(bottom: bottomViewPadding),
               viewPadding: bottomViewPadding == null
                   ? null
-                  : mediaQuery.viewPadding.copyWith(
-                      bottom: bottomViewPadding,
-                    ),
+                  : mediaQuery.viewPadding.copyWith(bottom: bottomViewPadding),
             ),
             child: child!,
           );
