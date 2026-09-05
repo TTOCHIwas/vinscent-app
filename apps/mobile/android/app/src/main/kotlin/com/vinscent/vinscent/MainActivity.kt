@@ -178,24 +178,30 @@ class MainActivity : FlutterActivity() {
             put(CalendarContract.Events.DTEND, start + MILLIS_PER_DAY)
             put(CalendarContract.Events.EVENT_TIMEZONE, "UTC")
             put(CalendarContract.Events.ALL_DAY, 1)
-            put(CalendarContract.Events.HAS_ALARM, 0)
             put(CalendarContract.Events.RRULE, repeatRule(arguments["repeatRule"]))
             put(CalendarContract.Events.CUSTOM_APP_PACKAGE, packageName)
             put(CalendarContract.Events.CUSTOM_APP_URI, marker)
         }
 
         if (eventId != null) {
+            val target = DeviceCalendarEventSelection.mutationTarget(
+                eventId = eventId,
+                calendarId = calendarId,
+                packageName = packageName,
+                marker = marker,
+            )
             val updated = contentResolver.update(
-                ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
+                CalendarContract.Events.CONTENT_URI,
                 values,
-                ownedEventSelection(),
-                arrayOf(packageName, marker),
+                target.selection,
+                target.arguments,
             )
             if (updated == 1) {
                 return eventId.toString()
             }
         }
 
+        values.put(CalendarContract.Events.HAS_ALARM, 0)
         val inserted = contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
             ?: throw IllegalStateException("The calendar provider rejected the event.")
         return ContentUris.parseId(inserted).toString()
@@ -209,10 +215,16 @@ class MainActivity : FlutterActivity() {
         val marker = eventMarker(sourceEventId)
         val externalEventId = arguments.requiredString("externalEventId")
         val eventId = findOwnedEventId(calendarId, externalEventId, marker) ?: return
+        val target = DeviceCalendarEventSelection.mutationTarget(
+            eventId = eventId,
+            calendarId = calendarId,
+            packageName = packageName,
+            marker = marker,
+        )
         contentResolver.delete(
-            ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId),
-            ownedEventSelection(),
-            arrayOf(packageName, marker),
+            CalendarContract.Events.CONTENT_URI,
+            target.selection,
+            target.arguments,
         )
     }
 

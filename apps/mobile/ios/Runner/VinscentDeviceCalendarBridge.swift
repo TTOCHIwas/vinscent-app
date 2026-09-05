@@ -175,7 +175,6 @@ final class VinscentDeviceCalendarBridge: NSObject, FlutterPlugin {
     event.startDate = eventDate
     event.endDate = Calendar.current.date(byAdding: .day, value: 1, to: eventDate)
     event.isAllDay = true
-    event.alarms = nil
     event.url = URL(string: marker)
     event.recurrenceRules = try recurrenceRules(arguments["repeatRule"])
 

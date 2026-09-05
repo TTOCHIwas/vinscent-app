@@ -311,7 +311,6 @@ class DeviceCalendarSyncCoordinator {
           queue: current.queue.replace(operation.incrementAttempts()),
         );
         await _store.write(userId: userId, state: current);
-        return;
       }
     }
   }

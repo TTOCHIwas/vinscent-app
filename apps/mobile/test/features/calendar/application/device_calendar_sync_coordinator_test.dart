@@ -304,7 +304,8 @@ class _FakeDeviceCalendarGateway implements DeviceCalendarGateway {
   }) async {
     upsertedEvents.add(event);
     previousEventDates.add(previousEventDate);
-    if (shouldFailUpsert || failingUpsertEventIds.contains(event.sourceEventId)) {
+    if (shouldFailUpsert ||
+        failingUpsertEventIds.contains(event.sourceEventId)) {
       throw Exception('device calendar unavailable');
     }
     if (upsertCompleter case final completer?) {
