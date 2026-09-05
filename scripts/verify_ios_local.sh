@@ -6,7 +6,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-for command_name in flutter dart; do
+for command_name in flutter dart pod; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "Required command is unavailable: $command_name" >&2
     exit 1
@@ -24,6 +24,10 @@ repository_root="$(cd "$script_directory/.." && pwd)"
 cd "$repository_root/apps/mobile"
 
 flutter pub get
+(
+  cd ios
+  pod install --deployment
+)
 dart format --output=none --set-exit-if-changed lib test integration_test
 flutter analyze --no-pub
 flutter test --no-pub
