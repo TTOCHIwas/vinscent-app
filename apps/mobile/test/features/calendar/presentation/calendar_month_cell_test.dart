@@ -12,6 +12,52 @@ import '../../../support/story_loop_fixtures.dart';
 import 'calendar_screen_test_support.dart';
 
 void main() {
+  testWidgets('오늘 날짜를 선택 여부와 관계없이 브랜드색 채움으로 표시한다', (tester) async {
+    Future<void> pumpTodayCell({required bool isSelected}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox(
+              width: 52,
+              height: 72,
+              child: CalendarMonthStoryCell(
+                date: DateTime(2026, 5, 10),
+                textColor: AppColors.textPrimary,
+                isSelected: isSelected,
+                isToday: true,
+                summary: null,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    BoxDecoration todayDecoration() {
+      final marker = find.byKey(
+        const ValueKey('calendar-today-indicator-2026-05-10'),
+      );
+      final decoratedBox = tester.widget<DecoratedBox>(
+        find.descendant(of: marker, matching: find.byType(DecoratedBox)),
+      );
+      return decoratedBox.decoration as BoxDecoration;
+    }
+
+    Text todayLabel() => tester.widget<Text>(find.text('10'));
+
+    await pumpTodayCell(isSelected: false);
+
+    expect(todayDecoration().color, AppColors.brandAccent);
+    expect(todayDecoration().border, isNull);
+    expect(todayLabel().style?.color, AppColors.textInverse);
+
+    await pumpTodayCell(isSelected: true);
+
+    expect(todayDecoration().color, AppColors.brandAccent);
+    expect(todayDecoration().border, isNull);
+    expect(todayLabel().style?.color, AppColors.textInverse);
+  });
+
   testWidgets('늦게 도착한 일정 미리보기를 셀 안에서 부드럽게 표시한다', (tester) async {
     final date = DateTime(2026, 5, 10);
     var events = const <CoupleCalendarEvent>[];
