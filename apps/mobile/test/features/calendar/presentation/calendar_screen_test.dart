@@ -537,6 +537,16 @@ void main() {
     'slides horizontal calendar changes while keeping weekdays fixed',
     (tester) async {
       await pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
+      for (final key in [
+        const Key('calendar-date-grid-transition'),
+        const Key('calendar-detail-header-transition'),
+        const Key('calendar-detail-content-transition'),
+      ]) {
+        final transition = tester.widget<AppHorizontalPageTransition>(
+          find.byKey(key),
+        );
+        expect(transition.duration, const Duration(milliseconds: 240));
+      }
       final swipeRegion = find.byKey(const Key('calendar-month-swipe-region'));
 
       await tester.fling(swipeRegion, const Offset(-300, 0), 1000);

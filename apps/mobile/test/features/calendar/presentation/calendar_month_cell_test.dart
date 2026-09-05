@@ -12,6 +12,60 @@ import '../../../support/story_loop_fixtures.dart';
 import 'calendar_screen_test_support.dart';
 
 void main() {
+  testWidgets('늦게 도착한 일정 미리보기를 셀 안에서 부드럽게 표시한다', (tester) async {
+    final date = DateTime(2026, 5, 10);
+    var events = const <CoupleCalendarEvent>[];
+    late StateSetter updateCell;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 52,
+            height: 72,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                updateCell = setState;
+                return CalendarMonthStoryCell(
+                  date: date,
+                  textColor: AppColors.textPrimary,
+                  isSelected: false,
+                  summary: null,
+                  events: events,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    updateCell(() {
+      events = [calendarEvent(id: 'event-1', title: '함께 산책', date: date)];
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 90));
+
+    final transition = find.byKey(
+      const Key('calendar-cell-content-transition-2026-05-10'),
+    );
+    expect(transition, findsOneWidget);
+    final fades = tester.widgetList<FadeTransition>(
+      find.descendant(of: transition, matching: find.byType(FadeTransition)),
+    );
+    expect(fades.length, 2);
+    expect(
+      fades.any((fade) => fade.opacity.value > 0 && fade.opacity.value < 1),
+      isTrue,
+    );
+
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('calendar-event-indicator-event-1')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('일요일과 공휴일을 휴일 색상으로 표시한다', (tester) async {
     await pumpCalendar(
       tester,
