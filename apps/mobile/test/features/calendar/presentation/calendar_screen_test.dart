@@ -783,28 +783,27 @@ void main() {
     },
   );
 
-  testWidgets(
-    'all mode reuses month events for the selected-day detail',
-    (tester) async {
-      final date = DateTime(2026, 5, 10);
-      final eventRequests = <CalendarEventDateRange>[];
+  testWidgets('all mode reuses month events for the selected-day detail', (
+    tester,
+  ) async {
+    final date = DateTime(2026, 5, 10);
+    final eventRequests = <CalendarEventDateRange>[];
 
-      await pumpCalendar(
-        tester,
-        repository: FakeStoryLoopReadRepository(),
-        previewMode: CalendarCellPreviewMode.all,
-        calendarEvents: [
-          calendarEvent(id: 'event-1', title: '함께 걷기', date: date),
-        ],
-        calendarEventRequests: eventRequests,
-      );
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      previewMode: CalendarCellPreviewMode.all,
+      calendarEvents: [
+        calendarEvent(id: 'event-1', title: '함께 걷기', date: date),
+      ],
+      calendarEventRequests: eventRequests,
+    );
 
-      expect(eventRequests, [
-        (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
-      ]);
-      expect(find.text('함께 걷기'), findsOneWidget);
-    },
-  );
+    expect(eventRequests, [
+      (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+    ]);
+    expect(find.text('함께 걷기'), findsOneWidget);
+  });
 
   testWidgets(
     'events-only skips card month previews and keeps event previews',

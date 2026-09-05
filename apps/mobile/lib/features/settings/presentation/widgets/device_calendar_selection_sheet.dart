@@ -40,10 +40,8 @@ Future<DeviceCalendarDescriptor?> showDeviceCalendarSelectionSheet({
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: calendars.length,
-                separatorBuilder: (_, _) => const Divider(
-                  height: 1,
-                  color: AppColors.settingsDivider,
-                ),
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, color: AppColors.settingsDivider),
                 itemBuilder: (context, index) {
                   final calendar = calendars[index];
                   return ListTile(
