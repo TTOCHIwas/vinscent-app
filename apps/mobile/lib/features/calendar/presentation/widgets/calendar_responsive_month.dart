@@ -65,32 +65,24 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentDate = ref.watch(coupleCurrentDateProvider);
+    final days = _calendarDays(visibleMonth);
     final summaryByDate = previewMode?.includesCards == true
         ? ref
-              .watch(storyLoopMonthSummaryProvider(visibleMonth))
-              .maybeWhen(
-                data: (entries) => {
-                  for (final entry in entries)
-                    calendarDateOnly(entry.coupleDate): entry,
-                },
-                orElse: () => const <DateTime, StoryLoopMonthSummaryDay>{},
-              )
+                  .watch(storyLoopMonthSummaryByDateProvider(visibleMonth))
+                  .asData
+                  ?.value ??
+              const <DateTime, StoryLoopMonthSummaryDay>{}
         : const <DateTime, StoryLoopMonthSummaryDay>{};
-    final eventsByDate = <DateTime, List<CoupleCalendarEvent>>{};
-    if (previewMode?.includesEvents == true) {
-      final calendarEvents = ref.watch(
-        coupleCalendarEventMonthProvider(visibleMonth),
-      );
-      for (final event
-          in calendarEvents.asData?.value ?? const <CoupleCalendarEvent>[]) {
-        eventsByDate
-            .putIfAbsent(calendarDateOnly(event.occurrenceDate), () => [])
-            .add(event);
-      }
-    }
+    final eventsByDate = previewMode?.includesEvents == true
+        ? ref
+                  .watch(coupleCalendarEventsByDateProvider(visibleMonth))
+                  .asData
+                  ?.value ??
+              const <DateTime, List<CoupleCalendarEvent>>{}
+        : const <DateTime, List<CoupleCalendarEvent>>{};
     final defaultEventLabels = <DateTime, String>{};
     const defaultEventResolver = CoupleDefaultCalendarEventResolver();
-    for (final date in _calendarDays(visibleMonth)) {
+    for (final date in days) {
       final occurrences = defaultEventResolver.resolve(
         relationshipStartDate: relationshipStartDate,
         date: date,
@@ -105,6 +97,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
       pinned: true,
       delegate: _CalendarMonthDelegate(
         visibleMonth: visibleMonth,
+        days: days,
         relationshipStartDate: relationshipStartDate,
         selectedDate: selectedDate,
         selectedDefaultEvents: selectedDefaultEvents,
@@ -132,6 +125,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
 class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   _CalendarMonthDelegate({
     required this.visibleMonth,
+    required this.days,
     required this.relationshipStartDate,
     required this.selectedDate,
     required this.selectedDefaultEvents,
@@ -160,6 +154,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   static const _columnGap = 4.0;
 
   final DateTime visibleMonth;
+  final List<DateTime> days;
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
   final List<CoupleDefaultCalendarEventOccurrence> selectedDefaultEvents;
@@ -193,7 +188,6 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final values = metrics.resolve(shrinkOffset);
-    final days = _calendarDays(visibleMonth);
     final selectedRow = _selectedRow(days);
     final rowPitch = values.rowHeight + values.rowGap;
     final gridTranslation = -(selectedRow * rowPitch * values.collapseProgress);
@@ -386,7 +380,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         ) ||
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
-        defaultEventLabels != oldDelegate.defaultEventLabels ||
+        !_sameStringMap(defaultEventLabels, oldDelegate.defaultEventLabels) ||
         publicHolidays != oldDelegate.publicHolidays ||
         currentDate != oldDelegate.currentDate ||
         metrics.expandedExtent != oldDelegate.metrics.expandedExtent ||
@@ -398,6 +392,18 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         detailTransitionKey != oldDelegate.detailTransitionKey ||
         detailTransitionDirection != oldDelegate.detailTransitionDirection;
   }
+}
+
+bool _sameStringMap(Map<DateTime, String> left, Map<DateTime, String> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (final entry in left.entries) {
+    if (right[entry.key] != entry.value) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool _sameDefaultEvents(

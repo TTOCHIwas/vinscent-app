@@ -34,6 +34,26 @@ final coupleCalendarEventMonthProvider = FutureProvider.autoDispose
           .fetchOccurrences(startDate: startDate, endDate: monthEnd);
     }, retry: (_, _) => null);
 
+final coupleCalendarEventsByDateProvider = FutureProvider.autoDispose
+    .family<Map<DateTime, List<CoupleCalendarEvent>>, DateTime>((
+      ref,
+      month,
+    ) async {
+      final events = await ref.watch(
+        coupleCalendarEventMonthProvider(calendarMonthOnly(month)).future,
+      );
+      final grouped = <DateTime, List<CoupleCalendarEvent>>{};
+      for (final event in events) {
+        grouped
+            .putIfAbsent(calendarDateOnly(event.occurrenceDate), () => [])
+            .add(event);
+      }
+      return Map<DateTime, List<CoupleCalendarEvent>>.unmodifiable({
+        for (final entry in grouped.entries)
+          entry.key: List<CoupleCalendarEvent>.unmodifiable(entry.value),
+      });
+    }, retry: (_, _) => null);
+
 final coupleCalendarEventDateProvider = FutureProvider.autoDispose
     .family<List<CoupleCalendarEvent>, DateTime>((ref, date) async {
       final normalizedDate = calendarDateOnly(date);

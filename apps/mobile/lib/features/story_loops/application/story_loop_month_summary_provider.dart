@@ -32,3 +32,16 @@ final storyLoopMonthSummaryProvider = FutureProvider.autoDispose
       final repository = ref.watch(storyLoopReadRepositoryProvider);
       return repository.fetchMonthSummary(normalizedMonth);
     }, retry: (_, _) => null);
+
+final storyLoopMonthSummaryByDateProvider = FutureProvider.autoDispose
+    .family<Map<DateTime, StoryLoopMonthSummaryDay>, DateTime>((
+      ref,
+      month,
+    ) async {
+      final entries = await ref.watch(
+        storyLoopMonthSummaryProvider(calendarMonthOnly(month)).future,
+      );
+      return Map<DateTime, StoryLoopMonthSummaryDay>.unmodifiable({
+        for (final entry in entries) calendarDateOnly(entry.coupleDate): entry,
+      });
+    }, retry: (_, _) => null);
