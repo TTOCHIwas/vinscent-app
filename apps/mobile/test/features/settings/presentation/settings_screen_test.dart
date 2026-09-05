@@ -21,14 +21,25 @@ void main() {
     expect(find.text('character editor'), findsOneWidget);
   });
 
+  testWidgets('캘린더 설정 화면을 연다', (tester) async {
+    await _pumpSettings(tester);
+
+    await tester.tap(find.byKey(const Key('settings-row-calendar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('calendar settings'), findsOneWidget);
+  });
+
   testWidgets('계정 설정 화면을 연다', (tester) async {
     await _pumpSettings(tester);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('settings-row-account')),
-      100,
+      240,
       scrollable: find.byType(Scrollable),
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('settings-row-account')));
     await tester.tap(find.byKey(const Key('settings-row-account')));
     await tester.pumpAndSettle();
 
@@ -253,6 +264,10 @@ Future<void> _pumpSettings(
           policyDocumentLinks: policyDocumentLinks,
           policyDocumentLauncher: policyDocumentLauncher,
         ),
+      ),
+      GoRoute(
+        path: '/settings/calendar',
+        builder: (context, state) => const Text('calendar settings'),
       ),
       GoRoute(
         path: '/settings/character',

@@ -12,7 +12,10 @@ void main() {
         .enqueueUpsert(latest);
 
     expect(queue.operations, hasLength(1));
-    expect(queue.operations.single.type, DeviceCalendarSyncOperationType.upsert);
+    expect(
+      queue.operations.single.type,
+      DeviceCalendarSyncOperationType.upsert,
+    );
     expect(queue.operations.single.event?.revision, 2);
     expect(queue.operations.single.event?.title, '바뀐 일정');
   });
@@ -25,7 +28,10 @@ void main() {
         .enqueueDelete(event);
 
     expect(queue.operations, hasLength(1));
-    expect(queue.operations.single.type, DeviceCalendarSyncOperationType.delete);
+    expect(
+      queue.operations.single.type,
+      DeviceCalendarSyncOperationType.delete,
+    );
     expect(queue.operations.single.event?.id, event.id);
   });
 }

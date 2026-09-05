@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
+import 'package:vinscent/features/calendar/data/public_holiday.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
@@ -10,6 +12,38 @@ import '../../../support/story_loop_fixtures.dart';
 import 'calendar_screen_test_support.dart';
 
 void main() {
+  testWidgets('일요일과 공휴일을 휴일 색상으로 표시한다', (tester) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      publicHolidays: [
+        PublicHoliday(
+          region: PublicHolidayRegion.southKorea,
+          date: DateTime(2026, 5, 5),
+          names: const ['어린이날'],
+        ),
+      ],
+    );
+
+    final sundayHeader = tester.widget<Text>(find.text('일').first);
+    final sundayCell = find.byKey(
+      const ValueKey('calendar-month-story-cell-empty-2026-05-03'),
+    );
+    final holidayCell = find.byKey(
+      const ValueKey('calendar-month-story-cell-empty-2026-05-05'),
+    );
+    final sundayDate = tester.widget<Text>(
+      find.descendant(of: sundayCell, matching: find.text('3')),
+    );
+    final holidayDate = tester.widget<Text>(
+      find.descendant(of: holidayCell, matching: find.text('5')),
+    );
+
+    expect(sundayHeader.style?.color, AppColors.calendarHoliday);
+    expect(sundayDate.style?.color, AppColors.calendarHoliday);
+    expect(holidayDate.style?.color, AppColors.calendarHoliday);
+  });
+
   testWidgets('shows a shared event in its cell and selected day detail', (
     tester,
   ) async {

@@ -4,6 +4,7 @@ import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
+import 'package:vinscent/features/calendar/data/public_holiday.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_sections.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_detail_title.dart';
@@ -16,6 +17,28 @@ import '../../../support/text_finders.dart';
 import 'calendar_screen_test_support.dart';
 
 void main() {
+  testWidgets('선택한 공휴일 이름을 상세 날짜 헤더에만 표시한다', (tester) async {
+    await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      initialDate: DateTime(2026, 5, 5),
+      publicHolidays: [
+        PublicHoliday(
+          region: PublicHolidayRegion.southKorea,
+          date: DateTime(2026, 5, 5),
+          names: const ['어린이날'],
+        ),
+      ],
+    );
+
+    expect(find.text('어린이날'), findsOneWidget);
+    expect(
+      find.byKey(const Key('calendar-detail-holiday-label')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('calendar-schedule-section')), findsNothing);
+  });
+
   testWidgets('fetches selected past date and shows story loop detail', (
     tester,
   ) async {

@@ -11,6 +11,12 @@ void main() {
       clearCalendarPreviewPreference: (userId) async {
         events.add('calendar:$userId');
       },
+      clearPublicHolidayRegionPreference: (userId) async {
+        events.add('holiday:$userId');
+      },
+      clearDeviceCalendarSync: (userId) async {
+        events.add('device-calendar:$userId');
+      },
       clearHomeFeedbackImpression: (userId) async {
         events.add('feedback:$userId');
       },
@@ -29,6 +35,8 @@ void main() {
     expect(events, [
       'proactive:user-a',
       'calendar:user-a',
+      'holiday:user-a',
+      'device-calendar:user-a',
       'feedback:user-a',
       'recording',
       'widgets',
@@ -44,6 +52,13 @@ void main() {
       },
       clearCalendarPreviewPreference: (_) async {
         events.add('calendar');
+      },
+      clearPublicHolidayRegionPreference: (_) async {
+        events.add('holiday');
+      },
+      clearDeviceCalendarSync: (_) async {
+        events.add('device-calendar');
+        throw StateError('device calendar failed');
       },
       clearHomeFeedbackImpression: (_) async {
         events.add('feedback');
@@ -63,12 +78,15 @@ void main() {
     expect(events, [
       'proactive',
       'calendar',
+      'holiday',
+      'device-calendar',
       'feedback',
       'recording',
       'widgets',
     ]);
     expect(result.failures.map((failure) => failure.operation), [
       AccountLocalDataCleanupOperation.proactiveSuggestion,
+      AccountLocalDataCleanupOperation.deviceCalendarSync,
       AccountLocalDataCleanupOperation.homeFeedbackImpression,
     ]);
   });

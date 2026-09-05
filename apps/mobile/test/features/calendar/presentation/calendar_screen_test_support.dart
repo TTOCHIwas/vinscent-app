@@ -10,10 +10,12 @@ import 'package:vinscent/features/ai/application/ai_question_feedback_provider.d
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/calendar/application/calendar_cell_preview_mode_controller.dart';
 import 'package:vinscent/features/calendar/application/couple_member_birthday_provider.dart';
+import 'package:vinscent/features/calendar/application/public_holiday_controller.dart';
 import 'package:vinscent/features/calendar/data/calendar_cell_preview_mode.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
 import 'package:vinscent/features/calendar/data/couple_member_birthday.dart';
+import 'package:vinscent/features/calendar/data/public_holiday.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -71,6 +73,7 @@ Future<GoRouter> pumpCalendar(
   Map<String, AiQuestionFeedback> aiFeedbacks = const {},
   List<CoupleCalendarEvent> calendarEvents = const [],
   List<CoupleMemberBirthday> memberBirthdays = const [],
+  List<PublicHoliday> publicHolidays = const [],
   List<CalendarEventDateRange>? calendarEventRequests,
   CalendarCellPreviewMode previewMode = CalendarCellPreviewMode.all,
   Future<CalendarCellPreviewMode>? previewModeResult,
@@ -156,6 +159,12 @@ Future<GoRouter> pumpCalendar(
         coupleMemberBirthdayProvider.overrideWith(
           (ref) async => memberBirthdays,
         ),
+        publicHolidayMonthProvider.overrideWith((ref, month) async {
+          return {
+            for (final holiday in publicHolidays)
+              if (holiday.date.year == month.year) holiday.date: holiday,
+          };
+        }),
         if (safetyReportRepository != null)
           safetyReportRepositoryProvider.overrideWithValue(
             safetyReportRepository,

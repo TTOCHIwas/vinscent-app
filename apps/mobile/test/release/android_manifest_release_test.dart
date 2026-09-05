@@ -22,6 +22,14 @@ void main() {
     );
   });
 
+  test('device calendar sync declares read and write permissions', () {
+    final xml = manifest.readAsStringSync();
+
+    for (final permission in _calendarPermissions) {
+      expect(xml, contains('<uses-permission android:name="$permission" />'));
+    }
+  });
+
   test('optional capture hardware does not filter Play devices', () {
     final xml = manifest.readAsStringSync();
 
@@ -80,6 +88,11 @@ const _optionalHardwareFeatures = <String>[
   'android.hardware.camera',
   'android.hardware.camera.autofocus',
   'android.hardware.microphone',
+];
+
+const _calendarPermissions = <String>[
+  'android.permission.READ_CALENDAR',
+  'android.permission.WRITE_CALENDAR',
 ];
 
 const _backupDomains = <String>[

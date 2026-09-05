@@ -26,6 +26,8 @@ void main() {
       'remote',
       'proactive:user-a',
       'calendar:user-a',
+      'holiday:user-a',
+      'device-calendar:user-a',
       'feedback:user-a',
       'recording',
       'widgets',
@@ -139,6 +141,12 @@ AccountLocalDataCleanup _localCleanup({
     },
     clearCalendarPreviewPreference: (userId) async {
       events.add('calendar:$userId');
+    },
+    clearPublicHolidayRegionPreference: (userId) async {
+      events.add('holiday:$userId');
+    },
+    clearDeviceCalendarSync: (userId) async {
+      events.add('device-calendar:$userId');
     },
     clearHomeFeedbackImpression: (userId) async {
       events.add('feedback:$userId');

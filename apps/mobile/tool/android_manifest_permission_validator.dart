@@ -11,9 +11,11 @@ const androidReleasePermissionContract = <String, int?>{
   'android.permission.POST_NOTIFICATIONS': null,
   'android.permission.RECEIVE_BOOT_COMPLETED': null,
   'android.permission.RECORD_AUDIO': null,
+  'android.permission.READ_CALENDAR': null,
   'android.permission.VIBRATE': null,
   'android.permission.WAKE_LOCK': null,
   'android.permission.WRITE_EXTERNAL_STORAGE': 29,
+  'android.permission.WRITE_CALENDAR': null,
   'com.google.android.c2dm.permission.RECEIVE': null,
   'com.vinscent.vinscent.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION': null,
 };
