@@ -47,7 +47,10 @@ void main() {
 
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(StoryCardEditorScreen), findsOneWidget);
-      expect(_captionFromPainter(tester), confirm ? 'center' : 'changed caption');
+      expect(
+        _captionFromPainter(tester),
+        confirm ? 'center' : 'changed caption',
+      );
     });
   }
 

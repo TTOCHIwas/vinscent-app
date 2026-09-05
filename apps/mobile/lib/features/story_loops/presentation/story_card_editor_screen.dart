@@ -325,7 +325,7 @@ class _StoryCardEditorContentState
       context: context,
       title: '수정 내용을 버릴까요?',
       message: '저장하지 않은 변경 내용이 사라져요.',
-      confirmLabel: '수정 버리기',
+      confirmLabel: '버리기',
       cancelLabel: '계속 수정',
     );
     if (!shouldDiscard || !mounted) {

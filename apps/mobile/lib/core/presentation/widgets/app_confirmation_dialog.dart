@@ -44,9 +44,10 @@ class AppConfirmationDialog extends StatelessWidget {
   final bool isDestructive;
 
   static const _screenInset = 24.0;
-  static const _contentInset = 24.0;
-  static const _actionInset = 12.0;
+  static const _horizontalInset = 24.0;
+  static const _minimumWidth = 280.0;
   static const _maximumWidth = 400.0;
+  static const _dividerHeight = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +58,8 @@ class AppConfirmationDialog extends StatelessWidget {
                     MediaQuery.viewInsetsOf(context).horizontal -
                     _screenInset * 2)
                 .clamp(0.0, _maximumWidth);
-        final maxTextWidth = (maxWidth - _contentInset * 2).clamp(
-          0.0,
-          _maximumWidth,
-        );
-        final maxActionTextWidth = (maxTextWidth - _actionInset * 2).clamp(
+        final minWidth = maxWidth.clamp(0.0, _minimumWidth);
+        final maxTextWidth = (maxWidth - _horizontalInset * 2).clamp(
           0.0,
           _maximumWidth,
         );
@@ -72,76 +70,92 @@ class AppConfirmationDialog extends StatelessWidget {
           backgroundColor: AppColors.background,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
-          constraints: BoxConstraints(maxWidth: maxWidth),
+          clipBehavior: Clip.antiAlias,
+          constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
           insetPadding: const EdgeInsets.all(_screenInset),
-          scrollable: true,
-          titlePadding: EdgeInsets.zero,
           contentPadding: EdgeInsets.zero,
-          actionsPadding: const EdgeInsets.fromLTRB(
-            _contentInset,
-            0,
-            _contentInset,
-            16,
-          ),
-          title: Padding(
-            padding: EdgeInsets.fromLTRB(
-              _contentInset,
-              24,
-              _contentInset,
-              message == null ? 20 : 0,
-            ),
-            child: _ConfirmationText(
-              title,
-              maxWidth: maxTextWidth,
-              style: AppTextStyles.sectionTitle,
-            ),
-          ),
-          content: message == null
-              ? null
-              : Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    _contentInset,
-                    12,
-                    _contentInset,
-                    20,
-                  ),
-                  child: _ConfirmationText(
-                    message,
-                    maxWidth: maxTextWidth,
-                    style: AppTextStyles.homeBody.copyWith(
-                      color: AppColors.textMuted,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(
+                fit: FlexFit.loose,
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      _horizontalInset,
+                      28,
+                      _horizontalInset,
+                      24,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ConfirmationText(
+                          title,
+                          maxWidth: maxTextWidth,
+                          style: AppTextStyles.sectionTitle,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (message != null) ...[
+                          const SizedBox(height: 8),
+                          _ConfirmationText(
+                            message,
+                            maxWidth: maxTextWidth,
+                            style: AppTextStyles.homeBody.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-          actions: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ConfirmationAction(
-                  buttonKey: const Key('app-confirmation-cancel'),
-                  label: cancelLabel,
-                  color: AppColors.textMuted,
-                  result: false,
-                  maxTextWidth: maxActionTextWidth,
-                ),
-                const SizedBox(height: 4),
-                _ConfirmationAction(
-                  buttonKey: const Key('app-confirmation-confirm'),
-                  label: confirmLabel,
-                  color: isDestructive
-                      ? Theme.of(context).colorScheme.error
-                      : AppColors.textPrimary,
-                  result: true,
-                  maxTextWidth: maxActionTextWidth,
-                ),
-              ],
-            ),
-          ],
+              ),
+              const _ConfirmationDivider(
+                dividerKey: Key('app-confirmation-divider-before-confirm'),
+              ),
+              _ConfirmationAction(
+                buttonKey: const Key('app-confirmation-confirm'),
+                label: confirmLabel,
+                color: isDestructive
+                    ? Theme.of(context).colorScheme.error
+                    : AppColors.textPrimary,
+                result: true,
+                maxTextWidth: maxTextWidth,
+              ),
+              const _ConfirmationDivider(
+                dividerKey: Key('app-confirmation-divider-before-cancel'),
+              ),
+              _ConfirmationAction(
+                buttonKey: const Key('app-confirmation-cancel'),
+                label: cancelLabel,
+                color: AppColors.textPrimary,
+                result: false,
+                maxTextWidth: maxTextWidth,
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+}
+
+class _ConfirmationDivider extends StatelessWidget {
+  const _ConfirmationDivider({required this.dividerKey});
+
+  final Key dividerKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      key: dividerKey,
+      color: AppColors.settingsDivider,
+      child: const SizedBox(height: AppConfirmationDialog._dividerHeight),
     );
   }
 }
@@ -168,9 +182,12 @@ class _ConfirmationAction extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: color,
         textStyle: AppTextStyles.homeBodyMedium,
-        minimumSize: const Size(64, 48),
-        padding: const EdgeInsets.all(AppConfirmationDialog._actionInset),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        minimumSize: const Size.fromHeight(56),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConfirmationDialog._horizontalInset,
+          vertical: 16,
+        ),
+        shape: const RoundedRectangleBorder(),
       ),
       onPressed: () => Navigator.of(context).pop(result),
       child: _ConfirmationText(

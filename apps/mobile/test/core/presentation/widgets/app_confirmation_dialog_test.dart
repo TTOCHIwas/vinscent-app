@@ -141,16 +141,13 @@ void main() {
     final surface = _dialogRect(tester);
     final title = tester.widget<Text>(
       find.byWidgetPredicate(
-        (widget) =>
-            widget is Text &&
-            widget.semanticsLabel == '수정 내용을 버릴까요?',
+        (widget) => widget is Text && widget.semanticsLabel == '수정 내용을 버릴까요?',
       ),
     );
     final message = tester.widget<Text>(
       find.byWidgetPredicate(
         (widget) =>
-            widget is Text &&
-            widget.semanticsLabel == '저장하지 않은 변경 내용이 사라져요.',
+            widget is Text && widget.semanticsLabel == '저장하지 않은 변경 내용이 사라져요.',
       ),
     );
     final confirm = tester.getRect(
@@ -212,8 +209,10 @@ void main() {
       expect(surface.bottom, lessThanOrEqualTo(layout.size.height - 24));
       for (final button in [confirm, cancel]) {
         expect(button.height, greaterThanOrEqualTo(48));
-        expect(surface.contains(button.topLeft), isTrue);
-        expect(surface.contains(button.bottomRight), isTrue);
+        expect(button.left, greaterThanOrEqualTo(surface.left));
+        expect(button.top, greaterThanOrEqualTo(surface.top));
+        expect(button.right, lessThanOrEqualTo(surface.right));
+        expect(button.bottom, lessThanOrEqualTo(surface.bottom));
       }
       expect(confirm.bottom, lessThanOrEqualTo(cancel.top));
       expect(cancel.center.dx, closeTo(confirm.center.dx, 0.01));
