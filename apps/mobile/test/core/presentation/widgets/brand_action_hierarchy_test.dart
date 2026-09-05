@@ -68,9 +68,11 @@ void main() {
       const MaterialApp(home: Center(child: AppLoadingIndicator())),
     );
     expect(
-      tester.widget<CircularProgressIndicator>(
-        find.byType(CircularProgressIndicator),
-      ).color,
+      tester
+          .widget<CircularProgressIndicator>(
+            find.byType(CircularProgressIndicator),
+          )
+          .color,
       AppColors.textMuted,
     );
   });
@@ -96,9 +98,11 @@ void main() {
     final save = find.byKey(const ValueKey('story-card-editor-save'));
     expect(tester.widget<IconButton>(save).color, AppColors.brandAction);
     expect(
-      tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.delete_outline),
-      ).color,
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.delete_outline),
+          )
+          .color,
       Colors.white,
     );
     expect(
@@ -135,9 +139,11 @@ void main() {
       expect(save.disabledColor, Colors.white38);
       if (isSaving) {
         expect(
-          tester.widget<CircularProgressIndicator>(
-            find.byType(CircularProgressIndicator),
-          ).color,
+          tester
+              .widget<CircularProgressIndicator>(
+                find.byType(CircularProgressIndicator),
+              )
+              .color,
           AppColors.brandAction,
         );
       }
