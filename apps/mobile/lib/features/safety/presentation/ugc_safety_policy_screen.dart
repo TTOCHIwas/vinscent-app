@@ -229,8 +229,8 @@ class _PolicyContent extends StatelessWidget {
                     child: Checkbox(
                       key: const Key('ugc-policy-checkbox'),
                       value: hasAcknowledged,
-                      activeColor: AppColors.selection,
-                      checkColor: AppColors.onSelection,
+                      activeColor: AppColors.controlActive,
+                      checkColor: AppColors.onControlActive,
                       onChanged: onAcknowledgedChanged == null
                           ? null
                           : (value) {

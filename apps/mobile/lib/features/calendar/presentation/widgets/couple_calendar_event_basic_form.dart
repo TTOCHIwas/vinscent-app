@@ -126,8 +126,8 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
                       ),
                     )
                   : null,
-              activeThumbColor: AppColors.onSelection,
-              activeTrackColor: AppColors.selection,
+              activeTrackColor: AppColors.controlActive,
+              activeThumbColor: AppColors.onControlActive,
               value: effectiveReminder.isEnabled,
               onChanged: _isEnabled && !isReminderUnavailable
                   ? onReminderEnabledChanged

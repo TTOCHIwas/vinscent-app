@@ -16,6 +16,9 @@ abstract final class AppColors {
   static const brandSurface = Color(0xFFFFF0ED);
   static const brandPressed = Color(0xFFD94C3B);
   static const onBrandAction = Color(0xFFFFFFFF);
+  static const attention = brandAccent;
+  static const controlActive = brandAccent;
+  static const onControlActive = onBrandAction;
 
   static const actionPrimary = Color(0xFF171717);
   static const actionDisabled = Color(0xFFECECEC);

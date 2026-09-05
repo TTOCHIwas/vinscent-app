@@ -183,8 +183,8 @@ void main() {
       repeatControl.style?.side?.resolve(selectedState)?.color,
       AppColors.selection,
     );
-    expect(reminderToggle.activeTrackColor, AppColors.selection);
-    expect(reminderToggle.activeThumbColor, AppColors.onSelection);
+    expect(reminderToggle.activeTrackColor, AppColors.controlActive);
+    expect(reminderToggle.activeThumbColor, AppColors.onControlActive);
 
     await tester.enterText(
       find.byKey(const Key('calendar-event-title-field')),

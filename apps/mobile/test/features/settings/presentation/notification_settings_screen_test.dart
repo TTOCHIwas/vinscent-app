@@ -52,8 +52,8 @@ void main() {
     for (final toggle in tester.widgetList<SwitchListTile>(
       find.byType(SwitchListTile),
     )) {
-      expect(toggle.activeTrackColor, AppColors.selection);
-      expect(toggle.activeThumbColor, AppColors.onSelection);
+      expect(toggle.activeTrackColor, AppColors.controlActive);
+      expect(toggle.activeThumbColor, AppColors.onControlActive);
     }
     expect(find.text('상대가 카드를 올렸을 때'), findsOneWidget);
     expect(find.text('새 질문이 도착했을 때'), findsOneWidget);

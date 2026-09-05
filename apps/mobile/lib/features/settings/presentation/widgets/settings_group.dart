@@ -145,8 +145,8 @@ class SettingsToggleRow extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 60),
       child: SwitchListTile.adaptive(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        activeThumbColor: AppColors.onSelection,
-        activeTrackColor: AppColors.selection,
+        activeTrackColor: AppColors.controlActive,
+        activeThumbColor: AppColors.onControlActive,
         title: Text(title, style: AppTextStyles.homeBody),
         subtitle: switch (subtitle) {
           final subtitle? => Padding(
