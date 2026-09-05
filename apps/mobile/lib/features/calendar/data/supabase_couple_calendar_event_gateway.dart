@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/date/app_date_policy.dart';
+import '../../../core/storage/signed_url_cache.dart';
 import 'couple_calendar_event.dart';
 import 'couple_calendar_event_artwork_path.dart';
 import 'couple_calendar_event_data_gateways.dart';
@@ -13,12 +14,15 @@ import 'couple_calendar_event_repository_contract.dart';
 
 class SupabaseCoupleCalendarEventGateway implements CoupleCalendarEventGateway {
   const SupabaseCoupleCalendarEventGateway({
+    required SignedUrlCache signedUrlCache,
     CoupleCalendarEventMapper mapper = const CoupleCalendarEventMapper(),
-  }) : _mapper = mapper;
+  }) : _signedUrlCache = signedUrlCache,
+       _mapper = mapper;
 
   static const _signedUrlExpiresInSeconds = 60 * 60;
 
   final CoupleCalendarEventMapper _mapper;
+  final SignedUrlCache _signedUrlCache;
 
   @override
   Future<bool> hasOccurrenceOn(DateTime date) async {
@@ -191,14 +195,21 @@ class SupabaseCoupleCalendarEventGateway implements CoupleCalendarEventGateway {
     }
 
     try {
-      final signedUrls = await _client.storage
-          .from(CoupleCalendarEventArtworkPath.bucketId)
-          .createSignedUrls(paths, _signedUrlExpiresInSeconds)
-          .timeout(AppConfig.supabaseRpcTimeout);
-      return {
-        for (final value in signedUrls)
-          if (value.path.isNotEmpty) value.path: value.signedUrl,
-      };
+      return _signedUrlCache.resolve(
+        bucketId: CoupleCalendarEventArtworkPath.bucketId,
+        paths: paths,
+        expiresInSeconds: _signedUrlExpiresInSeconds,
+        loader: (missingPaths, expiresInSeconds) async {
+          final signedUrls = await _client.storage
+              .from(CoupleCalendarEventArtworkPath.bucketId)
+              .createSignedUrls(missingPaths, expiresInSeconds)
+              .timeout(AppConfig.supabaseRpcTimeout);
+          return {
+            for (final value in signedUrls)
+              if (value.path.isNotEmpty) value.path: value.signedUrl,
+          };
+        },
+      );
     } on TimeoutException {
       return const {};
     } on StorageException {

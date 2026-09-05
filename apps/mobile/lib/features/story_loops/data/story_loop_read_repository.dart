@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/storage/signed_url_cache.dart';
 import 'story_loop_detail.dart';
 import 'story_loop_month_summary_day.dart';
 import 'story_loop_read_failure.dart';
@@ -13,7 +14,9 @@ import 'today_story_loop_summary.dart';
 final storyLoopReadRepositoryProvider = Provider<StoryLoopReadRepository>((
   ref,
 ) {
-  return const SupabaseStoryLoopReadRepository();
+  return SupabaseStoryLoopReadRepository(
+    signedUrlCache: ref.watch(signedUrlCacheProvider),
+  );
 });
 
 abstract interface class StoryLoopReadRepository {
@@ -26,13 +29,16 @@ abstract interface class StoryLoopReadRepository {
 
 class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
   const SupabaseStoryLoopReadRepository({
+    required SignedUrlCache signedUrlCache,
     StoryLoopReadMapper mapper = const StoryLoopReadMapper(),
-  }) : _mapper = mapper;
+  }) : _signedUrlCache = signedUrlCache,
+       _mapper = mapper;
 
   static const _previewSignedUrlExpiresInSeconds = 60 * 60;
   static const _bucketId = 'story-cards';
 
   final StoryLoopReadMapper _mapper;
+  final SignedUrlCache _signedUrlCache;
 
   @override
   Future<TodayStoryLoopSummary?> fetchTodaySummary() async {
@@ -142,20 +148,22 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
   Future<Map<String, String>> _createPreviewUrlsByPath(
     Iterable<String> paths,
   ) async {
-    final uniquePaths = paths.toSet().toList(growable: false);
-    if (uniquePaths.isEmpty) {
-      return const {};
-    }
-
     try {
-      final signedUrls = await _bucket
-          .createSignedUrls(uniquePaths, _previewSignedUrlExpiresInSeconds)
-          .timeout(AppConfig.supabaseRpcTimeout);
-
-      return {
-        for (final signedUrl in signedUrls)
-          if (signedUrl.path.isNotEmpty) signedUrl.path: signedUrl.signedUrl,
-      };
+      return _signedUrlCache.resolve(
+        bucketId: _bucketId,
+        paths: paths,
+        expiresInSeconds: _previewSignedUrlExpiresInSeconds,
+        loader: (missingPaths, expiresInSeconds) async {
+          final signedUrls = await _bucket
+              .createSignedUrls(missingPaths, expiresInSeconds)
+              .timeout(AppConfig.supabaseRpcTimeout);
+          return {
+            for (final signedUrl in signedUrls)
+              if (signedUrl.path.isNotEmpty)
+                signedUrl.path: signedUrl.signedUrl,
+          };
+        },
+      );
     } on TimeoutException {
       return const {};
     } on StorageException {

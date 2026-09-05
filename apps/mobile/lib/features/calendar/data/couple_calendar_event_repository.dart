@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/storage/signed_url_cache.dart';
 import 'couple_calendar_event_repository_contract.dart';
 import 'couple_calendar_event_data_gateways.dart';
 import 'default_couple_calendar_event_repository.dart';
@@ -10,7 +11,9 @@ export 'couple_calendar_event_repository_contract.dart';
 export 'default_couple_calendar_event_repository.dart';
 
 final coupleCalendarEventGatewayProvider = Provider<CoupleCalendarEventGateway>(
-  (ref) => const SupabaseCoupleCalendarEventGateway(),
+  (ref) => SupabaseCoupleCalendarEventGateway(
+    signedUrlCache: ref.watch(signedUrlCacheProvider),
+  ),
 );
 
 final coupleCalendarEventRepositoryProvider =

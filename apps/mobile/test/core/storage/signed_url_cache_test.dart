@@ -71,10 +71,7 @@ void main() {
     var loadCount = 0;
     final cache = SignedUrlCache();
 
-    Future<Map<String, String>> load(
-      List<String> paths,
-      int expiresInSeconds,
-    ) {
+    Future<Map<String, String>> load(List<String> paths, int expiresInSeconds) {
       loadCount += 1;
       return completer.future;
     }
