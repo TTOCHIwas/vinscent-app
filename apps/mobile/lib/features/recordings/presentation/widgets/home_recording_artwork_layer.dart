@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
+import '../../application/recording_attention_controller.dart';
 import '../../application/home_recording_drag_session.dart';
 import '../../application/home_recording_placement_geometry.dart';
 import '../../application/home_recording_placement_state.dart';
@@ -112,6 +113,7 @@ class _HomeRecordingArtworkLayerState
                           playbackState.isPlaying &&
                           playbackState.activeTargetKey ==
                               RecordingPlaybackTarget.homeSlot(slot).key,
+                      showAttentionIndicator: slot.isUnseen,
                       onTap: () => _togglePlayback(slot),
                       onLongPress: canEdit
                           ? () => _replaceSlotRecording(slot, overview)
@@ -470,13 +472,18 @@ class _HomeRecordingArtworkLayerState
       return;
     }
     try {
-      await ref
+      final action = await ref
           .read(
             recordingPlaybackControllerProvider(
               RecordingPlaybackSurface.home,
             ).notifier,
           )
           .toggle(RecordingPlaybackTarget.homeSlot(slot));
+      if (action == RecordingPlaybackAction.started) {
+        await ref
+            .read(recordingAttentionControllerProvider)
+            .acknowledgeSlotRecording(slot);
+      }
     } catch (_) {
       _showMessage('녹음을 재생하지 못했어요.');
     }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
+import '../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
@@ -17,6 +18,7 @@ import '../../safety/presentation/safety_report_sheet.dart';
 import '../../settings/presentation/widgets/settings_group.dart';
 import '../../settings/presentation/widgets/settings_page_layout.dart';
 import '../application/couple_recording_overview_controller.dart';
+import '../application/recording_attention_controller.dart';
 import '../application/recording_playback_controller.dart';
 import '../application/recording_slot_placement_session.dart';
 import '../recording_debug_log.dart';
@@ -158,7 +160,11 @@ class _RecordingLibraryScreenState
                     playbackState.isPlaying &&
                     playbackState.activeTargetKey == currentPlaybackTarget!.key,
                 onPlayPressed: () => unawaited(
-                  playbackController.toggle(currentPlaybackTarget!),
+                  _toggleCurrentRecording(
+                    recording: currentRecording,
+                    playbackTarget: currentPlaybackTarget!,
+                    playbackController: playbackController,
+                  ),
                 ),
                 onReportPressed:
                     couple.isActive &&
@@ -297,7 +303,39 @@ class _RecordingLibraryScreenState
     }
 
     final playbackTarget = RecordingPlaybackTarget.librarySlot(slot);
-    return () => unawaited(playbackController.toggle(playbackTarget));
+    return () => unawaited(
+      _toggleSlotRecording(
+        slot: slot,
+        playbackTarget: playbackTarget,
+        playbackController: playbackController,
+      ),
+    );
+  }
+
+  Future<void> _toggleCurrentRecording({
+    required CurrentCoupleRecording recording,
+    required RecordingPlaybackTarget playbackTarget,
+    required RecordingPlaybackController playbackController,
+  }) async {
+    final action = await playbackController.toggle(playbackTarget);
+    if (action == RecordingPlaybackAction.started) {
+      await ref
+          .read(recordingAttentionControllerProvider)
+          .acknowledgeCurrentRecording(recording);
+    }
+  }
+
+  Future<void> _toggleSlotRecording({
+    required CoupleRecordingSlot slot,
+    required RecordingPlaybackTarget playbackTarget,
+    required RecordingPlaybackController playbackController,
+  }) async {
+    final action = await playbackController.toggle(playbackTarget);
+    if (action == RecordingPlaybackAction.started) {
+      await ref
+          .read(recordingAttentionControllerProvider)
+          .acknowledgeSlotRecording(slot);
+    }
   }
 
   Future<void> _openNextSlot() async {
@@ -666,12 +704,18 @@ class _CurrentRecordingPreview extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Icon(
-                  isPlaying
-                      ? Icons.pause_circle_filled_rounded
-                      : Icons.play_circle_outline_rounded,
-                  color: AppColors.textPrimary,
-                  size: 30,
+                AppAttentionIndicator(
+                  key: const Key('recording-library-current-attention'),
+                  isVisible: recording.isUnseen,
+                  semanticsLabel: '새 현재 녹음 있음',
+                  offset: const Offset(1, -1),
+                  child: Icon(
+                    isPlaying
+                        ? Icons.pause_circle_filled_rounded
+                        : Icons.play_circle_outline_rounded,
+                    color: AppColors.textPrimary,
+                    size: 30,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -908,7 +952,15 @@ class _FilledSlotContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                _SlotArtworkThumbnail(slot: slot),
+                AppAttentionIndicator(
+                  key: ValueKey(
+                    'recording-library-slot-attention-${slot.slotId}',
+                  ),
+                  isVisible: slot.isUnseen,
+                  semanticsLabel: '새 슬롯 녹음 있음',
+                  offset: const Offset(1, -1),
+                  child: _SlotArtworkThumbnail(slot: slot),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

@@ -474,13 +474,14 @@ class _FakePlaybackController extends RecordingPlaybackController {
   RecordingPlaybackState build() => const RecordingPlaybackState.idle();
 
   @override
-  Future<void> toggle(RecordingPlaybackTarget target) async {
+  Future<RecordingPlaybackAction> toggle(RecordingPlaybackTarget target) async {
     toggledTargetKey = target.key;
     state = RecordingPlaybackState(
       activeTargetKey: target.key,
       isPlaying: true,
       isBusy: false,
     );
+    return RecordingPlaybackAction.started;
   }
 
   @override

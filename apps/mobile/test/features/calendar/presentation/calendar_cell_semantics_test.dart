@@ -38,4 +38,28 @@ void main() {
     final semantics = tester.widget<Semantics>(cellSemantics);
     expect(semantics.properties.label, contains('카드 2개'));
   });
+
+  testWidgets(
+    'announces and marks the current day independently of selection',
+    (tester) async {
+      await pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        today: DateTime(2026, 5, 10),
+        initialDate: DateTime(2026, 5, 5),
+      );
+
+      final todaySemantics = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label?.contains('오늘') == true,
+      );
+
+      expect(todaySemantics, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('calendar-today-indicator-2026-05-10')),
+        findsOneWidget,
+      );
+    },
+  );
 }

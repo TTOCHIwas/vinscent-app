@@ -74,4 +74,87 @@ void main() {
     expect(surfaceRect.height, 64);
     expect(bottomBarRect.bottom - surfaceRect.bottom, 52);
   });
+
+  testWidgets('updates parent attention indicators without replacing them', (
+    tester,
+  ) async {
+    var showHomeAttention = false;
+    var showCalendarAttention = false;
+    var showAiAttention = false;
+    late StateSetter updateBottomBar;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateBottomBar = setState;
+            return AppBottomBar(
+              height: 90,
+              currentLocation: '/home',
+              showHomeAttention: showHomeAttention,
+              showCalendarAttention: showCalendarAttention,
+              showAiAttention: showAiAttention,
+              onHomePressed: () {},
+              onCalendarPressed: () {},
+              onAiPressed: () {},
+            );
+          },
+        ),
+      ),
+    );
+
+    final homeIndicator = find.byKey(const Key('shell-tab-home-attention'));
+    final calendarIndicator = find.byKey(
+      const Key('shell-tab-calendar-attention'),
+    );
+    final aiIndicator = find.byKey(const Key('shell-tab-ai-attention'));
+    final initialHomeElement = homeIndicator.evaluate().single;
+    final initialCalendarElement = calendarIndicator.evaluate().single;
+    final initialAiElement = aiIndicator.evaluate().single;
+
+    expect(
+      tester
+          .widget<Badge>(
+            find.descendant(of: homeIndicator, matching: find.byType(Badge)),
+          )
+          .isLabelVisible,
+      isFalse,
+    );
+
+    updateBottomBar(() {
+      showHomeAttention = true;
+      showAiAttention = true;
+    });
+    await tester.pump();
+
+    expect(homeIndicator.evaluate().single, same(initialHomeElement));
+    expect(calendarIndicator.evaluate().single, same(initialCalendarElement));
+    expect(aiIndicator.evaluate().single, same(initialAiElement));
+    expect(
+      tester
+          .widget<Badge>(
+            find.descendant(of: homeIndicator, matching: find.byType(Badge)),
+          )
+          .isLabelVisible,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<Badge>(
+            find.descendant(of: aiIndicator, matching: find.byType(Badge)),
+          )
+          .isLabelVisible,
+      isTrue,
+    );
+
+    updateBottomBar(() {
+      showHomeAttention = false;
+      showAiAttention = false;
+    });
+    await tester.pump();
+
+    expect(homeIndicator.evaluate().single, same(initialHomeElement));
+    expect(aiIndicator.evaluate().single, same(initialAiElement));
+    expect(tester.takeException(), isNull);
+  });
 }

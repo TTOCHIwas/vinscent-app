@@ -12,6 +12,8 @@ import '../core/presentation/widgets/app_keyboard_dismiss_scope.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_status.dart';
+import '../features/ai/application/ai_learning_controller.dart';
+import '../features/ai/application/ai_memory_attention_controller.dart';
 import '../features/calendar/application/couple_calendar_event_realtime_controller.dart';
 import '../features/couple/application/couple_controller.dart';
 import '../features/characters/application/couple_character_controller.dart';
@@ -97,6 +99,10 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
         ref
             .read(coupleCalendarEventRealtimeControllerProvider.notifier)
             .refreshReadModels();
+        if (_isAiNotification(message.data)) {
+          ref.invalidate(aiLearningControllerProvider);
+          ref.invalidate(aiMemoryAttentionControllerProvider);
+        }
         if (HomeWidgetRecordingNotification.tryParse(message.data) != null) {
           unawaited(_synchronizeRecordingNotification(message.data));
         } else {
@@ -174,6 +180,8 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       ref
           .read(coupleCalendarEventRealtimeControllerProvider.notifier)
           .refreshReadModels();
+      ref.invalidate(aiLearningControllerProvider);
+      ref.invalidate(aiMemoryAttentionControllerProvider);
       if (_supportsPushNotifications) {
         unawaited(
           ref
@@ -183,6 +191,12 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       }
       _scheduleWidgetSync(requireRecordingVerification: true);
     }
+  }
+
+  bool _isAiNotification(Map<String, dynamic> data) {
+    final eventType = data['event_type'];
+    return data['type'] == 'ai_update' ||
+        (eventType is String && eventType.startsWith('ai_'));
   }
 
   void _queueWidgetLaunch(Uri? uri) {

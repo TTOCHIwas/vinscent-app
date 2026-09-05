@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(14);
+select plan(23);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -286,6 +286,78 @@ select is(
   ),
   1::bigint,
   'second placement is layered above the first'
+);
+
+select is(
+  (select current_is_unseen from public.get_couple_recording_attention_state()),
+  false,
+  'the author does not see their own current recording as new'
+);
+select is(
+  (
+    select cardinality(unseen_slot_ids)
+    from public.get_couple_recording_attention_state()
+  ),
+  2,
+  'slot updates made by the partner are independently unread'
+);
+select ok(
+  (
+    select '55000000-0000-0000-0000-000000000001'::uuid
+      = any(unseen_slot_ids)
+    from public.get_couple_recording_attention_state()
+  ),
+  'the unread slot list retains the exact leaf slot id'
+);
+select is(
+  public.acknowledge_couple_recording_slot(
+    '55000000-0000-0000-0000-000000000001',
+    '35000000-0000-0000-0000-000000000001'
+  ),
+  true,
+  'playing the current slot revision acknowledges that leaf'
+);
+select is(
+  (
+    select cardinality(unseen_slot_ids)
+    from public.get_couple_recording_attention_state()
+  ),
+  1,
+  'acknowledging one slot preserves other unread slots'
+);
+select is(
+  public.acknowledge_couple_recording_slot(
+    '55000000-0000-0000-0000-000000000001',
+    '35000000-0000-0000-0000-000000000002'
+  ),
+  false,
+  'a stale recording id cannot acknowledge a replaced slot'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claim.sub',
+  '15000000-0000-0000-0000-000000000002',
+  true
+);
+set local role authenticated;
+
+select is(
+  (select current_is_unseen from public.get_couple_recording_attention_state()),
+  true,
+  'the partner sees a newly authored current recording as unread'
+);
+select is(
+  public.acknowledge_current_couple_recording(
+    '35000000-0000-0000-0000-000000000003'
+  ),
+  true,
+  'playing the current recording acknowledges its exact revision'
+);
+select is(
+  (select current_is_unseen from public.get_couple_recording_attention_state()),
+  false,
+  'the acknowledged current recording is no longer unread'
 );
 
 select * from finish();

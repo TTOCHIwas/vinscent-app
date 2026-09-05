@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../application/recording_capture_controller.dart';
 import 'recording_pulse.dart';
 
@@ -24,6 +25,7 @@ class CharacterRecordingControl extends StatefulWidget {
     this.onPlaybackPressed,
     this.onRecordStart,
     this.onRecordEnd,
+    this.showAttentionIndicator = false,
   });
 
   static const controlKey = ValueKey<String>('character-recording-control');
@@ -50,6 +52,7 @@ class CharacterRecordingControl extends StatefulWidget {
   final VoidCallback? onPlaybackPressed;
   final VoidCallback? onRecordStart;
   final VoidCallback? onRecordEnd;
+  final bool showAttentionIndicator;
 
   @override
   State<CharacterRecordingControl> createState() =>
@@ -239,7 +242,14 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    widget.child,
+                    AppAttentionIndicator(
+                      key: CharacterRecordingControl.recordingDotKey,
+                      isVisible: widget.showAttentionIndicator,
+                      semanticsLabel: '새 녹음 있음',
+                      alignment: const Alignment(0.62, -0.62),
+                      offset: Offset.zero,
+                      child: widget.child,
+                    ),
                     if (showProgress)
                       Positioned(
                         left: (widget.size - progressWidth) / 2,
@@ -276,7 +286,9 @@ class _CharacterRecordingControlState extends State<CharacterRecordingControl> {
       return '재생 일시정지';
     }
     if (widget.recordingKey != null) {
-      return '녹음 재생, 길게 눌러 다시 녹음';
+      return widget.showAttentionIndicator
+          ? '새 녹음 재생, 길게 눌러 다시 녹음'
+          : '녹음 재생, 길게 눌러 다시 녹음';
     }
     return '길게 눌러 녹음';
   }

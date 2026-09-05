@@ -32,6 +32,7 @@ class CurrentCoupleRecording {
     required this.revision,
     required this.updatedAt,
     required this.audioUrl,
+    this.isUnseen = false,
   });
 
   final String recordingId;
@@ -41,6 +42,7 @@ class CurrentCoupleRecording {
   final int revision;
   final DateTime updatedAt;
   final String audioUrl;
+  final bool isUnseen;
 
   Duration get duration => Duration(milliseconds: durationMs);
 }
@@ -80,6 +82,7 @@ class CoupleRecordingSlot {
     required this.createdAt,
     required this.updatedAt,
     required this.audioUrl,
+    this.isUnseen = false,
     this.artwork,
     this.placement,
   });
@@ -97,6 +100,7 @@ class CoupleRecordingSlot {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String audioUrl;
+  final bool isUnseen;
   final CoupleRecordingSlotArtwork? artwork;
   final CoupleRecordingSlotPlacement? placement;
 

@@ -59,6 +59,10 @@ export function routeFor(eventType: AppEventType, assignedDate: unknown) {
       : '/home/question';
   }
 
+  if (eventType === 'ai_memory_review_ready') {
+    return '/ai/memories';
+  }
+
   if (eventType.startsWith('ai_')) {
     return '/ai';
   }

@@ -11,6 +11,7 @@ import '../../../couple/application/couple_controller.dart';
 import '../../../couple/data/couple.dart';
 import '../../application/couple_recording_overview_controller.dart';
 import '../../application/recording_capture_controller.dart';
+import '../../application/recording_attention_controller.dart';
 import '../../application/recording_playback_controller.dart';
 import '../../data/couple_recording.dart';
 import 'character_recording_control.dart';
@@ -122,6 +123,7 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
             recordingKey: currentRecording?.recordingId,
             isPlaying: isPlaying,
             isPlaybackBusy: playbackState.isBusy,
+            showAttentionIndicator: currentRecording?.isUnseen ?? false,
             isLoading: coupleAsync.isLoading || overviewAsync.isLoading,
             canRecord: canRecord,
             onPrimaryTap: needsCharacterSetup
@@ -130,7 +132,14 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
             primaryTapSemanticsLabel: needsCharacterSetup ? '캐릭터 설정' : null,
             onPlaybackPressed: needsCharacterSetup || playbackTarget == null
                 ? null
-                : () => unawaited(playbackController.toggle(playbackTarget)),
+                : () => unawaited(
+                    _toggleCurrentRecording(
+                      ref: ref,
+                      playbackController: playbackController,
+                      playbackTarget: playbackTarget,
+                      recording: currentRecording!,
+                    ),
+                  ),
             onRecordStart: !canRecord || couple == null
                 ? null
                 : () {
@@ -150,6 +159,22 @@ class HomeCharacterRecordingControl extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _toggleCurrentRecording({
+    required WidgetRef ref,
+    required RecordingPlaybackController playbackController,
+    required RecordingPlaybackTarget playbackTarget,
+    required CurrentCoupleRecording recording,
+  }) async {
+    final action = await playbackController.toggle(playbackTarget);
+    if (action != RecordingPlaybackAction.started) {
+      return;
+    }
+
+    await ref
+        .read(recordingAttentionControllerProvider)
+        .acknowledgeCurrentRecording(recording);
   }
 }
 

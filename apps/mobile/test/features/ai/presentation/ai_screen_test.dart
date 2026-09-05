@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/ai/application/ai_memory_attention_controller.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/application/ai_direct_question_controller.dart';
 import 'package:vinscent/features/ai/data/ai_direct_question_history.dart';
+import 'package:vinscent/features/ai/data/ai_memory_attention.dart';
+import 'package:vinscent/features/ai/data/ai_memory_attention_repository.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/presentation/ai_screen.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
@@ -156,6 +159,34 @@ void main() {
     expect(find.text('확인할 기억 6개'), findsOneWidget);
   });
 
+  testWidgets('acknowledges only the visible memory review batch', (
+    tester,
+  ) async {
+    final attentionRepository = _FakeAiMemoryAttentionRepository();
+    final memories = List.generate(
+      6,
+      (index) =>
+          _memory.copyWith(id: 'memory-$index', statement: '기억 문장 $index'),
+    );
+
+    await _pump(
+      tester,
+      _dashboard(
+        completedCount: 24,
+        personalizationStatus: AiPersonalizationStatus.reviewing,
+        memories: memories,
+        myPendingReviewCount: memories.length,
+      ),
+      memoryAttentionState: const AiMemoryAttentionState(unseenMemoryCount: 6),
+      attentionRepository: attentionRepository,
+    );
+
+    expect(
+      attentionRepository.acknowledgedTargets.map((target) => target.memoryId),
+      ['memory-0', 'memory-1', 'memory-2', 'memory-3', 'memory-4'],
+    );
+  });
+
   testWidgets('shows ready question header actions without dashboard clutter', (
     tester,
   ) async {
@@ -199,6 +230,22 @@ void main() {
     expect(find.text('너에 대해'), findsNothing);
     expect(find.text('상대에 대해'), findsNothing);
     expect(_wordBoundaryText('함께 산책하는 시간을 좋아해요.'), findsNothing);
+  });
+
+  testWidgets('shows unseen memory attention on the ready header action', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _dashboard(
+        completedCount: 24,
+        personalizationStatus: AiPersonalizationStatus.ready,
+      ),
+      memoryAttentionState: const AiMemoryAttentionState(unseenMemoryCount: 1),
+    );
+
+    expect(find.byKey(const Key('ai-tab-memory-attention')), findsOneWidget);
+    expect(find.byKey(const Key('ai-direct-question-input')), findsOneWidget);
   });
 
   testWidgets('shows partner wait until both reviews are resolved', (
@@ -396,6 +443,9 @@ Future<void> _pump(
   double textScaleFactor = 1,
   AiDirectQuestionHistory? directQuestionHistory,
   SafetyReportRepository? safetyReportRepository,
+  AiMemoryAttentionState memoryAttentionState =
+      const AiMemoryAttentionState.empty(),
+  AiMemoryAttentionRepository? attentionRepository,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -407,6 +457,13 @@ Future<void> _pump(
           (ref, notifier) async =>
               directQuestionHistory ?? _directQuestionHistory(),
         ),
+        aiMemoryAttentionControllerProvider.overrideWithBuild(
+          (ref, notifier) async => memoryAttentionState,
+        ),
+        if (attentionRepository != null)
+          aiMemoryAttentionRepositoryProvider.overrideWithValue(
+            attentionRepository,
+          ),
         if (safetyReportRepository != null)
           safetyReportRepositoryProvider.overrideWithValue(
             safetyReportRepository,
@@ -432,6 +489,23 @@ class _FakeSafetyReportRepository implements SafetyReportRepository {
   @override
   Future<void> submit(SafetyReportRequest request) async {
     requests.add(request);
+  }
+}
+
+class _FakeAiMemoryAttentionRepository implements AiMemoryAttentionRepository {
+  List<AiMemoryAttentionTarget> acknowledgedTargets = const [];
+
+  @override
+  Future<int> acknowledgeMemories(
+    List<AiMemoryAttentionTarget> memories,
+  ) async {
+    acknowledgedTargets = List.unmodifiable(memories);
+    return memories.length;
+  }
+
+  @override
+  Future<AiMemoryAttentionState> fetchState() async {
+    return const AiMemoryAttentionState.empty();
   }
 }
 

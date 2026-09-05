@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/ai_learning_dashboard.dart';
 import '../data/ai_learning_repository.dart';
 import 'ai_async_operation_queue.dart';
+import 'ai_memory_attention_controller.dart';
 
 final aiLearningControllerProvider =
     AsyncNotifierProvider.autoDispose<
@@ -39,6 +40,7 @@ class AiLearningController extends AsyncNotifier<AiLearningDashboard> {
           .read(aiLearningRepositoryProvider)
           .confirmMemory(memoryId: memoryId, decision: decision);
     }, showLoading: false);
+    ref.invalidate(aiMemoryAttentionControllerProvider);
   }
 
   Future<void> unlockFocusedQuestions() async {

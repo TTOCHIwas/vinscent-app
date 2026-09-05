@@ -13,6 +13,9 @@ class AppBottomBar extends StatelessWidget {
     required this.onHomePressed,
     required this.onCalendarPressed,
     required this.onAiPressed,
+    this.showHomeAttention = false,
+    this.showCalendarAttention = false,
+    this.showAiAttention = false,
   });
 
   static const _surfaceRadius = 100.0;
@@ -22,6 +25,9 @@ class AppBottomBar extends StatelessWidget {
   final VoidCallback onHomePressed;
   final VoidCallback onCalendarPressed;
   final VoidCallback onAiPressed;
+  final bool showHomeAttention;
+  final bool showCalendarAttention;
+  final bool showAiAttention;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +69,10 @@ class AppBottomBar extends StatelessWidget {
                           label: '\ud648',
                           icon: Icons.home_rounded,
                           isSelected: currentLocation.startsWith('/home'),
+                          showAttentionIndicator: showHomeAttention,
+                          attentionIndicatorKey: const Key(
+                            'shell-tab-home-attention',
+                          ),
                           onPressed: onHomePressed,
                         ),
                       ),
@@ -71,6 +81,10 @@ class AppBottomBar extends StatelessWidget {
                           label: '\ub2ec\ub825',
                           icon: Icons.calendar_today_rounded,
                           isSelected: currentLocation.startsWith('/calendar'),
+                          showAttentionIndicator: showCalendarAttention,
+                          attentionIndicatorKey: const Key(
+                            'shell-tab-calendar-attention',
+                          ),
                           onPressed: onCalendarPressed,
                         ),
                       ),
@@ -79,6 +93,10 @@ class AppBottomBar extends StatelessWidget {
                           label: 'AI',
                           icon: Icons.auto_awesome_rounded,
                           isSelected: currentLocation.startsWith('/ai'),
+                          showAttentionIndicator: showAiAttention,
+                          attentionIndicatorKey: const Key(
+                            'shell-tab-ai-attention',
+                          ),
                           onPressed: onAiPressed,
                         ),
                       ),

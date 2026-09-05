@@ -16,6 +16,7 @@ void main() {
         'current_recorded_at': '2026-07-21T08:00:00Z',
         'current_revision': 2,
         'current_updated_at': '2026-07-21T08:01:00Z',
+        'current_is_unseen': true,
       },
       resolveAudioUrl: (path) async {
         requestedPaths.add(path);
@@ -28,6 +29,7 @@ void main() {
     expect(recording?.durationMs, 15000);
     expect(recording?.revision, 2);
     expect(recording?.audioUrl, 'https://example.com/audio');
+    expect(recording?.isUnseen, isTrue);
   });
 
   test(
@@ -74,6 +76,7 @@ void main() {
         'placement_normalized_y': 0.75,
         'placement_revision': 5,
         'placement_z_index': 6,
+        'is_unseen': true,
       },
       resolveAudioUrl: (path) async {
         requestedAudioPaths.add(path);
@@ -97,6 +100,7 @@ void main() {
     expect(slot.placement?.normalizedY, 0.75);
     expect(slot.placement?.revision, 5);
     expect(slot.placement?.zIndex, 6);
+    expect(slot.isUnseen, isTrue);
   });
 
   test('omits absent artwork and placement from a saved slot', () async {

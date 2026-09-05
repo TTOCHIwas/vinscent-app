@@ -24,6 +24,7 @@ class CoupleRecordingReadMapper {
       revision: _toInt(row['current_revision']),
       updatedAt: _parseDateTime(row['current_updated_at']),
       audioUrl: await resolveAudioUrl(storagePath),
+      isUnseen: row['current_is_unseen'] as bool? ?? false,
     );
   }
 
@@ -63,6 +64,7 @@ class CoupleRecordingReadMapper {
       createdAt: _parseDateTime(row['created_at']),
       updatedAt: _parseDateTime(row['updated_at']),
       audioUrl: urls.first,
+      isUnseen: row['is_unseen'] as bool? ?? false,
       artwork: hasArtwork
           ? CoupleRecordingSlotArtwork(
               previewPath: artworkPreviewPath,

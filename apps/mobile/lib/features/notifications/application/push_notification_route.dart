@@ -1,14 +1,17 @@
 import '../../../core/date/app_date_policy.dart';
 
 String? resolvePushNotificationLocation(Map<String, dynamic> data) {
+  final eventType = data['event_type'];
+  if (eventType == 'ai_memory_review_ready') {
+    return '/ai/memories';
+  }
+
   final explicitRoute = _allowListedRoute(data['route']);
   if (explicitRoute != null) {
     return explicitRoute;
   }
 
   final notificationType = data['type'];
-  final eventType = data['event_type'];
-
   return switch (notificationType) {
     'partner_answer_completed' => _questionLocation(data['assigned_date']),
     'daily_question_delivery' ||
@@ -48,6 +51,7 @@ String? _allowListedRoute(Object? value) {
     '/calendar',
     '/calendar/question',
     '/ai',
+    '/ai/memories',
     '/settings',
     '/settings/notifications',
     '/settings/character',

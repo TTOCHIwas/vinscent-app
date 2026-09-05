@@ -54,7 +54,7 @@ void main() {
         'event_type': 'ai_memory_review_ready',
       });
 
-      expect(location, '/ai');
+      expect(location, '/ai/memories');
     });
 
     test('opens AI for asynchronous AI result events', () {

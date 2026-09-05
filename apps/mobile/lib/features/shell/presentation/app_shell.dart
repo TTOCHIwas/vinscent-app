@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../application/app_attention_summary.dart';
 import 'widgets/app_bottom_bar.dart';
 import 'widgets/shell_bottom_bar_visibility_notification.dart';
 
@@ -13,6 +15,10 @@ class AppShell extends StatefulWidget {
     required this.child,
     required this.location,
     this.navigationShell,
+    this.showHomeAttention = false,
+    this.showCalendarAttention = false,
+    this.showAiAttention = false,
+    this.observeAttention = false,
   });
 
   static const topMinHeight = 56.0;
@@ -24,6 +30,10 @@ class AppShell extends StatefulWidget {
   final Widget child;
   final String location;
   final StatefulNavigationShell? navigationShell;
+  final bool showHomeAttention;
+  final bool showCalendarAttention;
+  final bool showAiAttention;
+  final bool observeAttention;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -51,6 +61,43 @@ class _AppShellState extends State<AppShell> {
         _isBottomBarRequestedHidden;
     final canPop =
         GoRouter.maybeOf(context)?.canPop() ?? Navigator.of(context).canPop();
+    Widget buildBottomBarContent(AppAttentionSummary? attention) {
+      return IgnorePointer(
+        ignoring: isBottomBarHidden,
+        child: ExcludeSemantics(
+          excluding: isBottomBarHidden,
+          child: AppBottomBar(
+            height: AppShell.bottomBarHeight,
+            currentLocation: widget.location,
+            showHomeAttention:
+                attention?.hasHomeAttention ?? widget.showHomeAttention,
+            showCalendarAttention:
+                attention?.hasCalendarAttention ?? widget.showCalendarAttention,
+            showAiAttention:
+                attention?.hasAiAttention ?? widget.showAiAttention,
+            onHomePressed: () => _openBranch(context, 0, '/home'),
+            onCalendarPressed: () => _openBranch(context, 1, '/calendar'),
+            onAiPressed: () => _openBranch(context, 2, '/ai'),
+          ),
+        ),
+      );
+    }
+
+    final bottomNavigationBar = !showBottomBar
+        ? null
+        : AnimatedSlide(
+            key: const Key('shell-bottom-bar-motion'),
+            offset: isBottomBarHidden ? const Offset(0, 1) : Offset.zero,
+            duration: AppShell.bottomBarMotionDuration,
+            curve: AppShell.bottomBarMotionCurve,
+            child: widget.observeAttention
+                ? Consumer(
+                    builder: (context, ref, child) => buildBottomBarContent(
+                      ref.watch(appAttentionSummaryProvider),
+                    ),
+                  )
+                : buildBottomBarContent(null),
+          );
 
     return PopScope(
       canPop: canPop || widget.location == '/home',
@@ -71,28 +118,7 @@ class _AppShellState extends State<AppShell> {
             ],
           ),
         ),
-        bottomNavigationBar: showBottomBar
-            ? AnimatedSlide(
-                key: const Key('shell-bottom-bar-motion'),
-                offset: isBottomBarHidden ? const Offset(0, 1) : Offset.zero,
-                duration: AppShell.bottomBarMotionDuration,
-                curve: AppShell.bottomBarMotionCurve,
-                child: IgnorePointer(
-                  ignoring: isBottomBarHidden,
-                  child: ExcludeSemantics(
-                    excluding: isBottomBarHidden,
-                    child: AppBottomBar(
-                      height: AppShell.bottomBarHeight,
-                      currentLocation: widget.location,
-                      onHomePressed: () => _openBranch(context, 0, '/home'),
-                      onCalendarPressed: () =>
-                          _openBranch(context, 1, '/calendar'),
-                      onAiPressed: () => _openBranch(context, 2, '/ai'),
-                    ),
-                  ),
-                ),
-              )
-            : null,
+        bottomNavigationBar: bottomNavigationBar,
       ),
     );
   }

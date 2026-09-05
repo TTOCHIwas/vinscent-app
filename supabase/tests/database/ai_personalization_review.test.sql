@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(27);
+select plan(35);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -373,6 +373,95 @@ select is(
   (public.get_ai_learning_dashboard()->'progress'->>'my_pending_review_count')::integer,
   3,
   'the dashboard counts only decisions assigned to the current member'
+);
+
+select is(
+  (public.get_ai_memory_attention_state()->>'unseen_memory_count')::integer,
+  3,
+  'all newly reviewable memories start unseen'
+);
+
+select throws_ok(
+  $$ select public.acknowledge_ai_memories('[null]'::jsonb) $$,
+  'P0001',
+  'invalid_ai_memory_attention_request',
+  'a non-object attention item is rejected'
+);
+
+select throws_ok(
+  $$
+    select public.acknowledge_ai_memories(
+      '[{"memory_id":"invalid","memory_updated_at":"2026-09-05T00:00:00Z"}]'::jsonb
+    )
+  $$,
+  'P0001',
+  'invalid_ai_memory_attention_request',
+  'a malformed memory identifier is rejected'
+);
+
+select is(
+  public.acknowledge_ai_memories(
+    jsonb_build_array(
+      jsonb_build_object(
+        'memory_id', '72000000-0000-0000-0000-000000000001',
+        'memory_updated_at', '2000-01-01T00:00:00Z'
+      )
+    )
+  ),
+  0,
+  'a stale memory version cannot be acknowledged'
+);
+
+select is(
+  (public.get_ai_memory_attention_state()->>'unseen_memory_count')::integer,
+  3,
+  'a rejected acknowledgement leaves attention unchanged'
+);
+
+select is(
+  public.acknowledge_ai_memories(
+    jsonb_build_array(
+      (
+        select jsonb_build_object(
+          'memory_id', memory->>'memory_id',
+          'memory_updated_at', memory->>'updated_at'
+        )
+        from jsonb_array_elements(
+          public.get_ai_learning_dashboard()->'memories'
+        ) as memory
+        where memory->>'memory_id' =
+          '72000000-0000-0000-0000-000000000001'
+      )
+    )
+  ),
+  1,
+  'the exact visible memory version can be acknowledged'
+);
+
+select is(
+  (public.get_ai_memory_attention_state()->>'unseen_memory_count')::integer,
+  2,
+  'acknowledging one memory clears only that attention item'
+);
+
+reset role;
+
+update public.ai_memory_attention_receipts
+set seen_memory_updated_at = seen_memory_updated_at - interval '1 microsecond'
+where memory_id = '72000000-0000-0000-0000-000000000001'
+  and user_id = '12000000-0000-0000-0000-000000000001';
+
+select set_config(
+  'request.jwt.claim.sub',
+  '12000000-0000-0000-0000-000000000001',
+  true
+);
+set local role authenticated;
+
+select is(
+  (public.get_ai_memory_attention_state()->>'unseen_memory_count')::integer,
+  3,
+  'a different pending memory version becomes unseen again'
 );
 
 reset role;

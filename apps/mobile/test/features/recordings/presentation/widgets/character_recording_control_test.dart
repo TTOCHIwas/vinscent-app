@@ -23,7 +23,7 @@ void main() {
     expect(find.byType(Text), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    expect(_recordingDotIsVisible(tester), isFalse);
 
     await tester.tap(find.byKey(CharacterRecordingControl.controlKey));
     await tester.pump();
@@ -129,7 +129,7 @@ void main() {
 
     expect(find.byKey(_characterKey), findsOneWidget);
     expect(find.byKey(CharacterRecordingControl.progressKey), findsNothing);
-    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    expect(_recordingDotIsVisible(tester), isFalse);
 
     await tester.pump(const Duration(milliseconds: 149));
     expect(find.byKey(CharacterRecordingControl.progressKey), findsNothing);
@@ -204,7 +204,7 @@ void main() {
 
     expect(progress.value, isNull);
     expect(progress.color, AppColors.recordingActive);
-    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    expect(_recordingDotIsVisible(tester), isFalse);
     _expectUnifiedProgressBelowCharacter(tester);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
@@ -222,7 +222,7 @@ void main() {
 
     expect(progress.value, 0.5);
     expect(progress.color, AppColors.recordingActive);
-    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    expect(_recordingDotIsVisible(tester), isFalse);
     _expectUnifiedProgressBelowCharacter(tester);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byKey(_characterKey), findsOneWidget);
@@ -266,7 +266,7 @@ void main() {
     );
     expect(progress.value, isNull);
     expect(progress.color, AppColors.actionPrimary);
-    expect(find.byKey(CharacterRecordingControl.recordingDotKey), findsNothing);
+    expect(_recordingDotIsVisible(tester), isFalse);
     _expectUnifiedProgressBelowCharacter(tester);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
@@ -350,4 +350,10 @@ int _circularBorderCount(WidgetTester tester) {
         decoration.shape == BoxShape.circle &&
         decoration.border != null;
   }).length;
+}
+
+bool _recordingDotIsVisible(WidgetTester tester) {
+  final indicator = find.byKey(CharacterRecordingControl.recordingDotKey);
+  final badge = find.descendant(of: indicator, matching: find.byType(Badge));
+  return tester.widget<Badge>(badge).isLabelVisible;
 }

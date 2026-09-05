@@ -19,6 +19,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
     required this.date,
     required this.textColor,
     required this.isSelected,
+    this.isToday = false,
     required this.summary,
     this.events = const [],
     this.defaultEventLabel,
@@ -28,6 +29,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final DateTime date;
   final Color textColor;
   final bool isSelected;
+  final bool isToday;
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? defaultEventLabel;
@@ -83,6 +85,11 @@ class CalendarMonthStoryCell extends StatelessWidget {
                 child: Row(
                   children: [
                     SizedBox.square(
+                      key: isToday
+                          ? ValueKey(
+                              'calendar-today-indicator-${formatCalendarDate(date)}',
+                            )
+                          : null,
                       dimension: _dateMarkerSize,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -90,6 +97,12 @@ class CalendarMonthStoryCell extends StatelessWidget {
                               ? AppColors.actionPrimary
                               : Colors.transparent,
                           shape: BoxShape.circle,
+                          border: isToday
+                              ? Border.all(
+                                  color: AppColors.attention,
+                                  width: 1.5,
+                                )
+                              : null,
                         ),
                         child: Center(
                           child: Text(
@@ -98,6 +111,8 @@ class CalendarMonthStoryCell extends StatelessWidget {
                               AppTextStyles.homeCharacterLabel.copyWith(
                                 color: isSelected
                                     ? AppColors.textInverse
+                                    : isToday
+                                    ? AppColors.attention
                                     : textColor,
                                 fontSize: 12,
                                 fontWeight: isSelected

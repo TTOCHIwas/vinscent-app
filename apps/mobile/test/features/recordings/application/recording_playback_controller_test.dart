@@ -13,14 +13,20 @@ void main() {
       addTearDown(harness.dispose);
       final target = RecordingPlaybackTarget.homeSlot(_slot(1));
 
-      await harness.controller.toggle(target).timeout(_operationTimeout);
+      final started = await harness.controller
+          .toggle(target)
+          .timeout(_operationTimeout);
 
+      expect(started, RecordingPlaybackAction.started);
       expect(player.hasPendingPlayback, isTrue);
       expect(harness.state.isPlaying, isTrue);
       expect(harness.state.isBusy, isFalse);
 
-      await harness.controller.toggle(target).timeout(_operationTimeout);
+      final paused = await harness.controller
+          .toggle(target)
+          .timeout(_operationTimeout);
 
+      expect(paused, RecordingPlaybackAction.paused);
       expect(player.pauseCount, 1);
       expect(harness.state.isPlaying, isFalse);
       expect(harness.state.isBusy, isFalse);
@@ -33,9 +39,15 @@ void main() {
       final firstTarget = RecordingPlaybackTarget.homeSlot(_slot(1));
       final secondTarget = RecordingPlaybackTarget.homeSlot(_slot(2));
 
-      await harness.controller.toggle(firstTarget).timeout(_operationTimeout);
-      await harness.controller.toggle(secondTarget).timeout(_operationTimeout);
+      final firstAction = await harness.controller
+          .toggle(firstTarget)
+          .timeout(_operationTimeout);
+      final secondAction = await harness.controller
+          .toggle(secondTarget)
+          .timeout(_operationTimeout);
 
+      expect(firstAction, RecordingPlaybackAction.started);
+      expect(secondAction, RecordingPlaybackAction.started);
       expect(player.loadedUrls, [
         'https://example.com/audio-1.m4a',
         'https://example.com/audio-2.m4a',

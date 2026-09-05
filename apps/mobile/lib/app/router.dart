@@ -126,6 +126,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: AppShell(
             location: state.uri.path,
             navigationShell: navigationShell,
+            observeAttention: true,
             child: navigationShell,
           ),
         ),
@@ -286,7 +287,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         pageBuilder: (context, state, child) => MaterialPage<void>(
           key: state.pageKey,
-          child: AppShell(location: state.uri.path, child: child),
+          child: AppShell(
+            location: state.uri.path,
+            observeAttention: true,
+            child: child,
+          ),
         ),
         routes: [
           GoRoute(

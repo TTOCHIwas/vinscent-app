@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../data/couple_recording.dart';
 import 'recording_pulse.dart';
 
@@ -13,6 +14,7 @@ class HomeRecordingArtworkItem extends StatelessWidget {
     required this.pulseToken,
     required this.isPlaying,
     required this.onTap,
+    this.showAttentionIndicator = false,
     this.onLongPress,
     this.onPanStart,
     this.onPanUpdate,
@@ -28,6 +30,7 @@ class HomeRecordingArtworkItem extends StatelessWidget {
   final int? pulseToken;
   final bool isPlaying;
   final VoidCallback onTap;
+  final bool showAttentionIndicator;
   final VoidCallback? onLongPress;
   final GestureDragStartCallback? onPanStart;
   final GestureDragUpdateCallback? onPanUpdate;
@@ -65,17 +68,23 @@ class HomeRecordingArtworkItem extends StatelessWidget {
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
               scale: isDragging ? 1.06 : 1,
-              child: Opacity(
-                opacity: isBusy ? 0.55 : 1,
-                child: Image.network(
-                  artwork.previewUrl,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.textMuted,
+              child: AppAttentionIndicator(
+                key: ValueKey('home-recording-slot-attention-${slot.slotId}'),
+                isVisible: showAttentionIndicator,
+                semanticsLabel: '새 슬롯 녹음 있음',
+                offset: const Offset(-2, 2),
+                child: Opacity(
+                  opacity: isBusy ? 0.55 : 1,
+                  child: Image.network(
+                    artwork.previewUrl,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
               ),

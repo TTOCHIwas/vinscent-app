@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/assets/app_icons.dart';
 import '../../../../core/presentation/widgets/app_svg_icon.dart';
+import '../../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../couple/application/couple_controller.dart';
@@ -15,12 +16,14 @@ class AppHeader extends ConsumerWidget {
     required this.showRelationshipDayCount,
     required this.onRecordingLibraryPressed,
     required this.onSettingsPressed,
+    this.showRecordingAttention = false,
   });
 
   final double height;
   final bool showRelationshipDayCount;
   final VoidCallback onRecordingLibraryPressed;
   final VoidCallback onSettingsPressed;
+  final bool showRecordingAttention;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,10 +71,16 @@ class AppHeader extends ConsumerWidget {
                     width: 48,
                     height: 48,
                   ),
-                  icon: const AppSvgIcon(
-                    AppIcons.cassetteTape,
-                    size: 24,
-                    color: Colors.black,
+                  icon: AppAttentionIndicator(
+                    key: const Key('app-header-recording-attention'),
+                    isVisible: showRecordingAttention,
+                    semanticsLabel: '새 녹음 있음',
+                    offset: const Offset(3, -3),
+                    child: const AppSvgIcon(
+                      AppIcons.cassetteTape,
+                      size: 24,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),

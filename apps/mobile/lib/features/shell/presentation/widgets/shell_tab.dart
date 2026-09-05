@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/presentation/widgets/app_attention_indicator.dart';
 
 class ShellTab extends StatefulWidget {
   const ShellTab({
@@ -9,12 +10,16 @@ class ShellTab extends StatefulWidget {
     required this.icon,
     required this.isSelected,
     required this.onPressed,
+    this.showAttentionIndicator = false,
+    this.attentionIndicatorKey,
   });
 
   final String label;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onPressed;
+  final bool showAttentionIndicator;
+  final Key? attentionIndicatorKey;
 
   @override
   State<ShellTab> createState() => _ShellTabState();
@@ -64,12 +69,18 @@ class _ShellTabState extends State<ShellTab> {
                     borderRadius: BorderRadius.circular(_feedbackRadius),
                   ),
                   child: Center(
-                    child: Icon(
-                      widget.icon,
-                      size: 24,
-                      color: widget.isSelected
-                          ? AppColors.shellBottomBarIconSelected
-                          : AppColors.shellBottomBarIconIdle,
+                    child: AppAttentionIndicator(
+                      key: widget.attentionIndicatorKey,
+                      isVisible: widget.showAttentionIndicator,
+                      semanticsLabel: '${widget.label}에 새 항목 있음',
+                      offset: const Offset(3, -3),
+                      child: Icon(
+                        widget.icon,
+                        size: 24,
+                        color: widget.isSelected
+                            ? AppColors.shellBottomBarIconSelected
+                            : AppColors.shellBottomBarIconIdle,
+                      ),
                     ),
                   ),
                 ),

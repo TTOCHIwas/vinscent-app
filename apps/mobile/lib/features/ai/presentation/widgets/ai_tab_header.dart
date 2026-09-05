@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -11,6 +12,7 @@ class AiTabHeader extends StatelessWidget {
     this.remainingQuestionCount,
     this.onHistoryPressed,
     this.onMemoryPressed,
+    this.showMemoryAttention = false,
   }) : assert(
          !isQuestionReady ||
              (onHistoryPressed != null && onMemoryPressed != null),
@@ -22,6 +24,7 @@ class AiTabHeader extends StatelessWidget {
   final int? remainingQuestionCount;
   final VoidCallback? onHistoryPressed;
   final VoidCallback? onMemoryPressed;
+  final bool showMemoryAttention;
 
   @override
   Widget build(BuildContext context) {
@@ -75,9 +78,11 @@ class AiTabHeader extends StatelessWidget {
             ),
             _HeaderAction(
               actionKey: const Key('ai-tab-memory-action'),
+              attentionKey: const Key('ai-tab-memory-attention'),
               tooltip: '기억한 내용',
               icon: Icons.bookmark_outline_rounded,
               onPressed: onMemoryPressed!,
+              showAttention: showMemoryAttention,
             ),
           ],
         ),
@@ -92,22 +97,32 @@ class _HeaderAction extends StatelessWidget {
     required this.tooltip,
     required this.icon,
     required this.onPressed,
+    this.attentionKey,
+    this.showAttention = false,
   });
 
   final Key actionKey;
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
+  final Key? attentionKey;
+  final bool showAttention;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      key: actionKey,
-      tooltip: tooltip,
-      onPressed: onPressed,
-      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-      padding: const EdgeInsets.all(10),
-      icon: Icon(icon, size: 24, color: AppColors.textPrimary),
+    return AppAttentionIndicator(
+      key: attentionKey,
+      isVisible: showAttention,
+      semanticsLabel: showAttention ? '확인할 새 기억 있음' : null,
+      offset: const Offset(-4, 4),
+      child: IconButton(
+        key: actionKey,
+        tooltip: tooltip,
+        onPressed: onPressed,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        padding: const EdgeInsets.all(10),
+        icon: Icon(icon, size: 24, color: AppColors.textPrimary),
+      ),
     );
   }
 }

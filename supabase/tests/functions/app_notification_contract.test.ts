@@ -40,3 +40,7 @@ test('keeps dated feedback navigation unchanged', () => {
     '/home/question?date=2026-07-25',
   );
 });
+
+test('routes memory review notifications to the memory screen', () => {
+  assert.equal(routeFor('ai_memory_review_ready', null), '/ai/memories');
+});

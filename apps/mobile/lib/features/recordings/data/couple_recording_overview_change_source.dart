@@ -24,6 +24,8 @@ class SupabaseCoupleRecordingOverviewChangeSource
     'couple_recording_slot_settings',
     'couple_recording_slots',
     'couple_recording_slot_placements',
+    'couple_current_recording_receipts',
+    'couple_recording_slot_receipts',
   ];
 
   @override

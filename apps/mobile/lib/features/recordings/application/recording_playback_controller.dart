@@ -78,6 +78,8 @@ class _JustAudioRecordingAudioPlayer implements RecordingAudioPlayer {
 
 enum RecordingPlaybackSurface { home, library }
 
+enum RecordingPlaybackAction { started, paused, ignored }
+
 class RecordingPlaybackTarget {
   const RecordingPlaybackTarget._({required this.key, required this.audioUrl});
 
@@ -172,9 +174,9 @@ class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
     return const RecordingPlaybackState.idle();
   }
 
-  Future<void> toggle(RecordingPlaybackTarget target) async {
+  Future<RecordingPlaybackAction> toggle(RecordingPlaybackTarget target) async {
     if (_isHandlingToggle) {
-      return;
+      return RecordingPlaybackAction.ignored;
     }
 
     _isHandlingToggle = true;
@@ -185,26 +187,27 @@ class RecordingPlaybackController extends Notifier<RecordingPlaybackState> {
         await _player.stop();
         await _player.load(target.audioUrl);
         if (!ref.mounted) {
-          return;
+          return RecordingPlaybackAction.ignored;
         }
 
         state = state.copyWith(activeTargetKey: target.key);
         await _startPlayback();
-        return;
+        return RecordingPlaybackAction.started;
       }
 
       if (_player.completed) {
         await _player.seek(Duration.zero);
         await _startPlayback();
-        return;
+        return RecordingPlaybackAction.started;
       }
 
       if (_player.playing) {
         await _player.pause();
-        return;
+        return RecordingPlaybackAction.paused;
       }
 
       await _startPlayback();
+      return RecordingPlaybackAction.started;
     } finally {
       _isHandlingToggle = false;
       if (ref.mounted) {

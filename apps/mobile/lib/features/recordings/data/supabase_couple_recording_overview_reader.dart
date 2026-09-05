@@ -26,9 +26,18 @@ class SupabaseCoupleRecordingOverviewReader
     _support.ensureConfigured();
 
     try {
-      final currentData = await _support.client
-          .rpc('get_current_couple_recording')
-          .timeout(AppConfig.supabaseRpcTimeout);
+      final responses = await Future.wait([
+        _support.client
+            .rpc('get_current_couple_recording')
+            .timeout(AppConfig.supabaseRpcTimeout),
+        _support.client
+            .rpc('list_couple_recording_slots')
+            .timeout(AppConfig.supabaseRpcTimeout),
+        _support.client
+            .rpc('get_couple_recording_attention_state')
+            .timeout(AppConfig.supabaseRpcTimeout),
+      ]);
+      final currentData = responses[0];
       final currentRow = _support.asSingleRow(currentData);
       if (currentRow == null) {
         throw const CoupleRecordingRepositoryException(
@@ -36,19 +45,24 @@ class SupabaseCoupleRecordingOverviewReader
         );
       }
 
-      final slotData = await _support.client
-          .rpc('list_couple_recording_slots')
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final slotRows = _support.asRows(slotData);
+      final slotRows = _support.asRows(responses[1]);
+      final attentionRow = _support.asSingleRow(responses[2]);
+      final unseenSlotIds = ((attentionRow?['unseen_slot_ids'] as List?) ?? [])
+          .map((value) => value.toString())
+          .toSet();
+      final currentReadRow = Map<String, dynamic>.from(currentRow)
+        ..['current_is_unseen'] =
+            attentionRow?['current_is_unseen'] as bool? ?? false;
 
       final currentRecording = await _readMapper.mapCurrentRecording(
-        currentRow,
+        currentReadRow,
         resolveAudioUrl: _support.createRecordingSignedUrl,
       );
       final savedSlots = await Future.wait(
         slotRows.map(
           (row) => _readMapper.mapSavedSlot(
-            row,
+            Map<String, dynamic>.from(row)
+              ..['is_unseen'] = unseenSlotIds.contains(row['slot_id']),
             resolveAudioUrl: _support.createRecordingSignedUrl,
             resolveArtworkUrl: _support.createArtworkSignedUrl,
           ),

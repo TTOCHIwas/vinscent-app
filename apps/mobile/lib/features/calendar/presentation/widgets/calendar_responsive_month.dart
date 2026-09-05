@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../story_loops/application/story_loop_month_summary_provider.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
+import '../../../couple/application/couple_current_date_provider.dart';
 import '../../application/couple_default_calendar_event_resolver.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../data/calendar_cell_preview_mode.dart';
@@ -60,6 +61,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentDate = ref.watch(coupleCurrentDateProvider);
     final summaryByDate = previewMode?.includesCards == true
         ? ref
               .watch(storyLoopMonthSummaryProvider(visibleMonth))
@@ -110,6 +112,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         summaryByDate: summaryByDate,
         eventsByDate: eventsByDate,
         defaultEventLabels: defaultEventLabels,
+        currentDate: currentDate,
         onDatePressed: onDatePressed,
         metrics: metrics,
         onSwipeRight: onSwipeRight,
@@ -135,6 +138,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.summaryByDate,
     required this.eventsByDate,
     required this.defaultEventLabels,
+    required this.currentDate,
     required this.onDatePressed,
     required this.metrics,
     required this.onSwipeRight,
@@ -161,6 +165,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final Map<DateTime, StoryLoopMonthSummaryDay> summaryByDate;
   final Map<DateTime, List<CoupleCalendarEvent>> eventsByDate;
   final Map<DateTime, String> defaultEventLabels;
+  final DateTime currentDate;
   final ValueChanged<DateTime> onDatePressed;
   final CalendarMonthLayoutMetrics metrics;
   final VoidCallback onSwipeRight;
@@ -298,6 +303,13 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                                     days[index],
                                     selectedDate!,
                                   ),
+                              isToday:
+                                  isSameCalendarMonth(
+                                    days[index],
+                                    visibleMonth,
+                                  ) &&
+                                  _isEnabled(days[index]) &&
+                                  isSameCalendarDate(days[index], currentDate),
                               summary:
                                   summaryByDate[calendarDateOnly(days[index])],
                               events:
@@ -362,6 +374,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
         defaultEventLabels != oldDelegate.defaultEventLabels ||
+        currentDate != oldDelegate.currentDate ||
         metrics.expandedExtent != oldDelegate.metrics.expandedExtent ||
         metrics.standardExtent != oldDelegate.metrics.standardExtent ||
         detailHeaderExtent != oldDelegate.detailHeaderExtent ||
@@ -419,6 +432,7 @@ class _DateCell extends StatelessWidget {
     required this.isCurrentMonth,
     required this.isEnabled,
     required this.isSelected,
+    required this.isToday,
     required this.summary,
     required this.events,
     required this.defaultEventLabel,
@@ -430,6 +444,7 @@ class _DateCell extends StatelessWidget {
   final bool isCurrentMonth;
   final bool isEnabled;
   final bool isSelected;
+  final bool isToday;
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? defaultEventLabel;
@@ -444,6 +459,7 @@ class _DateCell extends StatelessWidget {
       selected: isSelected,
       label: [
         '${date.day}일',
+        if (isToday) '오늘',
         ?defaultEventLabel,
         if (events.isNotEmpty) '일정 ${events.length}개',
         if ((summary?.cardCount ?? 0) > 0) '카드 ${summary!.cardCount}개',
@@ -455,6 +471,7 @@ class _DateCell extends StatelessWidget {
           date: date,
           textColor: _textColor,
           isSelected: isSelected,
+          isToday: isToday,
           summary: isCurrentMonth ? summary : null,
           events: isCurrentMonth ? events : const [],
           defaultEventLabel: isCurrentMonth ? defaultEventLabel : null,
