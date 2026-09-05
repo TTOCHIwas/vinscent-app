@@ -23,8 +23,8 @@ final calendarAttentionStateProvider = Provider<CalendarAttentionState>((ref) {
     return const CalendarAttentionState.empty();
   }
 
-  final customEvents = ref
-      .watch(coupleCalendarEventDateProvider(today))
+  final hasCustomEvent = ref
+      .watch(coupleCalendarEventHasOccurrenceProvider(today))
       .asData
       ?.value;
   final birthdays = ref.watch(coupleMemberBirthdayProvider).asData?.value;
@@ -37,7 +37,6 @@ final calendarAttentionStateProvider = Provider<CalendarAttentionState>((ref) {
         );
 
   return CalendarAttentionState(
-    hasTodayEvent:
-        (customEvents?.isNotEmpty ?? false) || defaultEvents.isNotEmpty,
+    hasTodayEvent: (hasCustomEvent ?? false) || defaultEvents.isNotEmpty,
   );
 });

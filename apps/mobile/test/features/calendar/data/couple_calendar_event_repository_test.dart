@@ -66,6 +66,9 @@ class _FakeEventGateway implements CoupleCalendarEventGateway {
   String? lastArtworkRevision;
 
   @override
+  Future<bool> hasOccurrenceOn(DateTime date) async => false;
+
+  @override
   Future<void> deleteEvent({
     required String eventId,
     required int expectedRevision,

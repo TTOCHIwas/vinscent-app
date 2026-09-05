@@ -21,6 +21,32 @@ class SupabaseCoupleCalendarEventGateway implements CoupleCalendarEventGateway {
   final CoupleCalendarEventMapper _mapper;
 
   @override
+  Future<bool> hasOccurrenceOn(DateTime date) async {
+    _ensureConfigured();
+
+    try {
+      final data = await _client
+          .rpc(
+            'has_couple_calendar_event_occurrence',
+            params: {'target_date': formatCalendarDate(date)},
+          )
+          .timeout(AppConfig.supabaseRpcTimeout);
+      if (data is bool) {
+        return data;
+      }
+      throw const CoupleCalendarEventRepositoryException(
+        CoupleCalendarEventFailureReason.unknown,
+      );
+    } on TimeoutException {
+      throw const CoupleCalendarEventRepositoryException(
+        CoupleCalendarEventFailureReason.requestTimeout,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCalendarEventPostgrestError(error);
+    }
+  }
+
+  @override
   Future<List<CoupleCalendarEvent>> fetchOccurrences({
     required DateTime startDate,
     required DateTime endDate,

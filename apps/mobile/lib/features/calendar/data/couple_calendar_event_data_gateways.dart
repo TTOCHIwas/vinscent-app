@@ -4,6 +4,8 @@ import 'couple_calendar_event.dart';
 import 'couple_calendar_event_repository_contract.dart';
 
 abstract interface class CoupleCalendarEventGateway {
+  Future<bool> hasOccurrenceOn(DateTime date);
+
   Future<List<CoupleCalendarEvent>> fetchOccurrences({
     required DateTime startDate,
     required DateTime endDate,
