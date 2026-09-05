@@ -5,9 +5,7 @@ void main() {
   group('foreground refresh policy', () {
     test('refreshes calendar only for calendar notifications', () {
       expect(
-        shouldRefreshCalendarForPush(const {
-          'type': 'calendar_event_reminder',
-        }),
+        shouldRefreshCalendarForPush(const {'type': 'calendar_event_reminder'}),
         isTrue,
       );
       expect(
@@ -36,9 +34,7 @@ void main() {
         isTrue,
       );
       expect(
-        shouldRefreshStoryLoopForPush(const {
-          'type': 'recording_activity',
-        }),
+        shouldRefreshStoryLoopForPush(const {'type': 'recording_activity'}),
         isFalse,
       );
     });

@@ -1,5 +1,21 @@
 import '../../../core/date/app_date_policy.dart';
 
+bool shouldRefreshCalendarForPush(Map<String, dynamic> data) {
+  return data['type'] == 'calendar_event_reminder';
+}
+
+bool shouldRefreshStoryLoopForPush(Map<String, dynamic> data) {
+  final type = data['type'];
+  if (type == 'ai_update') {
+    return data['event_type'] == 'ai_feedback_ready';
+  }
+  return type == 'partner_answer_completed' ||
+      type == 'daily_question_delivery' ||
+      type == 'unanswered_reminder' ||
+      type == 'question_generated' ||
+      type == 'partner_story_card_uploaded';
+}
+
 String? resolvePushNotificationLocation(Map<String, dynamic> data) {
   final eventType = data['event_type'];
   if (eventType == 'ai_memory_review_ready') {

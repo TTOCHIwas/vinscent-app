@@ -94,12 +94,16 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
         message,
       ) {
-        ref
-            .read(storyLoopRealtimeControllerProvider.notifier)
-            .refreshReadModels();
-        ref
-            .read(coupleCalendarEventRealtimeControllerProvider.notifier)
-            .refreshReadModels();
+        if (shouldRefreshStoryLoopForPush(message.data)) {
+          ref
+              .read(storyLoopRealtimeControllerProvider.notifier)
+              .refreshReadModels();
+        }
+        if (shouldRefreshCalendarForPush(message.data)) {
+          ref
+              .read(coupleCalendarEventRealtimeControllerProvider.notifier)
+              .refreshReadModels();
+        }
         if (_isAiNotification(message.data)) {
           ref.invalidate(aiLearningControllerProvider);
           ref.invalidate(aiMemoryAttentionControllerProvider);
@@ -324,6 +328,8 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       });
       ref.listen(coupleCalendarEventRevisionProvider, (_, _) {
         _scheduleWidgetSync();
+      });
+      ref.listen(coupleCalendarEventRemoteRevisionProvider, (_, _) {
         unawaited(
           ref
               .read(deviceCalendarSyncCoordinatorProvider)

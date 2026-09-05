@@ -13,6 +13,11 @@ final coupleCalendarEventRevisionProvider =
       CoupleCalendarEventRevision.new,
     );
 
+final coupleCalendarEventRemoteRevisionProvider =
+    NotifierProvider<CoupleCalendarEventRevision, int>(
+      CoupleCalendarEventRevision.new,
+    );
+
 class CoupleCalendarEventRevision extends Notifier<int> {
   @override
   int build() => 0;
@@ -117,6 +122,9 @@ class CoupleCalendarEventRealtimeController extends AsyncNotifier<void> {
     _refreshTimer = Timer(_refreshDebounce, () {
       _refreshTimer = null;
       refreshReadModels();
+      if (ref.mounted) {
+        ref.read(coupleCalendarEventRemoteRevisionProvider.notifier).advance();
+      }
     });
   }
 }
