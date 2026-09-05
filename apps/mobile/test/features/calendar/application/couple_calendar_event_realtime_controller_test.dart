@@ -11,7 +11,7 @@ import 'package:vinscent/features/couple/application/couple_controller.dart';
 import '../../../support/couple_fixtures.dart';
 
 void main() {
-  test('coalesces a burst of calendar changes into one revision', () async {
+  test('separates local refreshes from remote device-sync revisions', () async {
     final changeSource = _FakeCalendarEventChangeSource();
     final container = ProviderContainer(
       overrides: [
@@ -27,16 +27,24 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(coupleCalendarEventRealtimeControllerProvider.future);
+    container
+        .read(coupleCalendarEventRealtimeControllerProvider.notifier)
+        .refreshReadModels();
+
+    expect(container.read(coupleCalendarEventRevisionProvider), 1);
+    expect(container.read(coupleCalendarEventRemoteRevisionProvider), 0);
+
     changeSource.emit();
     changeSource.emit();
 
     await _waitUntil(
-      () => container.read(coupleCalendarEventRevisionProvider) == 1,
+      () => container.read(coupleCalendarEventRemoteRevisionProvider) == 1,
     );
     await Future<void>.delayed(const Duration(milliseconds: 250));
 
     expect(changeSource.watchedCoupleId, 'couple-id');
-    expect(container.read(coupleCalendarEventRevisionProvider), 1);
+    expect(container.read(coupleCalendarEventRevisionProvider), 2);
+    expect(container.read(coupleCalendarEventRemoteRevisionProvider), 1);
   });
 }
 

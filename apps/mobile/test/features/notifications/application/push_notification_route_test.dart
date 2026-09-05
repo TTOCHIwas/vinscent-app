@@ -2,6 +2,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/notifications/application/push_notification_route.dart';
 
 void main() {
+  group('foreground refresh policy', () {
+    test('refreshes calendar only for calendar notifications', () {
+      expect(
+        shouldRefreshCalendarForPush(const {
+          'type': 'calendar_event_reminder',
+        }),
+        isTrue,
+      );
+      expect(
+        shouldRefreshCalendarForPush(const {
+          'type': 'partner_story_card_uploaded',
+        }),
+        isFalse,
+      );
+      expect(
+        shouldRefreshCalendarForPush(const {'type': 'ai_update'}),
+        isFalse,
+      );
+    });
+
+    test('refreshes story data only for story and question notifications', () {
+      expect(
+        shouldRefreshStoryLoopForPush(const {
+          'type': 'partner_story_card_uploaded',
+        }),
+        isTrue,
+      );
+      expect(
+        shouldRefreshStoryLoopForPush(const {
+          'type': 'partner_answer_completed',
+        }),
+        isTrue,
+      );
+      expect(
+        shouldRefreshStoryLoopForPush(const {
+          'type': 'recording_activity',
+        }),
+        isFalse,
+      );
+    });
+  });
+
   group('resolvePushNotificationLocation', () {
     test('uses an allow-listed explicit route', () {
       final location = resolvePushNotificationLocation({
