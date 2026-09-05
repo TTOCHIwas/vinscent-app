@@ -27,6 +27,7 @@ import 'calendar_month_layout_metrics.dart';
 import 'calendar_step_scroll_controller.dart';
 import 'calendar_step_scroll_physics.dart';
 import 'calendar_viewport_motion_controller.dart';
+import 'widgets/calendar_adjacent_month_prefetch.dart';
 import 'widgets/calendar_cell_preview_filter_button.dart';
 import 'widgets/calendar_detail_date_header.dart';
 import 'widgets/calendar_responsive_month.dart';
@@ -313,6 +314,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 },
               ),
             ),
+            if (previewMode != null)
+              CalendarAdjacentMonthPrefetch(
+                visibleMonth: _visibleMonth,
+                relationshipStartDate: couple.relationshipStartDate!,
+                previewMode: previewMode,
+              ),
           ],
         );
         return AppInitialReveal(
