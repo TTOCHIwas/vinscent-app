@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_confirmation_dialog.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
@@ -131,11 +132,12 @@ void main() {
   }
 
   for (final layout in [
-    (size: const Size(360, 800), scale: 1.0, stacked: false),
-    (size: const Size(320, 568), scale: 2.0, stacked: true),
-    (size: const Size(320, 568), scale: 3.0, stacked: true),
-    (size: const Size(640, 360), scale: 2.0, stacked: true),
-    (size: const Size(900, 1200), scale: 1.0, stacked: false),
+    (size: const Size(360, 800), scale: 0.8),
+    (size: const Size(360, 800), scale: 1.0),
+    (size: const Size(320, 568), scale: 2.0),
+    (size: const Size(320, 568), scale: 3.0),
+    (size: const Size(640, 360), scale: 2.0),
+    (size: const Size(900, 1200), scale: 1.0),
   ]) {
     testWidgets('keeps actions readable at $layout', (tester) async {
       await tester.binding.setSurfaceSize(layout.size);
@@ -167,13 +169,11 @@ void main() {
         expect(surface.contains(button.topLeft), isTrue);
         expect(surface.contains(button.bottomRight), isTrue);
       }
-      if (layout.stacked) {
-        expect(cancel.bottom, lessThanOrEqualTo(confirm.top));
-      } else {
-        expect(cancel.center.dy, closeTo(confirm.center.dy, 0.01));
-        expect(cancel.right, lessThanOrEqualTo(confirm.left));
-      }
-      final label = tester.element(find.text('수정 버리기'));
+      expect(cancel.bottom, lessThanOrEqualTo(confirm.top));
+      expect(cancel.center.dx, closeTo(confirm.center.dx, 0.01));
+      final label = tester.element(
+        find.byKey(const Key('app-confirmation-confirm')),
+      );
       expect(MediaQuery.textScalerOf(label).scale(16), 16 * layout.scale);
       expect(tester.takeException(), isNull);
       await tester.tap(find.byKey(const Key('app-confirmation-cancel')));
@@ -181,6 +181,83 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
   }
+
+  testWidgets('hugs short content and grows with content and text scale', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _openConfirmation(
+      tester,
+      title: '안내',
+      message: '확인했어요.',
+      cancelLabel: '취소',
+      confirmLabel: '확인',
+    );
+    final compact = _dialogRect(tester);
+    expect(compact.width, lessThan(280));
+    await tester.tap(find.byKey(const Key('app-confirmation-cancel')));
+    await tester.pumpAndSettle();
+
+    await _openConfirmation(
+      tester,
+      title: '안내',
+      message: '확인했어요.',
+      cancelLabel: '취소',
+      confirmLabel: '확인',
+      textScale: 2,
+    );
+    final enlarged = _dialogRect(tester);
+    expect(enlarged.width, greaterThan(compact.width));
+    expect(enlarged.height, greaterThan(compact.height));
+    await tester.tap(find.byKey(const Key('app-confirmation-cancel')));
+    await tester.pumpAndSettle();
+
+    await _openConfirmation(tester);
+    final longer = _dialogRect(tester);
+    expect(longer.width, greaterThan(compact.width));
+    expect(longer.width, lessThanOrEqualTo(400));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wraps title, body and action labels at word boundaries', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const title = '저장하지 않고 나갈까요?';
+    const message = '저장하지 않은 변경 내용은 사라져요.';
+    const confirmLabel = '재연결 초대 만들기';
+    await _openConfirmation(
+      tester,
+      title: title,
+      message: message,
+      confirmLabel: confirmLabel,
+      textScale: 2,
+    );
+
+    for (final original in [title, message, confirmLabel]) {
+      final finder = find.byWidgetPredicate(
+        (widget) => widget is Text && widget.semanticsLabel == original,
+      );
+      expect(finder, findsOneWidget);
+      final displayed = tester.widget<Text>(finder).data!;
+      expect(displayed, contains('\n'));
+      expect(displayed.split(RegExp(r'\s+')), original.split(' '));
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: finder, matching: find.byType(RichText)),
+      );
+      for (final word in RegExp(r'\S+').allMatches(displayed)) {
+        final boxes = paragraph.getBoxesForSelection(
+          TextSelection(baseOffset: word.start, extentOffset: word.end),
+        );
+        expect(boxes.map((box) => box.top).toSet(), hasLength(1));
+      }
+      expect(paragraph.didExceedMaxLines, isFalse);
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('long account warning scrolls without hiding actions', (
     tester,
@@ -207,7 +284,10 @@ Future<void> _openConfirmation(
   WidgetTester tester, {
   double textScale = 1,
   bool isDestructive = true,
+  String title = '수정 내용을 버릴까요?',
   String message = '저장하지 않은 변경 내용이 사라져요.',
+  String confirmLabel = '수정 버리기',
+  String cancelLabel = '계속 수정',
   ValueChanged<bool>? onResult,
 }) async {
   await tester.pumpWidget(
@@ -225,10 +305,10 @@ Future<void> _openConfirmation(
             onPressed: () async {
               final result = await showAppConfirmationDialog(
                 context: context,
-                title: '수정 내용을 버릴까요?',
+                title: title,
                 message: message,
-                confirmLabel: '수정 버리기',
-                cancelLabel: '계속 수정',
+                confirmLabel: confirmLabel,
+                cancelLabel: cancelLabel,
                 isDestructive: isDestructive,
               );
               onResult?.call(result);
@@ -242,6 +322,10 @@ Future<void> _openConfirmation(
   await tester.tap(find.text('열기'));
   await tester.pumpAndSettle();
 }
+
+Rect _dialogRect(WidgetTester tester) => tester.getRect(
+  find.descendant(of: find.byType(Dialog), matching: find.byType(Material)).first,
+);
 
 class _RouteObserver extends NavigatorObserver {
   final List<Route<dynamic>> pushedRoutes = [];
