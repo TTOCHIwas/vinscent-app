@@ -782,7 +782,7 @@ void main() {
   );
 
   testWidgets(
-    'all mode loads month previews and selected-day events independently',
+    'all mode reuses month events for the selected-day detail',
     (tester) async {
       final date = DateTime(2026, 5, 10);
       final eventRequests = <CalendarEventDateRange>[];
@@ -799,7 +799,6 @@ void main() {
 
       expect(eventRequests, [
         (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
-        (startDate: date, endDate: date),
       ]);
       expect(find.text('함께 걷기'), findsOneWidget);
     },

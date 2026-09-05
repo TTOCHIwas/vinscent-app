@@ -55,8 +55,14 @@ void main() {
     expect(repository.requestedRanges, isEmpty);
   });
 
-  test('loads only the selected date for a detail-only request', () async {
-    final repository = _FakeCalendarEventRepository();
+  test('reuses the month result and filters only the selected date', () async {
+    final selectedDate = DateTime(2026, 5, 10);
+    final repository = _FakeCalendarEventRepository(
+      events: [
+        _calendarEvent(id: 'selected', date: selectedDate),
+        _calendarEvent(id: 'other', date: DateTime(2026, 5, 11)),
+      ],
+    );
     final container = ProviderContainer(
       overrides: [
         coupleControllerProvider.overrideWithBuild(
@@ -70,18 +76,22 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(
+    final events = await container.read(
       coupleCalendarEventDateProvider(DateTime(2026, 5, 10, 23, 30)).future,
     );
 
     expect(repository.requestedRanges, [
-      (DateTime(2026, 5, 10), DateTime(2026, 5, 10)),
+      (DateTime(2026, 5, 1), DateTime(2026, 5, 31)),
     ]);
+    expect(events.map((event) => event.id), ['selected']);
   });
 }
 
 class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
+  _FakeCalendarEventRepository({this.events = const []});
+
   final requestedRanges = <(DateTime, DateTime)>[];
+  final List<CoupleCalendarEvent> events;
 
   @override
   Future<void> deleteEvent({
@@ -103,7 +113,7 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
     required DateTime endDate,
   }) async {
     requestedRanges.add((startDate, endDate));
-    return const [];
+    return events;
   }
 
   @override
@@ -115,4 +125,25 @@ class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
   }) {
     throw UnimplementedError();
   }
+}
+
+CoupleCalendarEvent _calendarEvent({
+  required String id,
+  required DateTime date,
+}) {
+  return CoupleCalendarEvent(
+    id: id,
+    coupleId: 'couple-id',
+    title: '일정',
+    eventDate: date,
+    occurrenceDate: date,
+    repeatRule: CoupleCalendarEventRepeatRule.none,
+    memo: null,
+    revision: 1,
+    createdByUserId: 'user-a',
+    updatedByUserId: 'user-a',
+    createdAt: DateTime(2026, 5, 1),
+    updatedAt: DateTime(2026, 5, 1),
+    reminder: const CoupleCalendarEventReminder.disabled(),
+  );
 }
