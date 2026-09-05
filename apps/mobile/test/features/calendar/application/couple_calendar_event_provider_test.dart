@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/calendar/application/couple_calendar_event_provider.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
+import 'package:vinscent/features/calendar/data/couple_calendar_event_data_gateways.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 
@@ -85,6 +86,31 @@ void main() {
     ]);
     expect(events.map((event) => event.id), ['selected']);
   });
+
+  test('checks calendar attention without loading event rows', () async {
+    final gateway = _FakeCalendarEventGateway(hasOccurrence: true);
+    final container = ProviderContainer(
+      overrides: [
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => activeCouple(
+            relationshipStartDate: DateTime(2026, 5, 1),
+            currentDate: DateTime(2026, 5, 10),
+          ),
+        ),
+        coupleCalendarEventGatewayProvider.overrideWithValue(gateway),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final hasOccurrence = await container.read(
+      coupleCalendarEventHasOccurrenceProvider(
+        DateTime(2026, 5, 10, 23, 30),
+      ).future,
+    );
+
+    expect(hasOccurrence, isTrue);
+    expect(gateway.requestedDates, [DateTime(2026, 5, 10)]);
+  });
 }
 
 class _FakeCalendarEventRepository implements CoupleCalendarEventRepository {
@@ -146,4 +172,46 @@ CoupleCalendarEvent _calendarEvent({
     updatedAt: DateTime(2026, 5, 1),
     reminder: const CoupleCalendarEventReminder.disabled(),
   );
+}
+
+class _FakeCalendarEventGateway implements CoupleCalendarEventGateway {
+  _FakeCalendarEventGateway({required this.hasOccurrence});
+
+  final bool hasOccurrence;
+  final requestedDates = <DateTime>[];
+
+  @override
+  Future<bool> hasOccurrenceOn(DateTime date) async {
+    requestedDates.add(date);
+    return hasOccurrence;
+  }
+
+  @override
+  Future<void> deleteEvent({
+    required String eventId,
+    required int expectedRevision,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CoupleCalendarEvent?> fetchEvent(String eventId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<CoupleCalendarEvent>> fetchOccurrences({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CoupleCalendarEvent> saveEvent({
+    required CoupleCalendarEventSaveRequest request,
+    required String? artworkRevision,
+  }) {
+    throw UnimplementedError();
+  }
 }
