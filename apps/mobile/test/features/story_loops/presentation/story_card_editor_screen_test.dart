@@ -38,6 +38,8 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('수정 내용을 버릴까요?'), findsOneWidget);
       expect(find.text('저장하지 않은 변경 내용이 사라져요.'), findsOneWidget);
+      expect(find.text('버리기'), findsOneWidget);
+      expect(find.text('수정 버리기'), findsNothing);
       await tester.tap(
         find.byKey(Key('app-confirmation-${confirm ? 'confirm' : 'cancel'}')),
       );

@@ -131,6 +131,52 @@ void main() {
     });
   }
 
+  testWidgets('centers copy and separates full-width action rows', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _openConfirmation(tester);
+
+    final surface = _dialogRect(tester);
+    final title = tester.widget<Text>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            widget.semanticsLabel == '수정 내용을 버릴까요?',
+      ),
+    );
+    final message = tester.widget<Text>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            widget.semanticsLabel == '저장하지 않은 변경 내용이 사라져요.',
+      ),
+    );
+    final confirm = tester.getRect(
+      find.byKey(const Key('app-confirmation-confirm')),
+    );
+    final cancel = tester.getRect(
+      find.byKey(const Key('app-confirmation-cancel')),
+    );
+    final confirmDivider = tester.getRect(
+      find.byKey(const Key('app-confirmation-divider-before-confirm')),
+    );
+    final cancelDivider = tester.getRect(
+      find.byKey(const Key('app-confirmation-divider-before-cancel')),
+    );
+
+    expect(title.textAlign, TextAlign.center);
+    expect(message.textAlign, TextAlign.center);
+    expect(confirm.width, closeTo(surface.width, 0.01));
+    expect(cancel.width, closeTo(surface.width, 0.01));
+    expect(confirmDivider.width, closeTo(surface.width, 0.01));
+    expect(cancelDivider.width, closeTo(surface.width, 0.01));
+    expect(confirmDivider.bottom, lessThanOrEqualTo(confirm.top));
+    expect(confirm.bottom, lessThanOrEqualTo(cancelDivider.top));
+    expect(cancelDivider.bottom, lessThanOrEqualTo(cancel.top));
+  });
+
   for (final layout in [
     (size: const Size(360, 800), scale: 0.8),
     (size: const Size(360, 800), scale: 1.0),
@@ -169,8 +215,10 @@ void main() {
         expect(surface.contains(button.topLeft), isTrue);
         expect(surface.contains(button.bottomRight), isTrue);
       }
-      expect(cancel.bottom, lessThanOrEqualTo(confirm.top));
+      expect(confirm.bottom, lessThanOrEqualTo(cancel.top));
       expect(cancel.center.dx, closeTo(confirm.center.dx, 0.01));
+      expect(confirm.width, closeTo(surface.width, 0.01));
+      expect(cancel.width, closeTo(surface.width, 0.01));
       final label = tester.element(
         find.byKey(const Key('app-confirmation-confirm')),
       );
@@ -182,7 +230,7 @@ void main() {
     });
   }
 
-  testWidgets('hugs short content and grows with content and text scale', (
+  testWidgets('uses a stable minimum width and grows with content scale', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
@@ -196,7 +244,7 @@ void main() {
       confirmLabel: '확인',
     );
     final compact = _dialogRect(tester);
-    expect(compact.width, lessThan(280));
+    expect(compact.width, closeTo(280, 0.01));
     await tester.tap(find.byKey(const Key('app-confirmation-cancel')));
     await tester.pumpAndSettle();
 
@@ -209,7 +257,7 @@ void main() {
       textScale: 2,
     );
     final enlarged = _dialogRect(tester);
-    expect(enlarged.width, greaterThan(compact.width));
+    expect(enlarged.width, greaterThanOrEqualTo(compact.width));
     expect(enlarged.height, greaterThan(compact.height));
     await tester.tap(find.byKey(const Key('app-confirmation-cancel')));
     await tester.pumpAndSettle();
@@ -286,7 +334,7 @@ Future<void> _openConfirmation(
   bool isDestructive = true,
   String title = '수정 내용을 버릴까요?',
   String message = '저장하지 않은 변경 내용이 사라져요.',
-  String confirmLabel = '수정 버리기',
+  String confirmLabel = '버리기',
   String cancelLabel = '계속 수정',
   ValueChanged<bool>? onResult,
 }) async {
