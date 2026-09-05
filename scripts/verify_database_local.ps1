@@ -19,16 +19,31 @@ $cleanupFailure = $null
 function Invoke-SupabaseChecked {
   param([string[]]$ArgumentList)
 
-  & $npx "--yes" $supabasePackage @ArgumentList
-  if ($LASTEXITCODE -ne 0) {
-    throw "Supabase command failed with exit code ${LASTEXITCODE}: $($ArgumentList -join ' ')"
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "Continue"
+    & $npx "--yes" $supabasePackage @ArgumentList
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($exitCode -ne 0) {
+    throw "Supabase command failed with exit code ${exitCode}: $($ArgumentList -join ' ')"
   }
 }
 
 Push-Location $repoRoot
 try {
-  & $npx "--yes" $supabasePackage "status" "--output" "json" *> $null
-  $stackWasRunning = $LASTEXITCODE -eq 0
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "Continue"
+    & $npx "--yes" $supabasePackage "status" "--output" "json" *> $null
+    $statusExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  $stackWasRunning = $statusExitCode -eq 0
 
   if (-not $stackWasRunning) {
     Invoke-SupabaseChecked @("db", "start")
