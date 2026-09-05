@@ -534,6 +534,64 @@ void main() {
   );
 
   testWidgets(
+    'prefetches adjacent month metadata and reuses it on navigation',
+    (tester) async {
+      final repository = FakeStoryLoopReadRepository();
+      final eventRequests = <CalendarEventDateRange>[];
+      final nextMonthEvent = calendarEvent(
+        id: 'july-event',
+        title: '미리 준비된 일정',
+        date: DateTime(2026, 7, 10),
+      );
+
+      await pumpCalendar(
+        tester,
+        repository: repository,
+        today: DateTime(2026, 7, 15),
+        relationshipStartDate: DateTime(2026, 5, 1),
+        initialDate: DateTime(2026, 6, 10),
+        calendarEvents: [nextMonthEvent],
+        calendarEventRequests: eventRequests,
+      );
+
+      expect(
+        repository.requestedMonths,
+        unorderedEquals([
+          DateTime(2026, 5),
+          DateTime(2026, 6),
+          DateTime(2026, 7),
+        ]),
+      );
+      expect(
+        eventRequests,
+        unorderedEquals([
+          (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+          (startDate: DateTime(2026, 6, 1), endDate: DateTime(2026, 6, 30)),
+          (startDate: DateTime(2026, 7, 1), endDate: DateTime(2026, 7, 31)),
+        ]),
+      );
+
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('calendar-event-indicator-july-event')),
+        findsOneWidget,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        eventRequests,
+        unorderedEquals([
+          (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+          (startDate: DateTime(2026, 6, 1), endDate: DateTime(2026, 6, 30)),
+          (startDate: DateTime(2026, 7, 1), endDate: DateTime(2026, 7, 31)),
+          (startDate: DateTime(2026, 8, 1), endDate: DateTime(2026, 8, 31)),
+        ]),
+      );
+    },
+  );
+
+  testWidgets(
     'slides horizontal calendar changes while keeping weekdays fixed',
     (tester) async {
       await pumpCalendar(tester, repository: FakeStoryLoopReadRepository());
@@ -811,6 +869,7 @@ void main() {
 
     expect(eventRequests, [
       (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+      (startDate: DateTime(2026, 6, 1), endDate: DateTime(2026, 6, 30)),
     ]);
     expect(find.text('함께 걷기'), findsOneWidget);
   });
@@ -863,6 +922,7 @@ void main() {
       expect(repository.requestedMonths, isEmpty);
       expect(eventRequests, [
         (startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
+        (startDate: DateTime(2026, 6, 1), endDate: DateTime(2026, 6, 30)),
       ]);
     },
   );
