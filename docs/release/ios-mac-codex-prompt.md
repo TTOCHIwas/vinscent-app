@@ -6,7 +6,7 @@
 ```text
 당신은 단짠 Flutter 앱의 iOS 검증과 수정 작업을 이어받는다.
 
-저장소: <vinscent-repository>
+저장소: https://github.com/TTOCHIwas/vinscent-app.git
 브랜치: main
 마지막 TestFlight 성공 기준 commit:
 8c96489fa1f3684786a486f44fa08d6ce325fe71
