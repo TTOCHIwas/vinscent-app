@@ -18,6 +18,37 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_dr
 import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
+  for (final confirm in [false, true]) {
+    testWidgets('discard dialog preserves saved card with confirm=$confirm', (
+      tester,
+    ) async {
+      await _pumpEditor(tester, draft: _existingCaptionDraft());
+      await _openCaptionInput(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('story-card-caption-input')),
+        'changed caption',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('story-card-caption-input-done')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('뒤로가기'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('수정 내용을 버릴까요?'), findsOneWidget);
+      expect(find.text('저장하지 않은 변경 내용이 사라져요.'), findsOneWidget);
+      await tester.tap(
+        find.byKey(Key('app-confirmation-${confirm ? 'confirm' : 'cancel'}')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(StoryCardEditorScreen), findsOneWidget);
+      expect(_captionFromPainter(tester), confirm ? 'center' : 'changed caption');
+    });
+  }
+
   for (final screen in [
     const Size(360, 800),
     const Size(900, 1200),
