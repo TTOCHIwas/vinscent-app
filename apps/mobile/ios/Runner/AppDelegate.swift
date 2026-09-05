@@ -1,6 +1,20 @@
 import Flutter
 import UIKit
 
+enum VinscentDeviceCalendarBridgeRegistration {
+  static func register(
+    with registrar: FlutterPluginRegistrar?,
+    registerBridge: (FlutterPluginRegistrar) -> Void = { registrar in
+      VinscentDeviceCalendarBridge.register(with: registrar)
+    }
+  ) {
+    guard let registrar else {
+      return
+    }
+    registerBridge(registrar)
+  }
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(
@@ -24,9 +38,10 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    let registrar = engineBridge.pluginRegistry.registrar(
-      forPlugin: "VinscentDeviceCalendarBridge"
+    VinscentDeviceCalendarBridgeRegistration.register(
+      with: engineBridge.pluginRegistry.registrar(
+        forPlugin: "VinscentDeviceCalendarBridge"
+      )
     )
-    VinscentDeviceCalendarBridge.register(with: registrar)
   }
 }
