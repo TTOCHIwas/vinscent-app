@@ -531,7 +531,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('삭제'));
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
     await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
     await tester.pumpAndSettle();
 

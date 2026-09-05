@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_controller.dart';
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/presentation/widgets/app_page_header.dart';
 import '../../../core/presentation/widgets/app_page_layout.dart';
@@ -409,7 +409,7 @@ class _CoupleCalendarEventEditorScreenState
     if (!_drawingController.canClear) {
       return;
     }
-    final shouldClear = await showAppConfirmationSheet(
+    final shouldClear = await showAppConfirmationDialog(
       context: context,
       title: '그림을 모두 지울까요?',
       confirmLabel: '삭제',

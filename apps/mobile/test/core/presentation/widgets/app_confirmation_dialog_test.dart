@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vinscent/core/presentation/widgets/app_confirmation_sheet.dart';
+import 'package:vinscent/core/presentation/widgets/app_confirmation_dialog.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_theme.dart';
 
@@ -21,7 +21,7 @@ void main() {
               builder: (context) => Scaffold(
                 body: TextButton(
                   onPressed: () async {
-                    result = await showAppConfirmationSheet(
+                    result = await showAppConfirmationDialog(
                       context: context,
                       title: '항목을 삭제할까요?',
                       message: '삭제하면 복구할 수 없어요.',
@@ -44,10 +44,7 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('항목을 삭제할까요?'), findsOneWidget);
       expect(find.text('삭제하면 복구할 수 없어요.'), findsOneWidget);
-      expect(
-        rootObserver.pushedRoutes.last,
-        isA<DialogRoute<dynamic>>(),
-      );
+      expect(rootObserver.pushedRoutes.last, isA<DialogRoute<dynamic>>());
       expect(
         branchObserver.pushedRoutes.whereType<DialogRoute<dynamic>>(),
         isEmpty,
@@ -70,7 +67,7 @@ void main() {
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () async {
-                result = await showAppConfirmationSheet(
+                result = await showAppConfirmationDialog(
                   context: context,
                   title: '변경 내용을 버릴까요?',
                   confirmLabel: '나가기',
@@ -147,7 +144,12 @@ void main() {
 
       expect(find.byType(AlertDialog), findsOneWidget);
       final surface = tester.getRect(
-        find.descendant(of: find.byType(Dialog), matching: find.byType(Material)),
+        find
+            .descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(Material),
+            )
+            .first,
       );
       final cancel = tester.getRect(
         find.byKey(const Key('app-confirmation-cancel')),
@@ -212,16 +214,16 @@ Future<void> _openConfirmation(
     MaterialApp(
       theme: AppTheme.light,
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(textScale),
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
         child: child!,
       ),
       home: Builder(
         builder: (context) => Scaffold(
           body: TextButton(
             onPressed: () async {
-              final result = await showAppConfirmationSheet(
+              final result = await showAppConfirmationDialog(
                 context: context,
                 title: '수정 내용을 버릴까요?',
                 message: message,

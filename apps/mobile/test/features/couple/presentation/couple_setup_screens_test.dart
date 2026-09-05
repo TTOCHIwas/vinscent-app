@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/presentation/widgets/app_action_button.dart';
-import 'package:vinscent/core/presentation/widgets/app_confirmation_sheet.dart';
+import 'package:vinscent/core/presentation/widgets/app_confirmation_dialog.dart';
 import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -124,7 +124,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(AppConfirmationSheet), findsOneWidget);
+    expect(find.byType(AppConfirmationDialog), findsOneWidget);
     expect(find.textContaining('차단 해제만으로는 다시 연결되지 않아'), findsOneWidget);
 
     await tester.tap(find.text('재연결 초대 만들기'));
@@ -186,7 +186,7 @@ void main() {
     await tester.tap(find.byTooltip('이전'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AppConfirmationSheet), findsOneWidget);
+    expect(find.byType(AppConfirmationDialog), findsOneWidget);
     expect(find.text('커플 연결 설정을 그만둘까?'), findsOneWidget);
     expect(find.text('연결 취소'), findsOneWidget);
   });

@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../application/story_card_editor_controller.dart';
 import '../application/story_card_editor_session.dart';
 import '../application/story_card_image_normalizer.dart';
@@ -321,11 +321,11 @@ class _StoryCardEditorContentState
       return;
     }
 
-    final shouldDiscard = await showAppConfirmationSheet(
+    final shouldDiscard = await showAppConfirmationDialog(
       context: context,
-      title: '수정 내용을 삭제하시겠어요?',
-      message: '현재 편집 중인 사진, 그림, 텍스트가 모두 삭제돼요.',
-      confirmLabel: '삭제',
+      title: '수정 내용을 버릴까요?',
+      message: '저장하지 않은 변경 내용이 사라져요.',
+      confirmLabel: '수정 버리기',
       cancelLabel: '계속 수정',
     );
     if (!shouldDiscard || !mounted) {
@@ -829,7 +829,7 @@ class _StoryCardEditorContentState
       return;
     }
 
-    final shouldDelete = await showAppConfirmationSheet(
+    final shouldDelete = await showAppConfirmationDialog(
       context: context,
       title: '오늘 카드를 삭제할까요?',
       message: '삭제하면 질문은 두 카드가 다시 완성될 때만 생성돼요.',

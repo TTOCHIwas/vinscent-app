@@ -142,7 +142,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('질문을 삭제할까요?'), findsOneWidget);
     expect(repository.deletedQuestionIds, isEmpty);
 
@@ -180,7 +180,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('질문을 삭제할까요?'), findsOneWidget);
     expect(find.text('취소'), findsOneWidget);
     expect(find.text('삭제'), findsOneWidget);

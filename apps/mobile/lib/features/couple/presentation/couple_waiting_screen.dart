@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_setup_page.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -108,7 +108,7 @@ class CoupleWaitingScreen extends ConsumerWidget {
     BuildContext context,
     CoupleFlowController controller,
   ) async {
-    final confirmed = await showAppConfirmationSheet(
+    final confirmed = await showAppConfirmationDialog(
       context: context,
       title: '초대를 취소할까?',
       message: '이 초대 코드는 더 이상 사용할 수 없어',

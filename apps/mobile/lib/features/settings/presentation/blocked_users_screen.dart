@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -61,7 +61,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
   }
 
   Future<void> _confirmUnblock(BlockedUser user) async {
-    final confirmed = await showAppConfirmationSheet(
+    final confirmed = await showAppConfirmationDialog(
       context: context,
       title: '${user.displayName}님 차단을 해제할까요?',
       message: '차단을 해제해도 커플 연결과 기록은 자동으로 복구되지 않아요',

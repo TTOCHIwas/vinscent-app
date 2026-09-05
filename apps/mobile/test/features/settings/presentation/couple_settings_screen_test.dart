@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vinscent/core/presentation/widgets/app_confirmation_sheet.dart';
+import 'package:vinscent/core/presentation/widgets/app_confirmation_dialog.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/data/couple_repository.dart';
@@ -64,7 +64,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(AppConfirmationSheet), findsOneWidget);
+    expect(find.byType(AppConfirmationDialog), findsOneWidget);
     expect(
       find.bySemanticsLabel(
         '연결을 해제해도 답변과 캐릭터 기록은 30일 동안 보관돼요. '
@@ -162,7 +162,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(AppConfirmationSheet), findsOneWidget);
+      expect(find.byType(AppConfirmationDialog), findsOneWidget);
       expect(
         find.bySemanticsLabel(
           '차단하면 커플 연결이 즉시 해제되고 두 사람의 공유 기록은 30일 동안 '

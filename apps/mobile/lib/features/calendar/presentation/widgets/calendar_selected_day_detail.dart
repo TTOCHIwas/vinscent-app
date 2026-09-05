@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/date/app_date_policy.dart';
 import '../../../../core/presentation/widgets/app_action_button.dart';
 import '../../../../core/presentation/widgets/app_action_tone.dart';
-import '../../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -126,7 +126,7 @@ class _CalendarSelectedDayDetailState
     if (_deletingEventIds.contains(event.id)) {
       return;
     }
-    final shouldDelete = await showAppConfirmationSheet(
+    final shouldDelete = await showAppConfirmationDialog(
       context: context,
       title: '일정을 삭제할까요?',
       message: event.title,

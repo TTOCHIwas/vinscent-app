@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/date/today_controller.dart';
 import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/presentation/widgets/app_action_tone.dart';
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_date_picker_sheet.dart';
 import '../../../core/presentation/widgets/app_setup_page.dart';
 import '../../../core/theme/app_colors.dart';
@@ -86,7 +86,7 @@ class RelationshipStartDateScreen extends ConsumerWidget {
     BuildContext context,
     CoupleFlowController controller,
   ) async {
-    final confirmed = await showAppConfirmationSheet(
+    final confirmed = await showAppConfirmationDialog(
       context: context,
       title: '커플 연결 설정을 그만둘까?',
       message: '지금 나가면 방금 연결한 커플이 취소되고, 두 사람 모두 다시 연결할 수 있어',

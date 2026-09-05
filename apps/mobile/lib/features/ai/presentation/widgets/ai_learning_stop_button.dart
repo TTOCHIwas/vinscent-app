@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../application/ai_learning_controller.dart';
 import 'ai_learning_error_message.dart';
@@ -22,7 +22,7 @@ class AiLearningStopButton extends ConsumerWidget {
   }
 
   Future<void> _stopLearning(BuildContext context, WidgetRef ref) async {
-    final shouldStop = await showAppConfirmationSheet(
+    final shouldStop = await showAppConfirmationDialog(
       context: context,
       title: 'AI 학습을 중지할까요?',
       message: '새로운 답변 분석과 기억 생성을 중지합니다.',

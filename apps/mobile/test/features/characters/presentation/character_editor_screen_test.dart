@@ -316,7 +316,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('character-drawing-clear')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('app-confirmation-confirm')));
     await tester.pumpAndSettle();
@@ -455,8 +455,8 @@ void main() {
     await tester.tap(find.byTooltip('뒤로가기'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('그림을 저장하지 않고 나갈까요?'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.bySemanticsLabel('그림을 저장하지 않고 나갈까요?'), findsOneWidget);
     expect(find.text('계속 그리기'), findsOneWidget);
     expect(find.text('나가기'), findsOneWidget);
 

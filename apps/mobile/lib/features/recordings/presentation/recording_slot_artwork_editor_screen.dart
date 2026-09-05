@@ -10,7 +10,7 @@ import '../../../core/drawing/widgets/app_drawing_canvas_layout.dart';
 import '../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../../core/presentation/widgets/app_page_header.dart';
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -237,7 +237,7 @@ class _RecordingSlotArtworkEditorScreenState
       return;
     }
 
-    final shouldClear = await showAppConfirmationSheet(
+    final shouldClear = await showAppConfirmationDialog(
       context: context,
       title: '그림을 모두 지울까요?',
       message: '저장하기 전까지는 현재 화면에서만 지워져요.',

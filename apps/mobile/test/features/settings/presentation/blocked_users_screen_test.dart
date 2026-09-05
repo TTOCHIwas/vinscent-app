@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vinscent/core/presentation/widgets/app_confirmation_sheet.dart';
+import 'package:vinscent/core/presentation/widgets/app_confirmation_dialog.dart';
 import 'package:vinscent/features/safety/application/user_block_providers.dart';
 import 'package:vinscent/features/safety/application/user_block_service.dart';
 import 'package:vinscent/features/safety/data/user_block.dart';
@@ -33,8 +33,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(AppConfirmationSheet), findsOneWidget);
-    expect(find.text('차단을 해제해도 커플 연결과 기록은 자동으로 복구되지 않아요'), findsOneWidget);
+    expect(find.byType(AppConfirmationDialog), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('차단을 해제해도 커플 연결과 기록은 자동으로 복구되지 않아요'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('차단 해제'));
     await tester.pumpAndSettle();

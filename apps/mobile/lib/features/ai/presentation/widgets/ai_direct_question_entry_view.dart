@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../../core/presentation/widgets/character_speech_bubble.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -160,7 +160,7 @@ class _AiDirectQuestionHistoryEntryState
   }
 
   Future<void> _confirmDelete() async {
-    final shouldDelete = await showAppConfirmationSheet(
+    final shouldDelete = await showAppConfirmationDialog(
       context: context,
       title: '질문을 삭제할까요?',
       message: '질문과 답변이 함께 삭제되고 복구할 수 없어요.',

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../account/application/account_deletion_controller.dart';
 import '../../account/data/account_deletion_repository.dart';
 import '../../auth/application/auth_controller.dart';
@@ -86,7 +86,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   }
 
   Future<void> _confirmSignOut() async {
-    final confirmed = await showAppConfirmationSheet(
+    final confirmed = await showAppConfirmationDialog(
       context: context,
       title: '로그아웃할까요?',
       message: '이 기기의 계정 연결만 해제되고 저장된 데이터는 삭제되지 않아요',
@@ -116,7 +116,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   }
 
   Future<void> _confirmDeleteAccount() async {
-    final confirmed = await showAppConfirmationSheet(
+    final confirmed = await showAppConfirmationDialog(
       context: context,
       title: '계정을 삭제할까요?',
       message:

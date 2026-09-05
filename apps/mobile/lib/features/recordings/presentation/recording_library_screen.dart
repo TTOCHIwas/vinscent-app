@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/widgets/app_confirmation_sheet.dart';
+import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -391,7 +391,7 @@ class _RecordingLibraryScreenState
   }
 
   Future<void> _deleteSlot(CoupleRecordingSlot slot) async {
-    final shouldDelete = await showAppConfirmationSheet(
+    final shouldDelete = await showAppConfirmationDialog(
       context: context,
       title: '슬롯을 비울까요?',
       message: "'${slot.title}' 녹음은 즉시 삭제되고 복구할 수 없어요.",
