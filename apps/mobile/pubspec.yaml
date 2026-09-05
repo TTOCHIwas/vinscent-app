@@ -93,6 +93,7 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/calendar/
     - assets/fonts/Cafe24PROSlimFit-LICENSE.txt
     - assets/fonts/Pretendard-LICENSE.txt
 

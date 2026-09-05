@@ -17,7 +17,9 @@ import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notificatio
 import '../application/calendar_cell_preview_mode_controller.dart';
 import '../application/couple_default_calendar_event_resolver.dart';
 import '../application/couple_member_birthday_provider.dart';
+import '../application/public_holiday_controller.dart';
 import '../data/calendar_cell_preview_mode.dart';
+import '../data/public_holiday.dart';
 import 'calendar_date_navigation.dart';
 import 'calendar_month_layout_metrics.dart';
 import 'calendar_step_scroll_controller.dart';
@@ -123,6 +125,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         .asData
         ?.value;
     final selectedPreviewMode = previewMode ?? CalendarCellPreviewMode.all;
+    final publicHolidays =
+        ref.watch(publicHolidayMonthProvider(_visibleMonth)).asData?.value ??
+        const <DateTime, PublicHoliday>{};
     final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
 
     return couple.when(
@@ -152,6 +157,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 date: selectedDate,
                 birthdays: memberBirthdays,
               );
+        final selectedPublicHoliday = selectedDate == null
+            ? null
+            : publicHolidays[calendarDateOnly(selectedDate)];
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext();
 
@@ -194,6 +202,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       CalendarDetailDateHeader.resolveExtent(
                         context,
                         defaultEvents: selectedDefaultEvents,
+                        publicHoliday: selectedPublicHoliday,
                       );
                   _adoptLayoutMetrics(metrics);
                   _scheduleInitialScrollPosition(metrics);
@@ -220,6 +229,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           relationshipStartDate: couple.relationshipStartDate!,
                           selectedDate: _selectedDate,
                           selectedDefaultEvents: selectedDefaultEvents,
+                          publicHolidays: publicHolidays,
                           memberBirthdays: memberBirthdays,
                           previewMode: previewMode,
                           calendarTransitionKey: _calendarPageRevision,

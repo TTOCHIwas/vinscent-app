@@ -31,6 +31,7 @@
 		A1000000000000000000000B /* VinscentWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* VinscentWidgets.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A1000000000000000000000C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* PrivacyInfo.xcprivacy */; };
 		A1000000000000000000000D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* PrivacyInfo.xcprivacy */; };
+		B10000000000000000000001 /* VinscentDeviceCalendarBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* VinscentDeviceCalendarBridge.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -113,6 +114,7 @@
 		A2000000000000000000000C /* Widget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Widget.xcconfig; path = Flutter/Widget.xcconfig; sourceTree = "<group>"; };
 		A2000000000000000000000D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A2000000000000000000000E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B20000000000000000000001 /* VinscentDeviceCalendarBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VinscentDeviceCalendarBridge.swift; sourceTree = "<group>"; };
 		FEE543AAF53424C8E58F650D /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -216,6 +218,7 @@
 				A20000000000000000000004 /* VinscentWidgetAudioController.swift */,
 				A20000000000000000000005 /* VinscentWidgetRecordingUploadBridge.swift */,
 				A20000000000000000000006 /* VinscentWidgetBackgroundTask.swift */,
+				B20000000000000000000001 /* VinscentDeviceCalendarBridge.swift */,
 				A20000000000000000000007 /* Runner.entitlements */,
 				A2000000000000000000000D /* PrivacyInfo.xcprivacy */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
@@ -536,6 +539,7 @@
 				A10000000000000000000004 /* VinscentWidgetAudioController.swift in Sources */,
 				A10000000000000000000005 /* VinscentWidgetRecordingUploadBridge.swift in Sources */,
 				A10000000000000000000006 /* VinscentWidgetBackgroundTask.swift in Sources */,
+				B10000000000000000000001 /* VinscentDeviceCalendarBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

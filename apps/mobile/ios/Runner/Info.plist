@@ -64,6 +64,10 @@
 	<string>완성한 카드를 사진 보관함에 저장하기 위해 사진 추가 권한이 필요합니다.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>스토리 카드에 사진을 추가하기 위해 카메라 권한이 필요합니다.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>단짠에서 만든 일정을 선택한 기기 캘린더에 추가하고 수정하거나 삭제하기 위해 캘린더 권한이 필요합니다.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>단짠에서 만든 일정을 선택한 기기 캘린더에 추가하고 수정하거나 삭제하기 위해 캘린더 권한이 필요합니다.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>현재 지역과 날씨에 어울리는 활동을 추천하기 위해 위치 권한이 필요합니다.</string>
 	<key>NSSupportsLiveActivities</key>

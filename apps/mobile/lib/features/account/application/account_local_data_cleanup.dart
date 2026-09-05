@@ -4,6 +4,8 @@ typedef AccountDeviceDataCleanup = Future<void> Function();
 enum AccountLocalDataCleanupOperation {
   proactiveSuggestion,
   calendarPreviewPreference,
+  publicHolidayRegionPreference,
+  deviceCalendarSync,
   homeFeedbackImpression,
   pendingRecordingDrafts,
   homeWidgets,
@@ -35,17 +37,23 @@ class AccountLocalDataCleanup {
   const AccountLocalDataCleanup({
     required AccountUserDataCleanup clearProactiveSuggestion,
     required AccountUserDataCleanup clearCalendarPreviewPreference,
+    required AccountUserDataCleanup clearPublicHolidayRegionPreference,
+    required AccountUserDataCleanup clearDeviceCalendarSync,
     required AccountUserDataCleanup clearHomeFeedbackImpression,
     required AccountDeviceDataCleanup clearPendingRecordingDrafts,
     required AccountDeviceDataCleanup clearHomeWidgets,
   }) : _clearProactiveSuggestion = clearProactiveSuggestion,
        _clearCalendarPreviewPreference = clearCalendarPreviewPreference,
+       _clearPublicHolidayRegionPreference = clearPublicHolidayRegionPreference,
+       _clearDeviceCalendarSync = clearDeviceCalendarSync,
        _clearHomeFeedbackImpression = clearHomeFeedbackImpression,
        _clearPendingRecordingDrafts = clearPendingRecordingDrafts,
        _clearHomeWidgets = clearHomeWidgets;
 
   final AccountUserDataCleanup _clearProactiveSuggestion;
   final AccountUserDataCleanup _clearCalendarPreviewPreference;
+  final AccountUserDataCleanup _clearPublicHolidayRegionPreference;
+  final AccountUserDataCleanup _clearDeviceCalendarSync;
   final AccountUserDataCleanup _clearHomeFeedbackImpression;
   final AccountDeviceDataCleanup _clearPendingRecordingDrafts;
   final AccountDeviceDataCleanup _clearHomeWidgets;
@@ -60,6 +68,16 @@ class AccountLocalDataCleanup {
     await _attempt(
       AccountLocalDataCleanupOperation.calendarPreviewPreference,
       () => _clearCalendarPreviewPreference(userId),
+      failures,
+    );
+    await _attempt(
+      AccountLocalDataCleanupOperation.publicHolidayRegionPreference,
+      () => _clearPublicHolidayRegionPreference(userId),
+      failures,
+    );
+    await _attempt(
+      AccountLocalDataCleanupOperation.deviceCalendarSync,
+      () => _clearDeviceCalendarSync(userId),
       failures,
     );
     await _attempt(

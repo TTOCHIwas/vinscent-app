@@ -43,6 +43,12 @@ class SettingsScreen extends StatelessWidget {
                 title: '알림 설정',
                 onTap: () => context.push('/settings/notifications'),
               ),
+              SettingsNavigationRow(
+                key: const Key('settings-row-calendar'),
+                icon: AppIcons.calendar,
+                title: '캘린더 설정',
+                onTap: () => context.push('/settings/calendar'),
+              ),
             ],
           ),
           const SizedBox(height: 24),

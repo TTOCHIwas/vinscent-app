@@ -15,6 +15,7 @@ import '../features/auth/application/auth_status.dart';
 import '../features/ai/application/ai_learning_controller.dart';
 import '../features/ai/application/ai_memory_attention_controller.dart';
 import '../features/calendar/application/couple_calendar_event_realtime_controller.dart';
+import '../features/calendar/application/device_calendar_sync_coordinator.dart';
 import '../features/couple/application/couple_controller.dart';
 import '../features/characters/application/couple_character_controller.dart';
 import '../features/home_widgets/application/home_widget_launch_coordinator.dart';
@@ -180,6 +181,11 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       ref
           .read(coupleCalendarEventRealtimeControllerProvider.notifier)
           .refreshReadModels();
+      unawaited(
+        ref
+            .read(deviceCalendarSyncCoordinatorProvider)
+            .synchronize(reconcile: true),
+      );
       ref.invalidate(aiLearningControllerProvider);
       ref.invalidate(aiMemoryAttentionControllerProvider);
       if (_supportsPushNotifications) {
@@ -286,6 +292,11 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
         if (next == AuthStatus.authenticated) {
           unawaited(_widgetLaunchDispatcher.drain());
           unawaited(_notificationLaunchDispatcher.drain());
+          unawaited(
+            ref
+                .read(deviceCalendarSyncCoordinatorProvider)
+                .synchronize(reconcile: true),
+          );
         }
         _scheduleWidgetSync();
       });
@@ -313,6 +324,11 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
       });
       ref.listen(coupleCalendarEventRevisionProvider, (_, _) {
         _scheduleWidgetSync();
+        unawaited(
+          ref
+              .read(deviceCalendarSyncCoordinatorProvider)
+              .synchronize(reconcile: true),
+        );
       });
       ref.listen(todayStoryLoopSummaryProvider, (_, next) {
         if (next.hasValue) {

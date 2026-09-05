@@ -15,6 +15,7 @@ import '../../application/couple_calendar_event_provider.dart';
 import '../../data/calendar_cell_preview_mode.dart';
 import '../../data/couple_calendar_event.dart';
 import '../../data/couple_member_birthday.dart';
+import '../../data/public_holiday.dart';
 import '../calendar_month_layout_metrics.dart';
 import 'calendar_detail_date_header.dart';
 import 'calendar_month_story_cell.dart';
@@ -26,6 +27,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
     required this.relationshipStartDate,
     required this.selectedDate,
     required this.selectedDefaultEvents,
+    required this.publicHolidays,
     required this.memberBirthdays,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
@@ -45,6 +47,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
   final List<CoupleDefaultCalendarEventOccurrence> selectedDefaultEvents;
+  final Map<DateTime, PublicHoliday> publicHolidays;
   final List<CoupleMemberBirthday> memberBirthdays;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
@@ -105,6 +108,7 @@ class CalendarResponsiveMonth extends ConsumerWidget {
         relationshipStartDate: relationshipStartDate,
         selectedDate: selectedDate,
         selectedDefaultEvents: selectedDefaultEvents,
+        publicHolidays: publicHolidays,
         calendarTransitionKey: calendarTransitionKey,
         calendarTransitionDirection: calendarTransitionDirection,
         detailTransitionKey: detailTransitionKey,
@@ -131,6 +135,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
     required this.relationshipStartDate,
     required this.selectedDate,
     required this.selectedDefaultEvents,
+    required this.publicHolidays,
     required this.calendarTransitionKey,
     required this.calendarTransitionDirection,
     required this.detailTransitionKey,
@@ -158,6 +163,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   final DateTime relationshipStartDate;
   final DateTime? selectedDate;
   final List<CoupleDefaultCalendarEventOccurrence> selectedDefaultEvents;
+  final Map<DateTime, PublicHoliday> publicHolidays;
   final Object calendarTransitionKey;
   final AppHorizontalPageDirection calendarTransitionDirection;
   final Object detailTransitionKey;
@@ -230,6 +236,8 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                     : CalendarDetailDateHeader(
                         date: selectedDate!,
                         defaultEvents: selectedDefaultEvents,
+                        publicHoliday:
+                            publicHolidays[calendarDateOnly(selectedDate!)],
                         height: detailHeaderExtent,
                       ),
               ),
@@ -265,7 +273,10 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                   top: _topPadding,
                   width: cellWidth,
                   height: _weekdayHeight,
-                  child: _WeekdayCell(label: _weekdayLabels[index]),
+                  child: _WeekdayCell(
+                    label: _weekdayLabels[index],
+                    isHoliday: index == 0,
+                  ),
                 ),
               Positioned(
                 left: 0,
@@ -319,6 +330,8 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                                   defaultEventLabels[calendarDateOnly(
                                     days[index],
                                   )],
+                              publicHoliday:
+                                  publicHolidays[calendarDateOnly(days[index])],
                               expandedContentProgress:
                                   values.expandedContentProgress,
                               onPressed: () => onDatePressed(days[index]),
@@ -374,6 +387,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         summaryByDate != oldDelegate.summaryByDate ||
         eventsByDate != oldDelegate.eventsByDate ||
         defaultEventLabels != oldDelegate.defaultEventLabels ||
+        publicHolidays != oldDelegate.publicHolidays ||
         currentDate != oldDelegate.currentDate ||
         metrics.expandedExtent != oldDelegate.metrics.expandedExtent ||
         metrics.standardExtent != oldDelegate.metrics.standardExtent ||
@@ -406,9 +420,10 @@ bool _sameDefaultEvents(
 }
 
 class _WeekdayCell extends StatelessWidget {
-  const _WeekdayCell({required this.label});
+  const _WeekdayCell({required this.label, required this.isHoliday});
 
   final String label;
+  final bool isHoliday;
 
   @override
   Widget build(BuildContext context) {
@@ -417,7 +432,9 @@ class _WeekdayCell extends StatelessWidget {
         label,
         style: AppTypography.applyToStyle(
           AppTextStyles.homeCharacterLabel.copyWith(
-            color: const Color(0xFF8C8C8C),
+            color: isHoliday
+                ? AppColors.calendarHoliday
+                : const Color(0xFF8C8C8C),
             fontSize: 12,
           ),
         ),
@@ -436,6 +453,7 @@ class _DateCell extends StatelessWidget {
     required this.summary,
     required this.events,
     required this.defaultEventLabel,
+    required this.publicHoliday,
     required this.expandedContentProgress,
     required this.onPressed,
   });
@@ -448,6 +466,7 @@ class _DateCell extends StatelessWidget {
   final StoryLoopMonthSummaryDay? summary;
   final List<CoupleCalendarEvent> events;
   final String? defaultEventLabel;
+  final PublicHoliday? publicHoliday;
   final double expandedContentProgress;
   final VoidCallback onPressed;
 
@@ -461,6 +480,7 @@ class _DateCell extends StatelessWidget {
         '${date.day}일',
         if (isToday) '오늘',
         ?defaultEventLabel,
+        if (publicHoliday != null) publicHoliday!.label,
         if (events.isNotEmpty) '일정 ${events.length}개',
         if ((summary?.cardCount ?? 0) > 0) '카드 ${summary!.cardCount}개',
       ].join(', '),
@@ -484,6 +504,9 @@ class _DateCell extends StatelessWidget {
   Color get _textColor {
     if (!isCurrentMonth || !isEnabled) {
       return const Color(0xFFC7C7C7);
+    }
+    if (date.weekday == DateTime.sunday || publicHoliday != null) {
+      return AppColors.calendarHoliday;
     }
     return const Color(0xFF171717);
   }

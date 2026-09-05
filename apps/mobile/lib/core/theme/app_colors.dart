@@ -29,6 +29,7 @@ abstract final class AppColors {
   static const selectionSurface = formSurface;
   static const success = Color(0xFF1BBF73);
   static const recordingActive = Color(0xFFE5484D);
+  static const calendarHoliday = Color(0xFFD74747);
   static const divider = Color(0xFF111111);
   static const wireframeBorder = Color(0xFFB1B1B1);
   static const wireframeIcon = Color(0xFF6C6C6C);

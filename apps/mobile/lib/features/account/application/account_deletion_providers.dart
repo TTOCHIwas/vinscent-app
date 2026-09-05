@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/app_config.dart';
 import '../../ai/data/ai_proactive_suggestion_store.dart';
 import '../../calendar/data/calendar_cell_preview_preference_store.dart';
+import '../../calendar/data/device_calendar_sync.dart';
+import '../../calendar/data/public_holiday_region_preference_store.dart';
 import '../../home/data/home_feedback_impression_store.dart';
 import '../../home_widgets/application/home_widget_sync_service.dart';
 import '../../recordings/application/pending_recording_draft_store.dart';
@@ -31,6 +33,12 @@ final accountLocalDataCleanupProvider = Provider<AccountLocalDataCleanup>((
         .clearForUser,
     clearCalendarPreviewPreference: ref
         .watch(calendarCellPreviewPreferenceStoreProvider)
+        .clearForUser,
+    clearPublicHolidayRegionPreference: ref
+        .watch(publicHolidayRegionPreferenceStoreProvider)
+        .clearForUser,
+    clearDeviceCalendarSync: ref
+        .watch(deviceCalendarSyncStoreProvider)
         .clearForUser,
     clearHomeFeedbackImpression: ref
         .watch(homeFeedbackImpressionStoreProvider)

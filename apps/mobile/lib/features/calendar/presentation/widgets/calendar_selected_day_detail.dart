@@ -14,10 +14,10 @@ import '../../../safety/data/safety_report.dart';
 import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../../story_loops/application/story_loop_detail_provider.dart';
 import '../../application/couple_calendar_event_provider.dart';
+import '../../application/couple_calendar_event_deletion_service.dart';
 import '../../application/couple_calendar_event_realtime_controller.dart';
 import '../../data/couple_calendar_event.dart';
 import '../../data/couple_calendar_event_failure.dart';
-import '../../data/couple_calendar_event_repository.dart';
 import 'calendar_event_detail_list.dart';
 import 'calendar_story_loop_detail.dart';
 
@@ -140,9 +140,7 @@ class _CalendarSelectedDayDetailState
       _deletingEventIds.add(event.id);
     });
     try {
-      await ref
-          .read(coupleCalendarEventRepositoryProvider)
-          .deleteEvent(eventId: event.id, expectedRevision: event.revision);
+      await ref.read(coupleCalendarEventDeletionServiceProvider).delete(event);
       ref
           .read(coupleCalendarEventRealtimeControllerProvider.notifier)
           .refreshReadModels();

@@ -6,12 +6,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../application/couple_default_calendar_event_resolver.dart';
+import '../../data/public_holiday.dart';
 
 class CalendarDetailDateHeader extends StatelessWidget {
   const CalendarDetailDateHeader({
     super.key,
     required this.date,
     this.defaultEvents = const [],
+    this.publicHoliday,
     this.height = baseExtent,
   });
 
@@ -19,6 +21,7 @@ class CalendarDetailDateHeader extends StatelessWidget {
   static const _horizontalPadding = 20.0;
   static const _verticalPadding = 10.0;
   static const _dateLineGap = 4.0;
+  static const _textMetricsTolerance = 2.0;
   static const _sectionGap = 8.0;
   static const _defaultEventRunSpacing = 4.0;
   static const _defaultEventIconSize = 22.0;
@@ -35,17 +38,22 @@ class CalendarDetailDateHeader extends StatelessWidget {
 
   final DateTime date;
   final List<CoupleDefaultCalendarEventOccurrence> defaultEvents;
+  final PublicHoliday? publicHoliday;
   final double height;
 
   static double resolveExtent(
     BuildContext context, {
     List<CoupleDefaultCalendarEventOccurrence> defaultEvents = const [],
+    PublicHoliday? publicHoliday,
   }) {
     final textScaler = MediaQuery.textScalerOf(context);
     final dateContentHeight =
         (textScaler.scale(24) * 1.2) +
         _dateLineGap +
-        (textScaler.scale(14) * 1.4);
+        (textScaler.scale(14) * 1.4) +
+        (publicHoliday == null
+            ? 0
+            : _dateLineGap + (textScaler.scale(14) * 1.4));
     final defaultEventLineHeight = math.max(
       textScaler.scale(20) * 1.4,
       _defaultEventIconSize,
@@ -58,13 +66,14 @@ class CalendarDetailDateHeader extends StatelessWidget {
         defaultEvents.isNotEmpty && _usesStackedLayout(context, defaultEvents)
         ? dateContentHeight + _sectionGap + defaultEventContentHeight
         : math.max(dateContentHeight, defaultEventContentHeight);
-    final contentHeight = (_verticalPadding * 2) + bodyHeight;
+    final contentHeight =
+        (_verticalPadding * 2) + bodyHeight + _textMetricsTolerance;
     return math.max(baseExtent, contentHeight.ceilToDouble());
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateBlock = _DateBlock(date: date);
+    final dateBlock = _DateBlock(date: date, publicHoliday: publicHoliday);
     final defaultEventBlock = _DefaultEvents(events: defaultEvents);
     final usesStackedLayout = _usesStackedLayout(context, defaultEvents);
 
@@ -123,9 +132,10 @@ class CalendarDetailDateHeader extends StatelessWidget {
 }
 
 class _DateBlock extends StatelessWidget {
-  const _DateBlock({required this.date});
+  const _DateBlock({required this.date, required this.publicHoliday});
 
   final DateTime date;
+  final PublicHoliday? publicHoliday;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +156,17 @@ class _DateBlock extends StatelessWidget {
             fontSize: 14,
           ),
         ),
+        if (publicHoliday case final holiday?) ...[
+          const SizedBox(height: CalendarDetailDateHeader._dateLineGap),
+          Text(
+            holiday.label,
+            key: const Key('calendar-detail-holiday-label'),
+            style: AppTextStyles.homeCharacterLabel.copyWith(
+              color: AppColors.calendarHoliday,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ],
     );
   }

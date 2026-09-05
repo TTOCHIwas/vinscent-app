@@ -29,6 +29,7 @@ import '../features/recordings/presentation/recording_library_screen.dart';
 import '../features/recordings/presentation/recording_slot_artwork_editor_screen.dart';
 import '../features/settings/presentation/account_settings_screen.dart';
 import '../features/settings/presentation/blocked_users_screen.dart';
+import '../features/settings/presentation/calendar_settings_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/profile_display_name_settings_screen.dart';
@@ -299,6 +300,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
             routes: [
+              GoRoute(
+                path: 'calendar',
+                name: 'calendarSettings',
+                builder: (context, state) => const CalendarSettingsScreen(),
+              ),
               GoRoute(
                 path: 'notifications',
                 name: 'notificationSettings',

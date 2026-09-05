@@ -4,11 +4,15 @@ import '../../../core/drawing/app_drawing.dart';
 import '../../../core/drawing/app_drawing_artifact_codec.dart';
 import '../data/couple_calendar_event.dart';
 import '../data/couple_calendar_event_repository.dart';
+import 'device_calendar_sync_coordinator.dart';
 
 final coupleCalendarEventEditorServiceProvider =
     Provider<CoupleCalendarEventEditorService>((ref) {
       return CoupleCalendarEventEditorService(
         repository: ref.watch(coupleCalendarEventRepositoryProvider),
+        deviceCalendarSyncCoordinator: ref.watch(
+          deviceCalendarSyncCoordinatorProvider,
+        ),
       );
     });
 
@@ -23,13 +27,16 @@ class CoupleCalendarEventEditorData {
 }
 
 class CoupleCalendarEventEditorService {
-  const CoupleCalendarEventEditorService({
+  CoupleCalendarEventEditorService({
     required CoupleCalendarEventRepository repository,
+    required DeviceCalendarSyncCoordinator deviceCalendarSyncCoordinator,
     AppDrawingArtifactCodec artworkCodec = const AppDrawingArtifactCodec(),
   }) : _repository = repository,
+       _deviceCalendarSyncCoordinator = deviceCalendarSyncCoordinator,
        _artworkCodec = artworkCodec;
 
   final CoupleCalendarEventRepository _repository;
+  final DeviceCalendarSyncCoordinator _deviceCalendarSyncCoordinator;
   final AppDrawingArtifactCodec _artworkCodec;
 
   Future<CoupleCalendarEventEditorData?> load(String eventId) async {
@@ -53,24 +60,25 @@ class CoupleCalendarEventEditorService {
     required AppDrawingData drawing,
     required bool drawingChanged,
   }) async {
+    late final CoupleCalendarEvent event;
     if (!drawingChanged) {
-      return _repository.saveEvent(coupleId: coupleId, request: request);
-    }
-
-    if (!drawing.hasVisibleContent) {
-      return _repository.saveEvent(
+      event = await _repository.saveEvent(coupleId: coupleId, request: request);
+    } else if (!drawing.hasVisibleContent) {
+      event = await _repository.saveEvent(
         coupleId: coupleId,
         request: _copyRequest(request, removeArtwork: true),
       );
+    } else {
+      final artifact = await _artworkCodec.encode(drawing);
+      event = await _repository.saveEvent(
+        coupleId: coupleId,
+        request: _copyRequest(request, removeArtwork: false),
+        previewBytes: artifact.previewBytes,
+        drawingDataBytes: artifact.drawingDataBytes,
+      );
     }
-
-    final artifact = await _artworkCodec.encode(drawing);
-    return _repository.saveEvent(
-      coupleId: coupleId,
-      request: _copyRequest(request, removeArtwork: false),
-      previewBytes: artifact.previewBytes,
-      drawingDataBytes: artifact.drawingDataBytes,
-    );
+    await _deviceCalendarSyncCoordinator.scheduleUpsert(event);
+    return event;
   }
 
   CoupleCalendarEventSaveRequest _copyRequest(
