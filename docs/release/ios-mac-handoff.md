@@ -208,8 +208,9 @@ EventKit 검증은 반드시 실제 iPhone에서 수행하고, 실기기에서 �
 항목은 통과로 기록하지 않는다. 실패가 확인되면 caller에서 Flutter
 coordinator, MethodChannel, Swift EventKit method 순서로 관련 파일과 호출자를
 모두 수집해 추적한다. 기기 캘린더의 Dart coordinator 테스트는 존재하지만,
-현재 `apps/mobile/ios/RunnerTests/RunnerTests.swift`는 예제 상태다. 문자열
-검사나 임시 우회를 추가하지 말고 재현 가능한 XCTest 또는 테스트 가능한
+`apps/mobile/ios/RunnerTests/RunnerTests.swift`에는 Flutter registrar를 얻지
+못하는 경우를 재현하는 네이티브 등록 경계 XCTest가 있다. EventKit 오류에는
+문자열 검사나 임시 우회를 추가하지 말고 재현 가능한 XCTest 또는 테스트 가능한
 네이티브 경계를 먼저 추가해 RED를 확인한 뒤 수정한다. Android와 공통 Flutter
 동작은 변경하지 않는다.
 
