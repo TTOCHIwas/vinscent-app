@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/presentation/widgets/app_horizontal_page_transition.dart';
 import '../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
+import '../../../core/presentation/widgets/app_initial_reveal.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -21,6 +22,7 @@ import '../application/public_holiday_controller.dart';
 import '../data/calendar_cell_preview_mode.dart';
 import '../data/public_holiday.dart';
 import 'calendar_date_navigation.dart';
+import 'calendar_motion.dart';
 import 'calendar_month_layout_metrics.dart';
 import 'calendar_step_scroll_controller.dart';
 import 'calendar_step_scroll_physics.dart';
@@ -163,7 +165,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext();
 
-        return Column(
+        final content = Column(
           children: [
             _CalendarMonthHeader(
               visibleMonth: _visibleMonth,
@@ -291,6 +293,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   ),
                                   transitionKey: _detailPageRevision,
                                   direction: _detailPageDirection,
+                                  duration:
+                                      calendarHorizontalTransitionDuration,
                                   child: _CalendarDetail(
                                     selectedDate: _selectedDate,
                                     today: today,
@@ -310,6 +314,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               ),
             ),
           ],
+        );
+        return AppInitialReveal(
+          key: const Key('calendar-initial-reveal'),
+          duration: calendarInitialRevealDuration,
+          curve: calendarContentRevealCurve,
+          child: content,
         );
       },
     );

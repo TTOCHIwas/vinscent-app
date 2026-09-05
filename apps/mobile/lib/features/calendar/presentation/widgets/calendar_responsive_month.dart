@@ -16,6 +16,7 @@ import '../../data/calendar_cell_preview_mode.dart';
 import '../../data/couple_calendar_event.dart';
 import '../../data/couple_member_birthday.dart';
 import '../../data/public_holiday.dart';
+import '../calendar_motion.dart';
 import '../calendar_month_layout_metrics.dart';
 import 'calendar_detail_date_header.dart';
 import 'calendar_month_story_cell.dart';
@@ -225,6 +226,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                 key: const Key('calendar-detail-header-transition'),
                 transitionKey: detailTransitionKey,
                 direction: detailTransitionDirection,
+                duration: calendarHorizontalTransitionDuration,
                 child: selectedDate == null
                     ? const SizedBox.expand()
                     : CalendarDetailDateHeader(
@@ -281,6 +283,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                   key: const Key('calendar-date-grid-transition'),
                   transitionKey: calendarTransitionKey,
                   direction: calendarTransitionDirection,
+                  duration: calendarHorizontalTransitionDuration,
                   child: ClipRect(
                     child: Stack(
                       children: [

@@ -45,7 +45,12 @@ void main() {
       ),
     );
 
-    final fade = tester.widget<FadeTransition>(find.byType(FadeTransition));
+    final fade = tester.widget<FadeTransition>(
+      find.descendant(
+        of: find.byType(AppInitialReveal),
+        matching: find.byType(FadeTransition),
+      ),
+    );
     expect(fade.opacity.value, 1);
   });
 }

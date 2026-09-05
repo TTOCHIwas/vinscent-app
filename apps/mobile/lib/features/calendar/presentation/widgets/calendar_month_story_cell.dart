@@ -10,6 +10,7 @@ import '../../../story_loops/data/story_loop_card_preview.dart';
 import '../../../story_loops/data/story_loop_month_summary_day.dart';
 import '../../data/couple_calendar_event.dart';
 import '../calendar_expanded_cell_layout.dart';
+import '../calendar_motion.dart';
 import 'calendar_month_card_preview.dart';
 import 'calendar_month_event_indicator.dart';
 
@@ -53,6 +54,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
       math.max(0.0, expandedContentProgress),
     );
     final hasEventArtwork = events.any((event) => event.artwork != null);
+    final contentIdentity = _contentIdentity(visibleCards, events);
     final displayMode = switch (visibleCards.length) {
       0 => 'empty',
       1 => 'single',
@@ -142,35 +144,48 @@ class CalendarMonthStoryCell extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ] else if (visibleCards.isNotEmpty &&
-                        events.isNotEmpty) ...[
+                    ] else ...[
                       const SizedBox(width: _eventHeaderGap),
                       Expanded(
-                        child: hasEventArtwork && resolvedExpandedProgress >= 1
-                            ? const SizedBox.shrink()
-                            : Opacity(
-                                opacity: hasEventArtwork
-                                    ? 1 - resolvedExpandedProgress
-                                    : 1,
-                                child: CalendarMonthEventIndicator(
-                                  date: date,
-                                  events: events,
-                                  artworkSize: eventArtworkSize,
-                                  previewCacheExtent: previewCacheExtent,
+                        child: _CalendarCellContentReveal(
+                          transitionKey:
+                              visibleCards.isNotEmpty && events.isNotEmpty
+                              ? contentIdentity
+                              : 'empty',
+                          child: visibleCards.isEmpty || events.isEmpty
+                              ? const SizedBox.shrink()
+                              : hasEventArtwork && resolvedExpandedProgress >= 1
+                              ? const SizedBox.shrink()
+                              : Opacity(
+                                  opacity: hasEventArtwork
+                                      ? 1 - resolvedExpandedProgress
+                                      : 1,
+                                  child: CalendarMonthEventIndicator(
+                                    date: date,
+                                    events: events,
+                                    artworkSize: eventArtworkSize,
+                                    previewCacheExtent: previewCacheExtent,
+                                  ),
                                 ),
-                              ),
+                        ),
                       ),
                     ],
                   ],
                 ),
               ),
               Expanded(
-                child: _CalendarCellContent(
-                  date: date,
-                  events: events,
-                  expandedContentProgress: resolvedExpandedProgress,
-                  cards: visibleCards,
-                  previewCacheExtent: previewCacheExtent,
+                child: _CalendarCellContentReveal(
+                  key: ValueKey(
+                    'calendar-cell-content-transition-${formatCalendarDate(date)}',
+                  ),
+                  transitionKey: contentIdentity,
+                  child: _CalendarCellContent(
+                    date: date,
+                    events: events,
+                    expandedContentProgress: resolvedExpandedProgress,
+                    cards: visibleCards,
+                    previewCacheExtent: previewCacheExtent,
+                  ),
                 ),
               ),
             ],
@@ -188,6 +203,53 @@ class CalendarMonthStoryCell extends StatelessWidget {
     final sortedCards = [...summary.cards]
       ..sort((left, right) => left.submittedAt.compareTo(right.submittedAt));
     return sortedCards.take(2).toList(growable: false);
+  }
+
+  String _contentIdentity(
+    List<StoryLoopCardPreview> cards,
+    List<CoupleCalendarEvent> events,
+  ) {
+    final cardParts =
+        cards
+            .map((card) => '${card.id}:${card.previewPath}')
+            .toList(growable: false)
+          ..sort();
+    final eventParts =
+        events
+            .map((event) => '${event.id}:${event.revision}')
+            .toList(growable: false)
+          ..sort();
+    return 'cards=${cardParts.join(',')}|events=${eventParts.join(',')}';
+  }
+}
+
+class _CalendarCellContentReveal extends StatelessWidget {
+  const _CalendarCellContentReveal({
+    super.key,
+    required this.transitionKey,
+    required this.child,
+  });
+
+  final Object transitionKey;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final animationsDisabled = MediaQuery.disableAnimationsOf(context);
+    return AnimatedSwitcher(
+      duration: animationsDisabled
+          ? Duration.zero
+          : calendarCellContentRevealDuration,
+      switchInCurve: calendarContentRevealCurve,
+      switchOutCurve: calendarContentRevealCurve,
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        children: [...previousChildren, ?currentChild],
+      ),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
+      child: KeyedSubtree(key: ValueKey(transitionKey), child: child),
+    );
   }
 }
 
