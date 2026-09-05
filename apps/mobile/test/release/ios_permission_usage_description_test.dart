@@ -28,6 +28,10 @@ void main() {
 
     expect(
       appDelegate,
+      contains('VinscentDeviceCalendarBridgeRegistration.register('),
+    );
+    expect(
+      appDelegate,
       contains('VinscentDeviceCalendarBridge.register(with: registrar)'),
     );
     expect(
