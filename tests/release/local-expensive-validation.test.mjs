@@ -67,9 +67,15 @@ test('Windows local database gate rebuilds migrations and preserves a running st
 
 test('Mac local iOS gate runs Flutter checks and a simulator build', async () => {
   const source = await load(iosScriptUrl);
+  const pubGetIndex = source.indexOf('flutter pub get');
+  const podInstallIndex = source.indexOf('pod install --deployment');
+  const formatIndex = source.indexOf('dart format');
 
   assert.match(source, /^#!\/usr\/bin\/env bash$/m);
   assert.match(source, /uname -s[\s\S]*Darwin/);
+  assert.ok(pubGetIndex >= 0);
+  assert.ok(podInstallIndex > pubGetIndex);
+  assert.ok(formatIndex > podInstallIndex);
   assert.match(source, /dart format[\s\S]*--set-exit-if-changed/);
   assert.match(source, /flutter analyze --no-pub/);
   assert.match(source, /flutter test --no-pub/);
