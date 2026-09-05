@@ -116,7 +116,7 @@ class _QuestionHistoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (history.questions.isEmpty) {
       return RefreshIndicator(
-        color: AppColors.brandAccent,
+        color: AppColors.textMuted,
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -135,7 +135,7 @@ class _QuestionHistoryList extends StatelessWidget {
     }
 
     return RefreshIndicator(
-      color: AppColors.brandAccent,
+      color: AppColors.textMuted,
       onRefresh: onRefresh,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),

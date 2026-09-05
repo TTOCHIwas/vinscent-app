@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/widgets/app_back_button.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class StoryCardEditorHeader extends StatelessWidget {
   const StoryCardEditorHeader({
@@ -53,14 +54,14 @@ class StoryCardEditorHeader extends StatelessWidget {
                     IconButton(
                       key: const ValueKey('story-card-editor-save'),
                       tooltip: '카드 올리기',
-                      color: Colors.white,
+                      color: AppColors.brandAction,
                       disabledColor: Colors.white38,
                       onPressed: canSave ? onSavePressed : null,
                       icon: isSaving
                           ? const SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: AppColors.brandAction,
                                 strokeWidth: 2,
                               ),
                             )

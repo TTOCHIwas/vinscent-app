@@ -487,6 +487,7 @@ class _RecordingLibraryScreenState
             IconButton(
               key: const ValueKey('recording-library-slot-title-save'),
               tooltip: '저장',
+              color: AppColors.brandAction,
               onPressed: () {
                 if (!formKey.currentState!.validate()) {
                   return;
@@ -813,6 +814,7 @@ class _EmptySlotContent extends StatelessWidget {
               IconButton(
                 key: ValueKey('recording-library-empty-slot-save-$slotIndex'),
                 tooltip: '현재 녹음 저장',
+                color: AppColors.brandAction,
                 onPressed: hasCurrentRecording ? onSavePressed : null,
                 icon: const Icon(Icons.check_rounded),
               ),

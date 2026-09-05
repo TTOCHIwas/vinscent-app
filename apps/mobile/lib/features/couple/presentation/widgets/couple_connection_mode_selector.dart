@@ -69,7 +69,7 @@ class _ModeItem extends StatelessWidget {
       button: true,
       selected: selected,
       child: Material(
-        color: selected ? AppColors.brandSurface : Colors.transparent,
+        color: selected ? AppColors.background : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           onTap: onTap,

@@ -251,7 +251,7 @@ class _FocusedQuestionProgressView extends StatelessWidget {
           child: LinearProgressIndicator(
             minHeight: 6,
             value: progress.myCompletionRatio,
-            color: AppColors.brandAccent,
+            color: AppColors.selection,
             backgroundColor: AppColors.settingsIconBackground,
           ),
         ),

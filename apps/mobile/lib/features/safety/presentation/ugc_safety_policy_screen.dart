@@ -173,7 +173,7 @@ class _PolicyContent extends StatelessWidget {
         const Icon(
           LucideIcons.shieldCheck,
           size: 36,
-          color: AppColors.brandAccent,
+          color: AppColors.textPrimary,
         ),
         const SizedBox(height: 20),
         const WordBoundaryText(
@@ -211,7 +211,7 @@ class _PolicyContent extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         Material(
-          color: AppColors.brandSurface,
+          color: AppColors.formSurface,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const Key('ugc-policy-acknowledgement'),
@@ -229,8 +229,8 @@ class _PolicyContent extends StatelessWidget {
                     child: Checkbox(
                       key: const Key('ugc-policy-checkbox'),
                       value: hasAcknowledged,
-                      activeColor: AppColors.brandAction,
-                      checkColor: AppColors.onBrandAction,
+                      activeColor: AppColors.selection,
+                      checkColor: AppColors.onSelection,
                       onChanged: onAcknowledgedChanged == null
                           ? null
                           : (value) {

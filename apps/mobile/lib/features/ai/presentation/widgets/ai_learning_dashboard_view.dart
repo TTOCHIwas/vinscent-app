@@ -38,7 +38,7 @@ class AiLearningDashboardView extends ConsumerWidget {
     }
 
     return RefreshIndicator(
-      color: AppColors.brandAccent,
+      color: AppColors.textMuted,
       onRefresh: () =>
           ref.read(aiLearningControllerProvider.notifier).refresh(),
       child: ListView(
@@ -242,7 +242,7 @@ class _LearningProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             minHeight: 6,
             value: progress.completionRatio,
-            color: AppColors.brandAccent,
+            color: AppColors.selection,
             backgroundColor: AppColors.settingsIconBackground,
           ),
         ),

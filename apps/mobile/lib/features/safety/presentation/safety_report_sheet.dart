@@ -210,11 +210,11 @@ class _ReasonRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foregroundColor = selected
-        ? AppColors.brandAction
+        ? AppColors.selection
         : AppColors.textPrimary;
 
     return Material(
-      color: selected ? AppColors.brandSurface : Colors.transparent,
+      color: selected ? AppColors.selectionSurface : Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         key: ValueKey('safety-report-reason-${item.reason.name}'),
@@ -241,7 +241,7 @@ class _ReasonRow extends StatelessWidget {
                 const Icon(
                   Icons.check_circle_rounded,
                   size: 20,
-                  color: AppColors.brandAction,
+                  color: AppColors.selection,
                 ),
               const SizedBox(width: 12),
             ],

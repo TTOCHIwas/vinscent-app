@@ -118,7 +118,7 @@ class _DirectQuestionComposerContent extends StatelessWidget {
                 child: LayoutBuilder(
                   builder: (context, conversationConstraints) {
                     return RefreshIndicator(
-                      color: AppColors.brandAccent,
+                      color: AppColors.textMuted,
                       onRefresh: onRefresh,
                       child: ListView(
                         key: const Key('ai-direct-question-conversation'),

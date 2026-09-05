@@ -48,7 +48,10 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
     final saveIcon = isSaving
         ? const SizedBox.square(
             dimension: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.brandAction,
+            ),
           )
         : const Icon(Icons.check_rounded);
     return Material(
@@ -62,6 +65,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
             action: IconButton(
               key: const Key('calendar-event-save'),
               tooltip: '일정 저장',
+              color: AppColors.brandAction,
               onPressed: _isEnabled ? onSavePressed : null,
               icon: saveIcon,
             ),

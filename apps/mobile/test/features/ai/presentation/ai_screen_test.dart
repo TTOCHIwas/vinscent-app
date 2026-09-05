@@ -23,7 +23,7 @@ void main() {
     expect(find.byKey(const Key('ai-learning-progress')), findsOneWidget);
     expect(
       tester.widget<RefreshIndicator>(find.byType(RefreshIndicator)).color,
-      AppColors.brandAccent,
+      AppColors.textMuted,
     );
     expect(
       tester
@@ -34,7 +34,7 @@ void main() {
             ),
           )
           .color,
-      AppColors.brandAccent,
+      AppColors.selection,
     );
   });
 

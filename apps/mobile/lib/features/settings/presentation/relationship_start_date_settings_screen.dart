@@ -25,11 +25,15 @@ class RelationshipStartDateSettingsScreen extends ConsumerWidget {
         data: (state) => IconButton(
           key: const Key('relationship-start-date-save'),
           tooltip: '만난 날 저장',
+          color: AppColors.brandAction,
           onPressed: state.canSave ? () => _save(context, ref) : null,
           icon: state.isSaving
               ? const SizedBox.square(
                   dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.brandAction,
+                  ),
                 )
               : const Icon(Icons.check_rounded),
         ),

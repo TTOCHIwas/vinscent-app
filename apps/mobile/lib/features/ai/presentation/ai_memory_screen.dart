@@ -56,7 +56,7 @@ class _ConfirmedMemoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (memories.isEmpty) {
       return RefreshIndicator(
-        color: AppColors.brandAccent,
+        color: AppColors.textMuted,
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -94,7 +94,7 @@ class _ConfirmedMemoryList extends StatelessWidget {
         .toList(growable: false);
 
     return RefreshIndicator(
-      color: AppColors.brandAccent,
+      color: AppColors.textMuted,
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),

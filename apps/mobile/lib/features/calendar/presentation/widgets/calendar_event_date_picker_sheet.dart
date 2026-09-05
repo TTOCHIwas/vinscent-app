@@ -319,7 +319,7 @@ class _DateCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = isSelected
-        ? AppColors.onBrandAction
+        ? AppColors.onSelection
         : isEnabled
         ? AppColors.textPrimary
         : AppColors.textPlaceholder;

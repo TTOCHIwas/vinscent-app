@@ -10,7 +10,7 @@ abstract final class CalendarEventFormStyle {
         return null;
       }
       return states.contains(WidgetState.selected)
-          ? AppColors.brandAccent
+          ? AppColors.selection
           : AppColors.background;
     }),
     foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -18,7 +18,7 @@ abstract final class CalendarEventFormStyle {
         return null;
       }
       return states.contains(WidgetState.selected)
-          ? AppColors.onBrandAction
+          ? AppColors.onSelection
           : AppColors.textPrimary;
     }),
     side: WidgetStateProperty.resolveWith((states) {
@@ -27,7 +27,7 @@ abstract final class CalendarEventFormStyle {
       }
       return BorderSide(
         color: states.contains(WidgetState.selected)
-            ? AppColors.brandAccent
+            ? AppColors.selection
             : AppColors.settingsDivider,
       );
     }),

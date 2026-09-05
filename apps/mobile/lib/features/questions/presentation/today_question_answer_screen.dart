@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/widgets/app_action_button.dart';
+import '../../../core/presentation/widgets/app_action_tone.dart';
 import '../../../core/presentation/widgets/app_answer_input.dart';
 import '../../../core/presentation/widgets/app_horizontal_swipe_region.dart';
 import '../../../core/presentation/widgets/app_keyboard_accessory.dart';
@@ -568,6 +569,7 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
           actionLabel: '저장',
           loadingLabel: '저장 중',
           actionIcon: const Icon(Icons.check_rounded),
+          actionTone: AppActionTone.brand,
           enabled: _canSubmit,
           isLoading: _isSubmitting,
           horizontalPadding: 32,

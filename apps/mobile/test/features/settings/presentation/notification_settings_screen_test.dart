@@ -52,8 +52,8 @@ void main() {
     for (final toggle in tester.widgetList<SwitchListTile>(
       find.byType(SwitchListTile),
     )) {
-      expect(toggle.activeTrackColor, AppColors.brandAccent);
-      expect(toggle.activeThumbColor, AppColors.onBrandAction);
+      expect(toggle.activeTrackColor, AppColors.selection);
+      expect(toggle.activeThumbColor, AppColors.onSelection);
     }
     expect(find.text('상대가 카드를 올렸을 때'), findsOneWidget);
     expect(find.text('새 질문이 도착했을 때'), findsOneWidget);
@@ -62,7 +62,7 @@ void main() {
     expect(find.widgetWithText(TextButton, '설정 열기'), findsOneWidget);
   });
 
-  testWidgets('기기 알림 허용 상태의 완료 표시에는 브랜드 색상을 사용한다', (tester) async {
+  testWidgets('기기 알림 허용 상태의 완료 표시에는 중립색을 사용한다', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -84,7 +84,7 @@ void main() {
       find.byIcon(Icons.check_circle_outline_rounded),
     );
 
-    expect(completedIcon.color, AppColors.brandAccent);
+    expect(completedIcon.color, AppColors.selection);
   });
 }
 

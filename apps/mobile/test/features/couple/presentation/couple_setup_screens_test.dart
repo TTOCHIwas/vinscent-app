@@ -33,7 +33,7 @@ void main() {
     );
     expect(
       tester.widget<Material>(selectedMode.first).color,
-      AppColors.brandSurface,
+      AppColors.background,
     );
     final selectorRect = tester.getRect(
       find.byKey(const Key('couple-connection-mode-selector')),

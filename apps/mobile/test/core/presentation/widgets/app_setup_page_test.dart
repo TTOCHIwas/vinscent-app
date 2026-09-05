@@ -64,8 +64,8 @@ void main() {
     expect(find.byKey(const Key('app-setup-step-2')), findsOneWidget);
     expect(find.byKey(const Key('app-setup-step-3')), findsOneWidget);
     expect(find.text('2 / 3'), findsNothing);
-    expect(_stepColor(tester, 1), AppColors.brandAccent);
-    expect(_stepColor(tester, 2), AppColors.brandAccent);
+    expect(_stepColor(tester, 1), AppColors.selection);
+    expect(_stepColor(tester, 2), AppColors.selection);
     expect(_stepColor(tester, 3), AppColors.settingsDivider);
   });
 }

@@ -173,18 +173,18 @@ void main() {
     expect(titleField.decoration?.counterText, isEmpty);
     expect(
       repeatControl.style?.backgroundColor?.resolve(selectedState),
-      AppColors.brandAccent,
+      AppColors.selection,
     );
     expect(
       repeatControl.style?.foregroundColor?.resolve(selectedState),
-      AppColors.onBrandAction,
+      AppColors.onSelection,
     );
     expect(
       repeatControl.style?.side?.resolve(selectedState)?.color,
-      AppColors.brandAccent,
+      AppColors.selection,
     );
-    expect(reminderToggle.activeTrackColor, AppColors.brandAccent);
-    expect(reminderToggle.activeThumbColor, AppColors.onBrandAction);
+    expect(reminderToggle.activeTrackColor, AppColors.selection);
+    expect(reminderToggle.activeThumbColor, AppColors.onSelection);
 
     await tester.enterText(
       find.byKey(const Key('calendar-event-title-field')),
@@ -216,15 +216,15 @@ void main() {
         );
     expect(
       extrasControl.style?.backgroundColor?.resolve(selectedState),
-      AppColors.brandAccent,
+      AppColors.selection,
     );
     expect(
       extrasControl.style?.foregroundColor?.resolve(selectedState),
-      AppColors.onBrandAction,
+      AppColors.onSelection,
     );
     expect(
       extrasControl.style?.side?.resolve(selectedState)?.color,
-      AppColors.brandAccent,
+      AppColors.selection,
     );
 
     final saveButton = find.byKey(const Key('calendar-event-save'));

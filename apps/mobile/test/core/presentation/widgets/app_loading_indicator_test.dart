@@ -4,7 +4,7 @@ import 'package:vinscent/core/presentation/widgets/app_loading_indicator.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 
 void main() {
-  testWidgets('uses the brand accent for general loading', (tester) async {
+  testWidgets('uses a neutral color for general loading', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Center(
@@ -19,7 +19,7 @@ void main() {
     final indicator = tester.widget<CircularProgressIndicator>(
       find.byType(CircularProgressIndicator),
     );
-    expect(indicator.color, AppColors.brandAccent);
+    expect(indicator.color, AppColors.textMuted);
     expect(indicator.strokeWidth, 2);
     expect(
       tester.getSize(find.byType(AppLoadingIndicator)),

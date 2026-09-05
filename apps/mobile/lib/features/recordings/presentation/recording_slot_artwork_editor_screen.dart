@@ -372,11 +372,15 @@ class _RecordingSlotArtworkEditorScreenState
               action: IconButton(
                 key: const ValueKey('recording-slot-artwork-save'),
                 tooltip: '저장',
+                color: AppColors.brandAction,
                 onPressed: _canSave ? _save : null,
                 icon: _isSaving
                     ? const SizedBox.square(
                         dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.brandAction,
+                        ),
                       )
                     : const Icon(Icons.check_rounded),
               ),

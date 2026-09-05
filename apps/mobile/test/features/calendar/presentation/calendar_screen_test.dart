@@ -726,8 +726,8 @@ void main() {
       find.descendant(of: selectedMode, matching: find.text('카드만')),
     );
 
-    expect(selectedDecoration.color, AppColors.brandAccent);
-    expect(selectedLabel.style?.color, AppColors.onBrandAction);
+    expect(selectedDecoration.color, AppColors.selection);
+    expect(selectedLabel.style?.color, AppColors.onSelection);
   });
 
   testWidgets(

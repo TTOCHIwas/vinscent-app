@@ -129,7 +129,7 @@ class AppSetupHeader extends StatelessWidget {
                           height: 3,
                           decoration: BoxDecoration(
                             color: index <= currentStep
-                                ? AppColors.brandAccent
+                                ? AppColors.selection
                                 : AppColors.settingsDivider,
                             borderRadius: BorderRadius.circular(2),
                           ),

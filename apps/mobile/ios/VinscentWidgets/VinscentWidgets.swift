@@ -6,9 +6,9 @@ import WidgetKit
 
 private enum VinscentWidgetPalette {
   static let brandAction = Color(
-    red: 220.0 / 255.0,
-    green: 105.0 / 255.0,
-    blue: 87.0 / 255.0
+    red: 240.0 / 255.0,
+    green: 90.0 / 255.0,
+    blue: 71.0 / 255.0
   )
   static let onBrandAction = Color(
     red: 255.0 / 255.0,

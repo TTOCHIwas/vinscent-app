@@ -73,14 +73,14 @@ class _ReminderOffsetOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foregroundColor = isSelected
-        ? AppColors.brandAccent
+        ? AppColors.selection
         : AppColors.textPrimary;
 
     return Semantics(
       button: true,
       selected: isSelected,
       child: Material(
-        color: isSelected ? AppColors.brandSurface : Colors.transparent,
+        color: isSelected ? AppColors.selectionSurface : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           key: Key('calendar-event-reminder-offset-$offsetDays'),
@@ -106,7 +106,7 @@ class _ReminderOffsetOption extends StatelessWidget {
                     const Icon(
                       Icons.check_rounded,
                       size: 20,
-                      color: AppColors.brandAccent,
+                      color: AppColors.selection,
                     ),
                 ],
               ),

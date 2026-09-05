@@ -11,16 +11,19 @@ abstract final class AppColors {
 
   static const logoBackground = Color(0xFF282A30);
 
-  static const brandAccent = Color(0xFFDC6957);
-  static const brandAction = Color(0xFFDC6957);
+  static const brandAccent = Color(0xFFF05A47);
+  static const brandAction = brandAccent;
   static const brandSurface = Color(0xFFFFF0ED);
-  static const brandPressed = Color(0xFFE86659);
+  static const brandPressed = Color(0xFFD94C3B);
   static const onBrandAction = Color(0xFFFFFFFF);
 
   static const actionPrimary = Color(0xFF171717);
   static const actionDisabled = Color(0xFFECECEC);
   static const actionDisabledContent = Color(0xFF8D8D8D);
   static const formSurface = Color(0xFFF4F4F4);
+  static const selection = actionPrimary;
+  static const onSelection = textInverse;
+  static const selectionSurface = formSurface;
   static const success = Color(0xFF1BBF73);
   static const recordingActive = Color(0xFFE5484D);
   static const divider = Color(0xFF111111);
@@ -32,6 +35,7 @@ abstract final class AppColors {
   static const shellBottomBarShadow = Color(0x24000000);
   static const shellBottomBarPressed = Color(0x14171717);
   static const shellBottomBarIconIdle = Color(0xFFBFBFBF);
+  static const shellBottomBarIconSelected = Color(0xFF000000);
 
   static const settingsSurface = Color(0xFFFFFFFF);
   static const settingsDivider = Color(0xFFE2E2E7);

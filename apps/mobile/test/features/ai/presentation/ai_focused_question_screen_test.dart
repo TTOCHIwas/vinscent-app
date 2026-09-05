@@ -24,7 +24,7 @@ void main() {
       tester
           .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
           .color,
-      AppColors.brandAccent,
+      AppColors.selection,
     );
   });
 
