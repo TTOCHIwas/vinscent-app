@@ -443,6 +443,40 @@ void main() {
     expect(tester.widget<TextField>(input).maxLines, 2);
   });
 
+  testWidgets('aligns the iOS input clearance with the bottom dock', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _FakeDirectQuestionRepository(history: _history()),
+      platform: TargetPlatform.iOS,
+      bottomViewPadding: 34,
+    );
+
+    final inputDock = tester.widget<Padding>(
+      find.byKey(const Key('ai-direct-question-input-dock')),
+    );
+
+    expect((inputDock.padding as EdgeInsets).bottom, 120);
+  });
+
+  testWidgets('preserves the Android input clearance above the system inset', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _FakeDirectQuestionRepository(history: _history()),
+      platform: TargetPlatform.android,
+      bottomViewPadding: 48,
+    );
+
+    final inputDock = tester.widget<Padding>(
+      find.byKey(const Key('ai-direct-question-input-dock')),
+    );
+
+    expect((inputDock.padding as EdgeInsets).bottom, 152);
+  });
+
   testWidgets('dismisses the keyboard after a completed content tap', (
     tester,
   ) async {
@@ -588,6 +622,8 @@ Future<void> _pump(
   AiDirectQuestionRepository repository, {
   SafetyReportRepository? safetyReportRepository,
   double textScaleFactor = 1,
+  TargetPlatform? platform,
+  double? bottomViewPadding,
   bool settle = true,
 }) async {
   final composerController = AiDirectQuestionComposerController();
@@ -604,12 +640,24 @@ Future<void> _pump(
           ),
       ],
       child: MaterialApp(
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
-          child: child!,
-        ),
+        theme: platform == null ? null : ThemeData(platform: platform),
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: TextScaler.linear(textScaleFactor),
+              padding: bottomViewPadding == null
+                  ? null
+                  : mediaQuery.padding.copyWith(bottom: bottomViewPadding),
+              viewPadding: bottomViewPadding == null
+                  ? null
+                  : mediaQuery.viewPadding.copyWith(
+                      bottom: bottomViewPadding,
+                    ),
+            ),
+            child: child!,
+          );
+        },
         home: SizedBox(
           width: 400,
           height: 700,
