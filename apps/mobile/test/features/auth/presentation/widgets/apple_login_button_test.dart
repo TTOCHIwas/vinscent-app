@@ -16,4 +16,31 @@ void main() {
     expect(find.byType(SignInWithAppleButton), findsOneWidget);
     expect(find.text('Apple로 로그인'), findsOneWidget);
   });
+
+  testWidgets('keeps accessibility text inside a compact iPhone button', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(390, 844),
+            textScaler: TextScaler.linear(3),
+          ),
+          child: Scaffold(
+            body: SizedBox(
+              width: 326,
+              child: AppleLoginButton(onPressed: () {}),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final buttonRect = tester.getRect(find.byType(SignInWithAppleButton));
+    final labelRect = tester.getRect(find.text('Apple로 로그인'));
+    expect(buttonRect.contains(labelRect.topLeft), isTrue);
+    expect(buttonRect.contains(labelRect.bottomRight), isTrue);
+  });
 }
