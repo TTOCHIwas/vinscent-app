@@ -324,7 +324,9 @@ Future<void> _openConfirmation(
 }
 
 Rect _dialogRect(WidgetTester tester) => tester.getRect(
-  find.descendant(of: find.byType(Dialog), matching: find.byType(Material)).first,
+  find
+      .descendant(of: find.byType(Dialog), matching: find.byType(Material))
+      .first,
 );
 
 class _RouteObserver extends NavigatorObserver {

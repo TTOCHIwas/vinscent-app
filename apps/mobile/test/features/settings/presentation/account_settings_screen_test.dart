@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 import 'package:vinscent/features/account/application/account_deletion_providers.dart';
 import 'package:vinscent/features/account/application/account_deletion_service.dart';
 import 'package:vinscent/features/account/application/account_local_data_cleanup.dart';
@@ -30,11 +29,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('계정을 삭제할까요?'), findsOneWidget);
-    final message = tester
-        .widgetList<WordBoundaryText>(find.byType(WordBoundaryText))
-        .singleWhere((widget) => widget.text.contains('AI 데이터'));
-    expect(message.text, contains('카드, 녹음, 답변, 캐릭터, 일정, AI 데이터'));
-    expect(message.text, contains('복구할 수 없어요'));
+    expect(
+      find.bySemanticsLabel(
+        '계정과 두 사람이 함께 만든 카드, 녹음, 답변, 캐릭터, 일정, AI 데이터가 '
+        '모두 영구 삭제돼요. 상대방 계정은 유지되지만 커플 연결은 해제되며, '
+        '삭제한 데이터는 복구할 수 없어요',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('삭제 확인 시 현재 사용자 계정을 한 번만 삭제한다', (tester) async {
