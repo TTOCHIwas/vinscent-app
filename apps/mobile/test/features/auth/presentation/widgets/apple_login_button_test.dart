@@ -45,9 +45,7 @@ void main() {
     expect(labelRect.top, greaterThanOrEqualTo(buttonRect.top));
     expect(labelRect.bottom, lessThanOrEqualTo(buttonRect.bottom));
     expect(
-      MediaQuery.textScalerOf(
-        tester.element(find.text('Apple로 로그인')),
-      ).scale(1),
+      MediaQuery.textScalerOf(tester.element(find.text('Apple로 로그인'))).scale(1),
       lessThanOrEqualTo(1.3),
     );
   });
