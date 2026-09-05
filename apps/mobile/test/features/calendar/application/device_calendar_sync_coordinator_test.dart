@@ -212,15 +212,54 @@ void main() {
 
     expect(gateway.previousEventDates.single, previous.eventDate);
   });
+
+  test('한 일정의 동기화 실패가 다른 일정을 막지 않는다', () async {
+    final first = _event(id: 'first-event');
+    final second = _event(id: 'second-event');
+    final store = InMemoryDeviceCalendarSyncStore(
+      DeviceCalendarSyncState(
+        enabled: true,
+        calendar: _calendar,
+        queue: DeviceCalendarSyncQueue.empty()
+            .enqueueUpsert(first)
+            .enqueueUpsert(second),
+        mappings: const {},
+      ),
+    );
+    final gateway = _FakeDeviceCalendarGateway(
+      failingUpsertEventIds: const {'first-event'},
+    );
+    final coordinator = DeviceCalendarSyncCoordinator(
+      gateway: gateway,
+      store: store,
+      eventSource: const _FakeDeviceCalendarSyncEventSource(),
+      currentUserId: () => 'user-id',
+      currentDate: () => DateTime(2026, 9, 5),
+    );
+
+    await coordinator.synchronize();
+
+    final state = await store.read(userId: 'user-id');
+    expect(gateway.upsertedEvents.map((event) => event.sourceEventId), [
+      'first-event',
+      'second-event',
+    ]);
+    expect(state.queue.operations, hasLength(1));
+    expect(state.queue.operations.single.event?.sourceEventId, 'first-event');
+    expect(state.queue.operations.single.attempts, 1);
+    expect(state.mappings, contains('second-event'));
+  });
 }
 
 class _FakeDeviceCalendarGateway implements DeviceCalendarGateway {
   _FakeDeviceCalendarGateway({
     this.shouldFailUpsert = false,
+    this.failingUpsertEventIds = const {},
     this.upsertCompleter,
   });
 
   final bool shouldFailUpsert;
+  final Set<String> failingUpsertEventIds;
   final Completer<String>? upsertCompleter;
   final List<DeviceCalendarEventPayload> upsertedEvents = [];
   final List<DateTime?> previousEventDates = [];
@@ -265,7 +304,7 @@ class _FakeDeviceCalendarGateway implements DeviceCalendarGateway {
   }) async {
     upsertedEvents.add(event);
     previousEventDates.add(previousEventDate);
-    if (shouldFailUpsert) {
+    if (shouldFailUpsert || failingUpsertEventIds.contains(event.sourceEventId)) {
       throw Exception('device calendar unavailable');
     }
     if (upsertCompleter case final completer?) {
@@ -295,10 +334,14 @@ const _calendar = DeviceCalendarDescriptor(
   accountName: 'user@example.com',
 );
 
-CoupleCalendarEvent _event({DateTime? eventDate, int revision = 4}) {
+CoupleCalendarEvent _event({
+  String id = 'event-id',
+  DateTime? eventDate,
+  int revision = 4,
+}) {
   final resolvedEventDate = eventDate ?? DateTime(2026, 9, 10);
   return CoupleCalendarEvent(
-    id: 'event-id',
+    id: id,
     coupleId: 'couple-id',
     title: '기념일',
     eventDate: resolvedEventDate,
