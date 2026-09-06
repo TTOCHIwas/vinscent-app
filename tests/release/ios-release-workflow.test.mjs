@@ -196,8 +196,10 @@ test('iOS release pins CocoaPods JSON serialization before locked pod install', 
 
   assert.match(gemfile, /gem ['"]cocoapods['"], ['"]1\.17\.0['"]/);
   assert.match(gemfile, /gem ['"]json['"], ['"]2\.7\.6['"]/);
+  assert.match(gemfile, /gem ['"]bigdecimal['"], ['"]3\.1\.9['"]/);
   assert.match(gemfileLock, /^    cocoapods \(1\.17\.0\)$/m);
   assert.match(gemfileLock, /^    json \(2\.7\.6\)$/m);
+  assert.match(gemfileLock, /^    bigdecimal \(3\.1\.9\)$/m);
   assert.ok(bundlerInstallIndex >= 0);
   assert.ok(bundleInstallIndex > bundlerInstallIndex);
   assert.ok(podInstallIndex > bundleInstallIndex);
