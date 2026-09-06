@@ -114,6 +114,10 @@ if [[ -e "$evidence_directory" ]]; then
 fi
 
 "$flutter_binary" pub get
+(
+  cd ios
+  pod install --deployment
+)
 build_arguments=(
   ipa
   --release
