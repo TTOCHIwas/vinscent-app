@@ -73,6 +73,22 @@ void main() {
   });
 
   test(
+    'iOS release installs the locked pods before the Flutter archive',
+    () {
+      final source = script.readAsStringSync();
+      final pubGetIndex = source.indexOf(r'"$flutter_binary" pub get');
+      final podInstallIndex = source.indexOf('pod install --deployment');
+      final buildIndex = source.indexOf(
+        r'"$flutter_binary" build "${build_arguments[@]}"',
+      );
+
+      expect(pubGetIndex, greaterThanOrEqualTo(0));
+      expect(podInstallIndex, greaterThan(pubGetIndex));
+      expect(buildIndex, greaterThan(podInstallIndex));
+    },
+  );
+
+  test(
     'iOS release script builds one verified archive without repeated tests',
     () {
       final source = script.readAsStringSync();
