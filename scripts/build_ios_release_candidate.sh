@@ -113,6 +113,10 @@ if [[ -e "$evidence_directory" ]]; then
   exit 1
 fi
 
+if [[ -n "${RUNNER_TEMP:-}" ]]; then
+  export PUB_CACHE="$RUNNER_TEMP/danjjan-pub-cache"
+fi
+
 "$flutter_binary" pub get
 (
   cd ios
