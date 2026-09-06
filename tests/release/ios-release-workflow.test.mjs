@@ -76,6 +76,21 @@ test('iOS release isolates the Pub cache before the first dependency resolution'
   assert.ok(dependencyResolutionIndex > pubCacheIndex);
 });
 
+test('iOS release does not restore the shared Pub dependency cache', async () => {
+  const source = await load(workflowUrl);
+  const flutterActionIndex = source.indexOf('subosito/flutter-action@');
+  const dependencyResolutionIndex = source.indexOf(
+    '- name: Resolve Flutter dependencies',
+  );
+
+  assert.ok(flutterActionIndex >= 0);
+  assert.ok(dependencyResolutionIndex > flutterActionIndex);
+  assert.match(
+    source.slice(flutterActionIndex, dependencyResolutionIndex),
+    /pub-cache: false/,
+  );
+});
+
 test('iOS release validates and uploads only when TestFlight is selected', async () => {
   const source = await load(workflowUrl);
 
