@@ -27,6 +27,7 @@ concurrency:
 env:
   CI: true
   FLUTTER_SUPPRESS_ANALYTICS: true
+  PUB_CACHE: ${{ runner.temp }}/danjjan-pub-cache
   BUILD_NUMBER: ${{ inputs.build_number }}
 
 jobs:
@@ -64,6 +65,7 @@ jobs:
           flutter-version: "3.41.9"
           channel: stable
           cache: true
+          pub-cache: false
       - name: Resolve Flutter dependencies
         working-directory: apps/mobile
         run: flutter pub get
