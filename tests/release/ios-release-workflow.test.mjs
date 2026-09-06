@@ -18,6 +18,11 @@ const releaseBuilderUrl = new URL(
   '../../scripts/build_ios_release_candidate.sh',
   import.meta.url,
 );
+const iosGemfileUrl = new URL('../../apps/mobile/ios/Gemfile', import.meta.url);
+const iosGemfileLockUrl = new URL(
+  '../../apps/mobile/ios/Gemfile.lock',
+  import.meta.url,
+);
 const xcodeProjectUrl = new URL(
   '../../apps/mobile/ios/Runner.xcodeproj/project.pbxproj',
   import.meta.url,
@@ -173,6 +178,29 @@ test('release builder supports explicit manual export options', async () => {
 
   assert.match(source, /DANJJAN_IOS_EXPORT_OPTIONS_PLIST/);
   assert.match(source, /--export-options-plist/);
+});
+
+test('iOS release pins CocoaPods JSON serialization before locked pod install', async () => {
+  const [source, gemfile, gemfileLock] = await Promise.all([
+    load(releaseBuilderUrl),
+    load(iosGemfileUrl),
+    load(iosGemfileLockUrl),
+  ]);
+  const bundlerInstallIndex = source.indexOf(
+    'gem install bundler --version 2.4.22 --no-document',
+  );
+  const bundleInstallIndex = source.indexOf('bundle _2.4.22_ install');
+  const podInstallIndex = source.indexOf(
+    'bundle _2.4.22_ exec pod install --deployment',
+  );
+
+  assert.match(gemfile, /gem ['"]cocoapods['"], ['"]1\.17\.0['"]/);
+  assert.match(gemfile, /gem ['"]json['"], ['"]2\.7\.6['"]/);
+  assert.match(gemfileLock, /^    cocoapods \(1\.17\.0\)$/m);
+  assert.match(gemfileLock, /^    json \(2\.7\.6\)$/m);
+  assert.ok(bundlerInstallIndex >= 0);
+  assert.ok(bundleInstallIndex > bundlerInstallIndex);
+  assert.ok(podInstallIndex > bundleInstallIndex);
 });
 
 test('iOS release builds the signed artifact without repeating local validation', async () => {
