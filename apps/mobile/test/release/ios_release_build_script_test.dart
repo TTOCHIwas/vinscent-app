@@ -73,6 +73,24 @@ void main() {
   });
 
   test(
+    'iOS release isolates the CI pub cache before resolving locked pods',
+    () {
+      final source = script.readAsStringSync();
+      final runnerTempIndex = source.indexOf(
+        r'if [[ -n "${RUNNER_TEMP:-}" ]]',
+      );
+      final pubCacheIndex = source.indexOf(
+        r'export PUB_CACHE="$RUNNER_TEMP/danjjan-pub-cache"',
+      );
+      final pubGetIndex = source.indexOf(r'"$flutter_binary" pub get');
+
+      expect(runnerTempIndex, greaterThanOrEqualTo(0));
+      expect(pubCacheIndex, greaterThan(runnerTempIndex));
+      expect(pubGetIndex, greaterThan(pubCacheIndex));
+    },
+  );
+
+  test(
     'iOS release installs the locked pods before the Flutter archive',
     () {
       final source = script.readAsStringSync();
