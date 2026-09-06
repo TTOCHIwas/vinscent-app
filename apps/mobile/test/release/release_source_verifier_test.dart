@@ -23,6 +23,11 @@ void main() {
     );
     expect(source, contains('Release source commit'));
     expect(source, contains('Release source worktree must be clean.'));
+    expect(source, contains(r'dirty_worktree="$('));
+    expect(
+      source,
+      contains(r'''printf '%s\n' "$dirty_worktree" >&2'''),
+    );
     expect(source, isNot(contains('git status --short')));
     expect(source, isNot(contains('dirname')));
   });
