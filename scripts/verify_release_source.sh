@@ -18,10 +18,12 @@ if [[ "$current_commit_sha" != "$expected_commit_sha" ]]; then
   exit 1
 fi
 
-if [[ -n "$(
+dirty_worktree="$(
   git -C "$repository_root" status --porcelain --untracked-files=all
-)" ]]; then
+)"
+if [[ -n "$dirty_worktree" ]]; then
   echo "Release source worktree must be clean." >&2
+  printf '%s\n' "$dirty_worktree" >&2
   exit 1
 fi
 
