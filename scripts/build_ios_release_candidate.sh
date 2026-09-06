@@ -127,6 +127,9 @@ export BUNDLE_APP_CONFIG="$release_temp_root/danjjan-ios-bundle-config"
 export BUNDLE_FROZEN=true
 gem install bundler --version 2.4.22 --no-document
 bundle _2.4.22_ install --jobs 4 --retry 3
+pod_wrapper_directory="$release_temp_root/danjjan-ios-pod-wrapper"
+bundle _2.4.22_ binstubs cocoapods --path "$pod_wrapper_directory"
+export PATH="$pod_wrapper_directory:$PATH"
 (
   cd ios
   bundle _2.4.22_ exec pod install --deployment
