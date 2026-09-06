@@ -118,9 +118,16 @@ if [[ -n "${RUNNER_TEMP:-}" ]]; then
 fi
 
 "$flutter_binary" pub get
+release_temp_root="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+export GEM_HOME="$release_temp_root/danjjan-ios-ruby-gems"
+export PATH="$GEM_HOME/bin:$PATH"
+export BUNDLE_GEMFILE="$mobile_directory/ios/Gemfile"
+export BUNDLE_PATH="$release_temp_root/danjjan-ios-bundle"
+gem install bundler --version 2.4.22 --no-document
+bundle _2.4.22_ install --jobs 4 --retry 3
 (
   cd ios
-  pod install --deployment
+  bundle _2.4.22_ exec pod install --deployment
 )
 build_arguments=(
   ipa
