@@ -123,6 +123,8 @@ export GEM_HOME="$release_temp_root/danjjan-ios-ruby-gems"
 export PATH="$GEM_HOME/bin:$PATH"
 export BUNDLE_GEMFILE="$mobile_directory/ios/Gemfile"
 export BUNDLE_PATH="$release_temp_root/danjjan-ios-bundle"
+export BUNDLE_APP_CONFIG="$release_temp_root/danjjan-ios-bundle-config"
+export BUNDLE_FROZEN=true
 gem install bundler --version 2.4.22 --no-document
 bundle _2.4.22_ install --jobs 4 --retry 3
 (
@@ -132,6 +134,7 @@ bundle _2.4.22_ install --jobs 4 --retry 3
 build_arguments=(
   ipa
   --release
+  --no-pub
   --build-number "$build_number"
   --dart-define="SUPABASE_URL=$DANJJAN_SUPABASE_URL"
   --dart-define="SUPABASE_ANON_KEY=$DANJJAN_SUPABASE_ANON_KEY"
