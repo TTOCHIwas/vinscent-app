@@ -76,6 +76,28 @@ test('iOS release isolates the Pub cache before the first dependency resolution'
   assert.ok(dependencyResolutionIndex > pubCacheIndex);
 });
 
+test('iOS release resolves runner temp only inside the Flutter setup step', async () => {
+  const source = await load(workflowUrl);
+  const workflowEnv = source.slice(
+    source.indexOf('\nenv:'),
+    source.indexOf('\njobs:'),
+  );
+  const flutterActionIndex = source.indexOf('subosito/flutter-action@');
+  const dependencyResolutionIndex = source.indexOf(
+    '- name: Resolve Flutter dependencies',
+  );
+  const flutterSetupStep = source.slice(
+    flutterActionIndex,
+    dependencyResolutionIndex,
+  );
+
+  assert.doesNotMatch(workflowEnv, /runner\.temp/);
+  assert.match(
+    flutterSetupStep,
+    /env:\r?\n\s+PUB_CACHE: \$\{\{ runner\.temp \}\}\/danjjan-pub-cache/,
+  );
+});
+
 test('iOS release does not restore the shared Pub dependency cache', async () => {
   const source = await load(workflowUrl);
   const flutterActionIndex = source.indexOf('subosito/flutter-action@');
