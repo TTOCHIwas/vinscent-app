@@ -221,6 +221,25 @@ test('iOS release keeps Bundler state temporary and does not resolve pods twice'
   );
 });
 
+test('iOS release routes Flutter pod installs through the locked bundle', async () => {
+  const source = await load(releaseBuilderUrl);
+  const bundleInstallIndex = source.indexOf('bundle _2.4.22_ install');
+  const binstubIndex = source.indexOf(
+    'bundle _2.4.22_ binstubs cocoapods --path "$pod_wrapper_directory"',
+  );
+  const wrapperPathIndex = source.indexOf(
+    'export PATH="$pod_wrapper_directory:$PATH"',
+  );
+  const buildIndex = source.indexOf(
+    '"$flutter_binary" build "${build_arguments[@]}"',
+  );
+
+  assert.ok(bundleInstallIndex >= 0);
+  assert.ok(binstubIndex > bundleInstallIndex);
+  assert.ok(wrapperPathIndex > binstubIndex);
+  assert.ok(buildIndex > wrapperPathIndex);
+});
+
 test('iOS release builds the signed artifact without repeating local validation', async () => {
   const source = await load(releaseBuilderUrl);
 
