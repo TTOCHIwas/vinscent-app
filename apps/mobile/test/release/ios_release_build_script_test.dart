@@ -76,9 +76,7 @@ void main() {
     'iOS release isolates the CI pub cache before resolving locked pods',
     () {
       final source = script.readAsStringSync();
-      final runnerTempIndex = source.indexOf(
-        r'if [[ -n "${RUNNER_TEMP:-}" ]]',
-      );
+      final runnerTempIndex = source.indexOf(r'if [[ -n "${RUNNER_TEMP:-}" ]]');
       final pubCacheIndex = source.indexOf(
         r'export PUB_CACHE="$RUNNER_TEMP/danjjan-pub-cache"',
       );
@@ -90,19 +88,38 @@ void main() {
     },
   );
 
+  test('iOS release installs the locked pods before the Flutter archive', () {
+    final source = script.readAsStringSync();
+    final pubGetIndex = source.indexOf(r'"$flutter_binary" pub get');
+    final podInstallIndex = source.indexOf('pod install --deployment');
+    final buildIndex = source.indexOf(
+      r'"$flutter_binary" build "${build_arguments[@]}"',
+    );
+
+    expect(pubGetIndex, greaterThanOrEqualTo(0));
+    expect(podInstallIndex, greaterThan(pubGetIndex));
+    expect(buildIndex, greaterThan(podInstallIndex));
+  });
+
   test(
-    'iOS release installs the locked pods before the Flutter archive',
+    'iOS release keeps dependency state out of the source after locked install',
     () {
       final source = script.readAsStringSync();
-      final pubGetIndex = source.indexOf(r'"$flutter_binary" pub get');
-      final podInstallIndex = source.indexOf('pod install --deployment');
-      final buildIndex = source.indexOf(
-        r'"$flutter_binary" build "${build_arguments[@]}"',
-      );
 
-      expect(pubGetIndex, greaterThanOrEqualTo(0));
-      expect(podInstallIndex, greaterThan(pubGetIndex));
-      expect(buildIndex, greaterThan(podInstallIndex));
+      expect(
+        source,
+        contains(
+          r'export BUNDLE_APP_CONFIG="$release_temp_root/'
+          'danjjan-ios-bundle-config"',
+        ),
+      );
+      expect(source, contains('export BUNDLE_FROZEN=true'));
+      expect(
+        RegExp(
+          r'build_arguments=\(\s+ipa\s+--release\s+--no-pub',
+        ).hasMatch(source),
+        isTrue,
+      );
     },
   );
 

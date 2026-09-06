@@ -205,6 +205,20 @@ test('iOS release pins CocoaPods JSON serialization before locked pod install', 
   assert.ok(podInstallIndex > bundleInstallIndex);
 });
 
+test('iOS release keeps Bundler state temporary and does not resolve pods twice', async () => {
+  const source = await load(releaseBuilderUrl);
+
+  assert.match(
+    source,
+    /export BUNDLE_APP_CONFIG="\$release_temp_root\/danjjan-ios-bundle-config"/,
+  );
+  assert.match(source, /export BUNDLE_FROZEN=true/);
+  assert.match(
+    source,
+    /build_arguments=\(\s*ipa\s*--release\s*--no-pub/m,
+  );
+});
+
 test('iOS release builds the signed artifact without repeating local validation', async () => {
   const source = await load(releaseBuilderUrl);
 
