@@ -65,6 +65,17 @@ test('iOS release restores signing before the verified release build', async () 
   assert.match(source, /retention-days: 90/);
 });
 
+test('iOS release isolates the Pub cache before the first dependency resolution', async () => {
+  const source = await load(workflowUrl);
+  const pubCacheIndex = source.indexOf(
+    'PUB_CACHE: ${{ runner.temp }}/danjjan-pub-cache',
+  );
+  const dependencyResolutionIndex = source.indexOf('run: flutter pub get');
+
+  assert.ok(pubCacheIndex >= 0);
+  assert.ok(dependencyResolutionIndex > pubCacheIndex);
+});
+
 test('iOS release validates and uploads only when TestFlight is selected', async () => {
   const source = await load(workflowUrl);
 
