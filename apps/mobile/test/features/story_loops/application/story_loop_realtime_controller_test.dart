@@ -19,15 +19,19 @@ void main() {
     await container.read(storyLoopRealtimeControllerProvider.future);
     expect(changeSource.watchedCoupleId, 'couple-id');
     expect(container.read(storyLoopReadRevisionProvider), 0);
+    expect(container.read(storyCardReadRevisionProvider), 0);
+    expect(container.read(dailyQuestionReadRevisionProvider), 0);
 
-    changeSource.emit();
-    changeSource.emit();
-    changeSource.emit();
+    changeSource.emit(StoryLoopChangeKind.cards);
+    changeSource.emit(StoryLoopChangeKind.cards);
+    changeSource.emit(StoryLoopChangeKind.cards);
 
     await _waitUntil(() => container.read(storyLoopReadRevisionProvider) == 1);
     await Future<void>.delayed(const Duration(milliseconds: 250));
 
     expect(container.read(storyLoopReadRevisionProvider), 1);
+    expect(container.read(storyCardReadRevisionProvider), 1);
+    expect(container.read(dailyQuestionReadRevisionProvider), 0);
   });
 
   test('manual refresh advances the story loop revision', () async {
@@ -42,6 +46,8 @@ void main() {
         .refreshReadModels();
 
     expect(container.read(storyLoopReadRevisionProvider), 1);
+    expect(container.read(storyCardReadRevisionProvider), 1);
+    expect(container.read(dailyQuestionReadRevisionProvider), 1);
   });
 
   test('replaces and disposes the realtime subscription on rebuild', () async {
@@ -85,20 +91,20 @@ Future<void> _waitUntil(bool Function() condition) async {
 }
 
 class _FakeStoryLoopChangeSource implements StoryLoopChangeSource {
-  final List<StreamController<void>> _controllers = [];
+  final List<StreamController<StoryLoopChangeKind>> _controllers = [];
   String? watchedCoupleId;
   int watchCount = 0;
   int cancelCount = 0;
 
-  void emit() {
-    _controllers.last.add(null);
+  void emit(StoryLoopChangeKind kind) {
+    _controllers.last.add(kind);
   }
 
   @override
-  Stream<void> watch({required String coupleId}) {
+  Stream<StoryLoopChangeKind> watch({required String coupleId}) {
     watchedCoupleId = coupleId;
     watchCount += 1;
-    final controller = StreamController<void>(
+    final controller = StreamController<StoryLoopChangeKind>(
       onCancel: () {
         cancelCount += 1;
       },

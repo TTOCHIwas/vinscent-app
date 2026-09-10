@@ -91,14 +91,16 @@ insert into public.daily_questions (
   question_id,
   assigned_date,
   status,
-  story_loop_id
+  story_loop_id,
+  closed_at
 )
 select
   '22000000-0000-0000-0000-000000000001',
   q.id,
   current_date - (25 - q.curriculum_position),
   'answered_by_one',
-  dsl.id
+  dsl.id,
+  now()
 from public.questions as q
 join public.daily_story_loops as dsl
   on dsl.couple_id = '22000000-0000-0000-0000-000000000001'

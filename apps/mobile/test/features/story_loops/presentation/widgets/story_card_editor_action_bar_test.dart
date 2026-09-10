@@ -29,4 +29,29 @@ void main() {
     expect(textY, lessThan(drawingY));
     expect(drawingY, lessThan(captionY));
   });
+
+  testWidgets('사진이 있을 때만 필름 도구를 노출한다', (tester) async {
+    var presses = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: StoryCardEditorActionBar(
+              interactionMode: StoryCardEditorTool.none,
+              hasBackground: true,
+              onAddTextPressed: () {},
+              onEditCaptionPressed: null,
+              onDrawingModePressed: () {},
+              onBackgroundColorPressed: null,
+              onFilmPressed: () => presses += 1,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('story-card-film-tool')));
+
+    expect(presses, 1);
+  });
 }

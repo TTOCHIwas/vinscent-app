@@ -8,17 +8,13 @@ class StoryCardEditorHeader extends StatelessWidget {
     super.key,
     required this.canSave,
     required this.isSaving,
-    required this.canDelete,
     required this.onBackPressed,
-    required this.onDeletePressed,
     required this.onSavePressed,
   });
 
   final bool canSave;
   final bool isSaving;
-  final bool canDelete;
   final VoidCallback onBackPressed;
-  final VoidCallback onDeletePressed;
   final VoidCallback onSavePressed;
 
   @override
@@ -41,33 +37,21 @@ class StoryCardEditorHeader extends StatelessWidget {
               ),
               Align(
                 alignment: Alignment.centerRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (canDelete)
-                      IconButton(
-                        tooltip: '카드 삭제',
-                        color: Colors.white,
-                        onPressed: onDeletePressed,
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    IconButton(
-                      key: const ValueKey('story-card-editor-save'),
-                      tooltip: '카드 올리기',
-                      color: AppColors.brandAction,
-                      disabledColor: Colors.white38,
-                      onPressed: canSave ? onSavePressed : null,
-                      icon: isSaving
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(
-                                color: AppColors.brandAction,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.check_rounded, size: 26),
-                    ),
-                  ],
+                child: IconButton(
+                  key: const ValueKey('story-card-editor-save'),
+                  tooltip: '카드 올리기',
+                  color: AppColors.brandAction,
+                  disabledColor: Colors.white38,
+                  onPressed: canSave ? onSavePressed : null,
+                  icon: isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            color: AppColors.brandAction,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.check_rounded, size: 26),
                 ),
               ),
             ],

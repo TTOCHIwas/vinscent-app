@@ -13,7 +13,6 @@ import '../../../safety/data/safety_report.dart';
 import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
-import '../../../story_loops/data/story_loop_status.dart';
 import 'calendar_detail_date_header.dart';
 import '../../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import 'calendar_story_card_stack.dart';
@@ -227,30 +226,14 @@ class _CardOnlyMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (detail.loopStatus == StoryLoopStatus.cardOnlyCompleted) {
-      return const _StateMessage(
-        title: '이 날은 카드만 남겼어요',
-        message: '두 사람이 남긴 카드를 그대로 간직할 수 있어요',
-      );
-    }
-
-    if (detail.loopStatus == StoryLoopStatus.questionPreparing) {
-      return const _StateMessage(
-        title: '둘의 카드가 모두 모였어요',
-        message: '둘에게 어울릴 질문을 고르고 있어요',
-      );
-    }
-
     return _StateMessage(
       title: switch (detail.cardCount) {
         0 => '이 날의 질문 기록이 없어요',
-        1 => '스토리 카드가 먼저 도착했어요',
-        _ => '스토리 카드가 모두 모였어요',
+        _ => '이 날은 카드만 남겼어요',
       },
       message: switch (detail.cardCount) {
         0 => '질문이 생성된 날짜를 선택하면 기록을 볼 수 있어요',
-        1 => '두 사람의 카드가 모두 올라오면 질문이 생성돼요',
-        _ => '질문이 준비되면 이 자리에서 함께 볼 수 있어요',
+        _ => '질문과 별개로 남긴 카드 기록이에요',
       },
     );
   }

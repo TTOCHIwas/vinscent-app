@@ -11,6 +11,10 @@ import {
   loadDueCalendarEventReminderJobs,
 } from './calendar_event_reminder_handler.ts';
 import {
+  dispatchDailyQuestionDeliveryJobs,
+  loadDueDailyQuestionDeliveryJobs,
+} from './daily_question_delivery_handler.ts';
+import {
   dispatchUnansweredQuestionReminderJobs,
   loadDueUnansweredQuestionReminderJobs,
 } from './unanswered_question_reminder_handler.ts';
@@ -18,6 +22,9 @@ import {
   dispatchRetryablePushNotificationJobs,
   loadRetryablePushNotificationJobs,
 } from './push_retry_handler.ts';
+import {
+  finalizeExpiredStoryCardsSafely,
+} from './story_card_rollover_handler.ts';
 
 const defaultLookbackMinutes = 10;
 
@@ -48,7 +55,14 @@ Deno.serve(async (request) => {
 
   try {
     const supabase = createServiceRoleClient();
-    const [questionJobs, calendarJobs, retryJobs] = await Promise.all([
+    const [
+      deliveryJobs,
+      questionJobs,
+      calendarJobs,
+      retryJobs,
+      storyCardRollover,
+    ] = await Promise.all([
+      loadDueDailyQuestionDeliveryJobs(supabase, runAt),
       loadDueUnansweredQuestionReminderJobs(
         supabase,
         runAt,
@@ -59,22 +73,37 @@ Deno.serve(async (request) => {
         lookbackMinutes,
       ),
       loadRetryablePushNotificationJobs(supabase),
+      finalizeExpiredStoryCardsSafely(supabase, runAt),
     ]);
-    const processedCount = questionJobs.length +
+    const finalizedStoryCardGroups = storyCardRollover.finalizedCount;
+    const notificationCount = deliveryJobs.length +
+      questionJobs.length +
       calendarJobs.length +
       retryJobs.length;
+    const processedCount = notificationCount + finalizedStoryCardGroups;
 
-    if (processedCount === 0) {
+    if (notificationCount === 0) {
       return jsonResponse({
         status: 'ok',
         runAt: runAt.toISOString(),
         lookbackMinutes,
-        processedCount: 0,
+        processedCount,
+        finalizedStoryCardGroups,
+        storyCardRolloverStatus: storyCardRollover.status,
       });
     }
 
     const accessToken = await createFcmAccessToken();
-    const [questionResults, calendarResults, retryResults] = await Promise.all([
+    const [
+      deliveryResults,
+      questionResults,
+      calendarResults,
+      retryResults,
+    ] = await Promise.all([
+      dispatchDailyQuestionDeliveryJobs(
+        deliveryJobs,
+        { supabase, accessToken },
+      ),
       dispatchUnansweredQuestionReminderJobs(
         questionJobs,
         { supabase, accessToken },
@@ -94,7 +123,10 @@ Deno.serve(async (request) => {
       runAt: runAt.toISOString(),
       lookbackMinutes,
       processedCount,
+      finalizedStoryCardGroups,
+      storyCardRolloverStatus: storyCardRollover.status,
       results: [
+        ...deliveryResults,
         ...questionResults,
         ...calendarResults,
         ...retryResults,

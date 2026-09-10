@@ -14,6 +14,7 @@ import 'package:vinscent/features/couple/presentation/couple_entry_screen.dart';
 import 'package:vinscent/features/couple/presentation/couple_setup_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/couple_waiting_screen.dart';
 import 'package:vinscent/features/couple/presentation/relationship_start_date_screen.dart';
+import 'package:vinscent/features/couple/presentation/question_delivery_time_screen.dart';
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
@@ -132,6 +133,21 @@ void main() {
 
     expect(find.byType(CharacterEditorScreen), findsOneWidget);
     expect(find.text('건너뛰기'), findsOneWidget);
+  });
+
+  testWidgets('asks the code-entering member for a question delivery time', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      couple: activeCoupleWithoutQuestionDeliveryTime(
+        userAId: 'partner-id',
+        userBId: _profile.id,
+        characterSetupStatus: CoupleCharacterSetupStatus.pending,
+      ),
+    );
+
+    expect(find.byType(QuestionDeliveryTimeScreen), findsOneWidget);
   });
 
   testWidgets(

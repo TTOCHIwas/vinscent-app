@@ -19,20 +19,21 @@ import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../questions/presentation/question_route_context.dart';
+import '../../questions/application/daily_question_detail_provider.dart';
+import '../../questions/data/daily_question_detail_snapshot.dart';
 import '../../recordings/application/couple_recording_overview_controller.dart';
 import '../../recordings/presentation/widgets/home_character_recording_control.dart';
 import '../../recordings/presentation/widgets/home_recording_artwork_layer.dart';
 import '../../safety/data/safety_report.dart';
 import '../../safety/presentation/safety_report_sheet.dart';
-import '../../story_loops/application/today_story_loop_summary_provider.dart';
-import '../../story_loops/data/story_loop_card_preview.dart';
-import '../../story_loops/data/story_loop_question_summary.dart';
-import '../../story_loops/data/story_loop_status.dart';
-import '../../story_loops/data/today_story_loop_summary.dart';
-import '../../story_loops/data/today_story_loop_summary_state.dart';
-import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
+import '../../story_loops/application/today_story_card_stacks_provider.dart';
+import '../../story_loops/data/story_card_stack_preview.dart';
+import '../../story_loops/data/story_card_scene.dart';
+import '../../story_loops/data/today_story_card_stacks.dart';
+import '../../story_loops/presentation/widgets/story_card_stack_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../application/home_guide.dart';
+import 'widgets/home_foreground_portal.dart';
 import 'widgets/home_hanging_story_cards.dart';
 import 'widgets/home_guide_rotator.dart';
 import 'widgets/persistent_home_proactive_suggestion_presenter.dart';
@@ -53,7 +54,6 @@ const _homeStoryRetryTooltip = '\ub2e4\uc2dc \uc2dc\ub3c4';
 const _homeFeedbackProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기다려줘!';
 const _homeFeedbackProcessingDuration = Duration(seconds: 3);
 const _homeCharacterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
-const _homeQuestionPreparingPrompt = '둘에게 어울릴 질문을 고르고 있어!';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -210,66 +210,73 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
         (state) => state.maybeWhen(data: (value) => value, orElse: () => null),
       ),
     );
-    final summaryAsync = ref.watch(todayStoryLoopSummaryProvider);
+    final cardsAsync = ref.watch(todayStoryCardStacksProvider);
+    final questionAsync = ref.watch(todayDailyQuestionProvider);
+    final cards = cardsAsync.asData?.value;
+    final question = questionAsync.asData?.value;
 
-    return summaryAsync.when(
-      loading: () => const Center(
+    if (cardsAsync.isLoading && questionAsync.isLoading) {
+      return const Center(
         child: SizedBox.square(
           dimension: 24,
           child: AppLoadingIndicator(strokeWidth: 2),
         ),
-      ),
-      error: (error, stackTrace) => Center(
+      );
+    }
+    if (cardsAsync.hasError && questionAsync.hasError) {
+      return Center(
         child: IconButton(
-          onPressed: () => ref.invalidate(todayStoryLoopSummaryProvider),
+          onPressed: () {
+            ref.invalidate(todayStoryCardStacksProvider);
+            ref.invalidate(todayDailyQuestionProvider);
+          },
           tooltip: _homeStoryRetryTooltip,
           icon: const Icon(Icons.refresh_rounded),
         ),
-      ),
-      data: (state) {
-        return switch (state) {
-          LoadedTodayStoryLoopSummaryState(summary: final summary) =>
-            _ResolvedHomeStoryLoopPreview(
-              summary: summary,
-              currentUserId: profile?.id,
-            ),
-          EmptyTodayStoryLoopSummaryState(summary: final summary) =>
-            _ResolvedHomeStoryLoopPreview(
-              summary: summary,
-              currentUserId: profile?.id,
-            ),
-          UnavailableTodayStoryLoopSummaryState() => const SizedBox.shrink(),
-        };
-      },
+      );
+    }
+    if (cards == null && question == null) {
+      return const SizedBox.shrink();
+    }
+
+    return _ResolvedHomeStoryLoopPreview(
+      cards: cards,
+      question: question,
+      currentUserId: profile?.id,
     );
   }
 }
 
 class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
   const _ResolvedHomeStoryLoopPreview({
-    required this.summary,
+    required this.cards,
+    required this.question,
     required this.currentUserId,
   });
 
-  final TodayStoryLoopSummary summary;
+  final TodayStoryCardStacks? cards;
+  final DailyQuestionDetailSnapshot? question;
   final String? currentUserId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dailyQuestion = question;
     final presentation = _HomeStoryLoopPresentation.fromSummary(
-      summary: summary,
+      cards: cards,
+      question: dailyQuestion,
       currentUserId: currentUserId,
     );
-    final question = summary.question;
     _HomeAiMessage? aiMessage;
-    if (question != null &&
-        question.myAnswerExists &&
-        question.partnerAnswerExists) {
+    if (dailyQuestion != null &&
+        dailyQuestion.answerState.hasMyAnswer &&
+        dailyQuestion.answerState.partnerAnswerExists) {
       final feedbackState = ref
-          .watch(aiQuestionFeedbackProvider(question.question.dailyQuestionId))
+          .watch(
+            aiQuestionFeedbackProvider(dailyQuestion.question.dailyQuestionId),
+          )
           .maybeWhen(data: (state) => state, orElse: () => null);
       aiMessage = _HomeAiMessage.fromState(
-        dailyQuestionId: question.question.dailyQuestionId,
+        dailyQuestionId: dailyQuestion.question.dailyQuestionId,
         state: feedbackState,
       );
     }
@@ -325,10 +332,11 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
             visibleAiMessage == null &&
             presentation.questionText == null
         ? selectEligibleHomeGuides(
-            canCreateCard: presentation.canAddCard,
+            canCreateCard:
+                presentation.canAddCard && presentation.myStack == null,
             canRecord:
                 characterPromptState.canGuideRecording &&
-                question == null &&
+                dailyQuestion == null &&
                 recordingGuideState.isReady,
             hasCurrentRecording: recordingGuideState.hasCurrentRecording,
             hasSavedRecordingSlot: recordingGuideState.hasSavedRecordingSlot,
@@ -346,8 +354,10 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
         ? AiProactiveSuggestionRequest(
             userId: currentUserId!,
             sessionId: foregroundSessionId,
-            contextDate: _dateKey(summary.coupleDate),
-            hasCardToday: presentation.myCard != null,
+            contextDate: _dateKey(
+              cards?.coupleDate ?? dailyQuestion?.coupleDate ?? DateTime.now(),
+            ),
+            hasCardToday: presentation.myStack != null,
           )
         : null;
     final proactiveSuggestion = proactiveRequest == null
@@ -448,13 +458,13 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                     : ValueKey('home-proactive-$proactivePresentationId');
 
                 return _HomeStoryLoopContent(
-                  myCard: presentation.myCard,
-                  partnerCard: presentation.partnerCard,
+                  myStack: presentation.myStack,
+                  partnerStack: presentation.partnerStack,
                   questionText: questionText,
                   questionIsAiGenerated: questionIsAiGenerated,
                   questionReportTarget: questionReportTarget,
                   questionOpacity: questionOpacity,
-                  cardsAreCompleted: presentation.cardsAreCompleted,
+                  hasBothCardStacks: presentation.hasBothCardStacks,
                   canAddCard: presentation.canAddCard,
                   onAddCard: presentation.canAddCard
                       ? () => context.go('/home/story')
@@ -462,20 +472,11 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                   onQuestionTap: onQuestionTap,
                   questionDismissibleKey: questionDismissibleKey,
                   onQuestionDismissed: dismissSuggestion,
-                  onCardTap: (card) {
-                    final editTargetLocation = presentation
-                        .editTargetLocationForCard(card);
-                    if (editTargetLocation != null) {
-                      context.go(editTargetLocation);
-                      return;
-                    }
-                    showStoryCardDetailOverlay(
+                  onCardTap: (stack) {
+                    showStoryCardStackOverlay(
                       context: context,
-                      cardId: card.id,
-                      previewUrl: card.previewUrl,
-                      canReport:
-                          currentUserId != null &&
-                          card.authorUserId != currentUserId,
+                      date: cards!.coupleDate,
+                      stack: stack,
                     );
                   },
                 );
@@ -568,13 +569,13 @@ class _HomeAiMessage {
 
 class _HomeStoryLoopContent extends StatelessWidget {
   const _HomeStoryLoopContent({
-    required this.myCard,
-    required this.partnerCard,
+    required this.myStack,
+    required this.partnerStack,
     required this.questionText,
     required this.questionIsAiGenerated,
     required this.questionReportTarget,
     required this.questionOpacity,
-    required this.cardsAreCompleted,
+    required this.hasBothCardStacks,
     required this.canAddCard,
     required this.onAddCard,
     required this.onQuestionTap,
@@ -583,35 +584,35 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.onCardTap,
   });
 
-  final StoryLoopCardPreview? myCard;
-  final StoryLoopCardPreview? partnerCard;
+  final StoryCardStackPreview? myStack;
+  final StoryCardStackPreview? partnerStack;
   final String? questionText;
   final bool questionIsAiGenerated;
   final SafetyReportTarget? questionReportTarget;
   final double questionOpacity;
-  final bool cardsAreCompleted;
+  final bool hasBothCardStacks;
   final bool canAddCard;
   final VoidCallback? onAddCard;
   final VoidCallback? onQuestionTap;
   final Key? questionDismissibleKey;
   final VoidCallback? onQuestionDismissed;
-  final ValueChanged<StoryLoopCardPreview> onCardTap;
+  final ValueChanged<StoryCardStackPreview> onCardTap;
 
   static const _entryGap = 8.0;
 
   @override
   Widget build(BuildContext context) {
     final storyEntry = _HomeStoryEntry(
-      myCard: myCard,
-      partnerCard: partnerCard,
+      myStack: myStack,
+      partnerStack: partnerStack,
       canAddCard: canAddCard,
       onAddCard: onAddCard,
-      cardsAreCompleted: cardsAreCompleted,
+      hasBothCardStacks: hasBothCardStacks,
       onCardTap: onCardTap,
     );
     final questionText = this.questionText;
-    final hasStoryEntry = myCard != null || partnerCard != null || canAddCard;
-    final maximumCardHeight = cardsAreCompleted
+    final hasStoryEntry = myStack != null || partnerStack != null || canAddCard;
+    final maximumCardHeight = hasBothCardStacks
         ? HomeHangingStoryCards.maximumCompactHeight
         : HomeHangingStoryCards.maximumStandardHeight;
 
@@ -669,51 +670,51 @@ class _HomeStoryLoopContent extends StatelessWidget {
 
 class _HomeStoryEntry extends StatelessWidget {
   const _HomeStoryEntry({
-    required this.myCard,
-    required this.partnerCard,
+    required this.myStack,
+    required this.partnerStack,
     required this.canAddCard,
     required this.onAddCard,
-    required this.cardsAreCompleted,
+    required this.hasBothCardStacks,
     required this.onCardTap,
   });
 
-  final StoryLoopCardPreview? myCard;
-  final StoryLoopCardPreview? partnerCard;
+  final StoryCardStackPreview? myStack;
+  final StoryCardStackPreview? partnerStack;
   final bool canAddCard;
   final VoidCallback? onAddCard;
-  final bool cardsAreCompleted;
-  final ValueChanged<StoryLoopCardPreview> onCardTap;
+  final bool hasBothCardStacks;
+  final ValueChanged<StoryCardStackPreview> onCardTap;
 
   @override
   Widget build(BuildContext context) {
-    final myCard = this.myCard;
-    final partnerCard = this.partnerCard;
-    if (myCard == null && partnerCard == null && !canAddCard) {
+    final myStack = this.myStack;
+    final partnerStack = this.partnerStack;
+    if (myStack == null && partnerStack == null && !canAddCard) {
       return const SizedBox.shrink();
     }
 
-    final size = cardsAreCompleted && myCard != null && partnerCard != null
+    final size = hasBothCardStacks
         ? HomeHangingStoryCardSize.compact
         : HomeHangingStoryCardSize.standard;
     final content = HomeHangingStoryCards(
       key: const Key('home-story-line'),
       size: size,
-      leftCardBuilder: myCard == null
-          ? canAddCard
-                ? (context, cardWidth) =>
-                      _HomeStoryAddButton(onPressed: onAddCard)
-                : null
-          : (context, cardWidth) => _HomeStoryCardThumbnail(
-              card: myCard,
-              width: cardWidth,
-              onTap: () => onCardTap(myCard),
-            ),
-      rightCardBuilder: partnerCard == null
+      leadingBuilder: canAddCard
+          ? (context, cardWidth) => _HomeStoryAddButton(onPressed: onAddCard)
+          : null,
+      leftCardBuilder: myStack == null
           ? null
-          : (context, cardWidth) => _HomeStoryCardThumbnail(
-              card: partnerCard,
+          : (context, cardWidth) => _HomeStoryCardStackThumbnail(
+              stack: myStack,
               width: cardWidth,
-              onTap: () => onCardTap(partnerCard),
+              onTap: () => onCardTap(myStack),
+            ),
+      rightCardBuilder: partnerStack == null
+          ? null
+          : (context, cardWidth) => _HomeStoryCardStackThumbnail(
+              stack: partnerStack,
+              width: cardWidth,
+              onTap: () => onCardTap(partnerStack),
             ),
     );
 
@@ -733,7 +734,7 @@ class _HomeStoryAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _HomeForegroundPortal(
+    return HomeForegroundPortal(
       portalKey: const Key('home-story-add-foreground'),
       placeholder: const SizedBox.square(dimension: 56),
       child: IconButton(
@@ -790,7 +791,7 @@ class _HomeQuestionAction extends StatelessWidget {
     final dismissibleKey = this.dismissibleKey;
     final onDismissed = this.onDismissed;
 
-    return _HomeForegroundPortal(
+    return HomeForegroundPortal(
       portalKey: const Key('home-question-foreground'),
       layoutKey: (questionText, isAiGenerated),
       placeholder: IgnorePointer(
@@ -870,116 +871,50 @@ class _HomeQuestionMessage extends StatelessWidget {
   }
 }
 
-class _HomeForegroundPortal extends StatefulWidget {
-  const _HomeForegroundPortal({
-    required this.portalKey,
-    required this.placeholder,
-    required this.child,
-    this.layoutKey,
-  });
-
-  final Key portalKey;
-  final Widget placeholder;
-  final Widget child;
-  final Object? layoutKey;
-
-  @override
-  State<_HomeForegroundPortal> createState() => _HomeForegroundPortalState();
-}
-
-class _HomeForegroundPortalState extends State<_HomeForegroundPortal> {
-  late final OverlayPortalController _controller = OverlayPortalController()
-    ..show();
-  final GlobalKey _placeholderKey = GlobalKey();
-  Object? _layoutSignature;
-  Size? _placeholderSize;
-  bool _measurementScheduled = false;
-
-  void _schedulePlaceholderMeasurement() {
-    if (_measurementScheduled) {
-      return;
-    }
-    _measurementScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measurementScheduled = false;
-      if (!mounted || _placeholderSize != null) {
-        return;
-      }
-      final renderObject = _placeholderKey.currentContext?.findRenderObject();
-      if (renderObject is! RenderBox || !renderObject.hasSize) {
-        return;
-      }
-      setState(() {
-        _placeholderSize = renderObject.size;
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final layoutSignature = (
-          widget.layoutKey,
-          constraints,
-          MediaQuery.textScalerOf(context),
-          Directionality.of(context),
-          Localizations.maybeLocaleOf(context),
-          DefaultTextStyle.of(context).style,
-        );
-        if (_layoutSignature != layoutSignature) {
-          _layoutSignature = layoutSignature;
-          _placeholderSize = null;
-        }
-        final placeholderSize = _placeholderSize;
-        if (placeholderSize == null) {
-          _schedulePlaceholderMeasurement();
-        }
-
-        return OverlayPortal.overlayChildLayoutBuilder(
-          key: widget.portalKey,
-          controller: _controller,
-          overlayChildBuilder: (context, info) {
-            final offset = MatrixUtils.transformPoint(
-              info.childPaintTransform,
-              Offset.zero,
-            );
-            return Positioned(
-              left: offset.dx,
-              top: offset.dy,
-              width: info.childSize.width,
-              height: info.childSize.height,
-              child: widget.child,
-            );
-          },
-          child: placeholderSize == null
-              ? KeyedSubtree(key: _placeholderKey, child: widget.placeholder)
-              : SizedBox.fromSize(size: placeholderSize),
-        );
-      },
-    );
-  }
-}
-
-class _HomeStoryCardThumbnail extends StatelessWidget {
-  const _HomeStoryCardThumbnail({
-    required this.card,
+class _HomeStoryCardStackThumbnail extends StatelessWidget {
+  const _HomeStoryCardStackThumbnail({
+    required this.stack,
     required this.width,
     required this.onTap,
   });
 
-  final StoryLoopCardPreview card;
+  final StoryCardStackPreview stack;
   final double width;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return StoryCardPreviewSurface(
-      surfaceKey: Key('home-story-card-${card.id}'),
-      previewUrl: card.previewUrl,
-      width: width,
-      onTap: onTap,
-      semanticsLabel: _homeStoryCardSemantics,
+    final card = stack.latestCard;
+    final layerCount = stack.cardCount.clamp(1, 3);
+    final previewWidth = math.max(0.0, width - 5);
+    return Padding(
+      padding: const EdgeInsets.only(top: 5, right: 5),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (var index = layerCount - 1; index > 0; index--)
+            Positioned(
+              top: -index * 2.5,
+              right: -index * 2.5,
+              child: Container(
+                width: previewWidth,
+                height: previewWidth / storyCardCanvasAspectRatio,
+                decoration: BoxDecoration(
+                  color: AppColors.formSurface,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: AppColors.settingsDivider),
+                ),
+              ),
+            ),
+          StoryCardPreviewSurface(
+            surfaceKey: Key('home-story-card-${card.id}'),
+            previewUrl: card.previewUrl,
+            width: previewWidth,
+            onTap: onTap,
+            semanticsLabel: '$_homeStoryCardSemantics, ${stack.cardCount}장',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -993,105 +928,77 @@ String _dateKey(DateTime date) {
 
 class _HomeStoryLoopPresentation {
   const _HomeStoryLoopPresentation({
-    required this.myCard,
-    required this.partnerCard,
+    required this.myStack,
+    required this.partnerStack,
     required this.questionText,
     required this.questionIsAiGenerated,
     required this.questionReportTarget,
-    required this.cardsAreCompleted,
+    required this.hasBothCardStacks,
     required this.canAddCard,
     required this.questionTargetLocation,
-    required this.editableCardId,
   });
 
-  final StoryLoopCardPreview? myCard;
-  final StoryLoopCardPreview? partnerCard;
+  final StoryCardStackPreview? myStack;
+  final StoryCardStackPreview? partnerStack;
   final String? questionText;
   final bool questionIsAiGenerated;
   final SafetyReportTarget? questionReportTarget;
-  final bool cardsAreCompleted;
+  final bool hasBothCardStacks;
   final bool canAddCard;
   final String? questionTargetLocation;
-  final String? editableCardId;
 
   factory _HomeStoryLoopPresentation.fromSummary({
-    required TodayStoryLoopSummary summary,
+    required TodayStoryCardStacks? cards,
+    required DailyQuestionDetailSnapshot? question,
     required String? currentUserId,
   }) {
-    final sortedCards = [...summary.cards]
-      ..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
-    final question = summary.question;
-    final isArchived = summary.accessMode == CoupleAccessMode.archivedReadOnly;
-    StoryLoopCardPreview? myCard;
-    StoryLoopCardPreview? partnerCard;
-    if (currentUserId != null) {
-      for (final card in sortedCards) {
-        if (card.authorUserId == currentUserId) {
-          myCard ??= card;
-        } else {
-          partnerCard ??= card;
-        }
-      }
-    }
+    final myStack = cards?.myStack;
+    final partnerStack = cards?.partnerStack;
+    final isArchived =
+        (cards?.accessMode ?? question?.accessMode) ==
+        CoupleAccessMode.archivedReadOnly;
     final canAddCard =
-        !isArchived &&
-        currentUserId != null &&
-        summary.canEditStory &&
-        myCard == null;
-
-    final questionText = switch ((summary.loopStatus, question)) {
-      (_, final question?) when question.myAnswerExists => null,
-      (_, final question?) => question.question.questionText,
-      (StoryLoopStatus.questionPreparing, null) => _homeQuestionPreparingPrompt,
-      _ => null,
-    };
+        !isArchived && currentUserId != null && cards?.canCreateCard == true;
+    final answerState = question?.answerState;
+    final questionText = answerState?.hasMyAnswer == true
+        ? null
+        : question?.question.questionText;
 
     return _HomeStoryLoopPresentation(
-      myCard: myCard,
-      partnerCard: partnerCard,
+      myStack: myStack,
+      partnerStack: partnerStack,
       questionText: questionText,
       questionIsAiGenerated:
           questionText != null &&
           question != null &&
-          !question.myAnswerExists &&
+          !question.answerState.hasMyAnswer &&
           question.question.questionSource == QuestionSource.ai,
       questionReportTarget:
           questionText != null &&
               question != null &&
-              !question.myAnswerExists &&
+              !question.answerState.hasMyAnswer &&
               question.question.questionSource == QuestionSource.ai
           ? SafetyReportTarget(
               type: SafetyReportTargetType.aiQuestion,
               id: question.question.dailyQuestionId,
             )
           : null,
-      cardsAreCompleted:
-          myCard != null &&
-          partnerCard != null &&
-          question?.myAnswerExists == true &&
-          question?.partnerAnswerExists == true,
+      hasBothCardStacks: myStack != null && partnerStack != null,
       canAddCard: canAddCard,
       questionTargetLocation: question == null
           ? null
           : _questionTargetLocation(question, isArchived: isArchived),
-      editableCardId: question == null && !isArchived && summary.canEditStory
-          ? myCard?.id
-          : null,
     );
   }
 
-  String? editTargetLocationForCard(StoryLoopCardPreview card) {
-    return card.id == editableCardId ? '/home/story' : null;
-  }
-
   static String _questionTargetLocation(
-    StoryLoopQuestionSummary question, {
+    DailyQuestionDetailSnapshot question, {
     required bool isArchived,
   }) {
     final routeContext = const QuestionRouteContext(
       source: QuestionRouteSource.home,
     );
-    return isArchived || question.myAnswerExists
+    return isArchived || question.answerState.hasMyAnswer
         ? routeContext.buildQuestionLocation()
         : routeContext.buildEditLocation();
   }

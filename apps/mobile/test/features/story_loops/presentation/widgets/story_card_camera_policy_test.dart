@@ -115,4 +115,103 @@ void main() {
       );
     });
   });
+
+  group('StoryCardCameraPolicy flash', () {
+    test('off, auto, always 순서로 순환하고 torch는 사용하지 않는다', () {
+      expect(
+        StoryCardCameraPolicy.nextFlashMode(FlashMode.off),
+        FlashMode.auto,
+      );
+      expect(
+        StoryCardCameraPolicy.nextFlashMode(FlashMode.auto),
+        FlashMode.always,
+      );
+      expect(
+        StoryCardCameraPolicy.nextFlashMode(FlashMode.always),
+        FlashMode.off,
+      );
+      expect(
+        StoryCardCameraPolicy.nextFlashMode(FlashMode.torch),
+        FlashMode.off,
+      );
+    });
+  });
+
+  group('StoryCardCameraPolicy swipe', () {
+    test('왼쪽과 오른쪽 스와이프를 필터 이동으로 구분한다', () {
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(-96, 8),
+          velocity: Offset.zero,
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.nextFilm,
+      );
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(96, -8),
+          velocity: Offset.zero,
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.previousFilm,
+      );
+    });
+
+    test('위와 아래 스와이프를 모두 카메라 전환으로 구분한다', () {
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(6, -96),
+          velocity: Offset.zero,
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.switchCamera,
+      );
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(-6, 96),
+          velocity: Offset.zero,
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.switchCamera,
+      );
+    });
+
+    test('짧거나 대각선인 이동과 두 손가락 입력은 무시한다', () {
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(20, 5),
+          velocity: Offset.zero,
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.none,
+      );
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(80, 72),
+          velocity: Offset.zero,
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.none,
+      );
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(-120, 0),
+          velocity: const Offset(-1200, 0),
+          pointerCount: 2,
+        ),
+        StoryCardCameraSwipeAction.none,
+      );
+    });
+
+    test('거리는 짧아도 충분히 빠른 한 방향 입력은 스와이프로 처리한다', () {
+      expect(
+        StoryCardCameraPolicy.classifySwipe(
+          displacement: const Offset(-30, 2),
+          velocity: const Offset(-900, 10),
+          pointerCount: 1,
+        ),
+        StoryCardCameraSwipeAction.nextFilm,
+      );
+    });
+  });
 }

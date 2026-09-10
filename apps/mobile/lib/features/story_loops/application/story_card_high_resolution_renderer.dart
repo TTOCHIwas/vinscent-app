@@ -2,8 +2,10 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'story_card_canvas_renderer.dart';
+import 'story_card_film_shader.dart';
 import '../data/story_card_download_failure.dart';
 import '../data/story_card_download_source.dart';
+import '../data/story_card_film_look.dart';
 
 abstract interface class StoryCardImageRenderer {
   Future<Uint8List> render(StoryCardDownloadSource source);
@@ -27,6 +29,7 @@ class StoryCardHighResolutionRenderer implements StoryCardImageRenderer {
     ui.Image? backgroundImage;
     ui.Picture? picture;
     ui.Image? outputImage;
+    ui.FragmentProgram? filmProgram;
 
     try {
       final backgroundBytes = source.backgroundImageBytes;
@@ -43,6 +46,11 @@ class StoryCardHighResolutionRenderer implements StoryCardImageRenderer {
         }
       }
 
+      if (backgroundImage != null &&
+          source.scene.film.look != StoryCardFilmLook.original) {
+        filmProgram = await StoryCardFilmShaderProgram.load();
+      }
+
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
       StoryCardCanvasRenderer.paint(
@@ -50,6 +58,7 @@ class StoryCardHighResolutionRenderer implements StoryCardImageRenderer {
         size: ui.Size(outputWidth.toDouble(), outputHeight.toDouble()),
         scene: source.scene,
         backgroundImage: backgroundImage,
+        filmProgram: filmProgram,
       );
       picture = recorder.endRecording();
       outputImage = await picture.toImage(outputWidth, outputHeight);

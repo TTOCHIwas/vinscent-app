@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_session.dart';
+import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {
@@ -17,15 +18,40 @@ void main() {
   });
 
   test('captured photo enters decorating with unsaved content', () {
+    const film = StoryCardFilmState(look: StoryCardFilmLook.warmth, seed: 31);
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
-    ).enterPhotoDecorator(Uint8List.fromList([1, 2, 3]));
+    ).enterPhotoDecorator(Uint8List.fromList([1, 2, 3]), film: film);
 
     expect(session.stage, StoryCardEditorStage.decorating);
     expect(session.tool, StoryCardEditorTool.background);
     expect(session.draft.hasPhoto, isTrue);
+    expect(session.draft.scene.film, film);
     expect(session.hasUnsavedChanges, isTrue);
   });
+
+  test(
+    'changing a film look preserves the photo and marks the draft dirty',
+    () {
+      final bytes = Uint8List.fromList([1, 2, 3]);
+      final session =
+          StoryCardEditorSession.fromDraft(
+                StoryCardDraft(scene: StoryCardScene.empty()),
+              )
+              .enterPhotoDecorator(bytes)
+              .setFilm(
+                const StoryCardFilmState(
+                  look: StoryCardFilmLook.moment,
+                  seed: 77,
+                ),
+              );
+
+      expect(session.draft.backgroundImageBytes, same(bytes));
+      expect(session.draft.scene.film.look, StoryCardFilmLook.moment);
+      expect(session.draft.scene.film.seed, 77);
+      expect(session.hasUnsavedChanges, isTrue);
+    },
+  );
 
   test('blank editor stays clean until its draft changes', () {
     final session = StoryCardEditorSession.fromDraft(

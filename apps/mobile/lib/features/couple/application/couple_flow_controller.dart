@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/date/app_date_policy.dart';
 import '../../../core/date/today_controller.dart';
 import '../data/couple_failure.dart';
+import '../data/question_delivery_time.dart';
+import '../data/question_delivery_time_repository.dart';
 import 'couple_controller.dart';
 import 'couple_flow_state.dart';
 
@@ -36,6 +38,16 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
 
     state = state.copyWith(
       relationshipStartDate: date,
+      clearErrorMessage: true,
+    );
+  }
+
+  void updateQuestionDeliveryTime(QuestionDeliveryTime value) {
+    if (state.isSubmitting) {
+      return;
+    }
+    state = state.copyWith(
+      questionDeliveryTime: value,
       clearErrorMessage: true,
     );
   }
@@ -165,6 +177,33 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
     }
   }
 
+  Future<void> saveQuestionDeliveryTime() async {
+    if (state.isSubmitting) {
+      return;
+    }
+
+    state = state.copyWith(
+      operation: CoupleFlowOperation.savingQuestionTime,
+      clearErrorMessage: true,
+    );
+
+    try {
+      await ref
+          .read(questionDeliveryTimeRepositoryProvider)
+          .setInitial(state.questionDeliveryTime);
+      await ref.read(coupleControllerProvider.notifier).refreshSilently();
+      state = state.copyWith(
+        operation: CoupleFlowOperation.idle,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        operation: CoupleFlowOperation.idle,
+        errorMessage: _messageFor(error),
+      );
+    }
+  }
+
   String _messageFor(Object error) {
     if (error is! CoupleRepositoryException) {
       return '잠시 후 다시 시도해주세요.';
@@ -190,6 +229,12 @@ class CoupleFlowController extends Notifier<CoupleFlowState> {
       CoupleFailureReason.relationshipDateRequired => '만난 날짜를 먼저 저장해주세요.',
       CoupleFailureReason.relationshipDateConflict =>
         '기존 기록보다 뒤의 날짜로 변경할 수 없어요.',
+      CoupleFailureReason.invalidQuestionDeliveryTime =>
+        '질문을 받을 시간을 다시 선택해주세요.',
+      CoupleFailureReason.questionDeliveryTimeAlreadySet =>
+        '질문 시간이 이미 설정되어 있어요.',
+      CoupleFailureReason.questionDeliveryTimeRequired =>
+        '질문을 받을 시간을 먼저 설정해주세요.',
       CoupleFailureReason.codeGenerationFailed => '초대 코드 생성에 실패했어요.',
       CoupleFailureReason.configMissing => '앱 설정이 아직 완료되지 않았어요.',
       CoupleFailureReason.unknown => '잠시 후 다시 시도해주세요.',

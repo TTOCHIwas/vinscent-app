@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -9,10 +10,14 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
+import '../../characters/application/couple_character_controller.dart';
+import '../application/story_card_camera_selection.dart';
 import '../application/story_card_editor_controller.dart';
 import '../application/story_card_editor_session.dart';
+import '../application/story_card_film_shader.dart';
 import '../application/story_card_image_normalizer.dart';
 import '../data/story_card_draft.dart';
+import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
 import '../data/story_loop_write_failure.dart';
 import 'widgets/story_card_caption_input_overlay.dart';
@@ -21,6 +26,7 @@ import 'widgets/story_card_drawing_controls.dart';
 import 'widgets/story_card_editor_action_bar.dart';
 import 'widgets/story_card_editor_canvas.dart';
 import 'widgets/story_card_editor_header.dart';
+import 'widgets/story_card_film_look_selector.dart';
 import 'widgets/story_card_text_input_overlay.dart';
 import 'widgets/story_card_text_trash_target.dart';
 
@@ -83,13 +89,23 @@ class _StoryCardEditorContentState
   bool _isTextOverTrash = false;
   bool _isPickingColor = false;
   bool _isSaving = false;
-  bool _isDeleting = false;
+  late StoryCardFilmState _cameraFilm;
+  ui.FragmentProgram? _filmProgram;
+  Future<ui.FragmentProgram>? _filmProgramFuture;
 
   @override
   void initState() {
     super.initState();
     _session = StoryCardEditorSession.fromDraft(widget.initialDraft);
+    _cameraFilm = widget.initialDraft.scene.film.seed > 0
+        ? widget.initialDraft.scene.film
+        : widget.initialDraft.scene.film.copyWith(
+            seed: StoryCardFilmSeed.now(),
+          );
     _loadBackgroundImage(_draft.backgroundImageBytes);
+    if (_draft.scene.film.look != StoryCardFilmLook.original) {
+      unawaited(_prepareFilmProgram());
+    }
   }
 
   @override
@@ -109,7 +125,6 @@ class _StoryCardEditorContentState
       !_isCaptionInputActive &&
       !_isPickingColor &&
       !_isSaving &&
-      !_isDeleting &&
       _draft.hasContent;
 
   @override
@@ -125,6 +140,9 @@ class _StoryCardEditorContentState
           ? StoryCardCameraStage(
               onBack: _handleBack,
               onImageSelected: _useBackgroundImage,
+              initialFilm: _cameraFilm,
+              onFilmChanged: (film) => _cameraFilm = film,
+              loadCharacterImage: _loadCoupleCharacterImage,
               onTextSelected: _enterBlankTextDecorator,
               onDrawingSelected: () =>
                   _enterBlankDecorator(StoryCardEditorTool.drawing),
@@ -152,6 +170,7 @@ class _StoryCardEditorContentState
                     key: _previewKey,
                     child: StoryCardEditorCanvas(
                       backgroundImage: _backgroundImage,
+                      filmProgram: _filmProgram,
                       scene: _draft.scene,
                       visibleStrokes: _visibleStrokes,
                       interactionMode: _session.tool,
@@ -180,12 +199,7 @@ class _StoryCardEditorContentState
                   key: const ValueKey('story-card-editor-header'),
                   canSave: _canSave,
                   isSaving: _isSaving,
-                  canDelete:
-                      _draft.existingRevision != null &&
-                      !_isSaving &&
-                      !_isDeleting,
                   onBackPressed: _handleBack,
-                  onDeletePressed: _deleteCard,
                   onSavePressed: _saveCard,
                 ),
               ),
@@ -206,6 +220,26 @@ class _StoryCardEditorContentState
                     onBackgroundColorPressed: _draft.hasPhoto
                         ? null
                         : _toggleCanvasBackground,
+                    onFilmPressed: _draft.hasPhoto ? _toggleFilmSelector : null,
+                    isFilmSelected: _session.tool == StoryCardEditorTool.film,
+                  ),
+                ),
+              ),
+            ),
+          if (_session.tool == StoryCardEditorTool.film)
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: StoryCardFilmLookSelector(
+                    key: const ValueKey('story-card-editor-film-selector'),
+                    selectedLook: _draft.scene.film.look,
+                    onLookChanged: _selectFilmLook,
+                    keyPrefix: 'story-card-editor-film',
                   ),
                 ),
               ),
@@ -299,7 +333,7 @@ class _StoryCardEditorContentState
       return;
     }
 
-    if (_isSaving || _isDeleting) {
+    if (_isSaving) {
       return;
     }
     if (_session.tool == StoryCardEditorTool.drawing) {
@@ -336,6 +370,7 @@ class _StoryCardEditorContentState
   }
 
   void _returnToCamera() {
+    _cameraFilm = _draft.scene.film.seed > 0 ? _draft.scene.film : _cameraFilm;
     _backgroundImage?.dispose();
     setState(() {
       _backgroundImage = null;
@@ -367,6 +402,9 @@ class _StoryCardEditorContentState
       _activeStroke = null;
       _activePointer = null;
       _session = nextSession;
+      _cameraFilm = nextSession.draft.scene.film.seed > 0
+          ? nextSession.draft.scene.film
+          : _cameraFilm;
     });
   }
 
@@ -444,6 +482,33 @@ class _StoryCardEditorContentState
     setState(() {
       _session = _session.toggleCanvasBackground();
     });
+  }
+
+  void _toggleFilmSelector() {
+    final nextTool = _session.tool == StoryCardEditorTool.film
+        ? StoryCardEditorTool.background
+        : StoryCardEditorTool.film;
+    setState(() {
+      _session = _session.selectTool(nextTool);
+    });
+    if (nextTool == StoryCardEditorTool.film) {
+      unawaited(_prepareFilmProgram());
+    }
+  }
+
+  void _selectFilmLook(StoryCardFilmLook look) {
+    final currentFilm = _draft.scene.film;
+    final nextFilm = currentFilm.copyWith(
+      look: look,
+      seed: currentFilm.seed > 0 ? currentFilm.seed : StoryCardFilmSeed.now(),
+    );
+    setState(() {
+      _session = _session.setFilm(nextFilm);
+      _cameraFilm = nextFilm;
+    });
+    if (look != StoryCardFilmLook.original) {
+      unawaited(_prepareFilmProgram());
+    }
   }
 
   void _enterBlankDecorator(StoryCardEditorTool tool) {
@@ -561,14 +626,17 @@ class _StoryCardEditorContentState
     });
   }
 
-  Future<void> _useBackgroundImage(Uint8List sourceBytes) async {
-    if (_isSaving || _isDeleting) {
+  Future<void> _useBackgroundImage(StoryCardCameraSelection selection) async {
+    if (_isSaving) {
       return;
     }
 
     try {
       final normalizedImageBytes = await const StoryCardImageNormalizer()
-          .normalize(sourceBytes);
+          .normalize(
+            selection.imageBytes,
+            characterComposition: selection.characterComposition,
+          );
       if (!mounted) {
         return;
       }
@@ -582,13 +650,30 @@ class _StoryCardEditorContentState
 
       setState(() {
         _backgroundImage = backgroundImage;
-        _session = _session.enterPhotoDecorator(normalizedImageBytes);
+        _cameraFilm = selection.film;
+        _session = _session.enterPhotoDecorator(
+          normalizedImageBytes,
+          film: selection.film,
+        );
       });
+      if (selection.film.look != StoryCardFilmLook.original) {
+        unawaited(_prepareFilmProgram());
+      }
     } catch (_) {
       if (mounted) {
         _showSnackBar('사진을 불러오지 못했어요.');
       }
     }
+  }
+
+  Future<Uint8List?> _loadCoupleCharacterImage() async {
+    final character = await ref.read(coupleCharacterControllerProvider.future);
+    if (character == null) {
+      return null;
+    }
+    return ref
+        .read(coupleCharacterControllerProvider.notifier)
+        .fetchImageBytes(character);
   }
 
   Future<void> _loadBackgroundImage(Uint8List? bytes) async {
@@ -618,6 +703,33 @@ class _StoryCardEditorContentState
     final frame = await codec.getNextFrame();
     codec.dispose();
     return frame.image;
+  }
+
+  Future<ui.FragmentProgram> _ensureFilmProgram() {
+    final currentProgram = _filmProgram;
+    if (currentProgram != null) {
+      return Future.value(currentProgram);
+    }
+
+    return _filmProgramFuture ??= StoryCardFilmShaderProgram.load().then((
+      program,
+    ) {
+      _filmProgram = program;
+      if (mounted) {
+        setState(() {});
+      }
+      return program;
+    });
+  }
+
+  Future<void> _prepareFilmProgram() async {
+    try {
+      await _ensureFilmProgram();
+    } catch (_) {
+      if (mounted) {
+        _showSnackBar('필름 효과를 준비하지 못했어요.');
+      }
+    }
   }
 
   void _startStroke(StoryCardPoint point, int pointer) {
@@ -804,6 +916,10 @@ class _StoryCardEditorContentState
   }
 
   Future<Uint8List> _capturePreview() async {
+    if (_draft.scene.film.look != StoryCardFilmLook.original &&
+        _filmProgram == null) {
+      await _ensureFilmProgram();
+    }
     await WidgetsBinding.instance.endOfFrame;
     final renderObject = _previewKey.currentContext?.findRenderObject();
     if (renderObject is! RenderRepaintBoundary) {
@@ -824,44 +940,6 @@ class _StoryCardEditorContentState
     return byteData.buffer.asUint8List();
   }
 
-  Future<void> _deleteCard() async {
-    if (_isDeleting || _draft.existingRevision == null) {
-      return;
-    }
-
-    final shouldDelete = await showAppConfirmationDialog(
-      context: context,
-      title: '오늘 카드를 삭제할까요?',
-      message: '삭제하면 질문은 두 카드가 다시 완성될 때만 생성돼요.',
-      confirmLabel: '삭제',
-    );
-    if (!shouldDelete || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _isDeleting = true;
-    });
-    try {
-      await ref
-          .read(storyCardEditorControllerProvider.notifier)
-          .delete(expectedRevision: _draft.existingRevision!);
-      if (mounted) {
-        context.go('/home');
-      }
-    } catch (error) {
-      if (mounted) {
-        _showSnackBar(_saveFailureMessage(error));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isDeleting = false;
-        });
-      }
-    }
-  }
-
   String _saveFailureMessage(Object error) {
     if (error is StoryLoopWriteRepositoryException) {
       return switch (error.reason) {
@@ -876,7 +954,8 @@ class _StoryCardEditorContentState
           '사진, 그림, 글 중 하나 이상을 추가해 주세요.',
         StoryLoopWriteFailureReason.invalidTextContent =>
           '텍스트 개수 또는 글자 수를 확인해 주세요.',
-        StoryLoopWriteFailureReason.cardLocked => '질문이 생성되어 오늘 카드를 수정할 수 없어요.',
+        StoryLoopWriteFailureReason.cardLocked =>
+          '올린 카드는 수정할 수 없어요. 새 카드로 올려 주세요.',
         StoryLoopWriteFailureReason.revisionRequired ||
         StoryLoopWriteFailureReason.revisionConflict =>
           '카드가 다른 곳에서 변경됐어요. 다시 열어 확인해 주세요.',

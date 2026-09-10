@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../core/drawing/app_drawing_style.dart';
+import 'story_card_film_look.dart';
 
 const storyCardColorPalette = AppDrawingStyle.colorPalette;
 const storyCardThinStrokeWidth = AppDrawingStyle.thinStrokeWidth;
@@ -89,6 +90,7 @@ class StoryCardScene {
     required this.backgroundTransform,
     required this.strokes,
     required this.textLayers,
+    this.film = const StoryCardFilmState.original(),
     this.canvasBackground = StoryCardCanvasBackground.white,
     this.caption,
   });
@@ -101,6 +103,7 @@ class StoryCardScene {
       backgroundTransform: const StoryCardBackgroundTransform.initial(),
       strokes: const [],
       textLayers: const [],
+      film: const StoryCardFilmState.original(),
       canvasBackground: canvasBackground,
     );
   }
@@ -135,6 +138,7 @@ class StoryCardScene {
             ),
           )
           .toList(growable: false),
+      film: StoryCardFilmState.fromJson(json['film']),
       canvasBackground: _canvasBackgroundFromJson(
         canvas?['background_color'] as String?,
       ),
@@ -145,6 +149,7 @@ class StoryCardScene {
   final StoryCardBackgroundTransform backgroundTransform;
   final List<StoryCardStroke> strokes;
   final List<StoryCardTextLayer> textLayers;
+  final StoryCardFilmState film;
   final StoryCardCanvasBackground canvasBackground;
   final String? caption;
 
@@ -173,6 +178,7 @@ class StoryCardScene {
     StoryCardBackgroundTransform? backgroundTransform,
     List<StoryCardStroke>? strokes,
     List<StoryCardTextLayer>? textLayers,
+    StoryCardFilmState? film,
     StoryCardCanvasBackground? canvasBackground,
     Object? caption = _storyCardCaptionUnchanged,
   }) {
@@ -180,6 +186,7 @@ class StoryCardScene {
       backgroundTransform: backgroundTransform ?? this.backgroundTransform,
       strokes: strokes ?? this.strokes,
       textLayers: textLayers ?? this.textLayers,
+      film: film ?? this.film,
       canvasBackground: canvasBackground ?? this.canvasBackground,
       caption: identical(caption, _storyCardCaptionUnchanged)
           ? this.caption
@@ -189,13 +196,14 @@ class StoryCardScene {
 
   Map<String, dynamic> toJson() {
     return {
-      'version': 4,
+      'version': 5,
       'canvas': {
         'width_ratio': 4,
         'height_ratio': 5,
         'background_color': canvasBackground.name,
       },
       'background': backgroundTransform.toJson(),
+      'film': film.toJson(),
       'strokes': strokes.map((stroke) => stroke.toJson()).toList(),
       'text_layers': textLayers.map((layer) => layer.toJson()).toList(),
       'caption': caption,

@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/date/app_date_policy.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../profile/application/profile_controller.dart';
+import '../../questions/application/daily_question_detail_provider.dart';
+import '../data/story_loop_card_save_result.dart';
 import 'story_loop_detail_provider.dart';
 import 'story_loop_month_summary_provider.dart';
+import 'today_story_card_stacks_provider.dart';
 import 'today_story_loop_summary_provider.dart';
-import '../data/editable_story_loop_card.dart';
 import '../data/story_card_draft.dart';
 import '../data/story_card_scene.dart';
 import '../data/story_loop_write_failure.dart';
@@ -23,11 +25,7 @@ final storyCardEditorControllerProvider =
 class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
   @override
   Future<StoryCardDraft> build() async {
-    final editableCard = await ref
-        .watch(storyLoopWriteRepositoryProvider)
-        .fetchEditableTodayCard();
-
-    return _draftFromEditableCard(editableCard);
+    return _emptyDraft();
   }
 
   Future<StoryLoopCardSaveResult> save({
@@ -56,39 +54,14 @@ class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
     return result;
   }
 
-  Future<void> delete({required int expectedRevision}) async {
-    final couple = await ref.read(coupleControllerProvider.future);
-    if (couple == null || !couple.canEditSharedData) {
-      throw const StoryLoopWriteRepositoryException(
-        StoryLoopWriteFailureReason.activeCoupleRequired,
-      );
-    }
-
-    await ref
-        .read(storyLoopWriteRepositoryProvider)
-        .deleteTodayCard(expectedRevision: expectedRevision);
-    state = AsyncValue.data(_emptyDraft());
-    _invalidateReadState(couple.effectiveCurrentDate);
-  }
-
-  StoryCardDraft _draftFromEditableCard(EditableStoryLoopCard? card) {
-    if (card == null) {
-      return _emptyDraft();
-    }
-
-    return StoryCardDraft(
-      scene: card.scene,
-      backgroundImageBytes: card.backgroundImageBytes,
-      existingRevision: card.revision,
-    );
-  }
-
   StoryCardDraft _emptyDraft() {
     return StoryCardDraft(scene: StoryCardScene.empty());
   }
 
   void _invalidateReadState(DateTime coupleDate) {
     ref.invalidate(todayStoryLoopSummaryProvider);
+    ref.invalidate(todayStoryCardStacksProvider);
+    ref.invalidate(todayDailyQuestionProvider);
     ref.invalidate(storyLoopDetailProvider(null));
     ref.invalidate(storyLoopDetailProvider(coupleDate));
     ref.invalidate(

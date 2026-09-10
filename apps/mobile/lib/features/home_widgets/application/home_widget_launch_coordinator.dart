@@ -1,19 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
 
-import '../../profile/application/profile_controller.dart';
-import '../../story_loops/application/today_story_loop_summary_provider.dart';
 import 'home_widget_launch_policy.dart';
 
 final homeWidgetLaunchCoordinatorProvider =
     Provider<HomeWidgetLaunchCoordinator>((ref) {
-      return HomeWidgetLaunchCoordinator(ref);
+      return const HomeWidgetLaunchCoordinator();
     });
 
 class HomeWidgetLaunchCoordinator {
-  const HomeWidgetLaunchCoordinator(this._ref);
-
-  final Ref _ref;
+  const HomeWidgetLaunchCoordinator();
 
   Stream<Uri?> get widgetClicks => HomeWidget.widgetClicked;
 
@@ -26,16 +22,6 @@ class HomeWidgetLaunchCoordinator {
     if (action == null) {
       return null;
     }
-    if (action == HomeWidgetLaunchAction.record) {
-      return HomeWidgetCardLaunchPolicy.homeLocation;
-    }
-
-    _ref.invalidate(todayStoryLoopSummaryProvider);
-    final profile = await _ref.read(profileControllerProvider.future);
-    final state = await _ref.read(todayStoryLoopSummaryProvider.future);
-    return HomeWidgetCardLaunchPolicy.resolve(
-      state: state,
-      currentUserId: profile?.id,
-    );
+    return HomeWidgetCardLaunchPolicy.resolve();
   }
 }

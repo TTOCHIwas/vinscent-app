@@ -12,6 +12,7 @@ import 'package:vinscent/core/drawing/widgets/app_drawing_width_slider.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
+import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
@@ -209,6 +210,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byTooltip('카드 올리기'), findsOneWidget);
+    expect(find.byTooltip('카드 삭제'), findsNothing);
     expect(find.text('올리기'), findsNothing);
     expect(find.text('오늘의 스토리'), findsNothing);
   });
@@ -367,6 +369,31 @@ void main() {
       _pixelAt(capturedBytes, capturedImage, x: 0.5, y: 0.9),
       const Color(0xFFFFFFFF),
     );
+  });
+
+  testWidgets('photo decorator exposes and applies the shared film selector', (
+    tester,
+  ) async {
+    await _pumpEditor(tester, draft: _existingRedPhotoDraft());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('story-card-film-tool')));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('story-card-editor-film-selector')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-editor-film-moment')),
+    );
+    await tester.pump();
+
+    expect(_filmFromPainter(tester).look, StoryCardFilmLook.moment);
+    expect(_filmFromPainter(tester).seed, greaterThan(0));
   });
 
   testWidgets('opens inline text input with focus instead of a dialog', (
@@ -1241,6 +1268,15 @@ StoryCardBackgroundTransform _backgroundTransform(WidgetTester tester) {
   );
   final dynamic painter = customPaint.painter;
   return painter.backgroundTransform as StoryCardBackgroundTransform;
+}
+
+StoryCardFilmState _filmFromPainter(WidgetTester tester) {
+  final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+  final customPaint = tester.widget<CustomPaint>(
+    find.descendant(of: canvas, matching: find.byType(CustomPaint)).first,
+  );
+  final dynamic painter = customPaint.painter;
+  return painter.film as StoryCardFilmState;
 }
 
 String? _captionFromPainter(WidgetTester tester) {

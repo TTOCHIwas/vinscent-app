@@ -1,11 +1,12 @@
 import 'dart:typed_data';
 
 import '../data/story_card_draft.dart';
+import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
 
 enum StoryCardEditorStage { camera, decorating }
 
-enum StoryCardEditorTool { none, background, text, drawing }
+enum StoryCardEditorTool { none, background, text, drawing, film }
 
 class StoryCardEditorSession {
   const StoryCardEditorSession({
@@ -53,12 +54,15 @@ class StoryCardEditorSession {
     );
   }
 
-  StoryCardEditorSession enterPhotoDecorator(Uint8List imageBytes) {
+  StoryCardEditorSession enterPhotoDecorator(
+    Uint8List imageBytes, {
+    StoryCardFilmState film = const StoryCardFilmState.original(),
+  }) {
     return copyWith(
       stage: StoryCardEditorStage.decorating,
       tool: StoryCardEditorTool.background,
       draft: StoryCardDraft(
-        scene: StoryCardScene.empty(),
+        scene: StoryCardScene.empty().copyWith(film: film),
         backgroundImageBytes: imageBytes,
       ),
       hasUnsavedChanges: true,
@@ -119,6 +123,13 @@ class StoryCardEditorSession {
     return updateDraft(
       draft.copyWith(scene: draft.scene.copyWith(caption: caption)),
     );
+  }
+
+  StoryCardEditorSession setFilm(StoryCardFilmState film) {
+    if (!draft.hasPhoto || draft.scene.film == film) {
+      return this;
+    }
+    return updateDraft(draft.copyWith(scene: draft.scene.copyWith(film: film)));
   }
 
   StoryCardEditorSession addTextLayer(StoryCardTextLayer layer) {

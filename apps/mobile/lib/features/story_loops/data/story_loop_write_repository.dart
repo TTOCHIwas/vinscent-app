@@ -9,7 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/config/app_config.dart';
 import '../story_loop_debug_log.dart';
-import 'editable_story_loop_card.dart';
+import 'story_loop_card_save_result.dart';
 import 'story_card_draft.dart';
 import 'story_card_scene.dart';
 import 'story_loop_write_failure.dart';
@@ -21,8 +21,6 @@ final storyLoopWriteRepositoryProvider = Provider<StoryLoopWriteRepository>((
 });
 
 abstract interface class StoryLoopWriteRepository {
-  Future<EditableStoryLoopCard?> fetchEditableTodayCard();
-
   Future<StoryLoopCardSaveResult> saveTodayCard({
     required String coupleId,
     required DateTime coupleDate,
@@ -31,60 +29,15 @@ abstract interface class StoryLoopWriteRepository {
     required Uint8List previewImageBytes,
   });
 
-  Future<void> deleteTodayCard({required int expectedRevision});
+  Future<void> deleteCard(String cardId);
+
+  Future<void> setFeaturedCard(String cardId);
 }
 
 class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
   const SupabaseStoryLoopWriteRepository();
 
   static const _bucketId = 'story-cards';
-
-  @override
-  Future<EditableStoryLoopCard?> fetchEditableTodayCard() async {
-    _ensureSupabaseConfigured();
-
-    try {
-      final data = await Supabase.instance.client
-          .rpc('get_my_today_story_loop_card_for_editing')
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final row = _asOptionalRow(data);
-      if (row == null) {
-        return null;
-      }
-
-      final sceneDataPath = row['scene_data_path'] as String;
-      final sceneBytes = await _bucket
-          .download(sceneDataPath)
-          .timeout(AppConfig.supabaseRpcTimeout);
-      final backgroundImagePath = row['background_image_path'] as String?;
-      final backgroundImageBytes = backgroundImagePath == null
-          ? null
-          : await _bucket
-                .download(backgroundImagePath)
-                .timeout(AppConfig.supabaseRpcTimeout);
-
-      return EditableStoryLoopCard(
-        storyLoopId: row['story_loop_id'] as String,
-        cardId: row['card_id'] as String,
-        revision: _toInt(row['card_revision']),
-        scene: StoryCardScene.fromJsonString(utf8.decode(sceneBytes)),
-        backgroundImageBytes: backgroundImageBytes,
-      );
-    } on TimeoutException {
-      throw const StoryLoopWriteRepositoryException(
-        StoryLoopWriteFailureReason.requestTimeout,
-      );
-    } on PostgrestException catch (error) {
-      throw _mapPostgrestError(error);
-    } on StorageException catch (error) {
-      throw _mapStorageError(error);
-    } on FormatException catch (error) {
-      throw StoryLoopWriteRepositoryException(
-        StoryLoopWriteFailureReason.unknown,
-        error.message,
-      );
-    }
-  }
 
   @override
   Future<StoryLoopCardSaveResult> saveTodayCard({
@@ -108,7 +61,7 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       utf8.encode(draft.scene.toJsonString()),
     );
     var uploadAttempted = false;
-    var stage = 'preview-upload';
+    var stage = 'artifact-upload';
 
     debugStoryLoopLog(
       'Save started: artifactRevision=$artifactRevision, '
@@ -119,52 +72,43 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
 
     try {
       uploadAttempted = true;
-      await _bucket
-          .uploadBinary(
-            artifactPaths.previewPath,
-            previewImageBytes,
-            fileOptions: const FileOptions(
-              contentType: 'image/png',
-              cacheControl: '60',
-            ),
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      debugStoryLoopLog(
-        'Preview upload completed: path=${artifactPaths.previewPath}',
-      );
-      stage = 'scene-upload';
-      await _bucket
-          .uploadBinary(
-            artifactPaths.sceneDataPath,
-            sceneBytes,
-            fileOptions: const FileOptions(
-              contentType: 'application/json',
-              cacheControl: '60',
-            ),
-          )
-          .timeout(AppConfig.supabaseRpcTimeout);
-      debugStoryLoopLog(
-        'Scene upload completed: path=${artifactPaths.sceneDataPath}',
-      );
-
       final backgroundImageBytes = draft.backgroundImageBytes;
-      if (backgroundImageBytes != null) {
-        stage = 'background-upload';
-        await _bucket
+      await Future.wait([
+        _bucket
             .uploadBinary(
-              artifactPaths.backgroundImagePath,
-              backgroundImageBytes,
+              artifactPaths.previewPath,
+              previewImageBytes,
               fileOptions: const FileOptions(
-                contentType: 'image/jpeg',
+                contentType: 'image/png',
                 cacheControl: '60',
               ),
             )
-            .timeout(AppConfig.supabaseRpcTimeout);
-        debugStoryLoopLog(
-          'Background upload completed: '
-          'path=${artifactPaths.backgroundImagePath}',
-        );
-      }
+            .timeout(AppConfig.supabaseRpcTimeout),
+        _bucket
+            .uploadBinary(
+              artifactPaths.sceneDataPath,
+              sceneBytes,
+              fileOptions: const FileOptions(
+                contentType: 'application/json',
+                cacheControl: '60',
+              ),
+            )
+            .timeout(AppConfig.supabaseRpcTimeout),
+        if (backgroundImageBytes != null)
+          _bucket
+              .uploadBinary(
+                artifactPaths.backgroundImagePath,
+                backgroundImageBytes,
+                fileOptions: const FileOptions(
+                  contentType: 'image/jpeg',
+                  cacheControl: '60',
+                ),
+              )
+              .timeout(AppConfig.supabaseRpcTimeout),
+      ]);
+      debugStoryLoopLog(
+        'Artifact upload completed: artifactRevision=$artifactRevision',
+      );
 
       stage = 'finalize-rpc';
       final data = await Supabase.instance.client
@@ -182,7 +126,6 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
               'requested_has_text': draft.scene.hasText,
               'requested_text_layer_count': draft.scene.textLayers.length,
               'requested_text_character_count': draft.scene.textCharacterCount,
-              'expected_revision': draft.existingRevision,
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
@@ -197,8 +140,6 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
         storyLoopStatus: row['story_loop_status'] as String,
         cardId: row['card_id'] as String,
         cardRevision: _toInt(row['card_revision']),
-        questionGenerated: row['question_generated'] as bool? ?? false,
-        dailyQuestionId: row['daily_question_id'] as String?,
       );
     } on TimeoutException {
       debugStoryLoopLog(
@@ -248,15 +189,26 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
   }
 
   @override
-  Future<void> deleteTodayCard({required int expectedRevision}) async {
-    _ensureSupabaseConfigured();
+  Future<void> deleteCard(String cardId) async {
+    await _runCardMutation(functionName: 'delete_story_card', cardId: cardId);
+  }
 
+  @override
+  Future<void> setFeaturedCard(String cardId) async {
+    await _runCardMutation(
+      functionName: 'set_today_story_card_featured',
+      cardId: cardId,
+    );
+  }
+
+  Future<void> _runCardMutation({
+    required String functionName,
+    required String cardId,
+  }) async {
+    _ensureSupabaseConfigured();
     try {
       await Supabase.instance.client
-          .rpc(
-            'delete_today_story_loop_card',
-            params: {'expected_revision': expectedRevision},
-          )
+          .rpc(functionName, params: {'target_card_id': cardId})
           .timeout(AppConfig.supabaseRpcTimeout);
     } on TimeoutException {
       throw const StoryLoopWriteRepositoryException(

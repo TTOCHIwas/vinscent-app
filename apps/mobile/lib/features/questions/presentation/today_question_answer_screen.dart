@@ -22,11 +22,12 @@ import '../../story_loops/presentation/widgets/story_card_pair_layout.dart';
 import '../../story_loops/presentation/widgets/story_card_detail_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../application/question_answer_submit_controller.dart';
+import '../application/daily_question_detail_provider.dart';
+import '../application/question_detail_provider.dart';
 import '../data/daily_question.dart';
 import '../data/daily_question_answer_state.dart';
 import '../data/question_detail_state.dart';
 import 'question_route_context.dart';
-import 'story_loop_question_view_model.dart';
 import 'widgets/question_answer_prompt_row.dart';
 import 'widgets/question_answer_sections.dart';
 import 'widgets/question_detail_header.dart';
@@ -62,7 +63,10 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
           error: (error, stackTrace) => null,
           data: (state) => state,
         );
-    final detail = ref.watch(storyLoopDetailProvider(targetDate));
+    final questionDetail = ref.watch(questionDetailProvider(targetDate));
+    final cards = _cardsFromStoryDetail(
+      ref.watch(storyLoopDetailProvider(targetDate)),
+    );
     final currentUserId = ref.watch(
       profileControllerProvider.select(
         (state) =>
@@ -74,7 +78,7 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
       targetDate: targetDate,
     );
 
-    final page = detail.when(
+    final page = questionDetail.when(
       loading: () => _QuestionPageFrame(
         onBackPressed: () => _goBack(context, backLocation),
         child: const _CenteredLoader(),
@@ -83,12 +87,7 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
         onBackPressed: () => _goBack(context, backLocation),
         child: _QuestionLoadError(onRetry: () => _retry(ref)),
       ),
-      data: (state) {
-        final questionState = toQuestionDetailState(state);
-        final cards = switch (state) {
-          LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
-          _ => const <StoryLoopCardDetail>[],
-        };
+      data: (questionState) {
         return switch (questionState) {
           LoadedQuestionDetailState() => _QuestionPageFrame(
             question: questionState.question,
@@ -147,7 +146,8 @@ class TodayQuestionAnswerScreen extends ConsumerWidget {
 
   void _retry(WidgetRef ref) {
     final retryTargetDate = targetDate;
-    ref.invalidate(storyLoopDetailProvider(retryTargetDate));
+    ref.invalidate(dailyQuestionDetailProvider);
+    ref.invalidate(questionDetailProvider(retryTargetDate));
   }
 
   String _questionDetailLocation(DateTime date) {
@@ -165,6 +165,15 @@ void _goBack(BuildContext context, String fallbackLocation) {
   }
 
   context.go(fallbackLocation);
+}
+
+List<StoryLoopCardDetail> _cardsFromStoryDetail(
+  AsyncValue<StoryLoopDetailState> state,
+) {
+  return switch (state.asData?.value) {
+    LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
+    _ => const <StoryLoopCardDetail>[],
+  };
 }
 
 class _QuestionUnavailableMessage extends StatelessWidget {
@@ -209,7 +218,7 @@ class _QuestionEditUnavailableMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _StateMessage(
       title: '답변을 작성할 수 없어요',
-      message: '오늘 질문 화면에서만 답변을 작성할 수 있어요.',
+      message: '이 질문은 더 이상 답변을 작성할 수 없어요.',
     );
   }
 }
@@ -226,7 +235,12 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(storyLoopDetailProvider(routeContext.targetDate));
+    final questionDetail = ref.watch(
+      questionDetailProvider(routeContext.targetDate),
+    );
+    final cards = _cardsFromStoryDetail(
+      ref.watch(storyLoopDetailProvider(routeContext.targetDate)),
+    );
     final currentUserId = ref.watch(
       profileControllerProvider.select(
         (state) =>
@@ -243,7 +257,7 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
           _goBackToQuestion(context, routeContext);
         }
       },
-      child: detail.when(
+      child: questionDetail.when(
         loading: () => _QuestionPageFrame(
           onBackPressed: () => _goBackToQuestion(context, routeContext),
           child: const _CenteredLoader(),
@@ -251,17 +265,11 @@ class TodayQuestionAnswerEditScreen extends ConsumerWidget {
         error: (error, stackTrace) => _QuestionPageFrame(
           onBackPressed: () => _goBackToQuestion(context, routeContext),
           child: _QuestionLoadError(
-            onRetry: () => ref.invalidate(
-              storyLoopDetailProvider(routeContext.targetDate),
-            ),
+            onRetry: () =>
+                ref.invalidate(questionDetailProvider(routeContext.targetDate)),
           ),
         ),
-        data: (state) {
-          final questionState = toQuestionDetailState(state);
-          final cards = switch (state) {
-            LoadedStoryLoopDetailState(detail: final detail) => detail.cards,
-            _ => const <StoryLoopCardDetail>[],
-          };
+        data: (questionState) {
           return switch (questionState) {
             LoadedQuestionDetailState() when questionState.canEdit =>
               _AnswerForm(

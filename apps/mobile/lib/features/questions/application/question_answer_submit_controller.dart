@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/app_date_policy.dart';
 import '../../story_loops/application/story_loop_detail_provider.dart';
 import '../../story_loops/application/story_loop_month_summary_provider.dart';
 import '../../story_loops/application/today_story_loop_summary_provider.dart';
-import '../../story_loops/data/story_loop_detail_state.dart';
 import '../data/daily_question_answer_failure.dart';
 import '../data/daily_question_answer_repository.dart';
 import '../data/daily_question_answer_state.dart';
+import '../data/question_detail_state.dart';
+import 'daily_question_detail_provider.dart';
+import 'question_detail_provider.dart';
 
 final questionAnswerSubmitControllerProvider =
     AsyncNotifierProvider<
@@ -29,22 +32,21 @@ class QuestionAnswerSubmitController
     state = const AsyncValue.loading();
 
     try {
-      final detailState = await ref.read(
-        storyLoopDetailProvider(targetDate).future,
+      final questionState = await ref.read(
+        questionDetailProvider(targetDate).future,
       );
-      final detail = switch (detailState) {
-        LoadedStoryLoopDetailState(:final detail) => detail,
-        _ => null,
+      final detail = switch (questionState) {
+        LoadedQuestionDetailState() => questionState,
+        UnavailableQuestionDetailState() => null,
       };
 
-      if (detail == null || !detail.canAnswerQuestion) {
+      if (detail == null || !detail.canEdit) {
         throw const DailyQuestionAnswerRepositoryException(
           DailyQuestionAnswerFailureReason.questionNotReady,
         );
       }
 
-      final question = detail.question;
-      if (question == null || question.answerState.hasBothAnswers) {
+      if (detail.answerState?.hasBothAnswers ?? false) {
         throw const DailyQuestionAnswerRepositoryException(
           DailyQuestionAnswerFailureReason.questionNotReady,
         );
@@ -52,17 +54,19 @@ class QuestionAnswerSubmitController
 
       final answerState = await ref
           .read(dailyQuestionAnswerRepositoryProvider)
-          .submitStoryLoopAnswer(
-            dailyQuestionId: question.question.dailyQuestionId,
+          .submitDailyQuestionAnswer(
+            dailyQuestionId: detail.question.dailyQuestionId,
             answerText: answerText,
           );
 
+      ref.invalidate(dailyQuestionDetailProvider);
+      ref.invalidate(questionDetailProvider);
       ref.invalidate(storyLoopDetailProvider(targetDate));
       ref.invalidate(storyLoopDetailProvider(null));
       ref.invalidate(todayStoryLoopSummaryProvider);
       ref.invalidate(
         storyLoopMonthSummaryProvider(
-          DateTime(detail.coupleDate.year, detail.coupleDate.month),
+          calendarMonthOnly(detail.question.assignedDate),
         ),
       );
       state = AsyncValue.data(answerState);

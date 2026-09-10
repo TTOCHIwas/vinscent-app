@@ -1,4 +1,5 @@
 import '../../../core/date/app_date_policy.dart';
+import 'question_delivery_time.dart';
 
 enum CoupleStatus {
   pending,
@@ -60,6 +61,9 @@ class Couple {
     this.characterSetupStatus = CoupleCharacterSetupStatus.custom,
     this.userBId,
     this.relationshipStartDate,
+    this.questionDeliveryTime,
+    this.pendingQuestionDeliveryTime,
+    this.pendingQuestionDeliveryTimeEffectiveDate,
     this.connectedAt,
     this.disconnectedAt,
     this.disconnectedByUserId,
@@ -77,6 +81,15 @@ class Couple {
       userBId: json['user_b_id'] as String?,
       relationshipStartDate: _parseOptionalDate(
         json['relationship_start_date'] as String?,
+      ),
+      questionDeliveryTime: _parseOptionalQuestionDeliveryTime(
+        json['question_delivery_time'] as String?,
+      ),
+      pendingQuestionDeliveryTime: _parseOptionalQuestionDeliveryTime(
+        json['pending_question_delivery_time'] as String?,
+      ),
+      pendingQuestionDeliveryTimeEffectiveDate: _parseOptionalDate(
+        json['pending_question_delivery_time_effective_date'] as String?,
       ),
       characterSetupStatus: CoupleCharacterSetupStatus.fromJson(
         json['character_setup_status'] as String? ?? 'custom',
@@ -103,6 +116,9 @@ class Couple {
   final String userAId;
   final String? userBId;
   final DateTime? relationshipStartDate;
+  final QuestionDeliveryTime? questionDeliveryTime;
+  final QuestionDeliveryTime? pendingQuestionDeliveryTime;
+  final DateTime? pendingQuestionDeliveryTimeEffectiveDate;
   final CoupleCharacterSetupStatus characterSetupStatus;
   final String timezone;
   final CoupleStatus status;
@@ -127,6 +143,8 @@ class Couple {
   bool get canReadSharedData => isActive || isArchivedReadOnly;
 
   bool get hasRelationshipStartDate => relationshipStartDate != null;
+
+  bool get hasQuestionDeliveryTime => questionDeliveryTime != null;
 
   bool get isCharacterSetupPending =>
       characterSetupStatus == CoupleCharacterSetupStatus.pending;
@@ -168,5 +186,14 @@ class Couple {
     }
 
     return DateTime.parse(value);
+  }
+
+  static QuestionDeliveryTime? _parseOptionalQuestionDeliveryTime(
+    String? value,
+  ) {
+    if (value == null) {
+      return null;
+    }
+    return QuestionDeliveryTime.fromDatabase(value);
   }
 }

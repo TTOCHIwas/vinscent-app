@@ -73,6 +73,12 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
         .fetchDrawingData(character);
   }
 
+  Future<Uint8List> fetchImageBytes(CoupleCharacter character) {
+    return ref
+        .read(coupleCharacterRepositoryProvider)
+        .fetchImageBytes(character);
+  }
+
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(

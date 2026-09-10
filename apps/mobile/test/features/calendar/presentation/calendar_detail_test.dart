@@ -413,13 +413,13 @@ void main() {
       tester.getCenter(card).dx,
       closeTo(tester.getCenter(detailContent).dx, 0.5),
     );
-    expect(find.text('스토리 카드가 먼저 도착했어요'), findsOneWidget);
-    expect(find.text('두 사람의 카드가 모두 올라오면 질문이 생성돼요'), findsOneWidget);
+    expect(find.text('이 날은 카드만 남겼어요'), findsOneWidget);
+    expect(find.text('질문과 별개로 남긴 카드 기록이에요'), findsOneWidget);
     expect(find.text('history question'), findsNothing);
     expect(find.text('09:00'), findsNothing);
   });
 
-  testWidgets('shows a distinct message while an AI question is preparing', (
+  testWidgets('legacy preparing status does not couple cards to questions', (
     tester,
   ) async {
     final repository = FakeStoryLoopReadRepository(
@@ -432,8 +432,9 @@ void main() {
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('둘의 카드가 모두 모였어요'), findsOneWidget);
-    expect(find.text('둘에게 어울릴 질문을 고르고 있어요'), findsOneWidget);
+    expect(find.text('이 날은 카드만 남겼어요'), findsOneWidget);
+    expect(find.text('질문과 별개로 남긴 카드 기록이에요'), findsOneWidget);
+    expect(find.text('둘에게 어울릴 질문을 고르고 있어요'), findsNothing);
   });
 
   testWidgets('does not promise a question for a card-only date', (
@@ -450,7 +451,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('이 날은 카드만 남겼어요'), findsOneWidget);
-    expect(find.text('두 사람이 남긴 카드를 그대로 간직할 수 있어요'), findsOneWidget);
+    expect(find.text('질문과 별개로 남긴 카드 기록이에요'), findsOneWidget);
     expect(find.text('질문이 준비되면 이 자리에서 함께 볼 수 있어요'), findsNothing);
   });
 

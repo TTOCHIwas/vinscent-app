@@ -56,12 +56,13 @@ void main() {
     expect(find.widgetWithText(TextButton, '다시 시도'), findsOneWidget);
   });
 
-  testWidgets('연결 해제는 공통 위험 동작 하단 시트로 확인한다', (tester) async {
+  testWidgets('연결 해제는 공통 위험 동작 확인창으로 확인한다', (tester) async {
     await _pumpCoupleSettings(tester, couple: activeCouple());
 
-    await tester.tap(
-      find.byKey(const Key('couple-settings-disconnect-action')),
-    );
+    final action = find.byKey(const Key('couple-settings-disconnect-action'));
+    await tester.ensureVisible(action);
+    await tester.pumpAndSettle();
+    await tester.tap(action);
     await tester.pumpAndSettle();
 
     expect(find.byType(AppConfirmationDialog), findsOneWidget);
@@ -101,6 +102,8 @@ void main() {
     );
 
     final action = find.byKey(const Key('couple-settings-disconnect-action'));
+    await tester.ensureVisible(action);
+    await tester.pumpAndSettle();
     await tester.tap(action);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('app-confirmation-confirm')));

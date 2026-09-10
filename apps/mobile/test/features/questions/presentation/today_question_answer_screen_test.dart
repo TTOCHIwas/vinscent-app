@@ -15,6 +15,8 @@ import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_repository.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/data/daily_question_detail_snapshot.dart';
+import 'package:vinscent/features/questions/data/daily_question_read_repository.dart';
 import 'package:vinscent/features/questions/presentation/question_route_context.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
@@ -1381,6 +1383,12 @@ Future<GoRouter> _pumpRouter(
         storyLoopReadRepositoryProvider.overrideWithValue(
           resolvedStoryLoopRepository,
         ),
+        dailyQuestionReadRepositoryProvider.overrideWithValue(
+          _StoryLoopBackedDailyQuestionReadRepository(
+            today: today,
+            storyLoopRepository: resolvedStoryLoopRepository,
+          ),
+        ),
         if (safetyReportRepository != null)
           safetyReportRepositoryProvider.overrideWithValue(
             safetyReportRepository,
@@ -1406,6 +1414,36 @@ Future<GoRouter> _pumpRouter(
     }
   }
   return router;
+}
+
+class _StoryLoopBackedDailyQuestionReadRepository
+    implements DailyQuestionReadRepository {
+  const _StoryLoopBackedDailyQuestionReadRepository({
+    required this.today,
+    required this.storyLoopRepository,
+  });
+
+  final DateTime today;
+  final StoryLoopReadRepository storyLoopRepository;
+
+  @override
+  Future<DailyQuestionDetailSnapshot?> fetchDetail(DateTime? date) async {
+    final targetDate = date ?? today;
+    final detail = await storyLoopRepository.fetchDetail(targetDate);
+    final question = detail?.question;
+    if (detail == null || question == null) {
+      return null;
+    }
+
+    return DailyQuestionDetailSnapshot(
+      coupleId: detail.coupleId,
+      coupleDate: detail.coupleDate,
+      accessMode: detail.accessMode,
+      canAnswerQuestion: detail.canAnswerQuestion,
+      question: question.question,
+      answerState: question.answerState,
+    );
+  }
 }
 
 AiQuestionFeedbackState _aiFeedbackState(
@@ -1532,7 +1570,7 @@ class _FakeDailyQuestionAnswerRepository
   var submitCallCount = 0;
 
   @override
-  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+  Future<DailyQuestionAnswerState> submitDailyQuestionAnswer({
     required String dailyQuestionId,
     required String answerText,
   }) async {

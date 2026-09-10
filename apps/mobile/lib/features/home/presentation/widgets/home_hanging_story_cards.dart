@@ -13,6 +13,7 @@ class HomeHangingStoryCards extends StatelessWidget {
   const HomeHangingStoryCards({
     super.key,
     required this.size,
+    this.leadingBuilder,
     this.leftCardBuilder,
     this.rightCardBuilder,
   });
@@ -33,12 +34,15 @@ class HomeHangingStoryCards extends StatelessWidget {
   static const _rightRotation = 0.055;
 
   final HomeHangingStoryCardSize size;
+  final HomeHangingStoryCardBuilder? leadingBuilder;
   final HomeHangingStoryCardBuilder? leftCardBuilder;
   final HomeHangingStoryCardBuilder? rightCardBuilder;
 
   @override
   Widget build(BuildContext context) {
-    if (leftCardBuilder == null && rightCardBuilder == null) {
+    if (leadingBuilder == null &&
+        leftCardBuilder == null &&
+        rightCardBuilder == null) {
       return const SizedBox.shrink();
     }
 
@@ -47,9 +51,12 @@ class HomeHangingStoryCards extends StatelessWidget {
         final contentWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth.clamp(0.0, maximumContentWidth).toDouble()
             : maximumContentWidth;
-        final slotWidth = math.max(0.0, (contentWidth - slotGap) / 2);
-        final leftAnchorX = slotWidth / 2;
-        final rightAnchorX = contentWidth - (slotWidth / 2);
+        final slotCount = leadingBuilder == null ? 2 : 3;
+        final resolvedSlotGap = slotCount == 3 ? 10.0 : slotGap;
+        final slotWidth = math.max(
+          0.0,
+          (contentWidth - (resolvedSlotGap * (slotCount - 1))) / slotCount,
+        );
         final maximumCardWidth = switch (size) {
           HomeHangingStoryCardSize.standard => maximumStandardCardWidth,
           HomeHangingStoryCardSize.compact => maximumCompactCardWidth,
@@ -78,12 +85,9 @@ class HomeHangingStoryCards extends StatelessWidget {
         final contentHeight = constraints.hasBoundedHeight
             ? math.min(preferredHeight, constraints.maxHeight)
             : math.min(preferredHeight, maximumHeight);
-        final leftRotation = size == HomeHangingStoryCardSize.compact
-            ? _leftRotation
-            : 0.0;
-        final rightRotation = size == HomeHangingStoryCardSize.compact
-            ? _rightRotation
-            : 0.0;
+        final builders = leadingBuilder == null
+            ? [leftCardBuilder, rightCardBuilder]
+            : [leadingBuilder, leftCardBuilder, rightCardBuilder];
 
         return Align(
           alignment: Alignment.topCenter,
@@ -102,22 +106,24 @@ class HomeHangingStoryCards extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (leftCardBuilder case final builder?)
-                  _HangingStoryCard(
-                    anchorX: leftAnchorX,
-                    anchorY: _lineY(leftAnchorX, contentWidth),
-                    cardWidth: cardWidth,
-                    rotation: leftRotation,
-                    builder: builder,
-                  ),
-                if (rightCardBuilder case final builder?)
-                  _HangingStoryCard(
-                    anchorX: rightAnchorX,
-                    anchorY: _lineY(rightAnchorX, contentWidth),
-                    cardWidth: cardWidth,
-                    rotation: rightRotation,
-                    builder: builder,
-                  ),
+                for (var index = 0; index < builders.length; index++)
+                  if (builders[index] case final builder?)
+                    _HangingStoryCard(
+                      anchorX:
+                          (slotWidth / 2) +
+                          (index * (slotWidth + resolvedSlotGap)),
+                      anchorY: _lineY(
+                        (slotWidth / 2) +
+                            (index * (slotWidth + resolvedSlotGap)),
+                        contentWidth,
+                      ),
+                      cardWidth: cardWidth,
+                      rotation: _rotationFor(
+                        index: index,
+                        slotCount: slotCount,
+                      ),
+                      builder: builder,
+                    ),
               ],
             ),
           ),
@@ -136,6 +142,20 @@ class HomeHangingStoryCards extends StatelessWidget {
     return (inverseT * inverseT * _lineEdgeY) +
         (2 * inverseT * t * _lineControlY) +
         (t * t * _lineEdgeY);
+  }
+
+  double _rotationFor({required int index, required int slotCount}) {
+    if (size != HomeHangingStoryCardSize.compact) {
+      return 0;
+    }
+    if (slotCount == 2) {
+      return index == 0 ? _leftRotation : _rightRotation;
+    }
+    return switch (index) {
+      0 => _leftRotation,
+      1 => 0,
+      _ => _rightRotation,
+    };
   }
 }
 

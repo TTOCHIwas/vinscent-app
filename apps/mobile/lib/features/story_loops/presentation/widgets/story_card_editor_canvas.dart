@@ -6,6 +6,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../application/story_card_canvas_renderer.dart';
 import '../../application/story_card_editor_session.dart';
+import '../../data/story_card_film_look.dart';
 import '../../data/story_card_scene.dart';
 
 class StoryCardEditorCanvas extends StatefulWidget {
@@ -13,6 +14,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
     super.key,
     required this.backgroundImage,
     required this.scene,
+    this.filmProgram,
     required this.visibleStrokes,
     required this.interactionMode,
     required this.onStrokeStart,
@@ -27,6 +29,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
 
   final ui.Image? backgroundImage;
   final StoryCardScene scene;
+  final ui.FragmentProgram? filmProgram;
   final List<StoryCardStroke> visibleStrokes;
   final StoryCardEditorTool interactionMode;
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
@@ -88,6 +91,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                       painter: _StoryCardPainter(
                         backgroundImage: widget.backgroundImage,
                         scene: widget.scene,
+                        filmProgram: widget.filmProgram,
                         strokes: widget.visibleStrokes,
                       ),
                     ),
@@ -237,17 +241,21 @@ class _StoryCardPainter extends CustomPainter {
   const _StoryCardPainter({
     required this.backgroundImage,
     required this.scene,
+    required this.filmProgram,
     required this.strokes,
   });
 
   final ui.Image? backgroundImage;
   final StoryCardScene scene;
+  final ui.FragmentProgram? filmProgram;
   final List<StoryCardStroke> strokes;
 
   StoryCardBackgroundTransform get backgroundTransform =>
       scene.backgroundTransform;
 
   String? get caption => scene.caption;
+
+  StoryCardFilmState get film => scene.film;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -256,6 +264,7 @@ class _StoryCardPainter extends CustomPainter {
       size: size,
       scene: scene,
       backgroundImage: backgroundImage,
+      filmProgram: filmProgram,
       strokes: strokes,
       includeTextLayers: false,
     );
@@ -265,6 +274,7 @@ class _StoryCardPainter extends CustomPainter {
   bool shouldRepaint(covariant _StoryCardPainter oldDelegate) {
     return oldDelegate.backgroundImage != backgroundImage ||
         oldDelegate.scene != scene ||
+        oldDelegate.filmProgram != filmProgram ||
         oldDelegate.strokes != strokes;
   }
 }

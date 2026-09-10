@@ -13,7 +13,7 @@ final dailyQuestionAnswerRepositoryProvider =
     });
 
 abstract interface class DailyQuestionAnswerRepository {
-  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+  Future<DailyQuestionAnswerState> submitDailyQuestionAnswer({
     required String dailyQuestionId,
     required String answerText,
   });
@@ -24,12 +24,12 @@ class SupabaseDailyQuestionAnswerRepository
   const SupabaseDailyQuestionAnswerRepository();
 
   @override
-  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+  Future<DailyQuestionAnswerState> submitDailyQuestionAnswer({
     required String dailyQuestionId,
     required String answerText,
   }) async {
     return _submitAnswer(
-      functionName: 'submit_story_loop_question_answer',
+      functionName: 'submit_daily_question_answer',
       params: {
         'expected_daily_question_id': dailyQuestionId,
         'answer_text': answerText,

@@ -11,6 +11,12 @@ import '../story_loop_debug_log.dart';
 final storyLoopReadRevisionProvider =
     NotifierProvider<StoryLoopReadRevision, int>(StoryLoopReadRevision.new);
 
+final storyCardReadRevisionProvider =
+    NotifierProvider<StoryLoopReadRevision, int>(StoryLoopReadRevision.new);
+
+final dailyQuestionReadRevisionProvider =
+    NotifierProvider<StoryLoopReadRevision, int>(StoryLoopReadRevision.new);
+
 class StoryLoopReadRevision extends Notifier<int> {
   @override
   int build() => 0;
@@ -29,9 +35,10 @@ final storyLoopRealtimeControllerProvider =
 class StoryLoopRealtimeController extends AsyncNotifier<void> {
   static const _refreshDebounce = Duration(milliseconds: 160);
 
-  StreamSubscription<void>? _changesSubscription;
+  StreamSubscription<StoryLoopChangeKind>? _changesSubscription;
   Timer? _refreshTimer;
   Future<void>? _pendingSubscriptionCancellation;
+  final Set<StoryLoopChangeKind> _pendingKinds = {};
 
   @override
   Future<void> build() async {
@@ -59,12 +66,15 @@ class StoryLoopRealtimeController extends AsyncNotifier<void> {
       return;
     }
     ref.read(storyLoopReadRevisionProvider.notifier).advance();
+    ref.read(storyCardReadRevisionProvider.notifier).advance();
+    ref.read(dailyQuestionReadRevisionProvider.notifier).advance();
   }
 
   void _registerLifecycle() {
     ref.onDispose(() {
       _refreshTimer?.cancel();
       _refreshTimer = null;
+      _pendingKinds.clear();
       final subscription = _changesSubscription;
       _changesSubscription = null;
       _pendingSubscriptionCancellation = _cancelSubscription(subscription);
@@ -76,7 +86,7 @@ class StoryLoopRealtimeController extends AsyncNotifier<void> {
         .read(storyLoopChangeSourceProvider)
         .watch(coupleId: coupleId)
         .listen(
-          (_) => _scheduleRefresh(),
+          (kind) => _scheduleRefresh(kind),
           onError: (Object error, StackTrace stackTrace) {
             debugStoryLoopLog('Realtime stream failed: $error');
           },
@@ -86,6 +96,7 @@ class StoryLoopRealtimeController extends AsyncNotifier<void> {
   Future<void> _stopWatchingChanges() async {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    _pendingKinds.clear();
     final pendingCancellation = _pendingSubscriptionCancellation;
     _pendingSubscriptionCancellation = null;
     await pendingCancellation;
@@ -95,7 +106,7 @@ class StoryLoopRealtimeController extends AsyncNotifier<void> {
   }
 
   Future<void> _cancelSubscription(
-    StreamSubscription<void>? subscription,
+    StreamSubscription<StoryLoopChangeKind>? subscription,
   ) async {
     if (subscription == null) {
       return;
@@ -107,11 +118,22 @@ class StoryLoopRealtimeController extends AsyncNotifier<void> {
     }
   }
 
-  void _scheduleRefresh() {
+  void _scheduleRefresh(StoryLoopChangeKind kind) {
+    _pendingKinds.add(kind);
     _refreshTimer?.cancel();
     _refreshTimer = Timer(_refreshDebounce, () {
       _refreshTimer = null;
-      refreshReadModels();
+      final kinds = Set<StoryLoopChangeKind>.from(_pendingKinds);
+      _pendingKinds.clear();
+      ref.read(storyLoopReadRevisionProvider.notifier).advance();
+      if (kinds.contains(StoryLoopChangeKind.cards) ||
+          kinds.contains(StoryLoopChangeKind.all)) {
+        ref.read(storyCardReadRevisionProvider.notifier).advance();
+      }
+      if (kinds.contains(StoryLoopChangeKind.questions) ||
+          kinds.contains(StoryLoopChangeKind.all)) {
+        ref.read(dailyQuestionReadRevisionProvider.notifier).advance();
+      }
     });
   }
 }

@@ -20,6 +20,8 @@ final coupleCharacterRepositoryProvider = Provider<CoupleCharacterRepository>((
 abstract interface class CoupleCharacterRepository {
   Future<CoupleCharacter?> fetchCurrentCharacter();
 
+  Future<Uint8List> fetchImageBytes(CoupleCharacter character);
+
   Future<String?> fetchDrawingData(CoupleCharacter character);
 
   Future<CoupleCharacter> saveCharacter({
@@ -60,6 +62,27 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
       );
     } on PostgrestException catch (error) {
       throw _mapPostgrestError(error);
+    } on StorageException catch (error) {
+      throw _mapStorageError(error);
+    }
+  }
+
+  @override
+  Future<Uint8List> fetchImageBytes(CoupleCharacter character) async {
+    if (!AppConfig.isSupabaseConfigured) {
+      throw const CoupleCharacterRepositoryException(
+        CoupleCharacterFailureReason.configMissing,
+      );
+    }
+
+    try {
+      return await _bucket
+          .download(character.imagePath)
+          .timeout(AppConfig.supabaseRpcTimeout);
+    } on TimeoutException {
+      throw const CoupleCharacterRepositoryException(
+        CoupleCharacterFailureReason.requestTimeout,
+      );
     } on StorageException catch (error) {
       throw _mapStorageError(error);
     }

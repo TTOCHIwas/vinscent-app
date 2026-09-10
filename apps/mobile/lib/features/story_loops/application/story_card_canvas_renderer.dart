@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_typography.dart';
+import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
+import 'story_card_film_shader.dart';
 
 abstract final class StoryCardCanvasRenderer {
   static void paint({
@@ -13,6 +15,7 @@ abstract final class StoryCardCanvasRenderer {
     required Size size,
     required StoryCardScene scene,
     required ui.Image? backgroundImage,
+    ui.FragmentProgram? filmProgram,
     List<StoryCardStroke>? strokes,
     bool includeTextLayers = true,
   }) {
@@ -25,6 +28,8 @@ abstract final class StoryCardCanvasRenderer {
       image: backgroundImage,
       transform: scene.backgroundTransform,
       canvasBackground: scene.canvasBackground,
+      film: scene.film,
+      filmProgram: filmProgram,
     );
     _drawCaption(canvas, size, layout.captionRect, scene.caption);
     _drawStrokes(canvas, size, strokes ?? scene.strokes);
@@ -42,11 +47,26 @@ abstract final class StoryCardCanvasRenderer {
     required ui.Image? image,
     required StoryCardBackgroundTransform transform,
     required StoryCardCanvasBackground canvasBackground,
+    required StoryCardFilmState film,
+    required ui.FragmentProgram? filmProgram,
   }) {
     canvas.save();
     canvas.clipRect(layout.photoRect);
     canvas.drawRect(layout.photoRect, Paint()..color = canvasBackground.color);
     if (image != null) {
+      if (film.look != StoryCardFilmLook.original && filmProgram != null) {
+        _drawFilteredBackground(
+          canvas: canvas,
+          destination: layout.photoRect,
+          image: image,
+          transform: transform,
+          canvasBackground: canvasBackground,
+          film: film,
+          filmProgram: filmProgram,
+        );
+        canvas.restore();
+        return;
+      }
       final coverScale = math.max(
         layout.photoRect.width / image.width,
         layout.photoRect.height / image.height,
@@ -69,6 +89,41 @@ abstract final class StoryCardCanvasRenderer {
       );
     }
     canvas.restore();
+  }
+
+  static void _drawFilteredBackground({
+    required Canvas canvas,
+    required Rect destination,
+    required ui.Image image,
+    required StoryCardBackgroundTransform transform,
+    required StoryCardCanvasBackground canvasBackground,
+    required StoryCardFilmState film,
+    required ui.FragmentProgram filmProgram,
+  }) {
+    final mapping = StoryCardFilmImageMapping.cover(
+      imageSize: Size(image.width.toDouble(), image.height.toDouble()),
+      destination: destination,
+      transform: transform,
+    );
+    final shader = StoryCardFilmShader.create(
+      program: filmProgram,
+      outputSize: destination.size,
+      outputOrigin: destination.topLeft,
+      mapping: mapping,
+      backgroundColor: canvasBackground.color,
+      film: film,
+      image: image,
+    );
+    try {
+      canvas.drawRect(
+        destination,
+        Paint()
+          ..shader = shader
+          ..filterQuality = FilterQuality.high,
+      );
+    } finally {
+      shader.dispose();
+    }
   }
 
   static void _drawCaption(

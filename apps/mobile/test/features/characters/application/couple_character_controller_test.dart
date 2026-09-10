@@ -74,6 +74,26 @@ void main() {
       isTrue,
     );
   });
+
+  test('카메라 효과용 캐릭터 이미지 바이트를 저장소에서 조회한다', () async {
+    final repository = _FakeCoupleCharacterRepository(_character())
+      ..imageBytes = Uint8List.fromList([4, 5, 6]);
+    final container = _container(
+      couple: activeCouple(),
+      repository: repository,
+    );
+    addTearDown(container.dispose);
+
+    final character = await container.read(
+      coupleCharacterControllerProvider.future,
+    );
+    final result = await container
+        .read(coupleCharacterControllerProvider.notifier)
+        .fetchImageBytes(character!);
+
+    expect(result, [4, 5, 6]);
+    expect(repository.imageFetchCount, 1);
+  });
 }
 
 ProviderContainer _container({
@@ -113,6 +133,8 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   CoupleCharacter? character;
   int fetchCount = 0;
   int saveCount = 0;
+  int imageFetchCount = 0;
+  Uint8List imageBytes = Uint8List(0);
 
   @override
   Future<CoupleCharacter?> fetchCurrentCharacter() async {
@@ -122,6 +144,12 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
 
   @override
   Future<String?> fetchDrawingData(CoupleCharacter character) async => null;
+
+  @override
+  Future<Uint8List> fetchImageBytes(CoupleCharacter character) async {
+    imageFetchCount += 1;
+    return imageBytes;
+  }
 
   @override
   Future<CoupleCharacter> saveCharacter({

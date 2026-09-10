@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
+import '../../couple/data/question_delivery_time.dart';
 import '../../profile/application/profile_controller.dart';
 import '../../safety/data/safety_report.dart';
 import '../../safety/application/user_block_service.dart';
@@ -75,9 +76,15 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
           );
           return _ActiveCoupleSettingsContent(
             relationshipStartDate: couple.relationshipStartDate,
+            questionDeliveryTime: couple.questionDeliveryTime,
+            pendingQuestionDeliveryTime: couple.pendingQuestionDeliveryTime,
+            pendingQuestionDeliveryTimeEffectiveDate:
+                couple.pendingQuestionDeliveryTimeEffectiveDate,
             isProcessing: _isProcessing,
             onRelationshipStartDatePressed: () =>
                 context.push('/settings/couple/relationship-date'),
+            onQuestionDeliveryTimePressed: () =>
+                context.push('/settings/couple/question-time'),
             onDisconnectPressed: _disconnectCouple,
             onBlockPartnerPressed: _blockPartner,
             onReportPartnerPressed: partnerUserId == null
@@ -256,16 +263,24 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
 class _ActiveCoupleSettingsContent extends StatelessWidget {
   const _ActiveCoupleSettingsContent({
     required this.relationshipStartDate,
+    required this.questionDeliveryTime,
+    required this.pendingQuestionDeliveryTime,
+    required this.pendingQuestionDeliveryTimeEffectiveDate,
     required this.isProcessing,
     required this.onRelationshipStartDatePressed,
+    required this.onQuestionDeliveryTimePressed,
     required this.onDisconnectPressed,
     required this.onBlockPartnerPressed,
     required this.onReportPartnerPressed,
   });
 
   final DateTime? relationshipStartDate;
+  final QuestionDeliveryTime? questionDeliveryTime;
+  final QuestionDeliveryTime? pendingQuestionDeliveryTime;
+  final DateTime? pendingQuestionDeliveryTimeEffectiveDate;
   final bool isProcessing;
   final VoidCallback onRelationshipStartDatePressed;
+  final VoidCallback onQuestionDeliveryTimePressed;
   final VoidCallback onDisconnectPressed;
   final VoidCallback onBlockPartnerPressed;
   final VoidCallback? onReportPartnerPressed;
@@ -291,6 +306,18 @@ class _ActiveCoupleSettingsContent extends StatelessWidget {
                 subtitle: _formatDate(relationshipStartDate),
                 enabled: !isProcessing,
                 onTap: onRelationshipStartDatePressed,
+              ),
+            if (questionDeliveryTime case final questionDeliveryTime?)
+              SettingsActionRow(
+                key: const Key('couple-settings-question-time-action'),
+                title: '질문 시간',
+                subtitle: _questionTimeSubtitle(
+                  questionDeliveryTime,
+                  pendingQuestionDeliveryTime,
+                  pendingQuestionDeliveryTimeEffectiveDate,
+                ),
+                enabled: !isProcessing,
+                onTap: onQuestionDeliveryTimePressed,
               ),
           ],
         ),
@@ -436,6 +463,17 @@ String _formatDate(DateTime value) {
   final month = value.month.toString().padLeft(2, '0');
   final day = value.day.toString().padLeft(2, '0');
   return '$year.$month.$day';
+}
+
+String _questionTimeSubtitle(
+  QuestionDeliveryTime effectiveTime,
+  QuestionDeliveryTime? pendingTime,
+  DateTime? pendingEffectiveDate,
+) {
+  if (pendingTime == null || pendingEffectiveDate == null) {
+    return effectiveTime.label;
+  }
+  return '${pendingTime.label} · ${_formatDate(pendingEffectiveDate)}부터';
 }
 
 String? _partnerUserId({

@@ -643,6 +643,11 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   }
 
   @override
+  Future<Uint8List> fetchImageBytes(CoupleCharacter character) async {
+    return Uint8List(0);
+  }
+
+  @override
   Future<CoupleCharacter> saveCharacter({
     required String coupleId,
     required Uint8List imageBytes,

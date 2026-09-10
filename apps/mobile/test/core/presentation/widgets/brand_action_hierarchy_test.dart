@@ -87,9 +87,7 @@ void main() {
           body: StoryCardEditorHeader(
             canSave: true,
             isSaving: false,
-            canDelete: true,
             onBackPressed: () {},
-            onDeletePressed: () {},
             onSavePressed: () => saves++,
           ),
         ),
@@ -97,14 +95,7 @@ void main() {
     );
     final save = find.byKey(const ValueKey('story-card-editor-save'));
     expect(tester.widget<IconButton>(save).color, AppColors.brandAction);
-    expect(
-      tester
-          .widget<IconButton>(
-            find.widgetWithIcon(IconButton, Icons.delete_outline),
-          )
-          .color,
-      Colors.white,
-    );
+    expect(find.widgetWithIcon(IconButton, Icons.delete_outline), findsNothing);
     expect(
       tester.widget<IconButton>(save).style?.backgroundColor?.resolve({}) ??
           Colors.transparent,
@@ -124,9 +115,7 @@ void main() {
             body: StoryCardEditorHeader(
               canSave: false,
               isSaving: isSaving,
-              canDelete: false,
               onBackPressed: () {},
-              onDeletePressed: () {},
               onSavePressed: () => fail('Disabled save must not run'),
             ),
           ),

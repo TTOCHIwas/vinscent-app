@@ -9,6 +9,7 @@ import 'package:vinscent/core/presentation/widgets/character_speech_bubble.dart'
 import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/questions/daily_question.dart';
+import 'package:vinscent/core/questions/daily_question_answer_state.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_current_location_service.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
@@ -28,18 +29,26 @@ import 'package:vinscent/features/home/presentation/widgets/home_guide_rotator.d
 import 'package:vinscent/features/home/presentation/widgets/transient_home_feedback_presenter.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
+import 'package:vinscent/features/questions/application/daily_question_detail_provider.dart';
+import 'package:vinscent/features/questions/data/daily_question_detail_snapshot.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
 import 'package:vinscent/features/recordings/presentation/widgets/character_recording_control.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_summary.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
+import 'package:vinscent/features/story_loops/application/today_story_card_stacks_provider.dart';
+import 'package:vinscent/features/story_loops/data/story_card_stack_item.dart';
+import 'package:vinscent/features/story_loops/data/story_card_stack_preview.dart';
+import 'package:vinscent/features/story_loops/data/today_story_card_stacks.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 import '../../../support/couple_fixtures.dart';
@@ -53,8 +62,8 @@ const _questionActionKey = Key('home-question-action');
 const _questionForegroundKey = Key('home-question-foreground');
 const _storyLineKey = Key('home-story-line');
 const _storyClotheslineKey = Key('home-story-clothesline');
-const _storyDetailOverlayKey = Key('story-card-detail-overlay');
-const _storyDetailCloseButtonKey = Key('story-card-detail-close');
+const _storyDetailOverlayKey = Key('story-card-stack-overlay');
+const _storyDetailCloseButtonKey = Key('story-card-stack-close');
 const _aiFeedbackText = 'AI feedback for both answers';
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
 const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
@@ -79,7 +88,7 @@ const _aiProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기�
 const _questionPreparingPrompt = '둘에게 어울릴 질문을 고르고 있어!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
-Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
+Key _storyDetailCardKey(String cardId) => Key('story-card-stack-$cardId');
 
 void main() {
   testWidgets(
@@ -238,6 +247,37 @@ void main() {
     expect(router.canPop(), isTrue);
   });
 
+  testWidgets('녹음 보관함이 홈을 가린 동안 화면 크기가 바뀌어도 전경 UI를 복원한다', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.reset);
+
+    final router = await _pumpRoutedHome(
+      tester,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _recordingOverviewWithCurrentAudio(),
+    );
+
+    expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+    expect(find.byKey(_questionBubbleKey), findsOneWidget);
+
+    final recordingRoute = router.push<void>('/home/recordings');
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(400, 620);
+    await tester.pump();
+    tester.view.physicalSize = const Size(400, 800);
+    await tester.pump();
+
+    router.pop();
+    await tester.pumpAndSettle();
+    await recordingRoute;
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+    expect(find.byKey(_questionBubbleKey), findsOneWidget);
+  });
+
   testWidgets('AI 동의 안내를 누르면 AI 탭으로 이동한다', (tester) async {
     final router = await _pumpRoutedHome(
       tester,
@@ -258,7 +298,7 @@ void main() {
   });
 
   testWidgets(
-    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uba74 \uc9c8\ubb38 \uc704\uc5d0 \ud655\ub300\ub41c \uce74\ub4dc \ubbf8\ub9ac\ubcf4\uae30\ub97c \ubcf4\uc5ec\uc900\ub2e4',
+    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uc5b4\ub3c4 \ub450 \uce74\ub4dc \ubb36\uc74c\uc740 compact \ubc30\uce58\ub97c \uc720\uc9c0\ud55c\ub2e4',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 592));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -329,17 +369,29 @@ void main() {
       expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(myCard, findsOneWidget);
       expect(partnerCard, findsOneWidget);
-      expect(tester.getSize(myCard), const Size(160, 200));
-      expect(tester.getSize(partnerCard), const Size(160, 200));
+      expect(tester.getSize(myCard), tester.getSize(partnerCard));
+      expect(
+        tester.getSize(myCard).aspectRatio,
+        closeTo(storyCardCanvasAspectRatio, 0.01),
+      );
+      expect(tester.getSize(myCard).width, closeTo(75, 0.1));
+      expect(
+        tester.getCenter(find.byKey(_storyAddButtonKey)).dx,
+        lessThan(tester.getCenter(myCard).dx),
+      );
       expect(
         tester.getTopLeft(myCard).dx,
         lessThan(tester.getTopLeft(partnerCard).dx),
       );
       expect(
-        tester.getTopLeft(partnerCard).dx - tester.getTopRight(myCard).dx,
-        16,
+        tester.getTopRight(myCard).dx,
+        lessThan(tester.getTopLeft(partnerCard).dx),
       );
-      expect(tester.getTopLeft(myCard).dy, tester.getTopLeft(partnerCard).dy);
+      expect(
+        (tester.getTopLeft(myCard).dy - tester.getTopLeft(partnerCard).dy)
+            .abs(),
+        lessThan(5),
+      );
       expect(
         tester.getBottomLeft(myCard).dy,
         lessThan(
@@ -357,7 +409,7 @@ void main() {
           tester.getTopLeft(characterControl).dy -
           tester.getBottomLeft(questionBubble).dy;
       expect(bubbleToCharacterGap, lessThan(cardToBubbleGap));
-      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
       expect(find.text(_storyLabel), findsNothing);
       expect(find.text(_storyAnswerAction), findsNothing);
       expect(tester.takeException(), isNull);
@@ -544,8 +596,9 @@ void main() {
       await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
       await tester.pumpAndSettle();
 
-      expect(router.routeInformationProvider.value.uri.path, '/home/story');
-      expect(find.text('story editor route'), findsOneWidget);
+      expect(router.routeInformationProvider.value.uri.path, '/home');
+      expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+      expect(find.byKey(_storyDetailCardKey('card-1')), findsOneWidget);
     },
   );
 
@@ -619,56 +672,52 @@ void main() {
     },
   );
 
-  testWidgets(
-    '\uc591\ucabd \ub2f5\ubcc0\uc774 \uc644\ub8cc\ub418\uba74 \uce74\ub4dc\ub97c \ucd95\uc18c\ud574 \uc904\uc5d0 \uac78\uc5b4 \ubcf4\uc5ec\uc900\ub2e4',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(360, 592));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets('uses compact card stacks independently from question answers', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 592));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await _pumpHome(
-        tester,
-        couple: _activeCouple,
-        today: _today,
-        todaySummary: sampleTodaySummary(
-          coupleDate: _today,
-          cards: [
-            samplePreviewCard(authorUserId: _profile.id),
-            samplePreviewCard(
-              id: 'card-2',
-              authorUserId: 'partner-id',
-              previewPath: 'previews/card-2.png',
-            ),
-          ],
-          question: StoryLoopQuestionSummary(
-            question: _dailyQuestion,
-            myAnswerExists: true,
-            partnerAnswerExists: true,
-            answerCount: 2,
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cards: [
+          samplePreviewCard(authorUserId: _profile.id),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: 'partner-id',
+            previewPath: 'previews/card-2.png',
           ),
+        ],
+        question: StoryLoopQuestionSummary(
+          question: _dailyQuestion,
+          myAnswerExists: false,
+          partnerAnswerExists: false,
+          answerCount: 0,
         ),
-      );
+      ),
+    );
 
-      final myCard = find.byKey(_storyThumbnailKey('card-1'));
-      final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
-      expect(find.byKey(_storyLineKey), findsOneWidget);
-      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
-      expect(tester.getSize(myCard).width, closeTo(80, 0.1));
-      expect(tester.getSize(partnerCard).width, closeTo(80, 0.1));
-      expect(
-        tester.getSize(find.byKey(_storyLineKey)).height,
-        closeTo(148, 0.1),
-      );
-      expect(
-        tester.getCenter(myCard).dx,
-        lessThan(tester.getCenter(partnerCard).dx),
-      );
-      expect(
-        findTextIgnoringWordJoiners(_dailyQuestion.questionText),
-        findsNothing,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+    final myCard = find.byKey(_storyThumbnailKey('card-1'));
+    final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+    expect(find.byKey(_storyLineKey), findsOneWidget);
+    expect(find.byKey(_storyClotheslineKey), findsOneWidget);
+    expect(tester.getSize(myCard).width, closeTo(75, 0.1));
+    expect(tester.getSize(partnerCard).width, closeTo(75, 0.1));
+    expect(tester.getSize(find.byKey(_storyLineKey)).height, closeTo(148, 0.1));
+    expect(
+      tester.getCenter(myCard).dx,
+      lessThan(tester.getCenter(partnerCard).dx),
+    );
+    expect(
+      findTextIgnoringWordJoiners(_dailyQuestion.questionText),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('shows published AI feedback after both answers on home', (
     tester,
@@ -1227,10 +1276,10 @@ void main() {
       expect(thumbnail, findsOneWidget);
       expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
       expect(
-        tester.getCenter(thumbnail).dx,
-        lessThan(tester.getSize(find.byType(HomeScreen)).width / 2),
+        tester.getCenter(find.byKey(_storyAddButtonKey)).dx,
+        lessThan(tester.getCenter(thumbnail).dx),
       );
-      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
       expect(find.text(_storyEditAction), findsNothing);
     },
   );
@@ -1311,12 +1360,12 @@ void main() {
         tester.getCenter(myCard).dy,
         lessThan(tester.getCenter(find.byType(HomeScreen)).dy),
       );
-      expect(find.byKey(_storyAddButtonKey), findsNothing);
+      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
       expect(find.text(_storyGenerating), findsNothing);
     },
   );
 
-  testWidgets('AI 질문을 준비하는 동안 탭할 수 없는 안내를 보여준다', (tester) async {
+  testWidgets('카드 상태로 질문 준비 안내를 만들지 않는다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
@@ -1339,18 +1388,12 @@ void main() {
       ),
     );
 
-    expect(
-      findTextIgnoringWordJoiners(_questionPreparingPrompt),
-      findsOneWidget,
-    );
-    expect(
-      tester.widget<InkWell>(find.byKey(_questionActionKey)).onTap,
-      isNull,
-    );
+    expect(findTextIgnoringWordJoiners(_questionPreparingPrompt), findsNothing);
+    expect(find.byKey(_questionActionKey), findsNothing);
     expect(find.byType(HomeGuideRotator), findsOneWidget);
     expect(
       tester.widget<HomeGuideRotator>(find.byType(HomeGuideRotator)).guides,
-      isEmpty,
+      isNot(contains(HomeGuide.card)),
     );
   });
 
@@ -1379,7 +1422,7 @@ void main() {
 
     expect(findTextIgnoringWordJoiners(_questionPreparingPrompt), findsNothing);
     expect(find.byKey(_questionActionKey), findsNothing);
-    expect(find.byKey(_storyAddButtonKey), findsNothing);
+    expect(find.byKey(_storyAddButtonKey), findsOneWidget);
   });
 
   for (final scenario
@@ -1470,6 +1513,10 @@ Future<GoRouter> _pumpRoutedHome(
   AiLearningDashboard? aiDashboard,
   SafetyReportRepository? safetyReportRepository,
 }) async {
+  final effectiveCouple = couple ?? _activeCouple;
+  final storyRepository = FakeStoryLoopReadRepository(
+    todaySummary: todaySummary,
+  );
   final router = GoRouter(
     initialLocation: '/home',
     routes: [
@@ -1517,7 +1564,7 @@ Future<GoRouter> _pumpRoutedHome(
     ProviderScope(
       overrides: [
         coupleControllerProvider.overrideWithBuild(
-          (ref, notifier) async => couple ?? _activeCouple,
+          (ref, notifier) async => effectiveCouple,
         ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
         profileControllerProvider.overrideWithBuild(
@@ -1526,8 +1573,15 @@ Future<GoRouter> _pumpRoutedHome(
         aiLearningControllerProvider.overrideWithBuild(
           (ref, notifier) async => aiDashboard ?? _aiDashboard(),
         ),
-        storyLoopReadRepositoryProvider.overrideWithValue(
-          FakeStoryLoopReadRepository(todaySummary: todaySummary),
+        storyLoopReadRepositoryProvider.overrideWithValue(storyRepository),
+        todayStoryCardStacksProvider.overrideWith(
+          (ref) => _loadTodayCardStacks(storyRepository, effectiveCouple),
+        ),
+        todayDailyQuestionProvider.overrideWith(
+          (ref) => _loadTodayQuestion(storyRepository),
+        ),
+        storyCardStackProvider.overrideWith(
+          (ref, request) => _loadStoryCardStack(storyRepository, request),
         ),
         aiQuestionFeedbackProvider.overrideWith(
           (ref, dailyQuestionId) => Stream.value(
@@ -1575,6 +1629,9 @@ Future<void> _pumpHome(
   TextScaler? textScaler,
   bool settle = true,
 }) async {
+  final resolvedStoryRepository =
+      storyLoopRepository ??
+      FakeStoryLoopReadRepository(todaySummary: todaySummary);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -1589,8 +1646,17 @@ Future<void> _pumpHome(
           (ref, notifier) async => aiDashboard ?? _aiDashboard(),
         ),
         storyLoopReadRepositoryProvider.overrideWithValue(
-          storyLoopRepository ??
-              FakeStoryLoopReadRepository(todaySummary: todaySummary),
+          resolvedStoryRepository,
+        ),
+        todayStoryCardStacksProvider.overrideWith(
+          (ref) => _loadTodayCardStacks(resolvedStoryRepository, couple),
+        ),
+        todayDailyQuestionProvider.overrideWith(
+          (ref) => _loadTodayQuestion(resolvedStoryRepository),
+        ),
+        storyCardStackProvider.overrideWith(
+          (ref, request) =>
+              _loadStoryCardStack(resolvedStoryRepository, request),
         ),
         aiQuestionFeedbackProvider.overrideWith(
           (ref, dailyQuestionId) => Stream.value(
@@ -1642,6 +1708,110 @@ Future<void> _pumpHome(
       await tester.pump(const Duration(milliseconds: 20));
     }
   }
+}
+
+Future<TodayStoryCardStacks?> _loadTodayCardStacks(
+  StoryLoopReadRepository repository,
+  Couple? couple,
+) async {
+  final summary = await repository.fetchTodaySummary();
+  if (summary == null) {
+    return null;
+  }
+
+  final cardsByAuthor = <String, List<StoryLoopCardPreview>>{};
+  for (final card in summary.cards) {
+    cardsByAuthor.putIfAbsent(card.authorUserId, () => []).add(card);
+  }
+  final stacks = cardsByAuthor.entries
+      .map((entry) {
+        final cards = [
+          ...entry.value,
+        ]..sort((left, right) => right.submittedAt.compareTo(left.submittedAt));
+        return StoryCardStackPreview(
+          authorUserId: entry.key,
+          latestCard: cards.first,
+          latestCardIsFeatured: false,
+          cardCount: cards.length,
+          isMine: entry.key == _profile.id,
+        );
+      })
+      .toList(growable: false);
+
+  return TodayStoryCardStacks(
+    coupleId: summary.coupleId,
+    coupleDate: summary.coupleDate,
+    accessMode: summary.accessMode,
+    canCreateCard: couple?.canEditSharedData ?? summary.canEditStory,
+    stacks: stacks,
+  );
+}
+
+Future<DailyQuestionDetailSnapshot?> _loadTodayQuestion(
+  StoryLoopReadRepository repository,
+) async {
+  final summary = await repository.fetchTodaySummary();
+  final questionSummary = summary?.question;
+  if (summary == null || questionSummary == null) {
+    return null;
+  }
+
+  final question = questionSummary.question;
+  return DailyQuestionDetailSnapshot(
+    coupleId: summary.coupleId,
+    coupleDate: summary.coupleDate,
+    accessMode: summary.accessMode,
+    canAnswerQuestion: summary.canAnswerQuestion,
+    question: question,
+    answerState: DailyQuestionAnswerState(
+      dailyQuestionId: question.dailyQuestionId,
+      status: question.status,
+      myAnswerId: questionSummary.myAnswerExists ? 'my-answer-id' : null,
+      myAnswerText: questionSummary.myAnswerExists ? '내 답변' : null,
+      partnerAnswerExists: questionSummary.partnerAnswerExists,
+      partnerAnswerId: questionSummary.partnerAnswerExists
+          ? 'partner-answer-id'
+          : null,
+      partnerAnswerText: questionSummary.partnerAnswerExists ? '상대 답변' : null,
+      answerCount: questionSummary.answerCount,
+    ),
+  );
+}
+
+Future<List<StoryCardStackItem>> _loadStoryCardStack(
+  StoryLoopReadRepository repository,
+  StoryCardStackRequest request,
+) async {
+  final summary = await repository.fetchTodaySummary();
+  final cards =
+      summary?.cards
+          .where((card) => card.authorUserId == request.authorUserId)
+          .toList(growable: false) ??
+      const <StoryLoopCardPreview>[];
+  final orderedCards = [...cards]
+    ..sort((left, right) => right.submittedAt.compareTo(left.submittedAt));
+
+  return [
+    for (var index = 0; index < orderedCards.length; index++)
+      StoryCardStackItem(
+        position: index + 1,
+        card: StoryLoopCardDetail(
+          id: orderedCards[index].id,
+          authorUserId: orderedCards[index].authorUserId,
+          previewPath: orderedCards[index].previewPath,
+          sceneDataPath: 'scenes/${orderedCards[index].id}.json',
+          hasPhoto: true,
+          hasDrawing: false,
+          hasText: false,
+          submittedAt: orderedCards[index].submittedAt,
+          revision: 1,
+          previewUrl: orderedCards[index].previewUrl,
+        ),
+        isFeatured: false,
+        canDelete: orderedCards[index].authorUserId == _profile.id,
+        canFeature: orderedCards[index].authorUserId == _profile.id,
+      ),
+  ];
 }
 
 Future<void> _submitVisibleAiReport(WidgetTester tester) async {

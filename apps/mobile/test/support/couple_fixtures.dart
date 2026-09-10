@@ -1,4 +1,5 @@
 import 'package:vinscent/features/couple/data/couple.dart';
+import 'package:vinscent/features/couple/data/question_delivery_time.dart';
 
 Couple pendingCouple({
   String id = 'couple-id',
@@ -36,6 +37,10 @@ Couple activeCouple({
   DateTime? currentDate,
   CoupleCharacterSetupStatus characterSetupStatus =
       CoupleCharacterSetupStatus.custom,
+  QuestionDeliveryTime? questionDeliveryTime = const QuestionDeliveryTime(
+    hour: 9,
+    minute: 0,
+  ),
 }) {
   final createdAtValue = createdAt ?? DateTime(2026);
 
@@ -49,10 +54,41 @@ Couple activeCouple({
     status: CoupleStatus.active,
     accessMode: CoupleAccessMode.active,
     characterSetupStatus: characterSetupStatus,
+    questionDeliveryTime: questionDeliveryTime,
     connectedAt: connectedAt ?? createdAtValue,
     createdAt: createdAtValue,
     updatedAt: updatedAt,
     currentDate: currentDate,
+  );
+}
+
+Couple activeCoupleWithoutQuestionDeliveryTime({
+  String id = 'couple-id',
+  String inviteCode = 'ABC234',
+  String userAId = 'user-id',
+  String userBId = 'partner-id',
+  DateTime? relationshipStartDate,
+  String timezone = 'Asia/Seoul',
+  DateTime? connectedAt,
+  DateTime? createdAt,
+  DateTime? updatedAt,
+  DateTime? currentDate,
+  CoupleCharacterSetupStatus characterSetupStatus =
+      CoupleCharacterSetupStatus.pending,
+}) {
+  return activeCouple(
+    id: id,
+    inviteCode: inviteCode,
+    userAId: userAId,
+    userBId: userBId,
+    relationshipStartDate: relationshipStartDate,
+    timezone: timezone,
+    connectedAt: connectedAt,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    currentDate: currentDate,
+    characterSetupStatus: characterSetupStatus,
+    questionDeliveryTime: null,
   );
 }
 
@@ -139,6 +175,7 @@ Couple _buildCouple({
       CoupleCharacterSetupStatus.custom,
   String? userBId,
   DateTime? relationshipStartDate,
+  QuestionDeliveryTime? questionDeliveryTime,
   DateTime? connectedAt,
   DateTime? disconnectedAt,
   String? disconnectedByUserId,
@@ -155,6 +192,7 @@ Couple _buildCouple({
     userAId: userAId,
     userBId: userBId,
     relationshipStartDate: relationshipStartDate,
+    questionDeliveryTime: questionDeliveryTime,
     timezone: timezone,
     status: status,
     accessMode: accessMode,

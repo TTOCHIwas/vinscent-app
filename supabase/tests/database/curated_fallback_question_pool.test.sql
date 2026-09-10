@@ -264,6 +264,12 @@ select is(
   'a couple receives the first unexposed fallback position'
 );
 
+update public.daily_questions
+set
+  status = 'completed',
+  closed_at = now()
+where id = (select id from first_fallback_assignment);
+
 create temporary table second_fallback_assignment
 on commit drop
 as
@@ -284,6 +290,12 @@ select is(
   20,
   'the next assignment never repeats an already exposed fallback'
 );
+
+update public.daily_questions
+set
+  status = 'completed',
+  closed_at = now()
+where id = (select id from second_fallback_assignment);
 
 insert into public.questions (
   id,

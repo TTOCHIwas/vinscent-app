@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/couple_calendar_event_repository.dart';
@@ -118,6 +120,11 @@ class _CharacterRepository extends Fake implements CoupleCharacterRepository {
 
   @override
   Future<CoupleCharacter?> fetchCurrentCharacter() async => character;
+
+  @override
+  Future<Uint8List> fetchImageBytes(CoupleCharacter character) async {
+    return Uint8List(0);
+  }
 }
 
 class _FailingRecordingRepository extends Fake

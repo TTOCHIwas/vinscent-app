@@ -11,26 +11,28 @@ final storyLoopChangeSourceProvider = Provider<StoryLoopChangeSource>((ref) {
 });
 
 abstract interface class StoryLoopChangeSource {
-  Stream<void> watch({required String coupleId});
+  Stream<StoryLoopChangeKind> watch({required String coupleId});
 }
+
+enum StoryLoopChangeKind { cards, questions, all }
 
 class SupabaseStoryLoopChangeSource implements StoryLoopChangeSource {
   const SupabaseStoryLoopChangeSource();
 
-  static const _tables = [
-    'daily_story_loops',
-    'story_loop_cards',
-    'daily_questions',
-  ];
+  static const _tables = {
+    'daily_story_loops': StoryLoopChangeKind.all,
+    'story_loop_cards': StoryLoopChangeKind.cards,
+    'daily_questions': StoryLoopChangeKind.questions,
+  };
 
   @override
-  Stream<void> watch({required String coupleId}) {
+  Stream<StoryLoopChangeKind> watch({required String coupleId}) {
     if (!AppConfig.isSupabaseConfigured) {
-      return const Stream<void>.empty();
+      return const Stream<StoryLoopChangeKind>.empty();
     }
 
     final client = Supabase.instance.client;
-    final controller = StreamController<void>();
+    final controller = StreamController<StoryLoopChangeKind>();
     var isCancelled = false;
     final filter = PostgresChangeFilter(
       type: PostgresChangeFilterType.eq,
@@ -39,15 +41,15 @@ class SupabaseStoryLoopChangeSource implements StoryLoopChangeSource {
     );
     final channel = client.channel('story-loop:$coupleId');
 
-    for (final table in _tables) {
+    for (final entry in _tables.entries) {
       channel.onPostgresChanges(
         event: PostgresChangeEvent.all,
         schema: 'public',
-        table: table,
+        table: entry.key,
         filter: filter,
         callback: (_) {
           if (!isCancelled) {
-            controller.add(null);
+            controller.add(entry.value);
           }
         },
       );

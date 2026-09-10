@@ -1,13 +1,27 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../application/story_card_camera_selection.dart';
 import '../../application/story_card_editor_session.dart';
+import '../../application/story_card_face_detector.dart';
+import '../../application/story_card_face_detector_factory.dart';
+import '../../application/story_card_face_effect.dart';
+import '../../application/story_card_face_effect_capture.dart';
+import '../../data/story_card_camera_effect.dart';
+import '../../data/story_card_film_look.dart';
+import 'story_card_camera_character_overlay.dart';
 import 'story_card_camera_controller.dart';
+import 'story_card_camera_face_tracker.dart';
+import 'story_card_camera_focus_overlay.dart';
+import 'story_card_camera_policy.dart';
+import 'story_card_camera_style_selector.dart';
 import 'story_card_editor_action_bar.dart';
+import 'story_card_film_filtered_preview.dart';
 
 class StoryCardCameraStage extends StatefulWidget {
   const StoryCardCameraStage({
@@ -16,12 +30,20 @@ class StoryCardCameraStage extends StatefulWidget {
     required this.onImageSelected,
     required this.onTextSelected,
     required this.onDrawingSelected,
+    this.initialFilm = const StoryCardFilmState.original(),
+    this.onFilmChanged,
+    this.faceDetector,
+    this.loadCharacterImage,
   });
 
   final VoidCallback onBack;
-  final ValueChanged<Uint8List> onImageSelected;
+  final ValueChanged<StoryCardCameraSelection> onImageSelected;
   final VoidCallback onTextSelected;
   final VoidCallback onDrawingSelected;
+  final StoryCardFilmState initialFilm;
+  final ValueChanged<StoryCardFilmState>? onFilmChanged;
+  final StoryCardFaceDetector? faceDetector;
+  final Future<Uint8List?> Function()? loadCharacterImage;
 
   @override
   State<StoryCardCameraStage> createState() => _StoryCardCameraStageState();
@@ -35,10 +57,31 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
   Object? _captureError;
   bool _isCapturing = false;
   bool _isPickingImage = false;
+  bool _isStyleSelectorVisible = false;
+  bool _isEffectLoading = false;
+  late StoryCardFilmState _film;
+  StoryCardCameraEffect _effect = StoryCardCameraEffect.none;
+  StoryCardCharacterAsset? _character;
+  StoryCardFaceObservation? _trackedFace;
+  StoryCardFaceDetector? _faceDetector;
+  StoryCardCameraFaceTracker? _faceTracker;
+  StoryCardFilmLook? _announcedFilmLook;
+  bool _isFilmAnnouncementVisible = false;
+  Timer? _filmAnnouncementFadeTimer;
+  Timer? _filmAnnouncementRemovalTimer;
+  Offset? _focusPoint;
+  double _exposureOffset = 0;
+  Timer? _focusTimer;
+  Offset _gestureDisplacement = Offset.zero;
+  bool _gestureHadMultiplePointers = false;
+  bool _isPinching = false;
 
   @override
   void initState() {
     super.initState();
+    _film = widget.initialFilm.seed > 0
+        ? widget.initialFilm
+        : widget.initialFilm.copyWith(seed: StoryCardFilmSeed.now());
     _camera = StoryCardCameraController()..addListener(_handleCameraChanged);
     WidgetsBinding.instance.addObserver(this);
     unawaited(_camera.initialize());
@@ -47,7 +90,8 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
-      unawaited(_camera.deactivate());
+      _hideFocusOverlay();
+      unawaited(_deactivateCamera());
     } else if (state == AppLifecycleState.resumed) {
       unawaited(_camera.initialize());
     }
@@ -56,8 +100,16 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _filmAnnouncementFadeTimer?.cancel();
+    _filmAnnouncementRemovalTimer?.cancel();
+    _focusTimer?.cancel();
     _camera.removeListener(_handleCameraChanged);
-    _camera.dispose();
+    _effect = StoryCardCameraEffect.none;
+    final faceTracker = _faceTracker;
+    final faceDetector = _faceDetector;
+    unawaited(
+      _disposeCameraResources(tracker: faceTracker, detector: faceDetector),
+    );
     super.dispose();
   }
 
@@ -68,15 +120,309 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
     setState(() {
       if (_camera.controller != null) {
         _captureError = null;
+      } else {
+        _focusPoint = null;
+        _trackedFace = null;
       }
     });
+    if (_camera.controller != null &&
+        _effect == StoryCardCameraEffect.coupleCharacter) {
+      unawaited(_startFaceTracking());
+    }
   }
 
   Future<void> _switchCamera() async {
     if (_isCapturing || _isPickingImage) {
       return;
     }
+    _hideFocusOverlay();
+    await _stopFaceTracking();
     await _camera.switchCamera();
+  }
+
+  Future<void> _cycleFlash() async {
+    if (_isCapturing || _isPickingImage) {
+      return;
+    }
+    await _camera.cycleFlashMode();
+  }
+
+  void _toggleStyleSelector() {
+    setState(() {
+      _isStyleSelectorVisible = !_isStyleSelectorVisible;
+    });
+  }
+
+  Future<void> _selectEffect(StoryCardCameraEffect effect) async {
+    if (_isEffectLoading || effect == _effect) {
+      return;
+    }
+    if (effect == StoryCardCameraEffect.none) {
+      setState(() {
+        _effect = effect;
+        _trackedFace = null;
+      });
+      await _stopFaceTracking();
+      return;
+    }
+
+    setState(() {
+      _isEffectLoading = true;
+    });
+    try {
+      var character = _character;
+      if (character == null) {
+        final bytes = await widget.loadCharacterImage?.call();
+        if (bytes == null || bytes.isEmpty) {
+          throw const _CharacterUnavailableException();
+        }
+        character = StoryCardCharacterAsset.fromBytes(bytes);
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _character = character;
+        _effect = effect;
+        _isEffectLoading = false;
+      });
+      await _startFaceTracking();
+    } on _CharacterUnavailableException {
+      if (mounted) {
+        setState(() {
+          _isEffectLoading = false;
+        });
+        _showSnackBar('먼저 둘의 캐릭터를 만들어 주세요.');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isEffectLoading = false;
+        });
+        _showSnackBar('캐릭터 효과를 불러오지 못했어요.');
+      }
+    }
+  }
+
+  Future<void> _deactivateCamera() async {
+    await _stopFaceTracking();
+    await _camera.deactivate();
+  }
+
+  Future<void> _startFaceTracking() async {
+    final controller = _camera.controller;
+    if (!mounted ||
+        _effect != StoryCardCameraEffect.coupleCharacter ||
+        _character == null ||
+        controller == null ||
+        !controller.value.isInitialized) {
+      return;
+    }
+
+    final detector = _obtainFaceDetector();
+    final tracker = _faceTracker ??= StoryCardCameraFaceTracker(
+      detector: detector,
+      onFaceChanged: _handleTrackedFaceChanged,
+    );
+    await tracker.start(controller);
+  }
+
+  Future<void> _stopFaceTracking() async {
+    await _faceTracker?.stop();
+    if (mounted && _trackedFace != null) {
+      setState(() {
+        _trackedFace = null;
+      });
+    }
+  }
+
+  void _handleTrackedFaceChanged(StoryCardFaceObservation? face) {
+    if (!mounted || _effect != StoryCardCameraEffect.coupleCharacter) {
+      return;
+    }
+    setState(() {
+      _trackedFace = face;
+    });
+  }
+
+  StoryCardFaceDetector _obtainFaceDetector() {
+    return _faceDetector ??=
+        widget.faceDetector ?? StoryCardFaceDetectorFactory.create();
+  }
+
+  Future<void> _disposeCameraResources({
+    required StoryCardCameraFaceTracker? tracker,
+    required StoryCardFaceDetector? detector,
+  }) async {
+    try {
+      await tracker?.dispose();
+    } catch (error) {
+      _logResourceDisposalFailure('tracker', error);
+    }
+    try {
+      await detector?.close();
+    } catch (error) {
+      _logResourceDisposalFailure('detector', error);
+    }
+    _camera.dispose();
+  }
+
+  void _logResourceDisposalFailure(String resource, Object error) {
+    if (kDebugMode) {
+      debugPrint('Story card camera $resource disposal failed: $error');
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _selectFilmLook(StoryCardFilmLook look) {
+    final nextFilm = _film.copyWith(look: look);
+    if (nextFilm == _film) {
+      return;
+    }
+    setState(() {
+      _film = nextFilm;
+    });
+    widget.onFilmChanged?.call(nextFilm);
+  }
+
+  void _stepFilm(int delta) {
+    final looks = StoryCardFilmLook.values;
+    final currentIndex = looks.indexOf(_film.look);
+    final nextIndex = (currentIndex + delta) % looks.length;
+    final nextLook = looks[nextIndex];
+    _selectFilmLook(nextLook);
+    _announceFilmLook(nextLook);
+  }
+
+  void _announceFilmLook(StoryCardFilmLook look) {
+    _filmAnnouncementFadeTimer?.cancel();
+    _filmAnnouncementRemovalTimer?.cancel();
+    setState(() {
+      _announcedFilmLook = look;
+      _isFilmAnnouncementVisible = true;
+    });
+    _filmAnnouncementFadeTimer = Timer(const Duration(milliseconds: 650), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isFilmAnnouncementVisible = false;
+      });
+    });
+    _filmAnnouncementRemovalTimer = Timer(
+      const Duration(milliseconds: 950),
+      () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _announcedFilmLook = null;
+        });
+      },
+    );
+  }
+
+  void _handleScaleStart(ScaleStartDetails details) {
+    _gestureDisplacement = Offset.zero;
+    _gestureHadMultiplePointers = details.pointerCount > 1;
+    _isPinching = details.pointerCount > 1;
+    if (_isPinching) {
+      _camera.beginScale();
+    }
+  }
+
+  void _handleScaleUpdate(ScaleUpdateDetails details) {
+    if (details.pointerCount > 1) {
+      _gestureHadMultiplePointers = true;
+      if (!_isPinching) {
+        _isPinching = true;
+        _camera.beginScale();
+      }
+      _camera.updateScale(details.scale);
+      return;
+    }
+    if (!_gestureHadMultiplePointers) {
+      _gestureDisplacement += details.focalPointDelta;
+    }
+  }
+
+  void _handleScaleEnd(ScaleEndDetails details) {
+    final action = StoryCardCameraPolicy.classifySwipe(
+      displacement: _gestureDisplacement,
+      velocity: details.velocity.pixelsPerSecond,
+      pointerCount: _gestureHadMultiplePointers ? 2 : 1,
+    );
+    _gestureDisplacement = Offset.zero;
+    _gestureHadMultiplePointers = false;
+    _isPinching = false;
+
+    switch (action) {
+      case StoryCardCameraSwipeAction.none:
+        return;
+      case StoryCardCameraSwipeAction.nextFilm:
+        _stepFilm(1);
+        return;
+      case StoryCardCameraSwipeAction.previousFilm:
+        _stepFilm(-1);
+        return;
+      case StoryCardCameraSwipeAction.switchCamera:
+        unawaited(_switchCamera());
+        return;
+    }
+  }
+
+  void _handlePreviewTap(TapUpDetails details, Size viewport) {
+    final controller = _camera.controller;
+    if (controller == null ||
+        (!controller.value.focusPointSupported &&
+            !controller.value.exposurePointSupported) ||
+        viewport.isEmpty) {
+      return;
+    }
+
+    final normalizedPoint = Offset(
+      (details.localPosition.dx / viewport.width).clamp(0.0, 1.0).toDouble(),
+      (details.localPosition.dy / viewport.height).clamp(0.0, 1.0).toDouble(),
+    );
+    setState(() {
+      _focusPoint = normalizedPoint;
+      _exposureOffset = _camera.exposureOffset;
+    });
+    _restartFocusTimer();
+    unawaited(_camera.setFocusAndExposurePoint(normalizedPoint));
+  }
+
+  void _handleExposureChanged(double offset) {
+    setState(() {
+      _exposureOffset = offset;
+    });
+    _camera.setExposureOffset(offset);
+    _restartFocusTimer();
+  }
+
+  void _handleExposureChangeStarted() {
+    _focusTimer?.cancel();
+  }
+
+  void _restartFocusTimer() {
+    _focusTimer?.cancel();
+    _focusTimer = Timer(const Duration(seconds: 3), _hideFocusOverlay);
+  }
+
+  void _hideFocusOverlay() {
+    _focusTimer?.cancel();
+    _focusTimer = null;
+    if (!mounted || _focusPoint == null) {
+      return;
+    }
+    setState(() {
+      _focusPoint = null;
+    });
   }
 
   Future<void> _capturePhoto() async {
@@ -92,8 +438,16 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
       _isCapturing = true;
     });
     try {
+      final characterSide = _trackedFace?.characterSide;
+      await _stopFaceTracking();
       final image = await controller.takePicture();
-      widget.onImageSelected(await image.readAsBytes());
+      widget.onImageSelected(
+        await _prepareSelection(image, characterSide: characterSide),
+      );
+    } on StoryCardFaceNotFoundException {
+      if (mounted) {
+        _showSnackBar('얼굴을 찾지 못했어요. 얼굴이 보이게 다시 찍어 주세요.');
+      }
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -105,6 +459,9 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
         setState(() {
           _isCapturing = false;
         });
+        if (_effect == StoryCardCameraEffect.coupleCharacter) {
+          unawaited(_startFaceTracking());
+        }
       }
     }
   }
@@ -118,6 +475,7 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
       _isPickingImage = true;
     });
     try {
+      await _stopFaceTracking();
       final image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 90,
@@ -125,15 +483,54 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
         maxHeight: 2048,
       );
       if (image != null) {
-        widget.onImageSelected(await image.readAsBytes());
+        widget.onImageSelected(await _prepareSelection(image));
+      }
+    } on StoryCardFaceNotFoundException {
+      if (mounted) {
+        _showSnackBar('사진에서 얼굴을 찾지 못했어요.');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnackBar('사진을 불러오지 못했어요.');
       }
     } finally {
       if (mounted) {
         setState(() {
           _isPickingImage = false;
         });
+        if (_effect == StoryCardCameraEffect.coupleCharacter) {
+          unawaited(_startFaceTracking());
+        }
       }
     }
+  }
+
+  Future<StoryCardCameraSelection> _prepareSelection(
+    XFile image, {
+    StoryCardCharacterSide? characterSide,
+  }) async {
+    final imageBytes = await image.readAsBytes();
+    StoryCardCharacterComposition? composition;
+    if (_effect == StoryCardCameraEffect.coupleCharacter) {
+      final character = _character;
+      if (character == null) {
+        throw const _CharacterUnavailableException();
+      }
+      final detector = _obtainFaceDetector();
+      composition = await StoryCardFaceEffectCapture(detector: detector)
+          .detectComposition(
+            imagePath: image.path,
+            imageBytes: imageBytes,
+            character: character,
+            characterSide: characterSide,
+          );
+    }
+
+    return StoryCardCameraSelection(
+      imageBytes: imageBytes,
+      film: _film,
+      characterComposition: composition,
+    );
   }
 
   @override
@@ -147,14 +544,29 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
           if (controller != null && controller.value.isInitialized)
             _CoveringCameraPreview(
               controller: controller,
+              film: _film,
+              character: _character,
+              trackedFace: _trackedFace,
               onPointerDown: (_) => _camera.addPointer(),
               onPointerUp: (_) => _camera.removePointer(),
               onPointerCancel: (_) => _camera.removePointer(),
-              onScaleStart: (_) => _camera.beginScale(),
-              onScaleUpdate: (details) => _camera.updateScale(details.scale),
+              onScaleStart: _handleScaleStart,
+              onScaleUpdate: _handleScaleUpdate,
+              onScaleEnd: _handleScaleEnd,
+              onTapUp: _handlePreviewTap,
             )
           else
             _CameraUnavailable(error: _captureError ?? _camera.error),
+          if (_focusPoint case final focusPoint?)
+            StoryCardCameraFocusOverlay(
+              normalizedPoint: focusPoint,
+              exposureOffset: _exposureOffset,
+              minimumExposureOffset: _camera.minimumExposureOffset,
+              maximumExposureOffset: _camera.maximumExposureOffset,
+              onExposureChanged: _handleExposureChanged,
+              onExposureChangeStarted: _handleExposureChangeStarted,
+              onExposureChangeEnded: _restartFocusTimer,
+            ),
           SafeArea(
             child: Stack(
               children: [
@@ -168,6 +580,17 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                   ),
                 ),
                 Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    key: const ValueKey('story-card-camera-flash'),
+                    tooltip: _flashTooltip(_camera.flashMode),
+                    onPressed: _camera.canChangeFlash ? _cycleFlash : null,
+                    color: Colors.white,
+                    disabledColor: const Color(0x66FFFFFF),
+                    icon: Icon(_flashIcon(_camera.flashMode), size: 28),
+                  ),
+                ),
+                Align(
                   alignment: Alignment.centerRight,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 12),
@@ -178,6 +601,11 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                       onEditCaptionPressed: null,
                       onDrawingModePressed: widget.onDrawingSelected,
                       onBackgroundColorPressed: null,
+                      onFilmPressed: _toggleStyleSelector,
+                      isFilmSelected:
+                          _isStyleSelectorVisible ||
+                          _film.look != StoryCardFilmLook.original ||
+                          _effect != StoryCardCameraEffect.none,
                     ),
                   ),
                 ),
@@ -198,7 +626,36 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                     onSwitchCameraPressed: _switchCamera,
                   ),
                 ),
+                if (_isStyleSelectorVisible)
+                  Positioned(
+                    key: const ValueKey('story-card-camera-film-selector'),
+                    left: 12,
+                    right: 12,
+                    bottom: 128,
+                    child: StoryCardCameraStyleSelector(
+                      selectedFilmLook: _film.look,
+                      selectedEffect: _effect,
+                      isEffectLoading: _isEffectLoading,
+                      onFilmLookChanged: _selectFilmLook,
+                      onEffectChanged: (effect) =>
+                          unawaited(_selectEffect(effect)),
+                    ),
+                  ),
               ],
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOut,
+                  opacity: _isFilmAnnouncementVisible ? 1 : 0,
+                  child: _announcedFilmLook == null
+                      ? const SizedBox.shrink()
+                      : _FilmLookAnnouncement(look: _announcedFilmLook!),
+                ),
+              ),
             ),
           ),
         ],
@@ -231,19 +688,32 @@ class _CameraBottomControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      padding: const EdgeInsets.fromLTRB(32, 0, 32, 16),
       child: SizedBox(
-        height: 88,
+        height: 108,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: IconButton.filledTonal(
+                child: _CameraAuxiliaryButton(
+                  key: const ValueKey('story-card-camera-gallery'),
                   tooltip: '갤러리',
                   onPressed: isPickingImage ? null : onGalleryPressed,
-                  icon: const Icon(Icons.photo_library_outlined),
+                  child: isPickingImage
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          LucideIcons.image,
+                          color: Colors.white,
+                          size: 27,
+                        ),
                 ),
               ),
             ),
@@ -256,23 +726,27 @@ class _CameraBottomControls extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: canSwitchCamera
-                    ? IconButton.filledTonal(
+                    ? _CameraAuxiliaryButton(
                         key: const ValueKey('story-card-camera-switch'),
                         tooltip: '카메라 전환',
                         onPressed:
                             isSwitchingCamera || isCapturing || isPickingImage
                             ? null
                             : onSwitchCameraPressed,
-                        icon: isSwitchingCamera
+                        child: isSwitchingCamera
                             ? const SizedBox.square(
                                 dimension: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(Icons.cameraswitch_outlined),
+                            : const Icon(
+                                LucideIcons.refreshCcw,
+                                color: Colors.white,
+                                size: 29,
+                              ),
                       )
-                    : const SizedBox.square(dimension: 48),
+                    : const SizedBox.square(dimension: 54),
               ),
             ),
           ],
@@ -282,22 +756,79 @@ class _CameraBottomControls extends StatelessWidget {
   }
 }
 
+class _CameraAuxiliaryButton extends StatelessWidget {
+  const _CameraAuxiliaryButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+    required this.child,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        enabled: isEnabled,
+        label: tooltip,
+        child: SizedBox.square(
+          dimension: 54,
+          child: Material(
+            color: isEnabled
+                ? const Color(0x52000000)
+                : const Color(0x26000000),
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onPressed,
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: isEnabled ? 1 : 0.45,
+                  duration: const Duration(milliseconds: 160),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CoveringCameraPreview extends StatelessWidget {
   const _CoveringCameraPreview({
     required this.controller,
+    required this.film,
+    required this.character,
+    required this.trackedFace,
     required this.onPointerDown,
     required this.onPointerUp,
     required this.onPointerCancel,
     required this.onScaleStart,
     required this.onScaleUpdate,
+    required this.onScaleEnd,
+    required this.onTapUp,
   });
 
   final CameraController controller;
+  final StoryCardFilmState film;
+  final StoryCardCharacterAsset? character;
+  final StoryCardFaceObservation? trackedFace;
   final PointerDownEventListener onPointerDown;
   final PointerUpEventListener onPointerUp;
   final PointerCancelEventListener onPointerCancel;
   final GestureScaleStartCallback onScaleStart;
   final GestureScaleUpdateCallback onScaleUpdate;
+  final GestureScaleEndCallback onScaleEnd;
+  final void Function(TapUpDetails details, Size viewport) onTapUp;
 
   @override
   Widget build(BuildContext context) {
@@ -312,26 +843,87 @@ class _CoveringCameraPreview extends StatelessWidget {
       onPointerDown: onPointerDown,
       onPointerUp: onPointerUp,
       onPointerCancel: onPointerCancel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onScaleStart: onScaleStart,
-        onScaleUpdate: onScaleUpdate,
-        child: ClipRect(
-          child: FittedBox(
-            fit: BoxFit.cover,
-            child: SizedBox(
-              width: previewSize.height,
-              height: previewSize.width,
-              child: CameraPreview(controller),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (details) => onTapUp(details, constraints.biggest),
+            onScaleStart: onScaleStart,
+            onScaleUpdate: onScaleUpdate,
+            onScaleEnd: onScaleEnd,
+            child: ClipRect(
+              child: StoryCardFilmFilteredPreview(
+                film: film,
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: previewSize.height,
+                    height: previewSize.width,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CameraPreview(controller),
+                        if (character case final character?)
+                          if (trackedFace case final trackedFace?)
+                            StoryCardCameraCharacterOverlay(
+                              face: trackedFace,
+                              character: character,
+                            ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _CaptureButton extends StatelessWidget {
+class _FilmLookAnnouncement extends StatelessWidget {
+  const _FilmLookAnnouncement({required this.look});
+
+  final StoryCardFilmLook look;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      look.label,
+      key: const ValueKey('story-card-camera-film-announcement'),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        shadows: [
+          Shadow(color: Color(0xB3000000), blurRadius: 8),
+          Shadow(color: Color(0x66000000), blurRadius: 2),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _flashIcon(FlashMode mode) {
+  return switch (mode) {
+    FlashMode.off => Icons.flash_off_rounded,
+    FlashMode.auto => Icons.flash_auto_rounded,
+    FlashMode.always => Icons.flash_on_rounded,
+    FlashMode.torch => Icons.flashlight_on_rounded,
+  };
+}
+
+String _flashTooltip(FlashMode mode) {
+  return switch (mode) {
+    FlashMode.off => '플래시 끔',
+    FlashMode.auto => '플래시 자동',
+    FlashMode.always => '플래시 켬',
+    FlashMode.torch => '플래시 조명',
+  };
+}
+
+class _CaptureButton extends StatefulWidget {
   const _CaptureButton({
     required this.isEnabled,
     required this.isCapturing,
@@ -343,21 +935,76 @@ class _CaptureButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
+  State<_CaptureButton> createState() => _CaptureButtonState();
+}
+
+class _CaptureButtonState extends State<_CaptureButton> {
+  var _isPressed = false;
+
+  void _setPressed(bool value) {
+    if (_isPressed == value || !mounted) {
+      return;
+    }
+    setState(() {
+      _isPressed = value;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: '촬영',
-      onPressed: isEnabled ? onPressed : null,
-      iconSize: 72,
-      color: Colors.white,
-      icon: isCapturing
-          ? const SizedBox.square(
-              dimension: 30,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 3,
+    final isEnabled = widget.isEnabled && !widget.isCapturing;
+    return Tooltip(
+      message: '촬영',
+      child: Semantics(
+        button: true,
+        enabled: isEnabled,
+        label: '촬영',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: isEnabled ? widget.onPressed : null,
+          onTapDown: isEnabled ? (_) => _setPressed(true) : null,
+          onTapUp: isEnabled ? (_) => _setPressed(false) : null,
+          onTapCancel: isEnabled ? () => _setPressed(false) : null,
+          child: SizedBox.square(
+            key: const ValueKey('story-card-camera-capture'),
+            dimension: 80,
+            child: Center(
+              child: AnimatedScale(
+                scale: _isPressed ? 0.94 : 1,
+                duration: const Duration(milliseconds: 100),
+                curve: Curves.easeOut,
+                child: AnimatedOpacity(
+                  opacity: widget.isEnabled ? 1 : 0.45,
+                  duration: const Duration(milliseconds: 160),
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Color(0x59000000), blurRadius: 8),
+                      ],
+                    ),
+                    child: SizedBox.square(
+                      dimension: 76,
+                      child: widget.isCapturing
+                          ? const Center(
+                              child: SizedBox.square(
+                                dimension: 24,
+                                child: CircularProgressIndicator(
+                                  color: Color(0xB3000000),
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
               ),
-            )
-          : const Icon(Icons.radio_button_unchecked),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -382,4 +1029,8 @@ class _CameraUnavailable extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CharacterUnavailableException implements Exception {
+  const _CharacterUnavailableException();
 }

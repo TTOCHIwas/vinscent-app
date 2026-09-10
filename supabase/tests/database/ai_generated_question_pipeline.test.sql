@@ -393,6 +393,11 @@ select is(
   'the general question job closes after persistence'
 );
 
+update public.daily_questions
+set closed_at = now()
+where couple_id = '23000000-0000-0000-0000-000000000001'
+  and closed_at is null;
+
 insert into public.ai_processing_jobs (
   id,
   couple_id,
@@ -578,6 +583,10 @@ select is(
   false,
   'the stale automatic question is deactivated'
 );
+
+update public.daily_questions
+set closed_at = now()
+where id = '39000000-0000-0000-0000-000000000010';
 
 insert into public.ai_personalization_states (
   couple_id,

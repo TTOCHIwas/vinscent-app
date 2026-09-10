@@ -19,6 +19,7 @@ import '../features/couple/application/couple_controller.dart';
 import '../features/couple/presentation/couple_entry_screen.dart';
 import '../features/couple/presentation/couple_setup_waiting_screen.dart';
 import '../features/couple/presentation/couple_waiting_screen.dart';
+import '../features/couple/presentation/question_delivery_time_screen.dart';
 import '../features/couple/presentation/relationship_start_date_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
@@ -33,6 +34,7 @@ import '../features/settings/presentation/calendar_settings_screen.dart';
 import '../features/settings/presentation/couple_settings_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/profile_display_name_settings_screen.dart';
+import '../features/settings/presentation/question_delivery_time_settings_screen.dart';
 import '../features/settings/presentation/relationship_start_date_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/safety/application/ugc_safety_policy_controller.dart';
@@ -104,6 +106,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/couple/anniversary',
         name: 'coupleAnniversary',
         builder: (context, state) => const RelationshipStartDateScreen(),
+      ),
+      GoRoute(
+        path: '/couple/question-time',
+        name: 'coupleQuestionTime',
+        builder: (context, state) => const QuestionDeliveryTimeScreen(),
       ),
       GoRoute(
         path: '/couple/character',
@@ -325,6 +332,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     name: 'relationshipStartDateSettings',
                     builder: (context, state) =>
                         const RelationshipStartDateSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'question-time',
+                    name: 'questionDeliveryTimeSettings',
+                    builder: (context, state) =>
+                        const QuestionDeliveryTimeSettingsScreen(),
                   ),
                 ],
               ),

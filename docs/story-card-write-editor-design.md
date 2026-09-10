@@ -118,12 +118,11 @@ RPC 반환값은 저장한 카드 revision, 루프 상태, 질문 생성 여부�
 
 `user_notification_preferences`에 `partner_story_card_enabled boolean not null default true`를 추가한다. get/update RPC, Flutter model/controller/settings UI를 함께 확장한다.
 
-`story_loop_notification_events`의 두 event type을 각각 발송하는 Edge Function과 Database Webhook을 둔다.
+카드 알림은 `story_loop_notification_events`와 Database Webhook으로 발송한다.
 
 - `partner_story_card_uploaded`: 수신자의 새 preference를 검사한다.
-- `question_generated`: 수신자의 기존 `daily_question_enabled`를 검사한다.
 
-기존 `dispatch-scheduled-notifications`는 더 이상 질문을 생성하거나 `daily_question_delivery`를 발송하지 않는다. 10분 간격으로 `daily_story_loops.question_generated_at + 1시간`에 해당하는 루프만 찾아, 아직 답변하지 않은 사용자에게 `unanswered_reminder`를 한 번 발송한다.
+질문은 카드 이벤트와 분리한다. `dispatch-scheduled-notifications`가 커플별 설정 시각에 오늘의 질문을 배정해 `daily_question_delivery`를 발송하고, 전달 후 아직 답변하지 않은 사용자에게 `unanswered_reminder`를 한 번 발송한다. 같은 스케줄러가 자정이 지난 카드 묶음도 정리하되, 카드 정리 실패가 질문·캘린더·재시도 알림을 막지 않게 격리한다.
 
 ## 8. 단계와 커밋
 
@@ -214,9 +213,9 @@ RPC 반환값은 저장한 카드 revision, 루프 상태, 질문 생성 여부�
 ## 9. 설계 검토 결과
 
 - 기존 fixed path는 잠금 경쟁에서 확정 preview를 덮어쓸 수 있어 revision별 immutable path로 교체한다.
-- 질문 선택은 기존 curated 순환 로직을 새 write RPC 내부의 private helper로 옮겨, `daily_questions.story_loop_id`를 한 트랜잭션에서 보장한다.
-- 카드 삭제와 질문 생성은 같은 advisory lock을 사용해 순서가 확정된다.
-- 기존 read RPC와 질문 답변 RPC의 계약은 유지한다. 카드 생성 전까지 질문을 읽거나 답변할 수 없는 현재 경계도 유지한다.
+- 질문 선택은 기존 curated 순환 로직을 유지하되, 커플별 설정 시각에 카드와 무관하게 배정한다.
+- 카드 쓰기와 질문 배정은 서로 다른 트랜잭션 경계를 사용해 한쪽의 실패나 지연이 다른 기능을 막지 않는다.
+- 기존 질문 read·answer RPC의 응답 계약은 유지하면서 `daily_questions.story_loop_id` 의존성은 제거한다.
 - 지우개 스트로크를 배경과 같은 layer에 그리면 사진까지 투명해지므로, 배경을 먼저 렌더링한 뒤 드로잉만 별도 layer에 합성한다.
 - 별도 자르기 버튼을 제거하면 텍스트 선택 후 배경 조정으로 돌아갈 경로가 사라지므로, 배경 두 손가락 제스처의 활성 조건을 버튼 선택 상태와 분리한다.
 - scene 스키마 확장은 기존 저장 카드 편집을 깨지 않도록 누락 필드 기본값을 정의하고 버전을 3으로 올린다.

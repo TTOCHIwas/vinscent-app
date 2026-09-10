@@ -25,6 +25,8 @@ import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/safety/application/ugc_safety_policy_controller.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/questions/data/daily_question_detail_snapshot.dart';
+import 'package:vinscent/features/questions/data/daily_question_read_repository.dart';
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/recordings/application/couple_recording_overview_controller.dart';
 import 'package:vinscent/features/recordings/data/couple_recording.dart';
@@ -981,12 +983,47 @@ Future<void> _pumpApp(
           ),
         todayControllerProvider.overrideWithBuild((ref, notifier) => _today),
         storyLoopReadRepositoryProvider.overrideWithValue(storyLoopRepository),
+        dailyQuestionReadRepositoryProvider.overrideWithValue(
+          _StoryLoopBackedDailyQuestionReadRepository(
+            today: _today,
+            storyLoopRepository: storyLoopRepository,
+          ),
+        ),
       ],
       child: const VinscentApp(),
     ),
   );
 
   await tester.pumpAndSettle();
+}
+
+class _StoryLoopBackedDailyQuestionReadRepository
+    implements DailyQuestionReadRepository {
+  const _StoryLoopBackedDailyQuestionReadRepository({
+    required this.today,
+    required this.storyLoopRepository,
+  });
+
+  final DateTime today;
+  final StoryLoopReadRepository storyLoopRepository;
+
+  @override
+  Future<DailyQuestionDetailSnapshot?> fetchDetail(DateTime? date) async {
+    final detail = await storyLoopRepository.fetchDetail(date ?? today);
+    final question = detail?.question;
+    if (detail == null || question == null) {
+      return null;
+    }
+
+    return DailyQuestionDetailSnapshot(
+      coupleId: detail.coupleId,
+      coupleDate: detail.coupleDate,
+      accessMode: detail.accessMode,
+      canAnswerQuestion: detail.canAnswerQuestion,
+      question: question.question,
+      answerState: question.answerState,
+    );
+  }
 }
 
 CoupleRecordingOverview _recordingOverviewWithCurrentAudio() {

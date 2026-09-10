@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
+import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 
 void main() {
@@ -31,6 +32,7 @@ void main() {
 
   test('scene JSON preserves visual layers and text count', () {
     const scene = StoryCardScene(
+      film: StoryCardFilmState(look: StoryCardFilmLook.quiet, seed: 1729),
       canvasBackground: StoryCardCanvasBackground.black,
       backgroundTransform: StoryCardBackgroundTransform(
         scale: 1.5,
@@ -70,6 +72,8 @@ void main() {
     expect(restored.backgroundTransform.scale, 1.5);
     expect(restored.backgroundTransform.offsetX, 0.1);
     expect(restored.backgroundTransform.offsetY, -0.2);
+    expect(restored.film.look, StoryCardFilmLook.quiet);
+    expect(restored.film.seed, 1729);
     expect(restored.canvasBackground, StoryCardCanvasBackground.black);
     expect(restored.hasDrawing, isTrue);
     expect(restored.strokes.first.tool, StoryCardDrawingTool.pen);
@@ -81,7 +85,7 @@ void main() {
     expect(restored.textCharacterCount, 7);
     expect(restored.caption, 'first date');
     expect(restored.captionCharacterCount, 10);
-    expect(restored.toJson()['version'], 4);
+    expect(restored.toJson()['version'], 5);
   });
 
   test('legacy scene defaults to pen strokes and unrotated text', () {
@@ -113,7 +117,21 @@ void main() {
     expect(restored.textLayers.single.scale, 1);
     expect(restored.textLayers.single.rotation, 0);
     expect(restored.caption, isNull);
+    expect(restored.film, const StoryCardFilmState.original());
   });
+
+  test(
+    'unknown future film look falls back to original without losing seed',
+    () {
+      final restored = StoryCardScene.fromJson({
+        'version': 6,
+        'film': {'look': 'future-look', 'seed': 99},
+      });
+
+      expect(restored.film.look, StoryCardFilmLook.original);
+      expect(restored.film.seed, 99);
+    },
+  );
 
   test('caption alone does not make an otherwise empty draft saveable', () {
     final draft = StoryCardDraft(

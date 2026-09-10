@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../application/story_card_editor_session.dart';
 import 'story_card_editor_icon_button.dart';
@@ -12,6 +13,8 @@ class StoryCardEditorActionBar extends StatelessWidget {
     required this.onEditCaptionPressed,
     required this.onDrawingModePressed,
     required this.onBackgroundColorPressed,
+    this.onFilmPressed,
+    this.isFilmSelected = false,
   });
 
   final StoryCardEditorTool interactionMode;
@@ -20,6 +23,8 @@ class StoryCardEditorActionBar extends StatelessWidget {
   final VoidCallback? onEditCaptionPressed;
   final VoidCallback onDrawingModePressed;
   final VoidCallback? onBackgroundColorPressed;
+  final VoidCallback? onFilmPressed;
+  final bool isFilmSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +44,16 @@ class StoryCardEditorActionBar extends StatelessWidget {
           isSelected: interactionMode == StoryCardEditorTool.drawing,
           onPressed: onDrawingModePressed,
         ),
+        if (onFilmPressed != null) ...[
+          const SizedBox(height: 8),
+          StoryCardEditorIconButton(
+            key: const ValueKey('story-card-film-tool'),
+            tooltip: '필름',
+            icon: LucideIcons.wandSparkles,
+            isSelected: isFilmSelected,
+            onPressed: onFilmPressed,
+          ),
+        ],
         if (onEditCaptionPressed != null) ...[
           const SizedBox(height: 8),
           StoryCardEditorIconButton(

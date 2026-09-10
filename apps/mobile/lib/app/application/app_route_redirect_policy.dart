@@ -21,6 +21,7 @@ class AppRouteRedirectPolicy {
     final isCoupleEntryRoute = path == '/couple';
     final isCoupleWaitingRoute = path == '/couple/waiting';
     final isCoupleAnniversaryRoute = path == '/couple/anniversary';
+    final isCoupleQuestionTimeRoute = path == '/couple/question-time';
     final isCoupleCharacterRoute = path == '/couple/character';
     final isCoupleSetupWaitingRoute = path == '/couple/setup/waiting';
     final isBlockedUsersRoute = path == '/settings/blocked-users';
@@ -30,6 +31,7 @@ class AppRouteRedirectPolicy {
         isCoupleEntryRoute ||
         isCoupleWaitingRoute ||
         isCoupleAnniversaryRoute ||
+        isCoupleQuestionTimeRoute ||
         isCoupleCharacterRoute ||
         isCoupleSetupWaitingRoute;
 
@@ -80,6 +82,7 @@ class AppRouteRedirectPolicy {
                       isUgcSafetyPolicyRoute: isUgcSafetyPolicyRoute,
                       isCoupleRoute: isCoupleRoute,
                       isCoupleAnniversaryRoute: isCoupleAnniversaryRoute,
+                      isCoupleQuestionTimeRoute: isCoupleQuestionTimeRoute,
                       isCoupleCharacterRoute: isCoupleCharacterRoute,
                       isCoupleSetupWaitingRoute: isCoupleSetupWaitingRoute,
                     ),
@@ -114,11 +117,14 @@ class AppRouteRedirectPolicy {
     required bool isUgcSafetyPolicyRoute,
     required bool isCoupleRoute,
     required bool isCoupleAnniversaryRoute,
+    required bool isCoupleQuestionTimeRoute,
     required bool isCoupleCharacterRoute,
     required bool isCoupleSetupWaitingRoute,
   }) {
     final setupIncomplete =
-        couple.relationshipStartDate == null || couple.isCharacterSetupPending;
+        couple.relationshipStartDate == null ||
+        !couple.hasQuestionDeliveryTime ||
+        couple.isCharacterSetupPending;
     final isSetupOwner = couple.isInitialSetupOwner(profile.id);
 
     if (setupIncomplete && !isSetupOwner) {
@@ -126,6 +132,9 @@ class AppRouteRedirectPolicy {
     }
     if (couple.relationshipStartDate == null) {
       return isCoupleAnniversaryRoute ? null : '/couple/anniversary';
+    }
+    if (!couple.hasQuestionDeliveryTime) {
+      return isCoupleQuestionTimeRoute ? null : '/couple/question-time';
     }
     if (couple.isCharacterSetupPending) {
       return isCoupleCharacterRoute ? null : '/couple/character';

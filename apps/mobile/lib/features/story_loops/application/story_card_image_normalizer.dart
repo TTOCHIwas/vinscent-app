@@ -1,15 +1,25 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:image/image.dart' as image;
 
+import 'story_card_face_effect.dart';
+
 class StoryCardImageNormalizer {
-  const StoryCardImageNormalizer();
+  const StoryCardImageNormalizer({
+    this.characterCompositor = const StoryCardCharacterCompositor(),
+  });
 
   static const _maximumDimension = 2048;
   static const _minimumResizeDimension = 960;
   static const _maximumEncodedBytes = 5 * 1024 * 1024;
 
-  Future<Uint8List> normalize(Uint8List source) async {
+  final StoryCardCharacterCompositor characterCompositor;
+
+  Future<Uint8List> normalize(
+    Uint8List source, {
+    StoryCardCharacterComposition? characterComposition,
+  }) async {
     final image.Image? decoded;
     try {
       decoded = image.decodeImage(source);
@@ -26,6 +36,23 @@ class StoryCardImageNormalizer {
       normalized = normalized.width >= normalized.height
           ? image.copyResize(normalized, width: _maximumDimension)
           : image.copyResize(normalized, height: _maximumDimension);
+    }
+
+    if (characterComposition != null) {
+      final asset = characterComposition.asset;
+      final placement = StoryCardCharacterPlacement.calculate(
+        face: characterComposition.face,
+        characterAspectRatio: asset.aspectRatio,
+        viewportSize: Size(
+          normalized.width.toDouble(),
+          normalized.height.toDouble(),
+        ),
+      );
+      normalized = characterCompositor.composite(
+        background: normalized,
+        characterBytes: asset.bytes,
+        normalizedPlacement: placement,
+      );
     }
 
     var encoded = Uint8List.fromList(image.encodeJpg(normalized, quality: 88));

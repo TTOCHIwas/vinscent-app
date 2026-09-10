@@ -59,7 +59,7 @@ class FakeDailyQuestionAnswerRepository
   var submitCallCount = 0;
 
   @override
-  Future<DailyQuestionAnswerState> submitStoryLoopAnswer({
+  Future<DailyQuestionAnswerState> submitDailyQuestionAnswer({
     required String dailyQuestionId,
     required String answerText,
   }) async {
