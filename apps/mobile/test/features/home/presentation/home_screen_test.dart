@@ -1598,6 +1598,10 @@ void main() {
     expect(surface.surfaceKey, _storyThumbnailKey('card-3'));
     expect(frontBorder.position, DecorationPosition.foreground);
     expect(frontBorderDecoration.border, isNotNull);
+    expect(
+      (frontBorderDecoration.border! as Border).top.color,
+      AppColors.settingsDivider,
+    );
     expect(frontBorderDecoration.boxShadow, isNull);
     expect(
       surfaceDecorations.expand((decoration) => decoration.boxShadow ?? []),
