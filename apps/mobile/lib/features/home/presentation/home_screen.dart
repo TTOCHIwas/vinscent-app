@@ -30,6 +30,7 @@ import '../../story_loops/application/today_story_card_stacks_provider.dart';
 import '../../story_loops/data/story_card_stack_preview.dart';
 import '../../story_loops/data/story_card_scene.dart';
 import '../../story_loops/data/today_story_card_stacks.dart';
+import '../../story_loops/presentation/story_card_editor_route.dart';
 import '../../story_loops/presentation/widgets/story_card_stack_overlay.dart';
 import '../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../application/home_guide.dart';
@@ -76,7 +77,9 @@ class HomeScreen extends ConsumerWidget {
         cardStacks?.canCreateCard == true;
 
     return _HomeCardCreationSwipeRegion(
-      onSwipeRight: canCreateCard ? () => context.go('/home/story') : null,
+      onSwipeRight: canCreateCard
+          ? () => context.go(storyCardEditorSwipeRightLocation)
+          : null,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           12,
@@ -546,7 +549,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                   hasBothCardStacks: presentation.hasBothCardStacks,
                   canAddCard: presentation.canAddCard,
                   onAddCard: presentation.canAddCard
-                      ? () => context.go('/home/story')
+                      ? () => context.go(storyCardEditorLocation)
                       : null,
                   onQuestionTap: onQuestionTap,
                   questionDismissibleKey: questionDismissibleKey,
@@ -572,7 +575,7 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
       case HomeGuideAction.none:
         return;
       case HomeGuideAction.openStoryEditor:
-        context.go('/home/story');
+        context.go(storyCardEditorLocation);
       case HomeGuideAction.openRecordingLibrary:
         context.push('/home/recordings');
       case HomeGuideAction.openAi:
@@ -818,22 +821,19 @@ class _HomeStoryAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = overCardStack ? 36.0 : 56.0;
+    final size = overCardStack ? 40.0 : 56.0;
     final button = IconButton(
       key: const Key('home-story-add-button'),
       onPressed: onPressed,
       tooltip: _homeStoryCreateTooltip,
       style: IconButton.styleFrom(
         fixedSize: Size.square(size),
-        backgroundColor: overCardStack
-            ? AppColors.white
-            : AppColors.actionPrimary,
-        foregroundColor: overCardStack
-            ? AppColors.textPrimary
-            : AppColors.textInverse,
+        padding: EdgeInsets.zero,
+        backgroundColor: AppColors.actionPrimary,
+        foregroundColor: AppColors.textInverse,
         shape: const CircleBorder(),
       ),
-      icon: Icon(Icons.add_rounded, size: overCardStack ? 22 : 28),
+      icon: Icon(Icons.add_rounded, size: overCardStack ? 24 : 28),
     );
 
     return HomeForegroundPortal(
@@ -1037,8 +1037,8 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
           ),
           if (onAddCard != null)
             Positioned(
-              right: -12,
-              bottom: -12,
+              right: -4,
+              bottom: -4,
               child: _HomeStoryAddButton(
                 onPressed: onAddCard,
                 overCardStack: true,

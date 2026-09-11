@@ -43,6 +43,7 @@ import '../features/shell/presentation/app_shell.dart';
 import '../features/shell/presentation/home_tab_frame.dart';
 import '../features/shell/presentation/widgets/shell_root_back_scope.dart';
 import '../features/story_loops/presentation/story_card_editor_screen.dart';
+import '../features/story_loops/presentation/story_card_editor_route.dart';
 
 final appRouterRefreshNotifierProvider = Provider<AppRouterRefreshNotifier>((
   ref,
@@ -125,7 +126,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home/story',
         name: 'storyCardEditor',
-        builder: (context, state) => const StoryCardEditorScreen(),
+        pageBuilder: (context, state) => buildStoryCardEditorPage(
+          key: state.pageKey,
+          uri: state.uri,
+          child: const StoryCardEditorScreen(),
+        ),
       ),
       StatefulShellRoute.indexedStack(
         pageBuilder: (context, state, navigationShell) => MaterialPage<void>(

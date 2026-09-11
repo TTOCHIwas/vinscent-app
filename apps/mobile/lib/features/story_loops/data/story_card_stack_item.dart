@@ -7,6 +7,7 @@ class StoryCardStackItem {
     required this.isFeatured,
     required this.canDelete,
     required this.canFeature,
+    required this.isRead,
   });
 
   factory StoryCardStackItem.fromJson(
@@ -31,6 +32,7 @@ class StoryCardStackItem {
       isFeatured: json['is_featured'] as bool? ?? false,
       canDelete: json['can_delete'] as bool? ?? false,
       canFeature: json['can_feature'] as bool? ?? false,
+      isRead: json['is_read'] as bool? ?? true,
     );
   }
 
@@ -39,4 +41,5 @@ class StoryCardStackItem {
   final bool isFeatured;
   final bool canDelete;
   final bool canFeature;
+  final bool isRead;
 }

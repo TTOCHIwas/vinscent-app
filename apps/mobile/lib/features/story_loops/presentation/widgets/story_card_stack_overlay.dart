@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../../application/story_card_download_service.dart';
 import '../../application/story_loop_realtime_controller.dart';
 import '../../application/today_story_card_stacks_provider.dart';
 import '../../data/story_card_download_failure.dart';
+import '../../data/story_card_read_receipt_repository.dart';
 import '../../data/story_card_scene.dart';
 import '../../data/story_card_stack_item.dart';
 import '../../data/story_card_stack_preview.dart';
@@ -56,9 +58,10 @@ class _StoryCardStackOverlay extends ConsumerStatefulWidget {
 
 class _StoryCardStackOverlayState
     extends ConsumerState<_StoryCardStackOverlay> {
-  late final PageController _pageController;
+  PageController? _pageController;
   var _currentIndex = 0;
   var _isMutating = false;
+  final _acknowledgedCardIds = <String>{};
 
   StoryCardStackRequest get _request => StoryCardStackRequest(
     date: widget.date,
@@ -66,21 +69,21 @@ class _StoryCardStackOverlayState
   );
 
   @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
   void dispose() {
-    _pageController.dispose();
+    _pageController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final itemsAsync = ref.watch(storyCardStackProvider(_request));
-    final items = itemsAsync.asData?.value;
+    final loadedItems = itemsAsync.asData?.value;
+    final items = loadedItems == null
+        ? null
+        : _sortChronologically(loadedItems);
+    if (items != null && items.isNotEmpty) {
+      _initializePageController(items);
+    }
     if (items != null && items.isNotEmpty && _currentIndex >= items.length) {
       _currentIndex = items.length - 1;
     }
@@ -189,7 +192,10 @@ class _StoryCardStackOverlayState
             key: const Key('story-card-stack-pages'),
             controller: _pageController,
             itemCount: items.length,
-            onPageChanged: (index) => setState(() => _currentIndex = index),
+            onPageChanged: (index) {
+              setState(() => _currentIndex = index);
+              _acknowledgeIfNeeded(items[index]);
+            },
             itemBuilder: (context, index) {
               final item = items[index];
               return Center(
@@ -282,17 +288,67 @@ class _StoryCardStackOverlayState
   }
 
   void _previous() {
-    _pageController.previousPage(
+    _pageController?.previousPage(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
   }
 
   void _next() {
-    _pageController.nextPage(
+    _pageController?.nextPage(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  List<StoryCardStackItem> _sortChronologically(
+    List<StoryCardStackItem> items,
+  ) {
+    return [...items]..sort((left, right) {
+      final submittedAtOrder = left.card.submittedAt.compareTo(
+        right.card.submittedAt,
+      );
+      if (submittedAtOrder != 0) {
+        return submittedAtOrder;
+      }
+      return left.card.id.compareTo(right.card.id);
+    });
+  }
+
+  void _initializePageController(List<StoryCardStackItem> items) {
+    if (_pageController != null) {
+      return;
+    }
+
+    final firstUnreadIndex = items.indexWhere((item) => !item.isRead);
+    _currentIndex = firstUnreadIndex >= 0 ? firstUnreadIndex : items.length - 1;
+    _pageController = PageController(initialPage: _currentIndex);
+    final initialItem = items[_currentIndex];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _acknowledgeIfNeeded(initialItem);
+      }
+    });
+  }
+
+  void _acknowledgeIfNeeded(StoryCardStackItem item) {
+    if (item.isRead || !_acknowledgedCardIds.add(item.card.id)) {
+      return;
+    }
+    unawaited(_acknowledge(item.card.id));
+  }
+
+  Future<void> _acknowledge(String cardId) async {
+    try {
+      final acknowledged = await ref
+          .read(storyCardReadReceiptRepositoryProvider)
+          .acknowledgeCard(cardId: cardId);
+      if (!acknowledged) {
+        _acknowledgedCardIds.remove(cardId);
+      }
+    } catch (_) {
+      _acknowledgedCardIds.remove(cardId);
+    }
   }
 
   Future<void> _feature(StoryCardStackItem item) async {

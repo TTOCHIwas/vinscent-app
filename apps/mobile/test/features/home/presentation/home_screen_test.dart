@@ -157,10 +157,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home/story');
-    expect(
-      router.routeInformationProvider.value.uri.queryParameters['entry'],
-      'home-swipe-right',
-    );
   });
 
   testWidgets('홈을 오른쪽으로 스와이프하면 카드 작성 화면을 연다', (tester) async {
@@ -174,6 +170,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home/story');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['entry'],
+      'home-swipe-right',
+    );
   });
 
   testWidgets('홈을 왼쪽으로 스와이프하면 카드 작성 화면을 열지 않는다', (tester) async {
@@ -437,7 +437,10 @@ void main() {
       );
       expect(tester.getSize(addButton).width, lessThan(56));
       expect(tester.getSize(addButton), const Size.square(40));
-      expect(tester.getRect(myCard).contains(tester.getCenter(addButton)), isTrue);
+      expect(
+        tester.getRect(myCard).contains(tester.getCenter(addButton)),
+        isTrue,
+      );
       final addButtonWidget = tester.widget<IconButton>(addButton);
       expect(
         addButtonWidget.style?.backgroundColor?.resolve({}),
@@ -1508,9 +1511,7 @@ void main() {
     expect(backLayerDecoration.boxShadow, isNotEmpty);
   });
 
-  testWidgets('카드 상세는 가장 오래된 미확인 카드에서 시작해 오래된 순서로 넘긴다', (
-    tester,
-  ) async {
+  testWidgets('카드 상세는 가장 오래된 미확인 카드에서 시작해 오래된 순서로 넘긴다', (tester) async {
     final receiptRepository = _FakeStoryCardReadReceiptRepository();
     final cards = _stackCards();
     await _pumpRoutedHome(
@@ -1538,19 +1539,20 @@ void main() {
     expect(find.text('2 / 3'), findsOneWidget);
     expect(receiptRepository.acknowledgedCardIds, ['stack-card-2']);
 
-    await tester.tapAt(const Offset(300, 320));
+    final currentCard = find.byKey(const Key('story-card-stack-stack-card-2'));
+    await tester.tapAt(
+      tester.getRect(currentCard).centerRight - const Offset(16, 0),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('3 / 3'), findsOneWidget);
-    expect(
-      receiptRepository.acknowledgedCardIds,
-      ['stack-card-2', 'stack-card-3'],
-    );
+    expect(receiptRepository.acknowledgedCardIds, [
+      'stack-card-2',
+      'stack-card-3',
+    ]);
   });
 
-  testWidgets('모든 카드를 확인했다면 오래된 순서의 마지막인 최신 카드에서 시작한다', (
-    tester,
-  ) async {
+  testWidgets('모든 카드를 확인했다면 오래된 순서의 마지막인 최신 카드에서 시작한다', (tester) async {
     final receiptRepository = _FakeStoryCardReadReceiptRepository();
     final cards = _stackCards();
     await _pumpRoutedHome(
