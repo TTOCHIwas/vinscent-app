@@ -88,6 +88,8 @@ const _aiProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기�
 const _questionPreparingPrompt = '둘에게 어울릴 질문을 고르고 있어!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
+Key _storyStackLayerKey(String cardId, int depth) =>
+    Key('home-story-card-$cardId-stack-layer-$depth');
 Key _storyDetailCardKey(String cardId) => Key('story-card-stack-$cardId');
 
 void main() {
@@ -154,6 +156,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home/story');
+  });
+
+  testWidgets('홈을 오른쪽으로 스와이프하면 카드 작성 화면을 연다', (tester) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    await tester.dragFrom(const Offset(80, 300), const Offset(180, 0));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home/story');
+  });
+
+  testWidgets('홈을 왼쪽으로 스와이프하면 카드 작성 화면을 열지 않는다', (tester) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    await tester.dragFrom(const Offset(260, 300), const Offset(-180, 0));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home');
+  });
+
+  testWidgets('카드 작성이 불가능하면 홈의 오른쪽 스와이프를 무시한다', (tester) async {
+    final router = await _pumpRoutedHome(
+      tester,
+      couple: archivedReadOnlyCouple(currentDate: _today),
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    await tester.dragFrom(const Offset(80, 300), const Offset(180, 0));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/home');
   });
 
   testWidgets(
@@ -1364,6 +1406,57 @@ void main() {
       expect(find.text(_storyGenerating), findsNothing);
     },
   );
+
+  testWidgets('여러 장의 홈 카드는 각진 비정형 더미로 표시한다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: 3,
+        storyEditLocked: false,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        cards: [
+          samplePreviewCard(
+            id: 'card-3',
+            authorUserId: _profile.id,
+            previewPath: 'previews/card-3.png',
+            submittedAt: DateTime.parse('2026-05-31T11:00:00Z'),
+          ),
+          samplePreviewCard(
+            id: 'card-2',
+            authorUserId: _profile.id,
+            previewPath: 'previews/card-2.png',
+            submittedAt: DateTime.parse('2026-05-31T10:00:00Z'),
+          ),
+          samplePreviewCard(
+            authorUserId: _profile.id,
+            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+          ),
+        ],
+      ),
+    );
+
+    final surfaceFinder = find.byType(StoryCardPreviewSurface);
+    final surface = tester.widget<StoryCardPreviewSurface>(surfaceFinder);
+    final clip = tester.widget<ClipRRect>(
+      find.descendant(of: surfaceFinder, matching: find.byType(ClipRRect)),
+    );
+    final backLayer = tester.widget<Transform>(
+      find.byKey(_storyStackLayerKey('card-3', 1)),
+    );
+    final furthestBackLayer = tester.widget<Transform>(
+      find.byKey(_storyStackLayerKey('card-3', 2)),
+    );
+
+    expect(surface.previewUrl, contains('card-3'));
+    expect(clip.borderRadius, BorderRadius.zero);
+    expect(backLayer.transform.storage[1], isNegative);
+    expect(furthestBackLayer.transform.storage[1], isPositive);
+  });
 
   testWidgets('카드 상태로 질문 준비 안내를 만들지 않는다', (tester) async {
     await _pumpHome(
