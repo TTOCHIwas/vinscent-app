@@ -407,6 +407,7 @@ void main() {
       expect(questionText.style?.fontSize, 16);
       final myCard = find.byKey(_storyThumbnailKey('card-1'));
       final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
+      final addButton = find.byKey(_storyAddButtonKey);
       expect(find.byKey(_storyLineKey), findsOneWidget);
       expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(myCard, findsOneWidget);
@@ -418,9 +419,18 @@ void main() {
       );
       expect(tester.getSize(myCard).width, closeTo(75, 0.1));
       expect(
-        tester.getCenter(find.byKey(_storyAddButtonKey)).dx,
-        lessThan(tester.getCenter(myCard).dx),
+        tester.getRect(myCard).overlaps(tester.getRect(addButton)),
+        isTrue,
       );
+      expect(
+        tester.getCenter(addButton).dx,
+        greaterThan(tester.getCenter(myCard).dx),
+      );
+      expect(
+        tester.getCenter(addButton).dy,
+        greaterThan(tester.getCenter(myCard).dy),
+      );
+      expect(tester.getSize(addButton).width, lessThan(56));
       expect(
         tester.getTopLeft(myCard).dx,
         lessThan(tester.getTopLeft(partnerCard).dx),
@@ -1317,11 +1327,20 @@ void main() {
       expect(find.byKey(_storyClotheslineKey), findsOneWidget);
       expect(thumbnail, findsOneWidget);
       expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
+      final addButton = find.byKey(_storyAddButtonKey);
+      expect(addButton, findsOneWidget);
       expect(
-        tester.getCenter(find.byKey(_storyAddButtonKey)).dx,
-        lessThan(tester.getCenter(thumbnail).dx),
+        tester.getRect(thumbnail).overlaps(tester.getRect(addButton)),
+        isTrue,
       );
-      expect(find.byKey(_storyAddButtonKey), findsOneWidget);
+      expect(
+        tester.getCenter(addButton).dx,
+        greaterThan(tester.getCenter(thumbnail).dx),
+      );
+      expect(
+        tester.getCenter(addButton).dy,
+        greaterThan(tester.getCenter(thumbnail).dy),
+      );
       expect(find.text(_storyEditAction), findsNothing);
     },
   );
@@ -1445,17 +1464,24 @@ void main() {
     final clip = tester.widget<ClipRRect>(
       find.descendant(of: surfaceFinder, matching: find.byType(ClipRRect)),
     );
-    final backLayer = tester.widget<Transform>(
-      find.byKey(_storyStackLayerKey('card-3', 1)),
+    final backLayerFinder = find.byKey(_storyStackLayerKey('card-3', 1));
+    final furthestBackLayerFinder = find.byKey(
+      _storyStackLayerKey('card-3', 2),
     );
-    final furthestBackLayer = tester.widget<Transform>(
-      find.byKey(_storyStackLayerKey('card-3', 2)),
+    final backLayer = tester.widget<Transform>(backLayerFinder);
+    final furthestBackLayer = tester.widget<Transform>(furthestBackLayerFinder);
+    final backLayerContainer = tester.widget<Container>(
+      find.descendant(of: backLayerFinder, matching: find.byType(Container)),
     );
+    final backLayerDecoration = backLayerContainer.decoration! as BoxDecoration;
 
     expect(surface.surfaceKey, _storyThumbnailKey('card-3'));
     expect(clip.borderRadius, BorderRadius.zero);
     expect(backLayer.transform.storage[1], isNegative);
     expect(furthestBackLayer.transform.storage[1], isPositive);
+    expect(backLayerDecoration.color, AppColors.white);
+    expect(backLayerDecoration.border, isNull);
+    expect(backLayerDecoration.boxShadow, isNotEmpty);
   });
 
   testWidgets('카드 상태로 질문 준비 안내를 만들지 않는다', (tester) async {
