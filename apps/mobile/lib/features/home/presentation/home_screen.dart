@@ -55,21 +55,100 @@ const _homeFeedbackProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠�
 const _homeFeedbackProcessingDuration = Duration(seconds: 3);
 const _homeCharacterSetupPrompt = '우리 둘 만의 캐릭터를 그려주세요!';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bottomNavigationClearance = MediaQuery.paddingOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomNavigationClearance),
-      child: const Column(
-        children: [
-          _CoupleStatus(),
-          Expanded(child: _HomeStageLayout()),
-        ],
+    final currentUserId = ref.watch(
+      profileControllerProvider.select(
+        (state) =>
+            state.maybeWhen(data: (profile) => profile?.id, orElse: () => null),
       ),
+    );
+    final cardStacks = ref.watch(
+      todayStoryCardStacksProvider.select((state) => state.asData?.value),
+    );
+    final canCreateCard =
+        currentUserId != null &&
+        cardStacks?.accessMode != CoupleAccessMode.archivedReadOnly &&
+        cardStacks?.canCreateCard == true;
+
+    return _HomeCardCreationSwipeRegion(
+      onSwipeRight: canCreateCard ? () => context.go('/home/story') : null,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          12,
+          12,
+          12 + bottomNavigationClearance,
+        ),
+        child: const Column(
+          children: [
+            _CoupleStatus(),
+            Expanded(child: _HomeStageLayout()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCardCreationSwipeRegion extends StatefulWidget {
+  const _HomeCardCreationSwipeRegion({
+    required this.onSwipeRight,
+    required this.child,
+  });
+
+  final VoidCallback? onSwipeRight;
+  final Widget child;
+
+  @override
+  State<_HomeCardCreationSwipeRegion> createState() =>
+      _HomeCardCreationSwipeRegionState();
+}
+
+class _HomeCardCreationSwipeRegionState
+    extends State<_HomeCardCreationSwipeRegion> {
+  static const _minimumDragDistance = 72.0;
+  static const _minimumFlingDistance = 24.0;
+  static const _minimumFlingVelocity = 650.0;
+
+  var _horizontalDragDistance = 0.0;
+
+  void _resetDrag() {
+    _horizontalDragDistance = 0;
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    final distance = _horizontalDragDistance;
+    final velocity = details.primaryVelocity ?? 0;
+    _resetDrag();
+
+    final isDeliberateDrag = distance >= _minimumDragDistance;
+    final isRightFling =
+        distance >= _minimumFlingDistance && velocity >= _minimumFlingVelocity;
+    if (isDeliberateDrag || isRightFling) {
+      widget.onSwipeRight?.call();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = widget.onSwipeRight != null;
+    return GestureDetector(
+      key: const Key('home-card-creation-swipe-region'),
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: isEnabled ? (_) => _resetDrag() : null,
+      onHorizontalDragUpdate: isEnabled
+          ? (details) {
+              _horizontalDragDistance += details.primaryDelta ?? 0;
+            }
+          : null,
+      onHorizontalDragEnd: isEnabled ? _handleDragEnd : null,
+      onHorizontalDragCancel: isEnabled ? _resetDrag : null,
+      child: widget.child,
     );
   }
 }
@@ -882,6 +961,11 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
   final double width;
   final VoidCallback? onTap;
 
+  static const _backLayerStyles = [
+    _HomeStoryCardBackLayerStyle(offset: Offset(-2.5, 1.5), angle: -0.026),
+    _HomeStoryCardBackLayerStyle(offset: Offset(4, -1), angle: 0.035),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final card = stack.latestCard;
@@ -892,17 +976,19 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          for (var index = layerCount - 1; index > 0; index--)
-            Positioned(
-              top: -index * 2.5,
-              right: -index * 2.5,
-              child: Container(
-                width: previewWidth,
-                height: previewWidth / storyCardCanvasAspectRatio,
-                decoration: BoxDecoration(
-                  color: AppColors.formSurface,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: AppColors.settingsDivider),
+          for (var depth = layerCount - 1; depth > 0; depth--)
+            Transform.translate(
+              offset: _backLayerStyles[depth - 1].offset,
+              child: Transform.rotate(
+                key: Key('home-story-card-${card.id}-stack-layer-$depth'),
+                angle: _backLayerStyles[depth - 1].angle,
+                child: Container(
+                  width: previewWidth,
+                  height: previewWidth / storyCardCanvasAspectRatio,
+                  decoration: BoxDecoration(
+                    color: AppColors.formSurface,
+                    border: Border.all(color: AppColors.settingsDivider),
+                  ),
                 ),
               ),
             ),
@@ -910,6 +996,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
             surfaceKey: Key('home-story-card-${card.id}'),
             previewUrl: card.previewUrl,
             width: previewWidth,
+            cornerRadius: 0,
             onTap: onTap,
             semanticsLabel: '$_homeStoryCardSemantics, ${stack.cardCount}장',
           ),
@@ -917,6 +1004,16 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeStoryCardBackLayerStyle {
+  const _HomeStoryCardBackLayerStyle({
+    required this.offset,
+    required this.angle,
+  });
+
+  final Offset offset;
+  final double angle;
 }
 
 String _dateKey(DateTime date) {

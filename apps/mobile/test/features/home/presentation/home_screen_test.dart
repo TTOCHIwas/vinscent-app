@@ -1452,7 +1452,7 @@ void main() {
       find.byKey(_storyStackLayerKey('card-3', 2)),
     );
 
-    expect(surface.previewUrl, contains('card-3'));
+    expect(surface.surfaceKey, _storyThumbnailKey('card-3'));
     expect(clip.borderRadius, BorderRadius.zero);
     expect(backLayer.transform.storage[1], isNegative);
     expect(furthestBackLayer.transform.storage[1], isPositive);

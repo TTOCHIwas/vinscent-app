@@ -12,6 +12,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
     this.surfaceKey,
     this.onTap,
     this.semanticsLabel,
+    this.cornerRadius = 1,
   });
 
   final String? previewUrl;
@@ -19,10 +20,12 @@ class StoryCardPreviewSurface extends StatelessWidget {
   final Key? surfaceKey;
   final VoidCallback? onTap;
   final String? semanticsLabel;
+  final double cornerRadius;
 
   @override
   Widget build(BuildContext context) {
     final height = width / storyCardCanvasAspectRatio;
+    final borderRadius = BorderRadius.circular(cornerRadius);
 
     return Semantics(
       label: semanticsLabel,
@@ -32,7 +35,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
         child: InkWell(
           key: surfaceKey,
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: borderRadius,
           child: SizedBox(
             width: width,
             child: AspectRatio(
@@ -40,7 +43,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.white,
-                  borderRadius: BorderRadius.circular(1),
+                  borderRadius: borderRadius,
                   border: Border.all(color: AppColors.wireframeBorder),
                   boxShadow: const [
                     BoxShadow(
@@ -51,7 +54,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(1),
+                  borderRadius: borderRadius,
                   child: AppSizedNetworkImage(
                     url: previewUrl,
                     logicalSize: Size(width, height),
