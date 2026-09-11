@@ -65,6 +65,9 @@ const _storyLineKey = Key('home-story-line');
 const _storyClotheslineKey = Key('home-story-clothesline');
 const _storyDetailOverlayKey = Key('story-card-stack-overlay');
 const _storyDetailCloseButtonKey = Key('story-card-stack-close');
+const _storyDetailDismissTranslationKey = Key(
+  'story-card-stack-dismiss-translation',
+);
 const _aiFeedbackText = 'AI feedback for both answers';
 const _storyLabel = '\uc624\ub298\uc758 \uc2a4\ud1a0\ub9ac';
 const _storyCreateAction = '\uce74\ub4dc \uc791\uc131';
@@ -1579,6 +1582,97 @@ void main() {
 
     expect(find.text('3 / 3'), findsOneWidget);
     expect(receiptRepository.acknowledgedCardIds, isEmpty);
+  });
+
+  testWidgets('카드 상세를 짧게 아래로 당기면 손가락을 따라간 뒤 원위치로 돌아온다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: sampleTodaySummary(coupleDate: _today),
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(_storyDetailCardKey('card-1'))),
+    );
+    await gesture.moveBy(const Offset(0, 24));
+    await tester.pump(const Duration(milliseconds: 16));
+    await gesture.moveBy(const Offset(0, 56));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final draggedTransform = tester.widget<Transform>(
+      find.byKey(_storyDetailDismissTranslationKey),
+    );
+    expect(draggedTransform.transform.storage[13], greaterThan(0));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+    final restoredTransform = tester.widget<Transform>(
+      find.byKey(_storyDetailDismissTranslationKey),
+    );
+    expect(restoredTransform.transform.storage[13], closeTo(0, 0.01));
+  });
+
+  testWidgets('카드 상세를 화면 높이의 임계점보다 아래로 내리면 닫힌다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: sampleTodaySummary(coupleDate: _today),
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
+    await tester.pumpAndSettle();
+
+    await tester.timedDrag(
+      find.byKey(_storyDetailCardKey('card-1')),
+      const Offset(0, 180),
+      const Duration(milliseconds: 600),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(_storyDetailOverlayKey), findsNothing);
+  });
+
+  testWidgets('아래 흔들림이 섞인 가로 스와이프는 상세를 닫지 않고 카드만 넘긴다', (tester) async {
+    final cards = _stackCards();
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: cards.length,
+        storyEditLocked: false,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        cards: cards,
+      ),
+      stackItems: [
+        _stackItem(cards[2], position: 1, isRead: true),
+        _stackItem(cards[1], position: 2, isRead: false),
+        _stackItem(cards[0], position: 3, isRead: false),
+      ],
+      receiptRepository: _FakeStoryCardReadReceiptRepository(),
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('stack-card-3')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 3'), findsOneWidget);
+
+    await tester.timedDrag(
+      find.byKey(const Key('story-card-stack-stack-card-2')),
+      const Offset(-220, 28),
+      const Duration(milliseconds: 500),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
+    expect(find.text('3 / 3'), findsOneWidget);
   });
 
   testWidgets('카드 상태로 질문 준비 안내를 만들지 않는다', (tester) async {
