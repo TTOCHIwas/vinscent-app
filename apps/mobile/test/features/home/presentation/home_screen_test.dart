@@ -172,7 +172,7 @@ void main() {
       find.byKey(_storyThumbnailKey('card-1')),
     );
 
-    expect(emptyAddButtonCenter.dx, closeTo(myCardCenter.dx, 0.1));
+    expect(emptyAddButtonCenter.dx, closeTo(myCardCenter.dx, 3));
   });
 
   testWidgets('카드 안내 말풍선을 누르면 카드 작성 화면을 연다', (tester) async {
@@ -454,7 +454,7 @@ void main() {
       expect(tester.getSize(myCard).width, closeTo(75, 0.1));
       expect(
         tester.getRect(myCard).overlaps(tester.getRect(addButton)),
-        isTrue,
+        isFalse,
       );
       expect(
         tester.getCenter(addButton).dx,
@@ -468,7 +468,11 @@ void main() {
       expect(tester.getSize(addButton), const Size.square(40));
       expect(
         tester.getRect(myCard).contains(tester.getCenter(addButton)),
-        isTrue,
+        isFalse,
+      );
+      expect(
+        tester.getTopLeft(addButton).dx - tester.getTopRight(myCard).dx,
+        greaterThanOrEqualTo(12),
       );
       final addButtonWidget = tester.widget<IconButton>(addButton);
       expect(

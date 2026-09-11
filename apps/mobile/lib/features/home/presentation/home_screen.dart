@@ -781,11 +781,11 @@ class _HomeStoryEntry extends StatelessWidget {
     final content = HomeHangingStoryCards(
       key: const Key('home-story-line'),
       size: size,
-      leadingBuilder: canAddCard && myStack == null
-          ? (context, cardWidth) => _HomeStoryAddButton(onPressed: onAddCard)
-          : null,
       leftCardBuilder: myStack == null
-          ? null
+          ? canAddCard
+                ? (context, cardWidth) =>
+                      _HomeStoryAddButton(onPressed: onAddCard)
+                : null
           : (context, cardWidth) => _HomeStoryCardStackThumbnail(
               stack: myStack,
               width: cardWidth,
@@ -813,15 +813,17 @@ class _HomeStoryEntry extends StatelessWidget {
 class _HomeStoryAddButton extends StatelessWidget {
   const _HomeStoryAddButton({
     required this.onPressed,
-    this.overCardStack = false,
+    this.besideCardStack = false,
   });
 
+  static const besideCardStackSize = 40.0;
+
   final VoidCallback? onPressed;
-  final bool overCardStack;
+  final bool besideCardStack;
 
   @override
   Widget build(BuildContext context) {
-    final size = overCardStack ? 40.0 : 56.0;
+    final size = besideCardStack ? besideCardStackSize : 56.0;
     final button = IconButton(
       key: const Key('home-story-add-button'),
       onPressed: onPressed,
@@ -833,14 +835,14 @@ class _HomeStoryAddButton extends StatelessWidget {
         foregroundColor: AppColors.textInverse,
         shape: const CircleBorder(),
       ),
-      icon: Icon(Icons.add_rounded, size: overCardStack ? 24 : 28),
+      icon: Icon(Icons.add_rounded, size: besideCardStack ? 24 : 28),
     );
 
     return HomeForegroundPortal(
       portalKey: const Key('home-story-add-foreground'),
-      layoutKey: overCardStack,
+      layoutKey: besideCardStack,
       placeholder: SizedBox.square(dimension: size),
-      child: overCardStack
+      child: besideCardStack
           ? DecoratedBox(
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
@@ -1037,11 +1039,11 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
           ),
           if (onAddCard != null)
             Positioned(
-              right: -4,
-              bottom: -4,
+              right: -(_HomeStoryAddButton.besideCardStackSize + 12),
+              bottom: 8,
               child: _HomeStoryAddButton(
                 onPressed: onAddCard,
-                overCardStack: true,
+                besideCardStack: true,
               ),
             ),
         ],
