@@ -1030,7 +1030,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
             key: Key('home-story-card-${card.id}-border'),
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.wireframeBorder),
+              border: Border.all(color: AppColors.settingsDivider),
             ),
             child: StoryCardPreviewSurface(
               surfaceKey: Key('home-story-card-${card.id}'),
