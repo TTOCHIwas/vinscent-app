@@ -149,6 +149,32 @@ void main() {
     },
   );
 
+  testWidgets('빈 상태 추가 버튼은 내 카드와 같은 왼쪽 슬롯을 사용한다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+    );
+    final emptyAddButtonCenter = tester.getCenter(
+      find.byKey(_storyAddButtonKey),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _todaySummaryWithMyCard(),
+    );
+    final myCardCenter = tester.getCenter(
+      find.byKey(_storyThumbnailKey('card-1')),
+    );
+
+    expect(emptyAddButtonCenter.dx, closeTo(myCardCenter.dx, 0.1));
+  });
+
   testWidgets('카드 안내 말풍선을 누르면 카드 작성 화면을 연다', (tester) async {
     final router = await _pumpRoutedHome(
       tester,
@@ -1329,51 +1355,45 @@ void main() {
     },
   );
 
-  testWidgets(
-    '\ub0b4 \uce74\ub4dc\ub9cc \uc788\uc73c\uba74 \uc67c\ucabd \ubbf8\ub9ac\ubcf4\uae30\ub85c \uc218\uc815 \uc9c4\uc785\uc810\uc744 \ubcf4\uc5ec\uc900\ub2e4',
-    (tester) async {
-      await _pumpHome(
-        tester,
-        couple: _activeCouple,
-        today: _today,
-        todaySummary: _summaryWithoutQuestion(
-          coupleDate: _today,
-          loopStatus: StoryLoopStatus.waitingPartnerCard,
-          cardCount: 1,
-          canEditStory: true,
-          canAnswerQuestion: false,
-          storyEditLocked: false,
-          cards: [
-            samplePreviewCard(
-              authorUserId: _profile.id,
-              submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
-            ),
-          ],
-        ),
-      );
+  testWidgets('내 카드가 있으면 추가 버튼을 카드 오른쪽 바깥에 분리한다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: StoryLoopStatus.waitingPartnerCard,
+        cardCount: 1,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        storyEditLocked: false,
+        cards: [
+          samplePreviewCard(
+            authorUserId: _profile.id,
+            submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+          ),
+        ],
+      ),
+    );
 
-      final thumbnail = find.byKey(_storyThumbnailKey('card-1'));
-      expect(find.byKey(_storyLineKey), findsOneWidget);
-      expect(find.byKey(_storyClotheslineKey), findsOneWidget);
-      expect(thumbnail, findsOneWidget);
-      expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
-      final addButton = find.byKey(_storyAddButtonKey);
-      expect(addButton, findsOneWidget);
-      expect(
-        tester.getRect(thumbnail).overlaps(tester.getRect(addButton)),
-        isTrue,
-      );
-      expect(
-        tester.getCenter(addButton).dx,
-        greaterThan(tester.getCenter(thumbnail).dx),
-      );
-      expect(
-        tester.getCenter(addButton).dy,
-        greaterThan(tester.getCenter(thumbnail).dy),
-      );
-      expect(find.text(_storyEditAction), findsNothing);
-    },
-  );
+    final thumbnail = find.byKey(_storyThumbnailKey('card-1'));
+    expect(find.byKey(_storyLineKey), findsOneWidget);
+    expect(find.byKey(_storyClotheslineKey), findsOneWidget);
+    expect(thumbnail, findsOneWidget);
+    expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
+    final addButton = find.byKey(_storyAddButtonKey);
+    expect(addButton, findsOneWidget);
+    expect(tester.getSize(addButton), const Size.square(40));
+    expect(
+      tester.getRect(thumbnail).overlaps(tester.getRect(addButton)),
+      isFalse,
+    );
+    expect(
+      tester.getTopLeft(addButton).dx - tester.getTopRight(thumbnail).dx,
+      closeTo(12, 0.1),
+    );
+    expect(find.text(_storyEditAction), findsNothing);
+  });
 
   testWidgets(
     '\uc0c1\ub300 \uce74\ub4dc\ub9cc \uc788\uc73c\uba74 \uc378\ub124\uc77c \uc606\uc5d0 \ub0b4 \uce74\ub4dc \ucd94\uac00 \ubc84\ud2bc\uc744 \ubcf4\uc5ec\uc900\ub2e4',
