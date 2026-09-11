@@ -38,6 +38,7 @@ import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
+import 'package:vinscent/features/story_loops/data/story_card_read_receipt_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -156,6 +157,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/home/story');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['entry'],
+      'home-swipe-right',
+    );
   });
 
   testWidgets('홈을 오른쪽으로 스와이프하면 카드 작성 화면을 연다', (tester) async {
@@ -431,6 +436,25 @@ void main() {
         greaterThan(tester.getCenter(myCard).dy),
       );
       expect(tester.getSize(addButton).width, lessThan(56));
+      expect(tester.getSize(addButton), const Size.square(40));
+      expect(tester.getRect(myCard).contains(tester.getCenter(addButton)), isTrue);
+      final addButtonWidget = tester.widget<IconButton>(addButton);
+      expect(
+        addButtonWidget.style?.backgroundColor?.resolve({}),
+        AppColors.actionPrimary,
+      );
+      expect(
+        addButtonWidget.style?.foregroundColor?.resolve({}),
+        AppColors.textInverse,
+      );
+      final addIcon = find.descendant(
+        of: addButton,
+        matching: find.byIcon(Icons.add_rounded),
+      );
+      expect(
+        tester.getCenter(addIcon),
+        offsetMoreOrLessEquals(tester.getCenter(addButton), epsilon: 0.1),
+      );
       expect(
         tester.getTopLeft(myCard).dx,
         lessThan(tester.getTopLeft(partnerCard).dx),
@@ -1484,6 +1508,77 @@ void main() {
     expect(backLayerDecoration.boxShadow, isNotEmpty);
   });
 
+  testWidgets('카드 상세는 가장 오래된 미확인 카드에서 시작해 오래된 순서로 넘긴다', (
+    tester,
+  ) async {
+    final receiptRepository = _FakeStoryCardReadReceiptRepository();
+    final cards = _stackCards();
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: cards.length,
+        storyEditLocked: false,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        cards: cards,
+      ),
+      stackItems: [
+        _stackItem(cards[2], position: 1, isRead: true),
+        _stackItem(cards[1], position: 2, isRead: false),
+        _stackItem(cards[0], position: 3, isRead: false),
+      ],
+      receiptRepository: receiptRepository,
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('stack-card-3')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(receiptRepository.acknowledgedCardIds, ['stack-card-2']);
+
+    await tester.tapAt(const Offset(300, 320));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 / 3'), findsOneWidget);
+    expect(
+      receiptRepository.acknowledgedCardIds,
+      ['stack-card-2', 'stack-card-3'],
+    );
+  });
+
+  testWidgets('모든 카드를 확인했다면 오래된 순서의 마지막인 최신 카드에서 시작한다', (
+    tester,
+  ) async {
+    final receiptRepository = _FakeStoryCardReadReceiptRepository();
+    final cards = _stackCards();
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: cards.length,
+        storyEditLocked: false,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        cards: cards,
+      ),
+      stackItems: [
+        _stackItem(cards[2], position: 1, isRead: true),
+        _stackItem(cards[1], position: 2, isRead: true),
+        _stackItem(cards[0], position: 3, isRead: true),
+      ],
+      receiptRepository: receiptRepository,
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('stack-card-3')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 / 3'), findsOneWidget);
+    expect(receiptRepository.acknowledgedCardIds, isEmpty);
+  });
+
   testWidgets('카드 상태로 질문 준비 안내를 만들지 않는다', (tester) async {
     await _pumpHome(
       tester,
@@ -1631,6 +1726,8 @@ Future<GoRouter> _pumpRoutedHome(
   HomeFeedbackImpressionStore? feedbackImpressionStore,
   AiLearningDashboard? aiDashboard,
   SafetyReportRepository? safetyReportRepository,
+  List<StoryCardStackItem>? stackItems,
+  StoryCardReadReceiptRepository? receiptRepository,
 }) async {
   final effectiveCouple = couple ?? _activeCouple;
   final storyRepository = FakeStoryLoopReadRepository(
@@ -1700,8 +1797,14 @@ Future<GoRouter> _pumpRoutedHome(
           (ref) => _loadTodayQuestion(storyRepository),
         ),
         storyCardStackProvider.overrideWith(
-          (ref, request) => _loadStoryCardStack(storyRepository, request),
+          (ref, request) => stackItems == null
+              ? _loadStoryCardStack(storyRepository, request)
+              : Future.value(stackItems),
         ),
+        if (receiptRepository != null)
+          storyCardReadReceiptRepositoryProvider.overrideWithValue(
+            receiptRepository,
+          ),
         aiQuestionFeedbackProvider.overrideWith(
           (ref, dailyQuestionId) => Stream.value(
             _aiFeedbackState(
@@ -1929,8 +2032,69 @@ Future<List<StoryCardStackItem>> _loadStoryCardStack(
         isFeatured: false,
         canDelete: orderedCards[index].authorUserId == _profile.id,
         canFeature: orderedCards[index].authorUserId == _profile.id,
+        isRead: true,
       ),
   ];
+}
+
+List<StoryLoopCardPreview> _stackCards() {
+  return [
+    samplePreviewCard(
+      id: 'stack-card-3',
+      authorUserId: 'partner-id',
+      previewPath: 'previews/stack-card-3.png',
+      submittedAt: DateTime.parse('2026-05-31T11:00:00Z'),
+    ),
+    samplePreviewCard(
+      id: 'stack-card-2',
+      authorUserId: 'partner-id',
+      previewPath: 'previews/stack-card-2.png',
+      submittedAt: DateTime.parse('2026-05-31T10:00:00Z'),
+    ),
+    samplePreviewCard(
+      id: 'stack-card-1',
+      authorUserId: 'partner-id',
+      previewPath: 'previews/stack-card-1.png',
+      submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+    ),
+  ];
+}
+
+StoryCardStackItem _stackItem(
+  StoryLoopCardPreview card, {
+  required int position,
+  required bool isRead,
+}) {
+  return StoryCardStackItem(
+    position: position,
+    card: StoryLoopCardDetail(
+      id: card.id,
+      authorUserId: card.authorUserId,
+      previewPath: card.previewPath,
+      sceneDataPath: 'scenes/${card.id}.json',
+      hasPhoto: true,
+      hasDrawing: false,
+      hasText: false,
+      submittedAt: card.submittedAt,
+      revision: 1,
+      previewUrl: card.previewUrl,
+    ),
+    isFeatured: false,
+    canDelete: false,
+    canFeature: false,
+    isRead: isRead,
+  );
+}
+
+class _FakeStoryCardReadReceiptRepository
+    implements StoryCardReadReceiptRepository {
+  final acknowledgedCardIds = <String>[];
+
+  @override
+  Future<bool> acknowledgeCard({required String cardId}) async {
+    acknowledgedCardIds.add(cardId);
+    return true;
+  }
 }
 
 Future<void> _submitVisibleAiReport(WidgetTester tester) async {

@@ -17,6 +17,7 @@ void main() {
       'is_featured': false,
       'can_delete': true,
       'can_feature': true,
+      'is_read': true,
     }, previewUrl: 'https://example.test/card-2.png');
 
     expect(item.position, 2);
@@ -25,5 +26,6 @@ void main() {
     expect(item.isFeatured, isFalse);
     expect(item.canDelete, isTrue);
     expect(item.canFeature, isTrue);
+    expect(item.isRead, isTrue);
   });
 }

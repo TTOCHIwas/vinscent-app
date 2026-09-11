@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(22);
+select plan(27);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -250,14 +250,74 @@ select is(
     order by position
     limit 1
   ),
-  '4a000000-0000-0000-0000-000000000002'::uuid,
-  'the viewer starts at the newest card'
+  '4a000000-0000-0000-0000-000000000001'::uuid,
+  'the stack is ordered from oldest to newest'
+);
+select is(
+  (
+    select count(*)
+    from public.get_story_card_stack(
+      current_date,
+      '1a000000-0000-0000-0000-000000000001'
+    )
+    where not is_read
+  ),
+  0::bigint,
+  'an author always reads their own cards as already seen'
+);
+select is(
+  (
+    select is_read
+    from public.get_story_card_stack(
+      current_date,
+      '1a000000-0000-0000-0000-000000000002'
+    )
+    limit 1
+  ),
+  false,
+  'a newly submitted partner card starts unread'
+);
+select is(
+  public.acknowledge_story_card(
+    '4a000000-0000-0000-0000-000000000003'
+  ),
+  true,
+  'a viewer can acknowledge a readable partner card'
+);
+select is(
+  (
+    select is_read
+    from public.get_story_card_stack(
+      current_date,
+      '1a000000-0000-0000-0000-000000000002'
+    )
+    limit 1
+  ),
+  true,
+  'an acknowledged partner card is returned as read'
 );
 select lives_ok(
   $$select public.set_today_story_card_featured(
     '4a000000-0000-0000-0000-000000000001'
   )$$,
   'a member can feature one of their cards'
+);
+
+reset role;
+
+select set_config(
+  'request.jwt.claim.sub',
+  '1a000000-0000-0000-0000-000000000003',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.acknowledge_story_card(
+    '4a000000-0000-0000-0000-000000000003'
+  ),
+  false,
+  'a user outside the couple cannot acknowledge the card'
 );
 
 reset role;
