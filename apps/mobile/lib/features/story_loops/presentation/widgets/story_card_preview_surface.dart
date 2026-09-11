@@ -13,6 +13,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
     this.onTap,
     this.semanticsLabel,
     this.cornerRadius = 1,
+    this.showShadow = true,
   });
 
   final String? previewUrl;
@@ -21,6 +22,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
   final VoidCallback? onTap;
   final String? semanticsLabel;
   final double cornerRadius;
+  final bool showShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -45,13 +47,15 @@ class StoryCardPreviewSurface extends StatelessWidget {
                   color: AppColors.white,
                   borderRadius: borderRadius,
                   border: Border.all(color: AppColors.wireframeBorder),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x12000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: showShadow
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x12000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: ClipRRect(
                   borderRadius: borderRadius,

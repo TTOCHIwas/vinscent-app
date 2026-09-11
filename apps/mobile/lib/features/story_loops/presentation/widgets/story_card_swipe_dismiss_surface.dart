@@ -86,15 +86,7 @@ class _StoryCardSwipeDismissSurfaceState
                       scale: scale,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(cornerRadius),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            const IgnorePointer(
-                              child: ColoredBox(color: Colors.black),
-                            ),
-                            child!,
-                          ],
-                        ),
+                        child: child,
                       ),
                     ),
                   ),

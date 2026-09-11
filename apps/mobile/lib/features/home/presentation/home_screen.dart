@@ -816,7 +816,8 @@ class _HomeStoryAddButton extends StatelessWidget {
     this.besideCardStack = false,
   });
 
-  static const besideCardStackSize = 40.0;
+  static const besideCardStackSize = 44.0;
+  static const besideCardStackHaloSize = 52.0;
 
   final VoidCallback? onPressed;
   final bool besideCardStack;
@@ -824,6 +825,7 @@ class _HomeStoryAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = besideCardStack ? besideCardStackSize : 56.0;
+    final portalSize = besideCardStack ? besideCardStackHaloSize : size;
     final button = IconButton(
       key: const Key('home-story-add-button'),
       onPressed: onPressed,
@@ -835,26 +837,21 @@ class _HomeStoryAddButton extends StatelessWidget {
         foregroundColor: AppColors.textInverse,
         shape: const CircleBorder(),
       ),
-      icon: Icon(Icons.add_rounded, size: besideCardStack ? 24 : 28),
+      icon: Icon(Icons.add_rounded, size: besideCardStack ? 26 : 28),
     );
 
     return HomeForegroundPortal(
       portalKey: const Key('home-story-add-foreground'),
       layoutKey: besideCardStack,
-      placeholder: SizedBox.square(dimension: size),
+      placeholder: SizedBox.square(dimension: portalSize),
       child: besideCardStack
           ? DecoratedBox(
+              key: const Key('home-story-add-halo'),
               decoration: const BoxDecoration(
+                color: AppColors.white,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 3),
-                  ),
-                ],
               ),
-              child: button,
+              child: Padding(padding: const EdgeInsets.all(4), child: button),
             )
           : button,
     );
@@ -1029,18 +1026,26 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
                 ),
               ),
             ),
-          StoryCardPreviewSurface(
-            surfaceKey: Key('home-story-card-${card.id}'),
-            previewUrl: card.previewUrl,
-            width: previewWidth,
-            cornerRadius: 0,
-            onTap: onTap,
-            semanticsLabel: '$_homeStoryCardSemantics, ${stack.cardCount}장',
+          DecoratedBox(
+            key: Key('home-story-card-${card.id}-border'),
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.wireframeBorder),
+            ),
+            child: StoryCardPreviewSurface(
+              surfaceKey: Key('home-story-card-${card.id}'),
+              previewUrl: card.previewUrl,
+              width: previewWidth,
+              cornerRadius: 0,
+              showShadow: false,
+              onTap: onTap,
+              semanticsLabel: '$_homeStoryCardSemantics, ${stack.cardCount}장',
+            ),
           ),
           if (onAddCard != null)
             Positioned(
-              right: -(_HomeStoryAddButton.besideCardStackSize + 12),
-              bottom: 8,
+              right: -10,
+              bottom: -10,
               child: _HomeStoryAddButton(
                 onPressed: onAddCard,
                 besideCardStack: true,

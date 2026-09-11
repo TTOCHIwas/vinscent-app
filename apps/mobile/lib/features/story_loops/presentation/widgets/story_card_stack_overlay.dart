@@ -17,6 +17,7 @@ import '../../data/story_card_scene.dart';
 import '../../data/story_card_stack_item.dart';
 import '../../data/story_card_stack_preview.dart';
 import '../../data/story_loop_write_repository.dart';
+import 'story_card_action_sheet.dart';
 import 'story_card_preview_surface.dart';
 import 'story_card_swipe_dismiss_surface.dart';
 
@@ -161,16 +162,19 @@ class _StoryCardStackOverlayState
                   Positioned(
                     right: 0,
                     top: 0,
-                    child: _StoryCardMenu(
-                      isBusy: _isMutating,
-                      canReport: !widget.stack.isMine,
-                      onDownload: () => _download(currentItem),
-                      onDelete: currentItem.canDelete
-                          ? () => _delete(currentItem, items!.length)
-                          : null,
-                      onReport: !widget.stack.isMine
-                          ? () => _report(currentItem)
-                          : null,
+                    child: IconButton(
+                      key: const Key('story-card-stack-menu'),
+                      tooltip: '카드 메뉴',
+                      onPressed: _isMutating
+                          ? null
+                          : () => unawaited(
+                              _openActions(currentItem, items!.length),
+                            ),
+                      color: AppColors.textInverse,
+                      disabledColor: AppColors.textInverse.withValues(
+                        alpha: 0.4,
+                      ),
+                      icon: const Icon(Icons.more_vert_rounded, size: 28),
                     ),
                   ),
               ],
@@ -376,6 +380,27 @@ class _StoryCardStackOverlayState
     }
   }
 
+  Future<void> _openActions(StoryCardStackItem item, int itemCount) async {
+    final action = await showStoryCardActionSheet(
+      context: context,
+      cardId: item.card.id,
+      showDelete: item.canDelete,
+      showReport: !widget.stack.isMine,
+    );
+    if (!mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case StoryCardAction.download:
+        await _download(item);
+      case StoryCardAction.delete:
+        await _delete(item, itemCount);
+      case StoryCardAction.report:
+        await _report(item);
+    }
+  }
+
   Future<void> _delete(StoryCardStackItem item, int itemCount) async {
     if (_isMutating || !item.canDelete) {
       return;
@@ -461,73 +486,5 @@ class _StoryCardStackOverlayState
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-enum _StoryCardMenuAction { download, delete, report }
-
-class _StoryCardMenu extends StatelessWidget {
-  const _StoryCardMenu({
-    required this.isBusy,
-    required this.canReport,
-    required this.onDownload,
-    required this.onDelete,
-    required this.onReport,
-  });
-
-  final bool isBusy;
-  final bool canReport;
-  final VoidCallback onDownload;
-  final VoidCallback? onDelete;
-  final VoidCallback? onReport;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_StoryCardMenuAction>(
-      key: const Key('story-card-stack-menu'),
-      tooltip: '카드 메뉴',
-      enabled: !isBusy,
-      color: AppColors.background,
-      iconColor: AppColors.textInverse,
-      icon: const Icon(Icons.more_vert_rounded, size: 28),
-      onSelected: (action) {
-        switch (action) {
-          case _StoryCardMenuAction.download:
-            onDownload();
-          case _StoryCardMenuAction.delete:
-            onDelete?.call();
-          case _StoryCardMenuAction.report:
-            onReport?.call();
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: _StoryCardMenuAction.download,
-          child: ListTile(
-            leading: Icon(Icons.download_rounded),
-            title: Text('다운로드'),
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-        if (onDelete != null)
-          const PopupMenuItem(
-            value: _StoryCardMenuAction.delete,
-            child: ListTile(
-              leading: Icon(Icons.delete_outline_rounded),
-              title: Text('삭제'),
-              contentPadding: EdgeInsets.zero,
-            ),
-          ),
-        if (canReport && onReport != null)
-          const PopupMenuItem(
-            value: _StoryCardMenuAction.report,
-            child: ListTile(
-              leading: Icon(Icons.flag_outlined),
-              title: Text('신고'),
-              contentPadding: EdgeInsets.zero,
-            ),
-          ),
-      ],
-    );
   }
 }
