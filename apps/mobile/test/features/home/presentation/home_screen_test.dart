@@ -58,6 +58,7 @@ import '../../../support/text_finders.dart';
 
 const _storyAddButtonKey = Key('home-story-add-button');
 const _storyAddForegroundKey = Key('home-story-add-foreground');
+const _storyAddHaloKey = Key('home-story-add-halo');
 const _questionBubbleKey = Key('home-question-speech-bubble');
 const _questionActionKey = Key('home-question-action');
 const _questionForegroundKey = Key('home-question-foreground');
@@ -65,6 +66,7 @@ const _storyLineKey = Key('home-story-line');
 const _storyClotheslineKey = Key('home-story-clothesline');
 const _storyDetailOverlayKey = Key('story-card-stack-overlay');
 const _storyDetailCloseButtonKey = Key('story-card-stack-close');
+const _storyDetailMenuKey = Key('story-card-stack-menu');
 const _storyDetailDismissTranslationKey = Key(
   'story-card-stack-dismiss-translation',
 );
@@ -92,9 +94,12 @@ const _aiProcessingPrompt = '둘이 남긴 답을 읽고 있어. 잠깐만 기�
 const _questionPreparingPrompt = '둘에게 어울릴 질문을 고르고 있어!';
 
 Key _storyThumbnailKey(String cardId) => Key('home-story-card-$cardId');
+Key _storyBorderKey(String cardId) => Key('home-story-card-$cardId-border');
 Key _storyStackLayerKey(String cardId, int depth) =>
     Key('home-story-card-$cardId-stack-layer-$depth');
 Key _storyDetailCardKey(String cardId) => Key('story-card-stack-$cardId');
+Key _storyActionSheetKey(String cardId) =>
+    Key('story-card-action-sheet-$cardId');
 
 void main() {
   testWidgets(
@@ -452,27 +457,26 @@ void main() {
         closeTo(storyCardCanvasAspectRatio, 0.01),
       );
       expect(tester.getSize(myCard).width, closeTo(75, 0.1));
+      final addHalo = find.byKey(_storyAddHaloKey);
+      expect(addHalo, findsOneWidget);
+      expect(tester.getSize(addButton), const Size.square(44));
+      expect(tester.getSize(addHalo), const Size.square(52));
+      expect(tester.getRect(myCard).overlaps(tester.getRect(addHalo)), isTrue);
       expect(
-        tester.getRect(myCard).overlaps(tester.getRect(addButton)),
-        isFalse,
+        tester.getCenter(addHalo),
+        offsetMoreOrLessEquals(tester.getCenter(addButton), epsilon: 0.1),
       );
       expect(
-        tester.getCenter(addButton).dx,
-        greaterThan(tester.getCenter(myCard).dx),
+        tester.getTopRight(addHalo).dx,
+        greaterThan(tester.getTopRight(myCard).dx),
       );
       expect(
-        tester.getCenter(addButton).dy,
-        greaterThan(tester.getCenter(myCard).dy),
-      );
-      expect(tester.getSize(addButton).width, lessThan(56));
-      expect(tester.getSize(addButton), const Size.square(40));
-      expect(
-        tester.getRect(myCard).contains(tester.getCenter(addButton)),
-        isFalse,
+        tester.getBottomRight(addHalo).dy,
+        greaterThan(tester.getBottomRight(myCard).dy),
       );
       expect(
-        tester.getTopLeft(addButton).dx - tester.getTopRight(myCard).dx,
-        greaterThanOrEqualTo(12),
+        (tester.getSize(addHalo).width - tester.getSize(addButton).width) / 2,
+        closeTo(4, 0.1),
       );
       final addButtonWidget = tester.widget<IconButton>(addButton);
       expect(
@@ -1273,6 +1277,16 @@ void main() {
       expect(find.byKey(_storyDetailOverlayKey), findsOneWidget);
       expect(tester.getSize(detailCard).width, greaterThanOrEqualTo(320));
       expect(tester.getCenter(detailCard).dx, closeTo(180, 0.5));
+      expect(
+        find.descendant(
+          of: find.byKey(_storyDetailDismissTranslationKey),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is ColoredBox && widget.color == Colors.black,
+          ),
+        ),
+        findsNothing,
+      );
+      expect(find.byType(HomeScreen), findsOneWidget);
 
       await tester.tap(detailCard);
       await tester.pumpAndSettle();
@@ -1290,6 +1304,29 @@ void main() {
       expect(find.byKey(_storyDetailOverlayKey), findsNothing);
     },
   );
+
+  testWidgets('카드 더보기는 앱 스타일 바텀시트를 연다', (tester) async {
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        cardCount: 1,
+        cards: [samplePreviewCard(authorUserId: _profile.id)],
+      ),
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('card-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(_storyDetailMenuKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(_storyActionSheetKey('card-1')), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(PopupMenuButton), findsNothing);
+    expect(find.text('다운로드'), findsOneWidget);
+    expect(find.text('삭제'), findsOneWidget);
+    expect(find.text('신고'), findsNothing);
+  });
 
   testWidgets(
     '\ub85c\ub529 \uc0c1\ud0dc\ub294 \ubb38\uad6c \uc5c6\uc774 \uc791\uc740 \uc9c4\ud589 \ud45c\uc2dc\ub85c \ubcf4\uc5ec\uc900\ub2e4',
@@ -1359,7 +1396,7 @@ void main() {
     },
   );
 
-  testWidgets('내 카드가 있으면 추가 버튼을 카드 오른쪽 바깥에 분리한다', (tester) async {
+  testWidgets('내 카드가 있으면 흰 링을 둔 추가 버튼을 모서리에 겹친다', (tester) async {
     await _pumpHome(
       tester,
       couple: _activeCouple,
@@ -1386,15 +1423,31 @@ void main() {
     expect(thumbnail, findsOneWidget);
     expect(tester.widget<InkWell>(thumbnail).onTap, isNotNull);
     final addButton = find.byKey(_storyAddButtonKey);
+    final addHalo = find.byKey(_storyAddHaloKey);
     expect(addButton, findsOneWidget);
-    expect(tester.getSize(addButton), const Size.square(40));
+    expect(addHalo, findsOneWidget);
+    expect(tester.getSize(addButton), const Size.square(44));
+    expect(tester.getSize(addHalo), const Size.square(52));
+    expect(tester.getRect(thumbnail).overlaps(tester.getRect(addHalo)), isTrue);
     expect(
-      tester.getRect(thumbnail).overlaps(tester.getRect(addButton)),
-      isFalse,
+      tester.getCenter(addHalo),
+      offsetMoreOrLessEquals(tester.getCenter(addButton), epsilon: 0.1),
     );
     expect(
-      tester.getTopLeft(addButton).dx - tester.getTopRight(thumbnail).dx,
-      closeTo(12, 0.1),
+      tester.getTopRight(addHalo).dx,
+      greaterThan(tester.getTopRight(thumbnail).dx),
+    );
+    expect(
+      tester.getBottomRight(addHalo).dy,
+      greaterThan(tester.getBottomRight(thumbnail).dy),
+    );
+    final halo = tester.widget<DecoratedBox>(addHalo);
+    final haloDecoration = halo.decoration as BoxDecoration;
+    expect(haloDecoration.color, AppColors.white);
+    expect(haloDecoration.shape, BoxShape.circle);
+    expect(
+      (tester.getSize(addHalo).width - tester.getSize(addButton).width) / 2,
+      closeTo(4, 0.1),
     );
     expect(find.text(_storyEditAction), findsNothing);
   });
@@ -1515,9 +1568,22 @@ void main() {
 
     final surfaceFinder = find.byType(StoryCardPreviewSurface);
     final surface = tester.widget<StoryCardPreviewSurface>(surfaceFinder);
+    final frontBorderFinder = find.byKey(_storyBorderKey('card-3'));
+    expect(frontBorderFinder, findsOneWidget);
+    final frontBorder = tester.widget<DecoratedBox>(frontBorderFinder);
+    final frontBorderDecoration = frontBorder.decoration as BoxDecoration;
     final clip = tester.widget<ClipRRect>(
       find.descendant(of: surfaceFinder, matching: find.byType(ClipRRect)),
     );
+    final surfaceDecorations = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(
+            of: surfaceFinder,
+            matching: find.byType(DecoratedBox),
+          ),
+        )
+        .map((widget) => widget.decoration)
+        .whereType<BoxDecoration>();
     final backLayerFinder = find.byKey(_storyStackLayerKey('card-3', 1));
     final furthestBackLayerFinder = find.byKey(
       _storyStackLayerKey('card-3', 2),
@@ -1530,6 +1596,13 @@ void main() {
     final backLayerDecoration = backLayerContainer.decoration! as BoxDecoration;
 
     expect(surface.surfaceKey, _storyThumbnailKey('card-3'));
+    expect(frontBorder.position, DecorationPosition.foreground);
+    expect(frontBorderDecoration.border, isNotNull);
+    expect(frontBorderDecoration.boxShadow, isNull);
+    expect(
+      surfaceDecorations.expand((decoration) => decoration.boxShadow ?? []),
+      isEmpty,
+    );
     expect(clip.borderRadius, BorderRadius.zero);
     expect(backLayer.transform.storage[1], isNegative);
     expect(furthestBackLayer.transform.storage[1], isPositive);
