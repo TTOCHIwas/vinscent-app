@@ -18,6 +18,7 @@ import '../../data/story_card_stack_item.dart';
 import '../../data/story_card_stack_preview.dart';
 import '../../data/story_loop_write_repository.dart';
 import 'story_card_preview_surface.dart';
+import 'story_card_swipe_dismiss_surface.dart';
 
 Future<void> showStoryCardStackOverlay({
   required BuildContext context,
@@ -32,7 +33,7 @@ Future<void> showStoryCardStackOverlay({
     useRootNavigator: true,
     barrierDismissible: true,
     barrierLabel: barrierLabel,
-    barrierColor: const Color(0xE6000000),
+    barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (context, animation, secondaryAnimation) =>
         _StoryCardStackOverlay(date: date, stack: stack),
@@ -93,84 +94,87 @@ class _StoryCardStackOverlayState
 
     return KeyedSubtree(
       key: const Key('story-card-stack-overlay'),
-      child: SafeArea(
-        minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Material(
-          color: Colors.transparent,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildCardArea(itemsAsync, items),
-              Positioned(
-                top: 0,
-                left: 0,
-                child: IconButton(
-                  key: const Key('story-card-stack-close'),
-                  tooltip: '카드 상세 닫기',
-                  onPressed: () => Navigator.of(context).pop(),
-                  color: AppColors.textInverse,
-                  icon: const Icon(Icons.close_rounded, size: 28),
-                ),
-              ),
-              if (items != null && items.length > 1)
+      child: StoryCardSwipeDismissSurface(
+        onDismissed: () => Navigator.of(context).pop(),
+        child: SafeArea(
+          minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _buildCardArea(itemsAsync, items),
                 Positioned(
-                  top: 13,
-                  left: 64,
-                  right: 64,
-                  child: Center(
-                    child: Text(
-                      '${_currentIndex + 1} / ${items.length}',
-                      style: const TextStyle(
-                        color: AppColors.textInverse,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                  top: 0,
+                  left: 0,
+                  child: IconButton(
+                    key: const Key('story-card-stack-close'),
+                    tooltip: '카드 상세 닫기',
+                    onPressed: () => Navigator.of(context).pop(),
+                    color: AppColors.textInverse,
+                    icon: const Icon(Icons.close_rounded, size: 28),
                   ),
                 ),
-              if (currentItem != null)
-                Positioned(
-                  left: 0,
-                  bottom: 0,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 160),
-                    opacity: currentItem.canFeature ? 1 : 0,
-                    child: IgnorePointer(
-                      ignoring: !currentItem.canFeature || _isMutating,
-                      child: IconButton(
-                        key: const Key('story-card-stack-feature'),
-                        tooltip: currentItem.isFeatured
-                            ? '오늘의 사진으로 선택됨'
-                            : '오늘의 사진으로 선택',
-                        onPressed: () => _feature(currentItem),
-                        color: AppColors.textInverse,
-                        icon: Icon(
-                          currentItem.isFeatured
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          size: 30,
+                if (items != null && items.length > 1)
+                  Positioned(
+                    top: 13,
+                    left: 64,
+                    right: 64,
+                    child: Center(
+                      child: Text(
+                        '${_currentIndex + 1} / ${items.length}',
+                        style: const TextStyle(
+                          color: AppColors.textInverse,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ),
-                ),
-              if (currentItem != null)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: _StoryCardMenu(
-                    isBusy: _isMutating,
-                    canReport: !widget.stack.isMine,
-                    onDownload: () => _download(currentItem),
-                    onDelete: currentItem.canDelete
-                        ? () => _delete(currentItem, items!.length)
-                        : null,
-                    onReport: !widget.stack.isMine
-                        ? () => _report(currentItem)
-                        : null,
+                if (currentItem != null)
+                  Positioned(
+                    left: 0,
+                    bottom: 0,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 160),
+                      opacity: currentItem.canFeature ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !currentItem.canFeature || _isMutating,
+                        child: IconButton(
+                          key: const Key('story-card-stack-feature'),
+                          tooltip: currentItem.isFeatured
+                              ? '오늘의 사진으로 선택됨'
+                              : '오늘의 사진으로 선택',
+                          onPressed: () => _feature(currentItem),
+                          color: AppColors.textInverse,
+                          icon: Icon(
+                            currentItem.isFeatured
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-            ],
+                if (currentItem != null)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: _StoryCardMenu(
+                      isBusy: _isMutating,
+                      canReport: !widget.stack.isMine,
+                      onDownload: () => _download(currentItem),
+                      onDelete: currentItem.canDelete
+                          ? () => _delete(currentItem, items!.length)
+                          : null,
+                      onReport: !widget.stack.isMine
+                          ? () => _report(currentItem)
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
