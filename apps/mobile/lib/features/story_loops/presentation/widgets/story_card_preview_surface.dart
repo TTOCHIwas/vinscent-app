@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/story_card_scene.dart';
+import '../../data/story_card_type.dart';
 
 class StoryCardPreviewSurface extends StatelessWidget {
   const StoryCardPreviewSurface({
     super.key,
     required this.previewUrl,
     required this.width,
+    this.cardType = StoryCardType.polaroid,
     this.surfaceKey,
     this.onTap,
     this.semanticsLabel,
@@ -18,15 +20,24 @@ class StoryCardPreviewSurface extends StatelessWidget {
 
   final String? previewUrl;
   final double width;
+  final StoryCardType cardType;
   final Key? surfaceKey;
   final VoidCallback? onTap;
   final String? semanticsLabel;
   final double cornerRadius;
   final bool showShadow;
 
+  static double widthInFourByFiveSlot(
+    double slotWidth,
+    StoryCardType cardType,
+  ) {
+    return slotWidth *
+        (cardType.canvasAspectRatio / storyCardCanvasAspectRatio);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final height = width / storyCardCanvasAspectRatio;
+    final height = width / cardType.canvasAspectRatio;
     final borderRadius = BorderRadius.circular(cornerRadius);
 
     return Semantics(
@@ -41,7 +52,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
           child: SizedBox(
             width: width,
             child: AspectRatio(
-              aspectRatio: storyCardCanvasAspectRatio,
+              aspectRatio: cardType.canvasAspectRatio,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.white,

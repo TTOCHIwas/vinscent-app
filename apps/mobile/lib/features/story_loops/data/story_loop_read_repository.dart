@@ -46,7 +46,7 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
 
     try {
       final data = await Supabase.instance.client
-          .rpc('get_today_story_loop_summary')
+          .rpc('get_today_story_loop_summary_v2')
           .timeout(AppConfig.supabaseRpcTimeout);
       final row = _asOptionalRow(data);
       if (row == null) {
@@ -74,7 +74,7 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
     try {
       final data = await Supabase.instance.client
           .rpc(
-            'get_story_loop_detail',
+            'get_story_loop_detail_v2',
             params: {'target_date': _formatDate(date)},
           )
           .timeout(AppConfig.supabaseRpcTimeout);
@@ -106,7 +106,7 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
     try {
       final data = await Supabase.instance.client
           .rpc(
-            'get_story_loop_month_summary',
+            'get_story_loop_month_summary_v2',
             params: {'target_month': _formatDate(month)},
           )
           .timeout(AppConfig.supabaseRpcTimeout);

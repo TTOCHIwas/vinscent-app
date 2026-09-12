@@ -28,7 +28,6 @@ import '../../safety/data/safety_report.dart';
 import '../../safety/presentation/safety_report_sheet.dart';
 import '../../story_loops/application/today_story_card_stacks_provider.dart';
 import '../../story_loops/data/story_card_stack_preview.dart';
-import '../../story_loops/data/story_card_scene.dart';
 import '../../story_loops/data/today_story_card_stacks.dart';
 import '../../story_loops/presentation/story_card_editor_route.dart';
 import '../../story_loops/presentation/widgets/story_card_stack_overlay.dart';
@@ -998,7 +997,11 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = stack.latestCard;
     final layerCount = stack.cardCount.clamp(1, 3);
-    final previewWidth = math.max(0.0, width - 5);
+    final slotWidth = math.max(0.0, width - 5);
+    final previewWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
+      slotWidth,
+      card.cardType,
+    );
     return Padding(
       padding: const EdgeInsets.only(top: 5, right: 5),
       child: Stack(
@@ -1012,7 +1015,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
                 angle: _backLayerStyles[depth - 1].angle,
                 child: Container(
                   width: previewWidth,
-                  height: previewWidth / storyCardCanvasAspectRatio,
+                  height: previewWidth / card.cardType.canvasAspectRatio,
                   decoration: const BoxDecoration(
                     color: AppColors.white,
                     boxShadow: [
@@ -1036,6 +1039,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
               surfaceKey: Key('home-story-card-${card.id}'),
               previewUrl: card.previewUrl,
               width: previewWidth,
+              cardType: card.cardType,
               cornerRadius: 0,
               showShadow: false,
               onTap: onTap,

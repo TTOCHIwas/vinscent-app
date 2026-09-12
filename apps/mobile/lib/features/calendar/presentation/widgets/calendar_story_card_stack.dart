@@ -107,12 +107,22 @@ class _CalendarStoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StoryCardPreviewSurface(
-      surfaceKey: ValueKey('calendar-story-card-${card.id}'),
-      previewUrl: card.previewUrl,
+    final previewWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
+      width,
+      card.cardType,
+    );
+    return SizedBox(
       width: width,
-      onTap: onTap,
-      semanticsLabel: '스토리 카드',
+      child: Center(
+        child: StoryCardPreviewSurface(
+          surfaceKey: ValueKey('calendar-story-card-${card.id}'),
+          previewUrl: card.previewUrl,
+          width: previewWidth,
+          cardType: card.cardType,
+          onTap: onTap,
+          semanticsLabel: '스토리 카드',
+        ),
+      ),
     );
   }
 }

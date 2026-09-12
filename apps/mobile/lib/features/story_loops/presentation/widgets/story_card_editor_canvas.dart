@@ -8,11 +8,12 @@ import '../../application/story_card_canvas_renderer.dart';
 import '../../application/story_card_editor_session.dart';
 import '../../data/story_card_film_look.dart';
 import '../../data/story_card_scene.dart';
+import '../../data/story_card_type.dart';
 
 class StoryCardEditorCanvas extends StatefulWidget {
   const StoryCardEditorCanvas({
     super.key,
-    required this.backgroundImage,
+    required this.backgroundImages,
     required this.scene,
     this.filmProgram,
     required this.visibleStrokes,
@@ -27,7 +28,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
     required this.onTextLayerScaleEnd,
   });
 
-  final ui.Image? backgroundImage;
+  final List<ui.Image?> backgroundImages;
   final StoryCardScene scene;
   final ui.FragmentProgram? filmProgram;
   final List<StoryCardStroke> visibleStrokes;
@@ -35,8 +36,9 @@ class StoryCardEditorCanvas extends StatefulWidget {
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
   final void Function(StoryCardPoint point, int pointer) onStrokeUpdate;
   final ValueChanged<int> onStrokeEnd;
-  final ValueChanged<ScaleStartDetails> onBackgroundScaleStart;
-  final void Function(ScaleUpdateDetails details, Size size)
+  final void Function(int photoIndex, ScaleStartDetails details)
+  onBackgroundScaleStart;
+  final void Function(int photoIndex, ScaleUpdateDetails details, Size size)
   onBackgroundScaleUpdate;
   final void Function(String layerId, ScaleStartDetails details)
   onTextLayerScaleStart;
@@ -54,6 +56,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
 
   String? _lockedTextLayerId;
   bool _isBackgroundTransformLocked = false;
+  int? _lockedPhotoIndex;
 
   @override
   void didUpdateWidget(covariant StoryCardEditorCanvas oldWidget) {
@@ -89,7 +92,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                   Positioned.fill(
                     child: CustomPaint(
                       painter: _StoryCardPainter(
-                        backgroundImage: widget.backgroundImage,
+                        backgroundImages: widget.backgroundImages,
                         scene: widget.scene,
                         filmProgram: widget.filmProgram,
                         strokes: widget.visibleStrokes,
@@ -182,7 +185,10 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
 
     if (_isBackgroundTransformLocked) {
       if (details.pointerCount >= 2) {
-        widget.onBackgroundScaleStart(details);
+        final photoIndex = _lockedPhotoIndex;
+        if (photoIndex != null) {
+          widget.onBackgroundScaleStart(photoIndex, details);
+        }
       }
       return;
     }
@@ -198,9 +204,24 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
 
     if (details.pointerCount >= 2 &&
         widget.interactionMode != StoryCardEditorTool.drawing &&
-        widget.backgroundImage != null) {
+        widget.backgroundImages.any((image) => image != null)) {
+      final layout = StoryCardLayout.fromSize(
+        type: widget.scene.cardType,
+        size: context.size ?? Size.zero,
+      );
+      final photoIndex = widget.scene.cardType == StoryCardType.polaroid
+          ? 0
+          : layout.photoRects.indexWhere(
+              (rect) => rect.contains(details.localFocalPoint),
+            );
+      if (photoIndex < 0 ||
+          photoIndex >= widget.backgroundImages.length ||
+          widget.backgroundImages[photoIndex] == null) {
+        return;
+      }
       _isBackgroundTransformLocked = true;
-      widget.onBackgroundScaleStart(details);
+      _lockedPhotoIndex = photoIndex;
+      widget.onBackgroundScaleStart(photoIndex, details);
     }
   }
 
@@ -212,7 +233,10 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     }
 
     if (_isBackgroundTransformLocked && details.pointerCount >= 2) {
-      widget.onBackgroundScaleUpdate(details, size);
+      final photoIndex = _lockedPhotoIndex;
+      if (photoIndex != null) {
+        widget.onBackgroundScaleUpdate(photoIndex, details, size);
+      }
     }
   }
 
@@ -225,6 +249,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
 
     _lockedTextLayerId = null;
     _isBackgroundTransformLocked = false;
+    _lockedPhotoIndex = null;
     _textPointerTargets.clear();
     widget.onTextLayerScaleEnd();
   }
@@ -239,13 +264,15 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
 
 class _StoryCardPainter extends CustomPainter {
   const _StoryCardPainter({
-    required this.backgroundImage,
+    required this.backgroundImages,
     required this.scene,
     required this.filmProgram,
     required this.strokes,
   });
 
-  final ui.Image? backgroundImage;
+  final List<ui.Image?> backgroundImages;
+
+  ui.Image? get backgroundImage => backgroundImages.firstOrNull;
   final StoryCardScene scene;
   final ui.FragmentProgram? filmProgram;
   final List<StoryCardStroke> strokes;
@@ -263,7 +290,7 @@ class _StoryCardPainter extends CustomPainter {
       canvas: canvas,
       size: size,
       scene: scene,
-      backgroundImage: backgroundImage,
+      backgroundImages: backgroundImages,
       filmProgram: filmProgram,
       strokes: strokes,
       includeTextLayers: false,
@@ -272,7 +299,7 @@ class _StoryCardPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StoryCardPainter oldDelegate) {
-    return oldDelegate.backgroundImage != backgroundImage ||
+    return oldDelegate.backgroundImages != backgroundImages ||
         oldDelegate.scene != scene ||
         oldDelegate.filmProgram != filmProgram ||
         oldDelegate.strokes != strokes;

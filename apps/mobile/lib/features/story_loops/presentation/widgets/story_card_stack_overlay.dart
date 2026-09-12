@@ -13,7 +13,6 @@ import '../../application/story_loop_realtime_controller.dart';
 import '../../application/today_story_card_stacks_provider.dart';
 import '../../data/story_card_download_failure.dart';
 import '../../data/story_card_read_receipt_repository.dart';
-import '../../data/story_card_scene.dart';
 import '../../data/story_card_stack_item.dart';
 import '../../data/story_card_stack_preview.dart';
 import '../../data/story_loop_write_repository.dart';
@@ -192,10 +191,6 @@ class _StoryCardStackOverlayState
     if (items != null && items.isNotEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final cardWidth = math.min(
-            constraints.maxWidth,
-            (constraints.maxHeight - 48) * storyCardCanvasAspectRatio,
-          );
           return PageView.builder(
             key: const Key('story-card-stack-pages'),
             controller: _pageController,
@@ -206,6 +201,11 @@ class _StoryCardStackOverlayState
             },
             itemBuilder: (context, index) {
               final item = items[index];
+              final cardWidth = math.min(
+                constraints.maxWidth,
+                (constraints.maxHeight - 48) *
+                    item.card.cardType.canvasAspectRatio,
+              );
               return Center(
                 child: Stack(
                   children: [
@@ -213,6 +213,7 @@ class _StoryCardStackOverlayState
                       surfaceKey: Key('story-card-stack-${item.card.id}'),
                       previewUrl: item.card.previewUrl,
                       width: cardWidth,
+                      cardType: item.card.cardType,
                       semanticsLabel: '스토리 카드 ${index + 1}',
                     ),
                     Positioned.fill(
@@ -267,7 +268,8 @@ class _StoryCardStackOverlayState
       builder: (context, constraints) {
         final cardWidth = math.min(
           constraints.maxWidth,
-          (constraints.maxHeight - 48) * storyCardCanvasAspectRatio,
+          (constraints.maxHeight - 48) *
+              widget.stack.latestCard.cardType.canvasAspectRatio,
         );
         return Center(
           child: Stack(
@@ -279,6 +281,7 @@ class _StoryCardStackOverlayState
                 ),
                 previewUrl: widget.stack.latestCard.previewUrl,
                 width: cardWidth,
+                cardType: widget.stack.latestCard.cardType,
                 semanticsLabel: '스토리 카드',
               ),
               const SizedBox.square(

@@ -693,17 +693,25 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StoryCardPreviewSurface(
-      surfaceKey: ValueKey('question-answer-card-${card.id}'),
-      previewUrl: card.previewUrl,
-      width: width,
-      onTap: () => showStoryCardDetailOverlay(
-        context: context,
-        cardId: card.id,
+    final previewWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
+      width,
+      card.cardType,
+    );
+    return Center(
+      child: StoryCardPreviewSurface(
+        surfaceKey: ValueKey('question-answer-card-${card.id}'),
         previewUrl: card.previewUrl,
-        canReport: canReport,
+        width: previewWidth,
+        cardType: card.cardType,
+        onTap: () => showStoryCardDetailOverlay(
+          context: context,
+          cardId: card.id,
+          previewUrl: card.previewUrl,
+          cardType: card.cardType,
+          canReport: canReport,
+        ),
+        semanticsLabel: '스토리 카드',
       ),
-      semanticsLabel: '스토리 카드',
     );
   }
 }

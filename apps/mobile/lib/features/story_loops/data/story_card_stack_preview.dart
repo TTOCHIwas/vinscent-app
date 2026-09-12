@@ -1,4 +1,5 @@
 import 'story_loop_card_preview.dart';
+import 'story_card_type.dart';
 
 class StoryCardStackPreview {
   const StoryCardStackPreview({
@@ -22,6 +23,9 @@ class StoryCardStackPreview {
         authorUserId: authorUserId,
         previewPath: previewPath,
         submittedAt: DateTime.parse(json['latest_card_submitted_at'] as String),
+        cardType: StoryCardType.fromStorageValue(
+          json['latest_card_type'] as String?,
+        ),
         previewUrl: previewUrl,
       ),
       latestCardIsFeatured: json['latest_card_is_featured'] as bool? ?? false,

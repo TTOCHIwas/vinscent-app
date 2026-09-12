@@ -1,4 +1,5 @@
 import 'story_loop_card_detail.dart';
+import 'story_card_type.dart';
 
 class StoryCardStackItem {
   const StoryCardStackItem({
@@ -27,6 +28,7 @@ class StoryCardStackItem {
         hasText: json['has_text'] as bool? ?? false,
         submittedAt: DateTime.parse(json['submitted_at'] as String),
         revision: (json['revision'] as num).toInt(),
+        cardType: StoryCardType.fromStorageValue(json['card_type'] as String?),
         previewUrl: previewUrl,
       ),
       isFeatured: json['is_featured'] as bool? ?? false,

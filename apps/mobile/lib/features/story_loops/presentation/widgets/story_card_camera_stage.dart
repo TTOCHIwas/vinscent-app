@@ -34,6 +34,8 @@ class StoryCardCameraStage extends StatefulWidget {
     this.onFilmChanged,
     this.faceDetector,
     this.loadCharacterImage,
+    this.showEditorTools = true,
+    this.showGalleryButton = true,
   });
 
   final VoidCallback onBack;
@@ -44,6 +46,8 @@ class StoryCardCameraStage extends StatefulWidget {
   final ValueChanged<StoryCardFilmState>? onFilmChanged;
   final StoryCardFaceDetector? faceDetector;
   final Future<Uint8List?> Function()? loadCharacterImage;
+  final bool showEditorTools;
+  final bool showGalleryButton;
 
   @override
   State<StoryCardCameraStage> createState() => _StoryCardCameraStageState();
@@ -590,25 +594,26 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                     icon: Icon(_flashIcon(_camera.flashMode), size: 28),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: StoryCardEditorActionBar(
-                      interactionMode: StoryCardEditorTool.none,
-                      hasBackground: true,
-                      onAddTextPressed: widget.onTextSelected,
-                      onEditCaptionPressed: null,
-                      onDrawingModePressed: widget.onDrawingSelected,
-                      onBackgroundColorPressed: null,
-                      onFilmPressed: _toggleStyleSelector,
-                      isFilmSelected:
-                          _isStyleSelectorVisible ||
-                          _film.look != StoryCardFilmLook.original ||
-                          _effect != StoryCardCameraEffect.none,
+                if (widget.showEditorTools)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: StoryCardEditorActionBar(
+                        interactionMode: StoryCardEditorTool.none,
+                        hasBackground: true,
+                        onAddTextPressed: widget.onTextSelected,
+                        onEditCaptionPressed: null,
+                        onDrawingModePressed: widget.onDrawingSelected,
+                        onBackgroundColorPressed: null,
+                        onFilmPressed: _toggleStyleSelector,
+                        isFilmSelected:
+                            _isStyleSelectorVisible ||
+                            _film.look != StoryCardFilmLook.original ||
+                            _effect != StoryCardCameraEffect.none,
+                      ),
                     ),
                   ),
-                ),
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: _CameraBottomControls(
@@ -621,12 +626,14 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                     canSwitchCamera:
                         _camera.alternateCamera != null || _camera.isSwitching,
                     isSwitchingCamera: _camera.isSwitching,
-                    onGalleryPressed: _pickFromGallery,
+                    onGalleryPressed: widget.showGalleryButton
+                        ? _pickFromGallery
+                        : null,
                     onCapturePressed: _capturePhoto,
                     onSwitchCameraPressed: _switchCamera,
                   ),
                 ),
-                if (_isStyleSelectorVisible)
+                if (widget.showEditorTools && _isStyleSelectorVisible)
                   Positioned(
                     key: const ValueKey('story-card-camera-film-selector'),
                     left: 12,
@@ -681,7 +688,7 @@ class _CameraBottomControls extends StatelessWidget {
   final bool isPickingImage;
   final bool canSwitchCamera;
   final bool isSwitchingCamera;
-  final VoidCallback onGalleryPressed;
+  final VoidCallback? onGalleryPressed;
   final VoidCallback onCapturePressed;
   final VoidCallback onSwitchCameraPressed;
 
@@ -697,24 +704,26 @@ class _CameraBottomControls extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: _CameraAuxiliaryButton(
-                  key: const ValueKey('story-card-camera-gallery'),
-                  tooltip: '갤러리',
-                  onPressed: isPickingImage ? null : onGalleryPressed,
-                  child: isPickingImage
-                      ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(
-                          LucideIcons.image,
-                          color: Colors.white,
-                          size: 27,
-                        ),
-                ),
+                child: onGalleryPressed == null
+                    ? const SizedBox.square(dimension: 54)
+                    : _CameraAuxiliaryButton(
+                        key: const ValueKey('story-card-camera-gallery'),
+                        tooltip: '갤러리',
+                        onPressed: isPickingImage ? null : onGalleryPressed,
+                        child: isPickingImage
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                LucideIcons.image,
+                                color: Colors.white,
+                                size: 27,
+                              ),
+                      ),
               ),
             ),
             _CaptureButton(

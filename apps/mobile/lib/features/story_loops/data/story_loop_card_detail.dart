@@ -1,3 +1,5 @@
+import 'story_card_type.dart';
+
 class StoryLoopCardDetail {
   const StoryLoopCardDetail({
     required this.id,
@@ -9,6 +11,7 @@ class StoryLoopCardDetail {
     required this.hasText,
     required this.submittedAt,
     required this.revision,
+    this.cardType = StoryCardType.polaroid,
     this.previewUrl,
   });
 
@@ -21,9 +24,10 @@ class StoryLoopCardDetail {
   final bool hasText;
   final DateTime submittedAt;
   final int revision;
+  final StoryCardType cardType;
   final String? previewUrl;
 
-  StoryLoopCardDetail copyWith({String? previewUrl}) {
+  StoryLoopCardDetail copyWith({StoryCardType? cardType, String? previewUrl}) {
     return StoryLoopCardDetail(
       id: id,
       authorUserId: authorUserId,
@@ -34,6 +38,7 @@ class StoryLoopCardDetail {
       hasText: hasText,
       submittedAt: submittedAt,
       revision: revision,
+      cardType: cardType ?? this.cardType,
       previewUrl: previewUrl ?? this.previewUrl,
     );
   }

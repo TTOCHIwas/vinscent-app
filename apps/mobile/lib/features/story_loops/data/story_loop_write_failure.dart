@@ -5,6 +5,7 @@ enum StoryLoopWriteFailureReason {
   relationshipDateRequired,
   storyNotReady,
   contentRequired,
+  invalidCardFormat,
   invalidTextContent,
   cardLocked,
   revisionRequired,

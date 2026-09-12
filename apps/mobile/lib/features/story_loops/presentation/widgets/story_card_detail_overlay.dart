@@ -8,7 +8,7 @@ import '../../../safety/data/safety_report.dart';
 import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../application/story_card_download_service.dart';
 import '../../data/story_card_download_failure.dart';
-import '../../data/story_card_scene.dart';
+import '../../data/story_card_type.dart';
 import 'story_card_preview_surface.dart';
 
 const _closeTooltip = '\uce74\ub4dc \uc0c1\uc138 \ub2eb\uae30';
@@ -22,6 +22,7 @@ Future<void> showStoryCardDetailOverlay({
   required BuildContext context,
   required String cardId,
   required String? previewUrl,
+  StoryCardType cardType = StoryCardType.polaroid,
   bool canReport = false,
 }) {
   final barrierLabel = MaterialLocalizations.of(
@@ -39,6 +40,7 @@ Future<void> showStoryCardDetailOverlay({
       return _StoryCardDetailOverlay(
         cardId: cardId,
         previewUrl: previewUrl,
+        cardType: cardType,
         canReport: canReport,
       );
     },
@@ -63,6 +65,7 @@ class _StoryCardDetailOverlay extends ConsumerStatefulWidget {
   const _StoryCardDetailOverlay({
     required this.cardId,
     required this.previewUrl,
+    required this.cardType,
     required this.canReport,
   });
 
@@ -72,6 +75,7 @@ class _StoryCardDetailOverlay extends ConsumerStatefulWidget {
 
   final String cardId;
   final String? previewUrl;
+  final StoryCardType cardType;
   final bool canReport;
 
   @override
@@ -102,7 +106,7 @@ class _StoryCardDetailOverlayState
             );
             final cardWidth = math.min(
               widthBound,
-              heightBound * storyCardCanvasAspectRatio,
+              heightBound * widget.cardType.canvasAspectRatio,
             );
 
             return Stack(
@@ -116,6 +120,7 @@ class _StoryCardDetailOverlayState
                       surfaceKey: Key('story-card-detail-${widget.cardId}'),
                       previewUrl: widget.previewUrl,
                       width: cardWidth,
+                      cardType: widget.cardType,
                       semanticsLabel: _cardSemanticsLabel,
                     ),
                   ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/drawing/app_drawing_style.dart';
 import 'story_card_film_look.dart';
+import 'story_card_type.dart';
 
 const storyCardColorPalette = AppDrawingStyle.colorPalette;
 const storyCardThinStrokeWidth = AppDrawingStyle.thinStrokeWidth;
@@ -36,25 +37,14 @@ class StoryCardPolaroidLayout {
   });
 
   factory StoryCardPolaroidLayout.fromSize(Size size) {
-    final horizontalInset = size.width * 0.06;
-    final topInset = horizontalInset;
-    final photoSide = size.width - horizontalInset * 2;
-    final photoRect = Rect.fromLTWH(
-      horizontalInset,
-      topInset,
-      photoSide,
-      photoSide / storyCardPhotoAspectRatio,
+    final layout = StoryCardLayout.fromSize(
+      type: StoryCardType.polaroid,
+      size: size,
     );
-    final captionTop = photoRect.bottom + size.width * 0.03;
 
     return StoryCardPolaroidLayout(
-      photoRect: photoRect,
-      captionRect: Rect.fromLTRB(
-        horizontalInset,
-        captionTop,
-        size.width - horizontalInset,
-        size.height - topInset,
-      ),
+      photoRect: layout.photoRects.single,
+      captionRect: layout.captionRect!,
     );
   }
 
@@ -90,6 +80,8 @@ class StoryCardScene {
     required this.backgroundTransform,
     required this.strokes,
     required this.textLayers,
+    this.cardType = StoryCardType.polaroid,
+    this.additionalPhotoTransforms = const [],
     this.film = const StoryCardFilmState.original(),
     this.canvasBackground = StoryCardCanvasBackground.white,
     this.caption,
@@ -98,11 +90,13 @@ class StoryCardScene {
   factory StoryCardScene.empty({
     StoryCardCanvasBackground canvasBackground =
         StoryCardCanvasBackground.white,
+    StoryCardType cardType = StoryCardType.polaroid,
   }) {
     return StoryCardScene(
       backgroundTransform: const StoryCardBackgroundTransform.initial(),
       strokes: const [],
       textLayers: const [],
+      cardType: cardType,
       film: const StoryCardFilmState.original(),
       canvasBackground: canvasBackground,
     );
@@ -118,12 +112,29 @@ class StoryCardScene {
     final strokes = json['strokes'] as List<dynamic>? ?? const [];
     final textLayers = json['text_layers'] as List<dynamic>? ?? const [];
     final background = json['background'] as Map<String, dynamic>?;
+    final backgrounds = json['backgrounds'] as List<dynamic>?;
     final canvas = json['canvas'] as Map<String, dynamic>?;
+    final cardType = StoryCardType.fromStorageValue(
+      json['card_type'] as String?,
+    );
+    final transforms = backgrounds
+        ?.map(
+          (value) => StoryCardBackgroundTransform.fromJson(
+            Map<String, dynamic>.from(value as Map),
+          ),
+        )
+        .toList(growable: false);
 
     return StoryCardScene(
-      backgroundTransform: background == null
-          ? const StoryCardBackgroundTransform.initial()
-          : StoryCardBackgroundTransform.fromJson(background),
+      backgroundTransform:
+          transforms?.firstOrNull ??
+          (background == null
+              ? const StoryCardBackgroundTransform.initial()
+              : StoryCardBackgroundTransform.fromJson(background)),
+      additionalPhotoTransforms: transforms == null
+          ? const []
+          : transforms.skip(1).toList(growable: false),
+      cardType: cardType,
       strokes: strokes
           .map(
             (stroke) => StoryCardStroke.fromJson(
@@ -147,11 +158,24 @@ class StoryCardScene {
   }
 
   final StoryCardBackgroundTransform backgroundTransform;
+  final List<StoryCardBackgroundTransform> additionalPhotoTransforms;
+  final StoryCardType cardType;
   final List<StoryCardStroke> strokes;
   final List<StoryCardTextLayer> textLayers;
   final StoryCardFilmState film;
   final StoryCardCanvasBackground canvasBackground;
   final String? caption;
+
+  List<StoryCardBackgroundTransform> get photoTransforms {
+    final transforms = [backgroundTransform, ...additionalPhotoTransforms];
+    return List.generate(
+      cardType.requiredPhotoCount,
+      (index) => index < transforms.length
+          ? transforms[index]
+          : const StoryCardBackgroundTransform.initial(),
+      growable: false,
+    );
+  }
 
   bool get hasDrawing =>
       strokes.any((stroke) => stroke.tool == StoryCardDrawingTool.pen);
@@ -176,6 +200,8 @@ class StoryCardScene {
 
   StoryCardScene copyWith({
     StoryCardBackgroundTransform? backgroundTransform,
+    List<StoryCardBackgroundTransform>? additionalPhotoTransforms,
+    StoryCardType? cardType,
     List<StoryCardStroke>? strokes,
     List<StoryCardTextLayer>? textLayers,
     StoryCardFilmState? film,
@@ -184,6 +210,9 @@ class StoryCardScene {
   }) {
     return StoryCardScene(
       backgroundTransform: backgroundTransform ?? this.backgroundTransform,
+      additionalPhotoTransforms:
+          additionalPhotoTransforms ?? this.additionalPhotoTransforms,
+      cardType: cardType ?? this.cardType,
       strokes: strokes ?? this.strokes,
       textLayers: textLayers ?? this.textLayers,
       film: film ?? this.film,
@@ -194,15 +223,33 @@ class StoryCardScene {
     );
   }
 
+  StoryCardScene withPhotoTransform(
+    int index,
+    StoryCardBackgroundTransform transform,
+  ) {
+    if (index < 0 || index >= cardType.requiredPhotoCount) {
+      throw RangeError.index(index, photoTransforms, 'index');
+    }
+    final transforms = [...photoTransforms]..[index] = transform;
+    return copyWith(
+      backgroundTransform: transforms.first,
+      additionalPhotoTransforms: transforms.skip(1).toList(growable: false),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
-      'version': 5,
+      'version': 6,
+      'card_type': cardType.storageValue,
       'canvas': {
-        'width_ratio': 4,
+        'width_ratio': cardType == StoryCardType.fourCutStrip ? 2 : 4,
         'height_ratio': 5,
         'background_color': canvasBackground.name,
       },
       'background': backgroundTransform.toJson(),
+      'backgrounds': photoTransforms
+          .map((transform) => transform.toJson())
+          .toList(growable: false),
       'film': film.toJson(),
       'strokes': strokes.map((stroke) => stroke.toJson()).toList(),
       'text_layers': textLayers.map((layer) => layer.toJson()).toList(),

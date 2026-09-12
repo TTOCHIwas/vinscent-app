@@ -60,6 +60,10 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
     final sceneBytes = Uint8List.fromList(
       utf8.encode(draft.scene.toJsonString()),
     );
+    final cardType = draft.scene.cardType;
+    final backgroundImageBytes = cardType.isFourCut
+        ? null
+        : draft.backgroundImageBytes;
     var uploadAttempted = false;
     var stage = 'artifact-upload';
 
@@ -67,12 +71,12 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       'Save started: artifactRevision=$artifactRevision, '
       'previewBytes=${previewImageBytes.length}, '
       'sceneBytes=${sceneBytes.length}, '
-      'backgroundBytes=${draft.backgroundImageBytes?.length ?? 0}',
+      'cardType=${cardType.storageValue}, photoCount=${draft.photoCount}, '
+      'backgroundBytes=${backgroundImageBytes?.length ?? 0}',
     );
 
     try {
       uploadAttempted = true;
-      final backgroundImageBytes = draft.backgroundImageBytes;
       await Future.wait([
         _bucket
             .uploadBinary(
@@ -113,7 +117,7 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       stage = 'finalize-rpc';
       final data = await Supabase.instance.client
           .rpc(
-            'upsert_today_story_loop_card',
+            'upsert_today_story_loop_card_v2',
             params: {
               'requested_artifact_revision': artifactRevision,
               'requested_preview_path': artifactPaths.previewPath,
@@ -121,11 +125,15 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
               'requested_background_image_path': backgroundImageBytes == null
                   ? null
                   : artifactPaths.backgroundImagePath,
-              'requested_has_photo': backgroundImageBytes != null,
+              'requested_has_photo': draft.hasPhoto,
               'requested_has_drawing': draft.scene.hasDrawing,
               'requested_has_text': draft.scene.hasText,
               'requested_text_layer_count': draft.scene.textLayers.length,
               'requested_text_character_count': draft.scene.textCharacterCount,
+              'requested_card_type': cardType.storageValue,
+              'requested_photo_count': draft.photoCount,
+              'requested_has_caption': draft.scene.hasCaption,
+              'expected_revision': draft.existingRevision,
             },
           )
           .timeout(AppConfig.supabaseRpcTimeout);
@@ -231,7 +239,14 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
   }
 
   void _validateDraft(StoryCardDraft draft) {
-    if (!draft.hasContent) {
+    if (draft.scene.cardType.isFourCut &&
+        (!draft.hasAllRequiredPhotos || draft.scene.hasCaption)) {
+      throw const StoryLoopWriteRepositoryException(
+        StoryLoopWriteFailureReason.invalidCardFormat,
+      );
+    }
+
+    if (!draft.scene.cardType.isFourCut && !draft.hasContent) {
       throw const StoryLoopWriteRepositoryException(
         StoryLoopWriteFailureReason.contentRequired,
       );
@@ -352,6 +367,10 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       'story_not_ready' => StoryLoopWriteFailureReason.storyNotReady,
       'story_card_content_required' =>
         StoryLoopWriteFailureReason.contentRequired,
+      'invalid_story_card_type' ||
+      'invalid_story_card_photo_count' ||
+      'invalid_story_card_caption' =>
+        StoryLoopWriteFailureReason.invalidCardFormat,
       'invalid_story_card_text_content' =>
         StoryLoopWriteFailureReason.invalidTextContent,
       'story_card_locked' => StoryLoopWriteFailureReason.cardLocked,

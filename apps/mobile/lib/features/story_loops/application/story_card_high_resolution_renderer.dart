@@ -25,6 +25,11 @@ class StoryCardHighResolutionRenderer implements StoryCardImageRenderer {
 
   @override
   Future<Uint8List> render(StoryCardDownloadSource source) async {
+    final compositeImageBytes = source.compositeImageBytes;
+    if (source.scene.cardType.isFourCut && compositeImageBytes != null) {
+      return compositeImageBytes;
+    }
+
     ui.Codec? backgroundCodec;
     ui.Image? backgroundImage;
     ui.Picture? picture;

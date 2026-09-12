@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_typography.dart';
 import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
+import '../data/story_card_type.dart';
 import 'story_card_film_shader.dart';
 
 abstract final class StoryCardCanvasRenderer {
@@ -14,24 +15,31 @@ abstract final class StoryCardCanvasRenderer {
     required Canvas canvas,
     required Size size,
     required StoryCardScene scene,
-    required ui.Image? backgroundImage,
+    ui.Image? backgroundImage,
+    List<ui.Image?>? backgroundImages,
     ui.FragmentProgram? filmProgram,
     List<StoryCardStroke>? strokes,
     bool includeTextLayers = true,
   }) {
-    final layout = StoryCardPolaroidLayout.fromSize(size);
+    final layout = StoryCardLayout.fromSize(type: scene.cardType, size: size);
+    final images = backgroundImages ?? [backgroundImage];
     canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
 
-    _drawBackground(
-      canvas: canvas,
-      layout: layout,
-      image: backgroundImage,
-      transform: scene.backgroundTransform,
-      canvasBackground: scene.canvasBackground,
-      film: scene.film,
-      filmProgram: filmProgram,
-    );
-    _drawCaption(canvas, size, layout.captionRect, scene.caption);
+    for (var index = 0; index < layout.photoRects.length; index++) {
+      _drawBackground(
+        canvas: canvas,
+        destination: layout.photoRects[index],
+        image: index < images.length ? images[index] : null,
+        transform: scene.photoTransforms[index],
+        canvasBackground: scene.canvasBackground,
+        film: scene.film,
+        filmProgram: filmProgram,
+      );
+    }
+    final captionRect = layout.captionRect;
+    if (captionRect != null) {
+      _drawCaption(canvas, size, captionRect, scene.caption);
+    }
     _drawStrokes(canvas, size, strokes ?? scene.strokes);
 
     if (includeTextLayers) {
@@ -43,7 +51,7 @@ abstract final class StoryCardCanvasRenderer {
 
   static void _drawBackground({
     required Canvas canvas,
-    required StoryCardPolaroidLayout layout,
+    required Rect destination,
     required ui.Image? image,
     required StoryCardBackgroundTransform transform,
     required StoryCardCanvasBackground canvasBackground,
@@ -51,13 +59,13 @@ abstract final class StoryCardCanvasRenderer {
     required ui.FragmentProgram? filmProgram,
   }) {
     canvas.save();
-    canvas.clipRect(layout.photoRect);
-    canvas.drawRect(layout.photoRect, Paint()..color = canvasBackground.color);
+    canvas.clipRect(destination);
+    canvas.drawRect(destination, Paint()..color = canvasBackground.color);
     if (image != null) {
       if (film.look != StoryCardFilmLook.original && filmProgram != null) {
         _drawFilteredBackground(
           canvas: canvas,
-          destination: layout.photoRect,
+          destination: destination,
           image: image,
           transform: transform,
           canvasBackground: canvasBackground,
@@ -68,19 +76,19 @@ abstract final class StoryCardCanvasRenderer {
         return;
       }
       final coverScale = math.max(
-        layout.photoRect.width / image.width,
-        layout.photoRect.height / image.height,
+        destination.width / image.width,
+        destination.height / image.height,
       );
       final drawWidth = image.width * coverScale * transform.scale;
       final drawHeight = image.height * coverScale * transform.scale;
       final offsetX =
-          layout.photoRect.left +
-          (layout.photoRect.width - drawWidth) / 2 +
-          transform.offsetX * layout.photoRect.width;
+          destination.left +
+          (destination.width - drawWidth) / 2 +
+          transform.offsetX * destination.width;
       final offsetY =
-          layout.photoRect.top +
-          (layout.photoRect.height - drawHeight) / 2 +
-          transform.offsetY * layout.photoRect.height;
+          destination.top +
+          (destination.height - drawHeight) / 2 +
+          transform.offsetY * destination.height;
       canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),

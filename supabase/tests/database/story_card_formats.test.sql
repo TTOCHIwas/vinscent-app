@@ -15,7 +15,7 @@ select col_default_is(
   'public',
   'story_loop_cards',
   'card_type',
-  '''polaroid''::text',
+  'polaroid',
   'existing and legacy clients default to polaroid'
 );
 select has_function(

@@ -4,6 +4,7 @@ import '../../../core/questions/daily_question_answer_state.dart';
 import '../../couple/data/couple.dart';
 import 'story_loop_card_detail.dart';
 import 'story_loop_card_preview.dart';
+import 'story_card_type.dart';
 import 'story_loop_detail.dart';
 import 'story_loop_month_summary_day.dart';
 import 'story_loop_question_detail.dart';
@@ -103,6 +104,9 @@ class StoryLoopReadMapper {
           authorUserId: row['first_card_author_user_id'] as String,
           previewPath: previewPath,
           submittedAt: _parseDateTime(row['first_card_submitted_at']),
+          cardType: StoryCardType.fromStorageValue(
+            row['first_card_type'] as String?,
+          ),
           previewUrl: previewUrlsByPath[previewPath],
         ),
       );
@@ -117,6 +121,9 @@ class StoryLoopReadMapper {
           authorUserId: row['second_card_author_user_id'] as String,
           previewPath: previewPath,
           submittedAt: _parseDateTime(row['second_card_submitted_at']),
+          cardType: StoryCardType.fromStorageValue(
+            row['second_card_type'] as String?,
+          ),
           previewUrl: previewUrlsByPath[previewPath],
         ),
       );
@@ -175,6 +182,9 @@ class StoryLoopReadMapper {
       hasText: row['${prefix}_has_text'] as bool? ?? false,
       submittedAt: _parseDateTime(row['${prefix}_submitted_at']),
       revision: _toInt(row['${prefix}_revision']),
+      cardType: StoryCardType.fromStorageValue(
+        row['${prefix}_type'] as String?,
+      ),
       previewUrl: previewUrlsByPath[previewPath],
     );
   }

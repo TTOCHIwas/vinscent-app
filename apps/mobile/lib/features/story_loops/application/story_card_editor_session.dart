@@ -3,8 +3,9 @@ import 'dart:typed_data';
 import '../data/story_card_draft.dart';
 import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
+import '../data/story_card_type.dart';
 
-enum StoryCardEditorStage { camera, decorating }
+enum StoryCardEditorStage { formatSelection, camera, assembling, decorating }
 
 enum StoryCardEditorTool { none, background, text, drawing, film }
 
@@ -22,7 +23,7 @@ class StoryCardEditorSession {
     return StoryCardEditorSession(
       stage: hasPersistedCard
           ? StoryCardEditorStage.decorating
-          : StoryCardEditorStage.camera,
+          : StoryCardEditorStage.formatSelection,
       tool: hasPersistedCard
           ? StoryCardEditorTool.none
           : StoryCardEditorTool.none,
@@ -40,6 +41,17 @@ class StoryCardEditorSession {
 
   bool get hasPersistedCard => baselineDraft.existingRevision != null;
 
+  StoryCardEditorSession selectCardType(StoryCardType cardType) {
+    return copyWith(
+      stage: cardType == StoryCardType.polaroid
+          ? StoryCardEditorStage.camera
+          : StoryCardEditorStage.assembling,
+      tool: StoryCardEditorTool.none,
+      draft: StoryCardDraft(scene: StoryCardScene.empty(cardType: cardType)),
+      hasUnsavedChanges: false,
+    );
+  }
+
   StoryCardEditorSession enterBlankDecorator({
     required StoryCardEditorTool tool,
     StoryCardCanvasBackground background = StoryCardCanvasBackground.white,
@@ -48,7 +60,10 @@ class StoryCardEditorSession {
       stage: StoryCardEditorStage.decorating,
       tool: tool,
       draft: StoryCardDraft(
-        scene: StoryCardScene.empty(canvasBackground: background),
+        scene: StoryCardScene.empty(
+          cardType: draft.scene.cardType,
+          canvasBackground: background,
+        ),
       ),
       hasUnsavedChanges: false,
     );
@@ -62,10 +77,57 @@ class StoryCardEditorSession {
       stage: StoryCardEditorStage.decorating,
       tool: StoryCardEditorTool.background,
       draft: StoryCardDraft(
-        scene: StoryCardScene.empty().copyWith(film: film),
+        scene: StoryCardScene.empty(
+          cardType: draft.scene.cardType,
+        ).copyWith(film: film),
         backgroundImageBytes: imageBytes,
       ),
       hasUnsavedChanges: true,
+    );
+  }
+
+  StoryCardEditorSession setPhoto(int index, Uint8List imageBytes) {
+    final nextDraft = draft.withPhoto(index, imageBytes);
+    if (!draft.scene.cardType.isFourCut) {
+      return updateDraft(nextDraft);
+    }
+    return updateDraft(
+      nextDraft.copyWith(
+        scene: nextDraft.scene.withPhotoTransform(
+          index,
+          const StoryCardBackgroundTransform.initial(),
+        ),
+      ),
+    );
+  }
+
+  StoryCardEditorSession enterFourCutDecorator() {
+    if (!draft.scene.cardType.isFourCut || !draft.hasAllRequiredPhotos) {
+      throw StateError('A complete four-cut draft is required.');
+    }
+    return copyWith(
+      stage: StoryCardEditorStage.decorating,
+      tool: StoryCardEditorTool.background,
+    );
+  }
+
+  StoryCardEditorSession enterFourCutCamera() {
+    if (!draft.scene.cardType.isFourCut) {
+      throw StateError('A four-cut draft is required.');
+    }
+    return copyWith(
+      stage: StoryCardEditorStage.camera,
+      tool: StoryCardEditorTool.none,
+    );
+  }
+
+  StoryCardEditorSession returnToFourCutAssembly() {
+    if (!draft.scene.cardType.isFourCut) {
+      throw StateError('A four-cut draft is required.');
+    }
+    return copyWith(
+      stage: StoryCardEditorStage.assembling,
+      tool: StoryCardEditorTool.none,
     );
   }
 
@@ -146,9 +208,16 @@ class StoryCardEditorSession {
     StoryCardBackgroundTransform transform,
   ) {
     return updateDraft(
-      draft.copyWith(
-        scene: draft.scene.copyWith(backgroundTransform: transform),
-      ),
+      draft.copyWith(scene: draft.scene.withPhotoTransform(0, transform)),
+    );
+  }
+
+  StoryCardEditorSession setPhotoTransform(
+    int index,
+    StoryCardBackgroundTransform transform,
+  ) {
+    return updateDraft(
+      draft.copyWith(scene: draft.scene.withPhotoTransform(index, transform)),
     );
   }
 
@@ -194,6 +263,7 @@ class StoryCardEditorSession {
     }
 
     return copyWith(
+      stage: StoryCardEditorStage.formatSelection,
       draft: StoryCardDraft(scene: StoryCardScene.empty()),
       tool: StoryCardEditorTool.none,
       hasUnsavedChanges: false,

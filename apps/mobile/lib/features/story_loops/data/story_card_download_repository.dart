@@ -9,6 +9,7 @@ import '../../../core/config/app_config.dart';
 import 'story_card_download_failure.dart';
 import 'story_card_download_source.dart';
 import 'story_card_scene.dart';
+import 'story_card_type.dart';
 
 final storyCardDownloadRepositoryProvider =
     Provider<StoryCardDownloadRepository>((ref) {
@@ -26,6 +27,7 @@ class SupabaseStoryCardDownloadRepository
   static const _bucketId = 'story-cards';
   static const _maxSceneBytes = 1024 * 1024;
   static const _maxBackgroundBytes = 5 * 1024 * 1024;
+  static const _maxCompositeBytes = 12 * 1024 * 1024;
 
   @override
   Future<StoryCardDownloadSource> fetch(String cardId) async {
@@ -38,7 +40,9 @@ class SupabaseStoryCardDownloadRepository
     try {
       final row = await Supabase.instance.client
           .from('story_loop_cards')
-          .select('scene_data_path, background_image_path')
+          .select(
+            'card_type, preview_path, scene_data_path, background_image_path',
+          )
           .eq('id', cardId)
           .maybeSingle()
           .timeout(AppConfig.supabaseRpcTimeout);
@@ -49,8 +53,20 @@ class SupabaseStoryCardDownloadRepository
       }
 
       final sceneDataPath = row['scene_data_path'] as String?;
+      final previewPath = row['preview_path'] as String?;
       final backgroundImagePath = row['background_image_path'] as String?;
+      final cardType = StoryCardType.fromStorageValue(
+        row['card_type'] as String?,
+      );
       if (sceneDataPath == null || sceneDataPath.trim().isEmpty) {
+        throw const StoryCardDownloadException(
+          StoryCardDownloadFailureReason.invalidSource,
+        );
+      }
+
+      final imagePath = cardType.isFourCut ? previewPath : backgroundImagePath;
+      if (cardType.isFourCut &&
+          (imagePath == null || imagePath.trim().isEmpty)) {
         throw const StoryCardDownloadException(
           StoryCardDownloadFailureReason.invalidSource,
         );
@@ -58,32 +74,38 @@ class SupabaseStoryCardDownloadRepository
 
       final downloads = <Future<Uint8List>>[
         _bucket.download(sceneDataPath),
-        if (backgroundImagePath != null) _bucket.download(backgroundImagePath),
+        if (imagePath != null) _bucket.download(imagePath),
       ];
       final results = await Future.wait(
         downloads,
       ).timeout(AppConfig.supabaseRpcTimeout);
       final sceneBytes = results.first;
-      final backgroundImageBytes = backgroundImagePath == null
-          ? null
-          : results.last;
+      final imageBytes = imagePath == null ? null : results.last;
 
       if (sceneBytes.isEmpty || sceneBytes.length > _maxSceneBytes) {
         throw const StoryCardDownloadException(
           StoryCardDownloadFailureReason.invalidSource,
         );
       }
-      if (backgroundImageBytes != null &&
-          (backgroundImageBytes.isEmpty ||
-              backgroundImageBytes.length > _maxBackgroundBytes)) {
+      final maxImageBytes = cardType.isFourCut
+          ? _maxCompositeBytes
+          : _maxBackgroundBytes;
+      if (imageBytes != null &&
+          (imageBytes.isEmpty || imageBytes.length > maxImageBytes)) {
         throw const StoryCardDownloadException(
           StoryCardDownloadFailureReason.invalidSource,
         );
       }
 
+      final decodedScene = _decodeScene(sceneBytes);
+      final scene = decodedScene.cardType == cardType
+          ? decodedScene
+          : decodedScene.copyWith(cardType: cardType);
+
       return StoryCardDownloadSource(
-        scene: _decodeScene(sceneBytes),
-        backgroundImageBytes: backgroundImageBytes,
+        scene: scene,
+        backgroundImageBytes: cardType.isFourCut ? null : imageBytes,
+        compositeImageBytes: cardType.isFourCut ? imageBytes : null,
       );
     } on StoryCardDownloadException {
       rethrow;

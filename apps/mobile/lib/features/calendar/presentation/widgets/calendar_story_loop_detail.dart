@@ -86,6 +86,7 @@ class _LoadedDetailSection extends StatelessWidget {
                 context: context,
                 cardId: card.id,
                 previewUrl: card.previewUrl,
+                cardType: card.cardType,
                 canReport:
                     currentUserId != null && card.authorUserId != currentUserId,
               ),
