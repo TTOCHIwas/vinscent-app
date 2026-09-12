@@ -242,4 +242,37 @@ void main() {
       everyElement(const StoryCardBackgroundTransform.initial()),
     );
   });
+
+  test('replacing a four-cut photo resets only that slot transform', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid)
+            .withPhotoTransform(
+              1,
+              const StoryCardBackgroundTransform(
+                scale: 1.8,
+                offsetX: 0.2,
+                offsetY: -0.1,
+              ),
+            )
+            .withPhotoTransform(
+              2,
+              const StoryCardBackgroundTransform(
+                scale: 1.4,
+                offsetX: -0.1,
+                offsetY: 0.1,
+              ),
+            ),
+      ),
+    );
+
+    final updated = session.setPhoto(1, Uint8List.fromList([9]));
+
+    expect(
+      updated.draft.scene.photoTransforms[1],
+      const StoryCardBackgroundTransform.initial(),
+    );
+    expect(updated.draft.scene.photoTransforms[2].scale, 1.4);
+    expect(updated.draft.photoImageBytes[1], Uint8List.fromList([9]));
+  });
 }
