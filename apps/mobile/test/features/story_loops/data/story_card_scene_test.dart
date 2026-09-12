@@ -92,16 +92,15 @@ void main() {
   });
 
   test('four-cut scene preserves its type and four independent transforms', () {
-    final scene = StoryCardScene.empty(
-      cardType: StoryCardType.fourCutStrip,
-    ).withPhotoTransform(
-      2,
-      const StoryCardBackgroundTransform(
-        scale: 1.8,
-        offsetX: 0.2,
-        offsetY: -0.1,
-      ),
-    );
+    final scene = StoryCardScene.empty(cardType: StoryCardType.fourCutStrip)
+        .withPhotoTransform(
+          2,
+          const StoryCardBackgroundTransform(
+            scale: 1.8,
+            offsetX: 0.2,
+            offsetY: -0.1,
+          ),
+        );
 
     final restored = StoryCardScene.fromJsonString(scene.toJsonString());
 
@@ -152,12 +151,13 @@ void main() {
   });
 
   test('four-cut draft requires all four photo slots before saving', () {
-    final draft = StoryCardDraft(
-      scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid),
-    )
-        .withPhoto(0, Uint8List.fromList([1]))
-        .withPhoto(1, Uint8List.fromList([2]))
-        .withPhoto(2, Uint8List.fromList([3]));
+    final draft =
+        StoryCardDraft(
+              scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid),
+            )
+            .withPhoto(0, Uint8List.fromList([1]))
+            .withPhoto(1, Uint8List.fromList([2]))
+            .withPhoto(2, Uint8List.fromList([3]));
 
     expect(draft.hasPhoto, isTrue);
     expect(draft.hasAllRequiredPhotos, isFalse);

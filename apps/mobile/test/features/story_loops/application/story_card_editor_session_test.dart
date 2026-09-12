@@ -18,24 +18,27 @@ void main() {
     expect(session.hasUnsavedChanges, isFalse);
   });
 
-  test('selecting a format routes polaroid to camera and four-cut to assembly', () {
-    final session = StoryCardEditorSession.fromDraft(
-      StoryCardDraft(scene: StoryCardScene.empty()),
-    );
+  test(
+    'selecting a format routes polaroid to camera and four-cut to assembly',
+    () {
+      final session = StoryCardEditorSession.fromDraft(
+        StoryCardDraft(scene: StoryCardScene.empty()),
+      );
 
-    expect(
-      session.selectCardType(StoryCardType.polaroid).stage,
-      StoryCardEditorStage.camera,
-    );
-    expect(
-      session.selectCardType(StoryCardType.fourCutGrid).stage,
-      StoryCardEditorStage.assembling,
-    );
-    expect(
-      session.selectCardType(StoryCardType.fourCutStrip).draft.scene.cardType,
-      StoryCardType.fourCutStrip,
-    );
-  });
+      expect(
+        session.selectCardType(StoryCardType.polaroid).stage,
+        StoryCardEditorStage.camera,
+      );
+      expect(
+        session.selectCardType(StoryCardType.fourCutGrid).stage,
+        StoryCardEditorStage.assembling,
+      );
+      expect(
+        session.selectCardType(StoryCardType.fourCutStrip).draft.scene.cardType,
+        StoryCardType.fourCutStrip,
+      );
+    },
+  );
 
   test('four-cut photos are filled independently before decorating', () {
     var session = StoryCardEditorSession.fromDraft(
@@ -54,11 +57,12 @@ void main() {
 
   test('captured photo enters decorating with unsaved content', () {
     const film = StoryCardFilmState(look: StoryCardFilmLook.warmth, seed: 31);
-    final session = StoryCardEditorSession.fromDraft(
-      StoryCardDraft(scene: StoryCardScene.empty()),
-    )
-        .selectCardType(StoryCardType.polaroid)
-        .enterPhotoDecorator(Uint8List.fromList([1, 2, 3]), film: film);
+    final session =
+        StoryCardEditorSession.fromDraft(
+              StoryCardDraft(scene: StoryCardScene.empty()),
+            )
+            .selectCardType(StoryCardType.polaroid)
+            .enterPhotoDecorator(Uint8List.fromList([1, 2, 3]), film: film);
 
     expect(session.stage, StoryCardEditorStage.decorating);
     expect(session.tool, StoryCardEditorTool.background);
@@ -102,12 +106,13 @@ void main() {
   });
 
   test('discarding a new card stays clean in the decorating stage', () {
-    final session = StoryCardEditorSession.fromDraft(
-      StoryCardDraft(scene: StoryCardScene.empty()),
-    )
-        .selectCardType(StoryCardType.polaroid)
-        .enterPhotoDecorator(Uint8List.fromList([1]))
-        .discardChanges();
+    final session =
+        StoryCardEditorSession.fromDraft(
+              StoryCardDraft(scene: StoryCardScene.empty()),
+            )
+            .selectCardType(StoryCardType.polaroid)
+            .enterPhotoDecorator(Uint8List.fromList([1]))
+            .discardChanges();
 
     expect(session.stage, StoryCardEditorStage.formatSelection);
     expect(session.draft.hasContent, isFalse);
@@ -115,12 +120,13 @@ void main() {
   });
 
   test('clean new decorator can return to a fresh camera stage', () {
-    final session = StoryCardEditorSession.fromDraft(
-      StoryCardDraft(scene: StoryCardScene.empty()),
-    )
-        .selectCardType(StoryCardType.polaroid)
-        .enterBlankDecorator(tool: StoryCardEditorTool.drawing)
-        .returnToCamera();
+    final session =
+        StoryCardEditorSession.fromDraft(
+              StoryCardDraft(scene: StoryCardScene.empty()),
+            )
+            .selectCardType(StoryCardType.polaroid)
+            .enterBlankDecorator(tool: StoryCardEditorTool.drawing)
+            .returnToCamera();
 
     expect(session.stage, StoryCardEditorStage.camera);
     expect(session.tool, StoryCardEditorTool.none);
