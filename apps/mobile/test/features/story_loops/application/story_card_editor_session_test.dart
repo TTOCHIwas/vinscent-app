@@ -6,22 +6,59 @@ import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_session.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 void main() {
-  test('new card starts at the camera stage', () {
+  test('new card starts at the format selection stage', () {
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
     );
 
-    expect(session.stage, StoryCardEditorStage.camera);
+    expect(session.stage, StoryCardEditorStage.formatSelection);
     expect(session.hasUnsavedChanges, isFalse);
+  });
+
+  test('selecting a format routes polaroid to camera and four-cut to assembly', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(scene: StoryCardScene.empty()),
+    );
+
+    expect(
+      session.selectCardType(StoryCardType.polaroid).stage,
+      StoryCardEditorStage.camera,
+    );
+    expect(
+      session.selectCardType(StoryCardType.fourCutGrid).stage,
+      StoryCardEditorStage.assembling,
+    );
+    expect(
+      session.selectCardType(StoryCardType.fourCutStrip).draft.scene.cardType,
+      StoryCardType.fourCutStrip,
+    );
+  });
+
+  test('four-cut photos are filled independently before decorating', () {
+    var session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(scene: StoryCardScene.empty()),
+    ).selectCardType(StoryCardType.fourCutGrid);
+
+    for (var index = 0; index < 4; index++) {
+      session = session.setPhoto(index, Uint8List.fromList([index]));
+    }
+    final decorating = session.enterFourCutDecorator();
+
+    expect(session.draft.hasAllRequiredPhotos, isTrue);
+    expect(decorating.stage, StoryCardEditorStage.decorating);
+    expect(decorating.tool, StoryCardEditorTool.background);
   });
 
   test('captured photo enters decorating with unsaved content', () {
     const film = StoryCardFilmState(look: StoryCardFilmLook.warmth, seed: 31);
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
-    ).enterPhotoDecorator(Uint8List.fromList([1, 2, 3]), film: film);
+    )
+        .selectCardType(StoryCardType.polaroid)
+        .enterPhotoDecorator(Uint8List.fromList([1, 2, 3]), film: film);
 
     expect(session.stage, StoryCardEditorStage.decorating);
     expect(session.tool, StoryCardEditorTool.background);
@@ -38,6 +75,7 @@ void main() {
           StoryCardEditorSession.fromDraft(
                 StoryCardDraft(scene: StoryCardScene.empty()),
               )
+              .selectCardType(StoryCardType.polaroid)
               .enterPhotoDecorator(bytes)
               .setFilm(
                 const StoryCardFilmState(
@@ -66,9 +104,12 @@ void main() {
   test('discarding a new card stays clean in the decorating stage', () {
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
-    ).enterPhotoDecorator(Uint8List.fromList([1])).discardChanges();
+    )
+        .selectCardType(StoryCardType.polaroid)
+        .enterPhotoDecorator(Uint8List.fromList([1]))
+        .discardChanges();
 
-    expect(session.stage, StoryCardEditorStage.decorating);
+    expect(session.stage, StoryCardEditorStage.formatSelection);
     expect(session.draft.hasContent, isFalse);
     expect(session.hasUnsavedChanges, isFalse);
   });
@@ -76,7 +117,10 @@ void main() {
   test('clean new decorator can return to a fresh camera stage', () {
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
-    ).enterBlankDecorator(tool: StoryCardEditorTool.drawing).returnToCamera();
+    )
+        .selectCardType(StoryCardType.polaroid)
+        .enterBlankDecorator(tool: StoryCardEditorTool.drawing)
+        .returnToCamera();
 
     expect(session.stage, StoryCardEditorStage.camera);
     expect(session.tool, StoryCardEditorTool.none);
@@ -175,5 +219,27 @@ void main() {
     expect(transformed.draft.scene.textLayers.single.x, 0.8);
     expect(transformed.draft.scene.textLayers.single.scale, 1.5);
     expect(removed.draft.scene.textLayers, isEmpty);
+  });
+
+  test('updates one four-cut transform without moving the other slots', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fourCutStrip),
+        existingRevision: 1,
+      ),
+    );
+    const transform = StoryCardBackgroundTransform(
+      scale: 2,
+      offsetX: -0.2,
+      offsetY: 0.1,
+    );
+
+    final updated = session.setPhotoTransform(3, transform);
+
+    expect(updated.draft.scene.photoTransforms[3], same(transform));
+    expect(
+      updated.draft.scene.photoTransforms.take(3),
+      everyElement(const StoryCardBackgroundTransform.initial()),
+    );
   });
 }

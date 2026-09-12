@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_stack_item.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 void main() {
   test('maps viewer permissions independently for every card', () {
@@ -9,6 +10,7 @@ void main() {
       'author_user_id': 'user-a',
       'preview_path': 'preview/card-2.png',
       'scene_data_path': 'scene/card-2.json',
+      'card_type': 'four_cut_grid',
       'has_photo': true,
       'has_drawing': false,
       'has_text': true,
@@ -23,6 +25,7 @@ void main() {
     expect(item.position, 2);
     expect(item.card.id, 'card-2');
     expect(item.card.previewUrl, 'https://example.test/card-2.png');
+    expect(item.card.cardType, StoryCardType.fourCutGrid);
     expect(item.isFeatured, isFalse);
     expect(item.canDelete, isTrue);
     expect(item.canFeature, isTrue);

@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 void main() {
   test('canvas and preview keep the 4:5 polaroid contract', () {
@@ -85,7 +88,33 @@ void main() {
     expect(restored.textCharacterCount, 7);
     expect(restored.caption, 'first date');
     expect(restored.captionCharacterCount, 10);
-    expect(restored.toJson()['version'], 5);
+    expect(restored.toJson()['version'], 6);
+  });
+
+  test('four-cut scene preserves its type and four independent transforms', () {
+    final scene = StoryCardScene.empty(
+      cardType: StoryCardType.fourCutStrip,
+    ).withPhotoTransform(
+      2,
+      const StoryCardBackgroundTransform(
+        scale: 1.8,
+        offsetX: 0.2,
+        offsetY: -0.1,
+      ),
+    );
+
+    final restored = StoryCardScene.fromJsonString(scene.toJsonString());
+
+    expect(restored.cardType, StoryCardType.fourCutStrip);
+    expect(restored.photoTransforms, hasLength(4));
+    expect(restored.photoTransforms[2].scale, 1.8);
+    expect(restored.photoTransforms[2].offsetX, 0.2);
+    expect(restored.toJson()['version'], 6);
+    expect(restored.toJson()['card_type'], 'four_cut_strip');
+    expect(
+      (restored.toJson()['canvas'] as Map<String, dynamic>)['width_ratio'],
+      2,
+    );
   });
 
   test('legacy scene defaults to pen strokes and unrotated text', () {
@@ -118,6 +147,25 @@ void main() {
     expect(restored.textLayers.single.rotation, 0);
     expect(restored.caption, isNull);
     expect(restored.film, const StoryCardFilmState.original());
+    expect(restored.cardType, StoryCardType.polaroid);
+    expect(restored.photoTransforms, hasLength(1));
+  });
+
+  test('four-cut draft requires all four photo slots before saving', () {
+    final draft = StoryCardDraft(
+      scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid),
+    )
+        .withPhoto(0, Uint8List.fromList([1]))
+        .withPhoto(1, Uint8List.fromList([2]))
+        .withPhoto(2, Uint8List.fromList([3]));
+
+    expect(draft.hasPhoto, isTrue);
+    expect(draft.hasAllRequiredPhotos, isFalse);
+    expect(draft.canSave, isFalse);
+
+    final completed = draft.withPhoto(3, Uint8List.fromList([4]));
+    expect(completed.hasAllRequiredPhotos, isTrue);
+    expect(completed.canSave, isTrue);
   });
 
   test(

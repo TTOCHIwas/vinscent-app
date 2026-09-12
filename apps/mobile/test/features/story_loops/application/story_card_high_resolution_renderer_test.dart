@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:vinscent/features/story_loops/application/story_card_high_resolu
 import 'package:vinscent/features/story_loops/data/story_card_download_source.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 void main() {
   testWidgets('defaults to 1440 by 1800 and renders a PNG', (tester) async {
@@ -24,6 +26,7 @@ void main() {
         ],
       ),
       backgroundImageBytes: null,
+      compositeImageBytes: null,
     );
 
     expect(renderer.outputWidth, 1440);
@@ -56,6 +59,7 @@ void main() {
         ),
       ),
       backgroundImageBytes: originalBytes,
+      compositeImageBytes: null,
     );
     const renderer = StoryCardHighResolutionRenderer(
       outputWidth: 80,
@@ -79,5 +83,20 @@ void main() {
       (captionPixel.r.toInt(), captionPixel.g.toInt(), captionPixel.b.toInt()),
       (255, 255, 255),
     );
+  });
+
+  test('returns the single saved composite for four-cut cards', () async {
+    final composite = Uint8List.fromList([1, 2, 3, 4]);
+    final source = StoryCardDownloadSource(
+      scene: StoryCardScene.empty(cardType: StoryCardType.fourCutStrip),
+      backgroundImageBytes: null,
+      compositeImageBytes: composite,
+    );
+
+    final rendered = await const StoryCardHighResolutionRenderer().render(
+      source,
+    );
+
+    expect(rendered, same(composite));
   });
 }
