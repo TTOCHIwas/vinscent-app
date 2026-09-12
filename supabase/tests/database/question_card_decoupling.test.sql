@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(27);
+select plan(30);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -255,6 +255,24 @@ select is(
 );
 select is(
   (
+    select case
+      when first_card_author_user_id =
+        '1a000000-0000-0000-0000-000000000001'::uuid
+        then first_card_id
+      when second_card_author_user_id =
+        '1a000000-0000-0000-0000-000000000001'::uuid
+        then second_card_id
+    end
+    from public.get_story_loop_month_summary(
+      date_trunc('month', current_date)::date
+    )
+    where couple_date = current_date
+  ),
+  '4a000000-0000-0000-0000-000000000002'::uuid,
+  'calendar falls back to the newest card before a feature is selected'
+);
+select is(
+  (
     select count(*)
     from public.get_story_card_stack(
       current_date,
@@ -301,6 +319,33 @@ select lives_ok(
     '4a000000-0000-0000-0000-000000000001'
   )$$,
   'a member can feature one of their cards'
+);
+select is(
+  (
+    select case
+      when first_card_author_user_id =
+        '1a000000-0000-0000-0000-000000000001'::uuid
+        then first_card_id
+      when second_card_author_user_id =
+        '1a000000-0000-0000-0000-000000000001'::uuid
+        then second_card_id
+    end
+    from public.get_story_loop_month_summary(
+      date_trunc('month', current_date)::date
+    )
+    where couple_date = current_date
+  ),
+  '4a000000-0000-0000-0000-000000000001'::uuid,
+  'calendar uses the featured card for the current day'
+);
+select is(
+  (
+    select latest_card_id
+    from public.get_today_story_card_stacks()
+    where author_user_id = '1a000000-0000-0000-0000-000000000001'
+  ),
+  '4a000000-0000-0000-0000-000000000002'::uuid,
+  'home keeps the newest card as the stack cover after featuring an older card'
 );
 
 reset role;
