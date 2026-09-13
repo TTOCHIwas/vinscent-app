@@ -127,7 +127,7 @@ class StoryCardLayout {
 
   factory StoryCardLayout._strip(Size size) {
     final horizontalInset = size.width * 0.06;
-    final verticalInset = size.width * 0.04;
+    final verticalInset = size.width * 0.10;
     final gap = size.width * 0.03;
     final photoWidth = size.width - horizontalInset * 2;
     final photoHeight = (size.height - verticalInset * 2 - gap * 3) / 4;

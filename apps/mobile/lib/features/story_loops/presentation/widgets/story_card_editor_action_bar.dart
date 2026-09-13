@@ -2,29 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../application/story_card_editor_session.dart';
+import '../../data/story_card_type.dart';
 import 'story_card_editor_icon_button.dart';
+import 'story_card_type_icon.dart';
 
 class StoryCardEditorActionBar extends StatelessWidget {
   const StoryCardEditorActionBar({
     super.key,
     required this.interactionMode,
     required this.hasBackground,
+    required this.cardType,
     required this.onAddTextPressed,
-    required this.onEditCaptionPressed,
     required this.onDrawingModePressed,
     required this.onBackgroundColorPressed,
+    required this.onCardTypePressed,
     this.onFilmPressed,
     this.isFilmSelected = false,
+    this.isCardTypeSelected = false,
   });
 
   final StoryCardEditorTool interactionMode;
   final bool hasBackground;
+  final StoryCardType cardType;
   final VoidCallback onAddTextPressed;
-  final VoidCallback? onEditCaptionPressed;
   final VoidCallback onDrawingModePressed;
   final VoidCallback? onBackgroundColorPressed;
+  final VoidCallback onCardTypePressed;
   final VoidCallback? onFilmPressed;
   final bool isFilmSelected;
+  final bool isCardTypeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -54,15 +60,14 @@ class StoryCardEditorActionBar extends StatelessWidget {
             onPressed: onFilmPressed,
           ),
         ],
-        if (onEditCaptionPressed != null) ...[
-          const SizedBox(height: 8),
-          StoryCardEditorIconButton(
-            key: const ValueKey('story-card-caption-tool'),
-            tooltip: '짧은 글',
-            icon: Icons.short_text,
-            onPressed: onEditCaptionPressed,
-          ),
-        ],
+        const SizedBox(height: 8),
+        StoryCardEditorIconButton(
+          key: const ValueKey('story-card-type-tool'),
+          tooltip: '카드 유형',
+          iconWidget: StoryCardTypeIcon(type: cardType, size: 23),
+          isSelected: isCardTypeSelected,
+          onPressed: onCardTypePressed,
+        ),
         if (!hasBackground) ...[
           const SizedBox(height: 8),
           StoryCardEditorIconButton(

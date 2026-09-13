@@ -161,7 +161,7 @@ class _Action extends StatelessWidget {
       child: _DialogText(
         label,
         maxWidth: maxTextWidth,
-        style: AppTextStyles.homeBodyMedium,
+        style: AppTextStyles.homeBodyMedium.copyWith(color: color),
       ),
     );
   }

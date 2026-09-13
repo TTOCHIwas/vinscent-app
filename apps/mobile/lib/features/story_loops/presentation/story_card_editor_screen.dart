@@ -23,7 +23,6 @@ import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
 import '../data/story_card_type.dart';
 import '../data/story_loop_write_failure.dart';
-import 'widgets/story_card_caption_input_overlay.dart';
 import 'widgets/story_card_camera_stage.dart';
 import 'widgets/story_card_draft_exit_dialog.dart';
 import 'widgets/story_card_drawing_controls.dart';
@@ -36,6 +35,7 @@ import 'widgets/story_card_photo_adjustment_screen.dart';
 import 'widgets/story_card_photo_slot_controls.dart';
 import 'widgets/story_card_text_input_overlay.dart';
 import 'widgets/story_card_text_trash_target.dart';
+import 'widgets/story_card_type_picker.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
   const StoryCardEditorScreen({super.key});
@@ -92,7 +92,6 @@ class _StoryCardEditorContentState
   StoryCardTextLayer? _textLayerTransformStart;
   Offset _textLayerFocalPointStart = Offset.zero;
   bool _isTextInputActive = false;
-  bool _isCaptionInputActive = false;
   bool _isDraggingText = false;
   bool _isTextOverTrash = false;
   bool _isPickingColor = false;
@@ -101,10 +100,14 @@ class _StoryCardEditorContentState
   bool _isSavingLocalDraft = false;
   bool _isLocalDraftActive = false;
   List<StoryCardLocalDraftSummary> _localDrafts = const [];
-  StoryCardType? _announcedCardType;
-  bool _isCardTypeAnnouncementVisible = false;
-  Timer? _cardTypeAnnouncementFadeTimer;
-  Timer? _cardTypeAnnouncementRemovalTimer;
+  bool _isCardTypeSelectorVisible = false;
+  bool _isCardTypeGuideMounted = false;
+  bool _isCardTypeGuideVisible = false;
+  bool _isInitialCardTypeSelectorPinned = false;
+  bool _hasShownCardTypeOnboarding = false;
+  Timer? _cardTypeSelectorHideTimer;
+  Timer? _cardTypeGuideFadeTimer;
+  Timer? _cardTypeGuideRemovalTimer;
   late StoryCardFilmState _cameraFilm;
   ui.FragmentProgram? _filmProgram;
   Future<ui.FragmentProgram>? _filmProgramFuture;
@@ -126,12 +129,20 @@ class _StoryCardEditorContentState
     )) {
       unawaited(_prepareFilmProgram());
     }
+    if (!_session.hasPersistedCard &&
+        _session.stage == StoryCardEditorStage.decorating &&
+        _draft.hasDraftContent) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showCardTypeOnboarding();
+      });
+    }
   }
 
   @override
   void dispose() {
-    _cardTypeAnnouncementFadeTimer?.cancel();
-    _cardTypeAnnouncementRemovalTimer?.cancel();
+    _cardTypeSelectorHideTimer?.cancel();
+    _cardTypeGuideFadeTimer?.cancel();
+    _cardTypeGuideRemovalTimer?.cancel();
     _disposeImages(_backgroundImages);
     super.dispose();
   }
@@ -144,7 +155,6 @@ class _StoryCardEditorContentState
 
   bool get _canSave =>
       !_isTextInputActive &&
-      !_isCaptionInputActive &&
       !_isPickingColor &&
       !_isPickingGallery &&
       !_isSaving &&
@@ -182,6 +192,8 @@ class _StoryCardEditorContentState
       onImageSelected: _useBackgroundImage,
       initialFilm: _cameraFilm,
       onFilmChanged: (film) => _cameraFilm = film,
+      initialCardType: _draft.scene.cardType,
+      onCardTypeChanged: targetIndex == null ? _selectCameraCardType : null,
       loadCharacterImage: _loadCoupleCharacterImage,
       onTextSelected: _enterBlankTextDecorator,
       onDrawingSelected: () =>
@@ -206,7 +218,7 @@ class _StoryCardEditorContentState
             child: Padding(
               padding: _session.tool == StoryCardEditorTool.drawing
                   ? StoryCardDrawingControls.canvasInsets
-                  : EdgeInsets.zero,
+                  : const EdgeInsets.only(top: 68, bottom: 72),
               child: Center(
                 child: AspectRatio(
                   key: const ValueKey('story-card-editor-canvas'),
@@ -234,8 +246,7 @@ class _StoryCardEditorContentState
                         ),
                       ),
                       if (_session.tool != StoryCardEditorTool.drawing &&
-                          !_isTextInputActive &&
-                          !_isCaptionInputActive)
+                          !_isTextInputActive)
                         StoryCardPhotoSlotControls(
                           cardType: _draft.scene.cardType,
                           hasPhotos: _draft.photoImageBytes
@@ -253,6 +264,14 @@ class _StoryCardEditorContentState
               ),
             ),
           ),
+          if (_session.tool != StoryCardEditorTool.drawing)
+            if (_isCardTypeSelectorVisible && !_isCardTypeGuideMounted)
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _hideCardTypeSelector,
+                ),
+              ),
           if (_session.tool != StoryCardEditorTool.drawing)
             Positioned(
               top: 0,
@@ -278,10 +297,8 @@ class _StoryCardEditorContentState
                   child: StoryCardEditorActionBar(
                     interactionMode: _session.tool,
                     hasBackground: _draft.hasPhoto,
+                    cardType: _draft.scene.cardType,
                     onAddTextPressed: _selectTextTool,
-                    onEditCaptionPressed: _draft.scene.cardType.supportsCaption
-                        ? _selectCaptionTool
-                        : null,
                     onDrawingModePressed: () =>
                         _selectTool(StoryCardEditorTool.drawing),
                     onBackgroundColorPressed: _draft.hasPhoto
@@ -290,7 +307,9 @@ class _StoryCardEditorContentState
                     onFilmPressed: _selectedPhotoBytes == null
                         ? null
                         : _toggleFilmSelector,
+                    onCardTypePressed: _toggleCardTypeSelector,
                     isFilmSelected: _session.tool == StoryCardEditorTool.film,
+                    isCardTypeSelected: _isCardTypeSelectorVisible,
                   ),
                 ),
               ),
@@ -369,37 +388,65 @@ class _StoryCardEditorContentState
               onCancelled: _cancelTextInput,
               onSubmitted: _submitTextInput,
             ),
-          if (_isCaptionInputActive)
-            StoryCardCaptionInputOverlay(
-              initialValue: _draft.scene.caption ?? '',
-              onCancelled: _cancelCaptionInput,
-              onSubmitted: _submitCaptionInput,
-            ),
-          if (_announcedCardType != null)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  child: AnimatedOpacity(
+          if (_session.tool != StoryCardEditorTool.drawing)
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AnimatedSlide(
+                    key: const ValueKey(
+                      'story-card-editor-type-selector-slide',
+                    ),
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOut,
-                    opacity: _isCardTypeAnnouncementVisible ? 1 : 0,
+                    offset: _isCardTypeSelectorVisible
+                        ? Offset.zero
+                        : const Offset(0, 1.3),
+                    child: IgnorePointer(
+                      ignoring: !_isCardTypeSelectorVisible,
+                      child: StoryCardTypePicker(
+                        key: const ValueKey('story-card-editor-type-selector'),
+                        selectedType: _draft.scene.cardType,
+                        onSelected: _selectCardType,
+                        keyPrefix: 'story-card-editor-type',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (_isCardTypeGuideMounted)
+            Positioned.fill(
+              child: GestureDetector(
+                key: const ValueKey('story-card-editor-type-guide'),
+                behavior: HitTestBehavior.opaque,
+                onTap: _dismissCardTypeGuide,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  opacity: _isCardTypeGuideVisible ? 1 : 0,
+                  child: Center(
                     child: DecoratedBox(
-                      key: const ValueKey('story-card-type-announcement'),
                       decoration: BoxDecoration(
-                        color: const Color(0xA6000000),
+                        color: const Color(0xB3000000),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 9,
+                          vertical: 10,
                         ),
                         child: Text(
-                          _announcedCardType!.displayName,
-                          style: const TextStyle(
+                          '좌우로 밀어 카드 유형을 바꿔보세요.',
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            letterSpacing: 0,
                           ),
                         ),
                       ),
@@ -430,8 +477,12 @@ class _StoryCardEditorContentState
       _cancelTextInput();
       return;
     }
-    if (_isCaptionInputActive) {
-      _cancelCaptionInput();
+    if (_isCardTypeGuideMounted) {
+      _dismissCardTypeGuide();
+      return;
+    }
+    if (_isCardTypeSelectorVisible) {
+      _hideCardTypeSelector();
       return;
     }
 
@@ -712,42 +763,118 @@ class _StoryCardEditorContentState
     if (nextIndex == currentIndex) {
       return;
     }
-    final nextType = types[nextIndex];
+    _selectCardType(types[nextIndex]);
+  }
+
+  void _selectCameraCardType(StoryCardType type) {
+    if (_cameraTargetPhotoIndex != null || type == _draft.scene.cardType) {
+      return;
+    }
     setState(() {
-      _session = _session.changeCardType(nextType);
+      _session = _session.changeCardType(type);
       _selectedPhotoIndex = 0;
       _selectedEmptyPhotoIndex = null;
     });
-    _announceCardType(nextType);
   }
 
-  void _announceCardType(StoryCardType type) {
-    _cardTypeAnnouncementFadeTimer?.cancel();
-    _cardTypeAnnouncementRemovalTimer?.cancel();
+  void _selectCardType(StoryCardType type) {
+    _cardTypeSelectorHideTimer?.cancel();
     setState(() {
-      _announcedCardType = type;
-      _isCardTypeAnnouncementVisible = true;
+      if (type != _draft.scene.cardType) {
+        _session = _session.changeCardType(type);
+        _selectedPhotoIndex = 0;
+        _selectedEmptyPhotoIndex = null;
+      }
+      _isCardTypeSelectorVisible = true;
+      _isInitialCardTypeSelectorPinned = false;
     });
-    _cardTypeAnnouncementFadeTimer = Timer(
-      const Duration(milliseconds: 700),
-      () {
-        if (mounted) {
-          setState(() => _isCardTypeAnnouncementVisible = false);
-        }
-      },
+    _scheduleCardTypeSelectorHide();
+  }
+
+  void _toggleCardTypeSelector() {
+    if (_isCardTypeSelectorVisible) {
+      _hideCardTypeSelector();
+      return;
+    }
+
+    _cardTypeSelectorHideTimer?.cancel();
+    setState(() {
+      _session = _session.selectTool(
+        _draft.hasPhoto
+            ? StoryCardEditorTool.background
+            : StoryCardEditorTool.none,
+      );
+      _isCardTypeSelectorVisible = true;
+      _isInitialCardTypeSelectorPinned = false;
+    });
+    _scheduleCardTypeSelectorHide();
+  }
+
+  void _hideCardTypeSelector() {
+    _cardTypeSelectorHideTimer?.cancel();
+    if (!_isCardTypeSelectorVisible) {
+      return;
+    }
+    setState(() {
+      _isCardTypeSelectorVisible = false;
+      _isInitialCardTypeSelectorPinned = false;
+    });
+  }
+
+  void _scheduleCardTypeSelectorHide() {
+    _cardTypeSelectorHideTimer?.cancel();
+    _cardTypeSelectorHideTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted || _isInitialCardTypeSelectorPinned) {
+        return;
+      }
+      _hideCardTypeSelector();
+    });
+  }
+
+  void _showCardTypeOnboarding() {
+    if (!mounted ||
+        _hasShownCardTypeOnboarding ||
+        _session.hasPersistedCard ||
+        _session.stage != StoryCardEditorStage.decorating ||
+        !_draft.hasDraftContent) {
+      return;
+    }
+
+    _cardTypeSelectorHideTimer?.cancel();
+    _cardTypeGuideFadeTimer?.cancel();
+    _cardTypeGuideRemovalTimer?.cancel();
+    setState(() {
+      _hasShownCardTypeOnboarding = true;
+      _isCardTypeSelectorVisible = true;
+      _isInitialCardTypeSelectorPinned = true;
+      _isCardTypeGuideMounted = true;
+      _isCardTypeGuideVisible = true;
+    });
+    _cardTypeGuideFadeTimer = Timer(
+      const Duration(seconds: 2),
+      _dismissCardTypeGuide,
     );
-    _cardTypeAnnouncementRemovalTimer = Timer(
-      const Duration(milliseconds: 980),
-      () {
-        if (mounted) {
-          setState(() => _announcedCardType = null);
-        }
-      },
-    );
+  }
+
+  void _dismissCardTypeGuide() {
+    _cardTypeGuideFadeTimer?.cancel();
+    if (!mounted || !_isCardTypeGuideMounted) {
+      return;
+    }
+    setState(() => _isCardTypeGuideVisible = false);
+    _cardTypeGuideRemovalTimer?.cancel();
+    _cardTypeGuideRemovalTimer = Timer(const Duration(milliseconds: 220), () {
+      if (mounted) {
+        setState(() => _isCardTypeGuideMounted = false);
+      }
+    });
   }
 
   void _selectTool(StoryCardEditorTool tool) {
+    _cardTypeSelectorHideTimer?.cancel();
     setState(() {
+      _isCardTypeSelectorVisible = false;
+      _isInitialCardTypeSelectorPinned = false;
       _session = _session.selectTool(tool);
     });
   }
@@ -772,6 +899,7 @@ class _StoryCardEditorContentState
           ? StoryCardEditorTool.background
           : StoryCardEditorTool.none,
     );
+    _showCardTypeOnboarding();
   }
 
   Future<Color?> _enterColorSampler() async {
@@ -803,21 +931,20 @@ class _StoryCardEditorContentState
       return;
     }
 
+    _cardTypeSelectorHideTimer?.cancel();
     setState(() {
+      _isCardTypeSelectorVisible = false;
+      _isInitialCardTypeSelectorPinned = false;
       _session = _session.selectTool(StoryCardEditorTool.text);
       _isTextInputActive = true;
     });
   }
 
-  void _selectCaptionTool() {
-    setState(() {
-      _session = _session.selectTool(StoryCardEditorTool.none);
-      _isCaptionInputActive = true;
-    });
-  }
-
   void _toggleCanvasBackground() {
+    _cardTypeSelectorHideTimer?.cancel();
     setState(() {
+      _isCardTypeSelectorVisible = false;
+      _isInitialCardTypeSelectorPinned = false;
       _session = _session.toggleCanvasBackground();
     });
   }
@@ -826,7 +953,10 @@ class _StoryCardEditorContentState
     final nextTool = _session.tool == StoryCardEditorTool.film
         ? StoryCardEditorTool.background
         : StoryCardEditorTool.film;
+    _cardTypeSelectorHideTimer?.cancel();
     setState(() {
+      _isCardTypeSelectorVisible = false;
+      _isInitialCardTypeSelectorPinned = false;
       _session = _session.selectTool(nextTool);
     });
     if (nextTool == StoryCardEditorTool.film) {
@@ -890,48 +1020,6 @@ class _StoryCardEditorContentState
     });
   }
 
-  void _cancelCaptionInput() {
-    if (!_isCaptionInputActive) {
-      return;
-    }
-
-    FocusManager.instance.primaryFocus?.unfocus();
-    setState(() {
-      _isCaptionInputActive = false;
-      _session = _session.selectTool(
-        _draft.hasPhoto
-            ? StoryCardEditorTool.background
-            : StoryCardEditorTool.none,
-      );
-    });
-  }
-
-  void _submitCaptionInput(String value) {
-    final caption = value.trim();
-    if (caption.characters.length > storyCardMaxCaptionCharacters ||
-        caption.split(RegExp(r'\r\n?|\n')).length > storyCardMaxCaptionLines) {
-      _showSnackBar(
-        '짧은 글은 최대 $storyCardMaxCaptionCharacters자, '
-        '$storyCardMaxCaptionLines줄까지 입력할 수 있어요.',
-      );
-      return;
-    }
-
-    final nextCaption = caption.isEmpty ? null : caption;
-    FocusManager.instance.primaryFocus?.unfocus();
-    setState(() {
-      _isCaptionInputActive = false;
-      final nextTool = _draft.hasPhoto
-          ? StoryCardEditorTool.background
-          : StoryCardEditorTool.none;
-      if (nextCaption == _draft.scene.caption) {
-        _session = _session.selectTool(nextTool);
-        return;
-      }
-      _session = _session.setCaption(nextCaption).selectTool(nextTool);
-    });
-  }
-
   void _submitTextInput(String value, Color color) {
     final text = value.trim();
     if (text.isEmpty) {
@@ -967,6 +1055,7 @@ class _StoryCardEditorContentState
           )
           .selectTool(StoryCardEditorTool.none);
     });
+    _showCardTypeOnboarding();
   }
 
   Future<void> _useBackgroundImage(StoryCardCameraSelection selection) async {
@@ -1014,14 +1103,14 @@ class _StoryCardEditorContentState
         setState(() {
           _backgroundImages = nextImages;
           _cameraFilm = selection.film;
-          _session = _session.enterPhotoDecorator(
-            normalizedImageBytes,
-            film: selection.film,
-          );
+          _session = _session
+              .changeCardType(selection.cardType)
+              .enterPhotoDecorator(normalizedImageBytes, film: selection.film);
           _selectedPhotoIndex = 0;
           _selectedEmptyPhotoIndex = null;
         });
         _disposeImages(previousImages);
+        _showCardTypeOnboarding();
       }
       if (selection.film.look != StoryCardFilmLook.original) {
         unawaited(_prepareFilmProgram());
@@ -1121,6 +1210,7 @@ class _StoryCardEditorContentState
       _cameraFilm = draft.scene.photoFilms.first;
     });
     _disposeImages(previousImages);
+    _showCardTypeOnboarding();
     await _refreshLocalDrafts();
     if (draft.scene.photoFilms.any(
       (film) => film.look != StoryCardFilmLook.original,

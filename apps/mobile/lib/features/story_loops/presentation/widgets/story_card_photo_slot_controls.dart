@@ -90,9 +90,9 @@ class _EmptyPhotoSlot extends StatelessWidget {
               onPressed: isPickingGallery ? null : onCameraPressed,
               color: Colors.white,
               disabledColor: Colors.white38,
-              icon: const Icon(LucideIcons.camera, size: 27),
+              icon: const Icon(LucideIcons.camera, size: 30),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 16),
             IconButton(
               key: ValueKey('story-card-photo-slot-gallery-$index'),
               tooltip: '갤러리',
@@ -107,7 +107,7 @@ class _EmptyPhotoSlot extends StatelessWidget {
                         strokeWidth: 2,
                       ),
                     )
-                  : const Icon(LucideIcons.image, size: 27),
+                  : const Icon(LucideIcons.image, size: 30),
             ),
           ],
         ),

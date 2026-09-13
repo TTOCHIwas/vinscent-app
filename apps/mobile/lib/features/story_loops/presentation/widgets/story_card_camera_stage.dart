@@ -15,6 +15,7 @@ import '../../application/story_card_face_effect.dart';
 import '../../application/story_card_face_effect_capture.dart';
 import '../../data/story_card_camera_effect.dart';
 import '../../data/story_card_film_look.dart';
+import '../../data/story_card_type.dart';
 import 'story_card_camera_character_overlay.dart';
 import 'story_card_camera_controller.dart';
 import 'story_card_camera_face_tracker.dart';
@@ -23,6 +24,7 @@ import 'story_card_camera_policy.dart';
 import 'story_card_camera_style_selector.dart';
 import 'story_card_editor_action_bar.dart';
 import 'story_card_film_filtered_preview.dart';
+import 'story_card_type_picker.dart';
 
 class StoryCardCameraStage extends StatefulWidget {
   const StoryCardCameraStage({
@@ -33,6 +35,8 @@ class StoryCardCameraStage extends StatefulWidget {
     required this.onDrawingSelected,
     this.initialFilm = const StoryCardFilmState.original(),
     this.onFilmChanged,
+    this.initialCardType = StoryCardType.fullBleed,
+    this.onCardTypeChanged,
     this.faceDetector,
     this.loadCharacterImage,
     this.showEditorTools = true,
@@ -48,6 +52,8 @@ class StoryCardCameraStage extends StatefulWidget {
   final VoidCallback onDrawingSelected;
   final StoryCardFilmState initialFilm;
   final ValueChanged<StoryCardFilmState>? onFilmChanged;
+  final StoryCardType initialCardType;
+  final ValueChanged<StoryCardType>? onCardTypeChanged;
   final StoryCardFaceDetector? faceDetector;
   final Future<Uint8List?> Function()? loadCharacterImage;
   final bool showEditorTools;
@@ -69,8 +75,10 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
   bool _isCapturing = false;
   bool _isPickingImage = false;
   bool _isStyleSelectorVisible = false;
+  bool _isCardTypeSelectorVisible = false;
   bool _isEffectLoading = false;
   late StoryCardFilmState _film;
+  late StoryCardType _cardType;
   StoryCardCameraEffect _effect = StoryCardCameraEffect.none;
   StoryCardCharacterAsset? _character;
   StoryCardFaceObservation? _trackedFace;
@@ -93,9 +101,19 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
     _film = widget.initialFilm.seed > 0
         ? widget.initialFilm
         : widget.initialFilm.copyWith(seed: StoryCardFilmSeed.now());
+    _cardType = widget.initialCardType;
     _camera = StoryCardCameraController()..addListener(_handleCameraChanged);
     WidgetsBinding.instance.addObserver(this);
     unawaited(_camera.initialize());
+  }
+
+  @override
+  void didUpdateWidget(covariant StoryCardCameraStage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialCardType != oldWidget.initialCardType &&
+        widget.initialCardType != _cardType) {
+      _cardType = widget.initialCardType;
+    }
   }
 
   @override
@@ -161,7 +179,23 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
   void _toggleStyleSelector() {
     setState(() {
       _isStyleSelectorVisible = !_isStyleSelectorVisible;
+      _isCardTypeSelectorVisible = false;
     });
+  }
+
+  void _toggleCardTypeSelector() {
+    setState(() {
+      _isCardTypeSelectorVisible = !_isCardTypeSelectorVisible;
+      _isStyleSelectorVisible = false;
+    });
+  }
+
+  void _selectCardType(StoryCardType type) {
+    if (type == _cardType) {
+      return;
+    }
+    setState(() => _cardType = type);
+    widget.onCardTypeChanged?.call(type);
   }
 
   Future<void> _selectEffect(StoryCardCameraEffect effect) async {
@@ -540,6 +574,7 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
     return StoryCardCameraSelection(
       imageBytes: imageBytes,
       film: _film,
+      cardType: _cardType,
       characterComposition: composition,
     );
   }
@@ -547,6 +582,14 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
   @override
   Widget build(BuildContext context) {
     final controller = _camera.controller;
+    final guideAspectRatio =
+        widget.guideAspectRatio ??
+        (widget.showEditorTools
+            ? StoryCardLayout.fromSize(
+                type: _cardType,
+                size: _cardType.previewSize,
+              ).photoAspectRatio(0)
+            : null);
     return ColoredBox(
       color: Colors.black,
       child: Stack(
@@ -568,7 +611,7 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
             )
           else
             _CameraUnavailable(error: _captureError ?? _camera.error),
-          if (widget.guideAspectRatio case final aspectRatio?)
+          if (guideAspectRatio case final aspectRatio?)
             _StoryCardCameraCropGuide(aspectRatio: aspectRatio),
           if (_focusPoint case final focusPoint?)
             StoryCardCameraFocusOverlay(
@@ -622,15 +665,17 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                       child: StoryCardEditorActionBar(
                         interactionMode: StoryCardEditorTool.none,
                         hasBackground: true,
+                        cardType: _cardType,
                         onAddTextPressed: widget.onTextSelected,
-                        onEditCaptionPressed: null,
                         onDrawingModePressed: widget.onDrawingSelected,
                         onBackgroundColorPressed: null,
                         onFilmPressed: _toggleStyleSelector,
+                        onCardTypePressed: _toggleCardTypeSelector,
                         isFilmSelected:
                             _isStyleSelectorVisible ||
                             _film.look != StoryCardFilmLook.original ||
                             _effect != StoryCardCameraEffect.none,
+                        isCardTypeSelected: _isCardTypeSelectorVisible,
                       ),
                     ),
                   ),
@@ -666,6 +711,18 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                       onFilmLookChanged: _selectFilmLook,
                       onEffectChanged: (effect) =>
                           unawaited(_selectEffect(effect)),
+                    ),
+                  ),
+                if (widget.showEditorTools && _isCardTypeSelectorVisible)
+                  Positioned(
+                    key: const ValueKey('story-card-camera-type-selector'),
+                    left: 12,
+                    right: 12,
+                    bottom: 128,
+                    child: StoryCardTypePicker(
+                      selectedType: _cardType,
+                      onSelected: _selectCardType,
+                      keyPrefix: 'story-card-camera-type',
                     ),
                   ),
               ],
