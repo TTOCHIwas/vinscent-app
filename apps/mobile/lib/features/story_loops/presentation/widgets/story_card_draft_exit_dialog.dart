@@ -63,10 +63,23 @@ class StoryCardDraftExitDialog extends StatelessWidget {
                       _horizontalInset,
                       24,
                     ),
-                    child: _DialogText(
-                      '임시 저장할까요?',
-                      maxWidth: maxTextWidth,
-                      style: AppTextStyles.sectionTitle,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _DialogText(
+                          '임시 저장할까요?',
+                          maxWidth: maxTextWidth,
+                          style: AppTextStyles.sectionTitle,
+                        ),
+                        const SizedBox(height: 8),
+                        _DialogText(
+                          '저장하지 않은 변경 내용이 사라져요.',
+                          maxWidth: maxTextWidth,
+                          style: AppTextStyles.homeBody.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
