@@ -49,6 +49,18 @@ void main() {
     },
   );
 
+  test('inactive photos keep a loaded local draft in the editor', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+        additionalPhotoImageBytes: [Uint8List.fromList([2])],
+      ),
+    );
+
+    expect(session.stage, StoryCardEditorStage.decorating);
+    expect(session.draft.canSave, isFalse);
+  });
+
   test('four-cut photos are filled independently before decorating', () {
     var session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
@@ -123,7 +135,7 @@ void main() {
             .enterPhotoDecorator(Uint8List.fromList([1]))
             .discardChanges();
 
-    expect(session.stage, StoryCardEditorStage.formatSelection);
+    expect(session.stage, StoryCardEditorStage.camera);
     expect(session.draft.hasContent, isFalse);
     expect(session.hasUnsavedChanges, isFalse);
   });

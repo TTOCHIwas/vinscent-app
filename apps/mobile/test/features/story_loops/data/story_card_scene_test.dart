@@ -88,7 +88,7 @@ void main() {
     expect(restored.textCharacterCount, 7);
     expect(restored.caption, 'first date');
     expect(restored.captionCharacterCount, 10);
-    expect(restored.toJson()['version'], 6);
+    expect(restored.toJson()['version'], 7);
   });
 
   test('four-cut scene preserves its type and four independent transforms', () {
@@ -108,7 +108,7 @@ void main() {
     expect(restored.photoTransforms, hasLength(4));
     expect(restored.photoTransforms[2].scale, 1.8);
     expect(restored.photoTransforms[2].offsetX, 0.2);
-    expect(restored.toJson()['version'], 6);
+    expect(restored.toJson()['version'], 7);
     expect(restored.toJson()['card_type'], 'four_cut_strip');
     expect(
       (restored.toJson()['canvas'] as Map<String, dynamic>)['width_ratio'],
@@ -228,6 +228,17 @@ void main() {
 
     expect(draft.scene.hasCaption, isTrue);
     expect(draft.hasContent, isFalse);
+  });
+
+  test('inactive photos do not make the active card saveable', () {
+    final draft = StoryCardDraft(
+      scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+      additionalPhotoImageBytes: [Uint8List.fromList([2])],
+    );
+
+    expect(draft.hasPhoto, isFalse);
+    expect(draft.hasContent, isFalse);
+    expect(draft.canSave, isFalse);
   });
 
   test('eraser-only scene is not valid drawing content', () {

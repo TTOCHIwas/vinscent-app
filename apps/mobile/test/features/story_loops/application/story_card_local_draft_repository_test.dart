@@ -88,4 +88,18 @@ void main() {
     expect(resaved.savedAt, now);
     expect(resaved.expiresAt, now.add(const Duration(hours: 72)));
   });
+
+  test('prunes an abandoned atomic-writing directory', () async {
+    final writingDirectory = Directory(
+      '${cacheDirectory.path}${Platform.pathSeparator}'
+      'story_card_drafts${Platform.pathSeparator}abandoned.writing',
+    );
+    await writingDirectory.create(recursive: true);
+    await File(
+      '${writingDirectory.path}${Platform.pathSeparator}photo_0.bin',
+    ).writeAsBytes([1, 2, 3]);
+
+    expect(await repository.list(), isEmpty);
+    expect(await writingDirectory.exists(), isFalse);
+  });
 }
