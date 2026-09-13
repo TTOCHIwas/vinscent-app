@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/presentation/safety_report_sheet.dart';
 import 'package:vinscent/features/story_loops/application/story_card_download_service.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_detail_overlay.dart';
 
 void main() {
@@ -79,12 +80,42 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('keeps a vertical four-cut card below the detail actions', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: _OverlayLauncher(cardType: StoryCardType.fourCutStrip),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final card = tester.getRect(
+      find.byKey(const Key('story-card-detail-card-1')),
+    );
+    final close = tester.getRect(
+      find.byKey(const Key('story-card-detail-close')),
+    );
+    expect(card.top, greaterThanOrEqualTo(close.bottom + 8));
+    expect(card.bottom, lessThanOrEqualTo(640 - 24));
+  });
 }
 
 class _OverlayLauncher extends StatelessWidget {
-  const _OverlayLauncher({this.canReport = false});
+  const _OverlayLauncher({
+    this.canReport = false,
+    this.cardType = StoryCardType.polaroid,
+  });
 
   final bool canReport;
+  final StoryCardType cardType;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +126,7 @@ class _OverlayLauncher extends StatelessWidget {
             context: context,
             cardId: 'card-1',
             previewUrl: null,
+            cardType: cardType,
             canReport: canReport,
           ),
           child: const Text('open'),

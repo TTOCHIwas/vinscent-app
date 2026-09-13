@@ -22,6 +22,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('임시 저장할까요?'), findsOneWidget);
+    expect(find.text('저장하지 않은 변경 내용이 사라져요.'), findsOneWidget);
     final save = find.byKey(const ValueKey('story-card-draft-exit-save'));
     final discard = find.byKey(const ValueKey('story-card-draft-exit-discard'));
     final continueEditing = find.byKey(

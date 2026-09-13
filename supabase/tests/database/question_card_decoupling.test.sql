@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(30);
+select plan(31);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -337,6 +337,21 @@ select is(
   ),
   '4a000000-0000-0000-0000-000000000001'::uuid,
   'calendar uses the featured card for the current day'
+);
+select is(
+  (
+    select case
+      when first_card_author_user_id =
+        '1a000000-0000-0000-0000-000000000001'::uuid
+        then first_card_id
+      when second_card_author_user_id =
+        '1a000000-0000-0000-0000-000000000001'::uuid
+        then second_card_id
+    end
+    from public.get_story_loop_detail_v2(current_date)
+  ),
+  '4a000000-0000-0000-0000-000000000001'::uuid,
+  'selected-day detail uses the featured card for the current day'
 );
 select is(
   (

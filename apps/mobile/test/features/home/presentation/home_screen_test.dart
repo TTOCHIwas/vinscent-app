@@ -40,6 +40,7 @@ import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart'
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_card_read_receipt_repository.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_summary.dart';
@@ -788,12 +789,30 @@ void main() {
     },
   );
 
-  testWidgets('uses compact card stacks independently from question answers', (
-    tester,
-  ) async {
+  testWidgets('질문과 상대 카드가 생겨도 홈 카드 크기를 일정하게 유지한다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 592));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: 1,
+        storyEditLocked: false,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        cards: [samplePreviewCard(authorUserId: _profile.id)],
+      ),
+    );
+    final singleCardWidth = tester
+        .getSize(find.byKey(_storyThumbnailKey('card-1')))
+        .width;
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
     await _pumpHome(
       tester,
       couple: _activeCouple,
@@ -821,9 +840,9 @@ void main() {
     final partnerCard = find.byKey(_storyThumbnailKey('card-2'));
     expect(find.byKey(_storyLineKey), findsOneWidget);
     expect(find.byKey(_storyClotheslineKey), findsOneWidget);
-    expect(tester.getSize(myCard).width, closeTo(75, 0.1));
-    expect(tester.getSize(partnerCard).width, closeTo(75, 0.1));
-    expect(tester.getSize(find.byKey(_storyLineKey)).height, closeTo(148, 0.1));
+    expect(tester.getSize(myCard).width, closeTo(singleCardWidth, 0.1));
+    expect(tester.getSize(partnerCard).width, closeTo(singleCardWidth, 0.1));
+    expect(singleCardWidth, inInclusiveRange(140, 155));
     expect(
       tester.getCenter(myCard).dx,
       lessThan(tester.getCenter(partnerCard).dx),
@@ -1685,6 +1704,42 @@ void main() {
     expect(receiptRepository.acknowledgedCardIds, isEmpty);
   });
 
+  testWidgets('세로 네컷 상세는 상단과 하단 동작 영역을 침범하지 않는다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final stripCard = StoryLoopCardPreview(
+      id: 'strip-card',
+      authorUserId: _profile.id,
+      previewPath: 'previews/strip-card.png',
+      submittedAt: DateTime.parse('2026-05-31T09:00:00Z'),
+      cardType: StoryCardType.fourCutStrip,
+    );
+    await _pumpRoutedHome(
+      tester,
+      todaySummary: _summaryWithoutQuestion(
+        coupleDate: _today,
+        loopStatus: null,
+        cardCount: 1,
+        storyEditLocked: false,
+        canEditStory: true,
+        canAnswerQuestion: false,
+        cards: [stripCard],
+      ),
+      stackItems: [_stackItem(stripCard, position: 1, isRead: true)],
+    );
+
+    await tester.tap(find.byKey(_storyThumbnailKey('strip-card')));
+    await tester.pumpAndSettle();
+
+    final card = tester.getRect(find.byKey(_storyDetailCardKey('strip-card')));
+    final close = tester.getRect(find.byKey(_storyDetailCloseButtonKey));
+    final feature = tester.getRect(
+      find.byKey(const Key('story-card-stack-feature')),
+    );
+    expect(card.top, greaterThanOrEqualTo(close.bottom + 8));
+    expect(card.bottom, lessThanOrEqualTo(feature.top - 8));
+  });
+
   testWidgets('카드 상세를 짧게 아래로 당기면 손가락을 따라간 뒤 원위치로 돌아온다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -2274,6 +2329,7 @@ StoryCardStackItem _stackItem(
       hasText: false,
       submittedAt: card.submittedAt,
       revision: 1,
+      cardType: card.cardType,
       previewUrl: card.previewUrl,
     ),
     isFeatured: false,
