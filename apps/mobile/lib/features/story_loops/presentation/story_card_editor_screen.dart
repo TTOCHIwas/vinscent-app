@@ -209,7 +209,7 @@ class _StoryCardEditorContentState
   }
 
   Widget _buildDecorator() {
-    return ColoredBox(
+    final content = ColoredBox(
       color: Colors.black,
       child: Stack(
         fit: StackFit.expand,
@@ -240,6 +240,7 @@ class _StoryCardEditorContentState
                           onPhotoTapped: _handlePhotoTapped,
                           onPhotosReordered: _reorderPhotos,
                           onCardTypeStep: _stepCardType,
+                          onCanvasTapped: _handleCanvasTapped,
                           onTextLayerScaleStart: _startTextLayerTransform,
                           onTextLayerScaleUpdate: _updateTextLayerTransform,
                           onTextLayerScaleEnd: _endTextLayerTransform,
@@ -264,14 +265,6 @@ class _StoryCardEditorContentState
               ),
             ),
           ),
-          if (_session.tool != StoryCardEditorTool.drawing)
-            if (_isCardTypeSelectorVisible && !_isCardTypeGuideMounted)
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _hideCardTypeSelector,
-                ),
-              ),
           if (_session.tool != StoryCardEditorTool.drawing)
             Positioned(
               top: 0,
@@ -421,10 +414,8 @@ class _StoryCardEditorContentState
             ),
           if (_isCardTypeGuideMounted)
             Positioned.fill(
-              child: GestureDetector(
+              child: IgnorePointer(
                 key: const ValueKey('story-card-editor-type-guide'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _dismissCardTypeGuide,
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOut,
@@ -457,6 +448,16 @@ class _StoryCardEditorContentState
             ),
         ],
       ),
+    );
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) {
+        if (_isCardTypeGuideMounted) {
+          _dismissCardTypeGuide();
+        }
+      },
+      child: content,
     );
   }
 
@@ -616,6 +617,18 @@ class _StoryCardEditorContentState
       return;
     }
     unawaited(_openPhotoAdjustment(index));
+  }
+
+  bool _handleCanvasTapped() {
+    if (_isCardTypeGuideMounted) {
+      _dismissCardTypeGuide();
+      return true;
+    }
+    if (_isCardTypeSelectorVisible) {
+      _hideCardTypeSelector();
+      return true;
+    }
+    return false;
   }
 
   void _openPhotoSlotCamera(int index) {

@@ -26,6 +26,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
     required this.onPhotoTapped,
     required this.onPhotosReordered,
     required this.onCardTypeStep,
+    this.onCanvasTapped,
     required this.onTextLayerScaleStart,
     required this.onTextLayerScaleUpdate,
     required this.onTextLayerScaleEnd,
@@ -42,6 +43,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
   final ValueChanged<int> onPhotoTapped;
   final void Function(int fromIndex, int toIndex) onPhotosReordered;
   final ValueChanged<int> onCardTypeStep;
+  final bool Function()? onCanvasTapped;
   final void Function(String layerId, ScaleStartDetails details)
   onTextLayerScaleStart;
   final void Function(String layerId, ScaleUpdateDetails details, Size size)
@@ -281,8 +283,11 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
       } else if (displacement.dx.abs() >= 60 &&
           displacement.dx.abs() > displacement.dy.abs() * 1.35) {
         widget.onCardTypeStep(displacement.dx < 0 ? 1 : -1);
-      } else if (displacement.distance <= 16 && photoIndex != null) {
-        widget.onPhotoTapped(photoIndex);
+      } else if (displacement.distance <= 16) {
+        final wasConsumed = widget.onCanvasTapped?.call() ?? false;
+        if (!wasConsumed && photoIndex != null) {
+          widget.onPhotoTapped(photoIndex);
+        }
       }
     }
 
