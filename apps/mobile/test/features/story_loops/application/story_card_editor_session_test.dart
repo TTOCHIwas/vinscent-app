@@ -9,41 +9,50 @@ import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 void main() {
-  test('new card starts at the format selection stage', () {
+  test('new card starts in the camera with the full-bleed format', () {
     final session = StoryCardEditorSession.fromDraft(
-      StoryCardDraft(scene: StoryCardScene.empty()),
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+      ),
     );
 
-    expect(session.stage, StoryCardEditorStage.formatSelection);
+    expect(session.stage, StoryCardEditorStage.camera);
+    expect(session.draft.scene.cardType, StoryCardType.fullBleed);
     expect(session.hasUnsavedChanges, isFalse);
   });
 
   test(
-    'selecting a format routes polaroid to camera and four-cut to assembly',
+    'changing type in the editor preserves captured photos and edit layers',
     () {
+      final firstPhoto = Uint8List.fromList([1]);
+      const layer = StoryCardTextLayer(
+        id: 'layer',
+        text: '함께',
+        x: 0.5,
+        y: 0.5,
+        color: Color(0xFF111111),
+      );
       final session = StoryCardEditorSession.fromDraft(
-        StoryCardDraft(scene: StoryCardScene.empty()),
-      );
+        StoryCardDraft(
+          scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+        ),
+      ).enterPhotoDecorator(firstPhoto).addTextLayer(layer);
 
-      expect(
-        session.selectCardType(StoryCardType.polaroid).stage,
-        StoryCardEditorStage.camera,
-      );
-      expect(
-        session.selectCardType(StoryCardType.fourCutGrid).stage,
-        StoryCardEditorStage.assembling,
-      );
-      expect(
-        session.selectCardType(StoryCardType.fourCutStrip).draft.scene.cardType,
-        StoryCardType.fourCutStrip,
-      );
+      final fourCut = session.changeCardType(StoryCardType.fourCutGrid);
+      final polaroid = fourCut.changeCardType(StoryCardType.polaroid);
+
+      expect(fourCut.stage, StoryCardEditorStage.decorating);
+      expect(fourCut.draft.photoImageBytes.first, same(firstPhoto));
+      expect(fourCut.draft.scene.textLayers, [layer]);
+      expect(polaroid.draft.photoImageBytes.single, same(firstPhoto));
+      expect(polaroid.draft.scene.textLayers, [layer]);
     },
   );
 
   test('four-cut photos are filled independently before decorating', () {
     var session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(scene: StoryCardScene.empty()),
-    ).selectCardType(StoryCardType.fourCutGrid);
+    ).changeCardType(StoryCardType.fourCutGrid);
 
     for (var index = 0; index < 4; index++) {
       session = session.setPhoto(index, Uint8List.fromList([index]));
@@ -61,7 +70,7 @@ void main() {
         StoryCardEditorSession.fromDraft(
               StoryCardDraft(scene: StoryCardScene.empty()),
             )
-            .selectCardType(StoryCardType.polaroid)
+            .changeCardType(StoryCardType.polaroid)
             .enterPhotoDecorator(Uint8List.fromList([1, 2, 3]), film: film);
 
     expect(session.stage, StoryCardEditorStage.decorating);
@@ -79,7 +88,7 @@ void main() {
           StoryCardEditorSession.fromDraft(
                 StoryCardDraft(scene: StoryCardScene.empty()),
               )
-              .selectCardType(StoryCardType.polaroid)
+              .changeCardType(StoryCardType.polaroid)
               .enterPhotoDecorator(bytes)
               .setFilm(
                 const StoryCardFilmState(
@@ -110,7 +119,7 @@ void main() {
         StoryCardEditorSession.fromDraft(
               StoryCardDraft(scene: StoryCardScene.empty()),
             )
-            .selectCardType(StoryCardType.polaroid)
+            .changeCardType(StoryCardType.polaroid)
             .enterPhotoDecorator(Uint8List.fromList([1]))
             .discardChanges();
 
@@ -124,7 +133,7 @@ void main() {
         StoryCardEditorSession.fromDraft(
               StoryCardDraft(scene: StoryCardScene.empty()),
             )
-            .selectCardType(StoryCardType.polaroid)
+            .changeCardType(StoryCardType.polaroid)
             .enterBlankDecorator(tool: StoryCardEditorTool.drawing)
             .returnToCamera();
 
@@ -280,5 +289,68 @@ void main() {
     );
     expect(updated.draft.scene.photoTransforms[2].scale, 1.4);
     expect(updated.draft.photoImageBytes[1], Uint8List.fromList([9]));
+  });
+
+  test('reordering photos keeps bytes, transform, and film together', () {
+    const transformed = StoryCardBackgroundTransform(
+      scale: 1.7,
+      offsetX: 0.2,
+      offsetY: -0.1,
+      rotation: 0.4,
+    );
+    const filtered = StoryCardFilmState(
+      look: StoryCardFilmLook.quiet,
+      seed: 77,
+    );
+    var session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid),
+      ),
+    );
+    for (var index = 0; index < 4; index++) {
+      session = session.setPhoto(index, Uint8List.fromList([index]));
+    }
+    session = session
+        .setPhotoTransform(0, transformed)
+        .setPhotoFilm(0, filtered)
+        .reorderPhotos(0, 2);
+
+    expect(session.draft.photoImageBytes[2], Uint8List.fromList([0]));
+    expect(session.draft.scene.photoTransforms[2], transformed);
+    expect(session.draft.scene.photoFilms[2], filtered);
+    expect(session.draft.photoImageBytes[0], Uint8List.fromList([2]));
+  });
+
+  test('removing one photo clears only that photo state', () {
+    var session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid),
+      ),
+    ).setPhoto(1, Uint8List.fromList([9]));
+    session = session
+        .setPhotoTransform(
+          1,
+          const StoryCardBackgroundTransform(
+            scale: 2,
+            offsetX: 0.1,
+            offsetY: 0.2,
+            rotation: 0.3,
+          ),
+        )
+        .setPhotoFilm(
+          1,
+          const StoryCardFilmState(look: StoryCardFilmLook.color, seed: 12),
+        )
+        .removePhoto(1);
+
+    expect(session.draft.photoImageBytes[1], isNull);
+    expect(
+      session.draft.scene.photoTransforms[1],
+      const StoryCardBackgroundTransform.initial(),
+    );
+    expect(
+      session.draft.scene.photoFilms[1],
+      const StoryCardFilmState.original(),
+    );
   });
 }

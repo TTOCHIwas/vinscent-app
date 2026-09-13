@@ -116,6 +116,46 @@ void main() {
     );
   });
 
+  test('scene preserves rotation and one film state per photo', () {
+    final scene = StoryCardScene.empty(cardType: StoryCardType.fourCutGrid)
+        .withPhotoTransform(
+          2,
+          const StoryCardBackgroundTransform(
+            scale: 1.4,
+            offsetX: 0.1,
+            offsetY: -0.2,
+            rotation: 0.35,
+          ),
+        )
+        .withPhotoFilm(
+          2,
+          const StoryCardFilmState(look: StoryCardFilmLook.moment, seed: 42),
+        );
+
+    final restored = StoryCardScene.fromJsonString(scene.toJsonString());
+
+    expect(restored.photoTransforms[2].rotation, 0.35);
+    expect(restored.photoFilms[2].look, StoryCardFilmLook.moment);
+    expect(restored.photoFilms[2].seed, 42);
+    expect(restored.toJson()['version'], 7);
+  });
+
+  test('legacy global film is inherited by every photo slot', () {
+    final restored = StoryCardScene.fromJson({
+      'version': 6,
+      'card_type': 'four_cut_grid',
+      'film': {'look': 'warmth', 'seed': 91},
+    });
+
+    expect(restored.photoFilms, hasLength(4));
+    expect(
+      restored.photoFilms,
+      everyElement(
+        const StoryCardFilmState(look: StoryCardFilmLook.warmth, seed: 91),
+      ),
+    );
+  });
+
   test('legacy scene defaults to pen strokes and unrotated text', () {
     final restored = StoryCardScene.fromJson({
       'version': 1,

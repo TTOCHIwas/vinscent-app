@@ -267,6 +267,43 @@ void main() {
     expect(switchCenter.dy, closeTo(captureCenter.dy, 1));
   });
 
+  testWidgets('최초 카메라에는 카드 프레임 가이드를 표시하지 않는다', (tester) async {
+    await tester.pumpWidget(_subject());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('story-card-camera-crop-guide')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('사진 칸 카메라는 대상 비율 가이드와 임시저장함 진입을 제공한다', (tester) async {
+    var draftsPressed = false;
+    await tester.pumpWidget(
+      _subject(
+        guideAspectRatio: 1,
+        draftCount: 2,
+        onDraftsPressed: () => draftsPressed = true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final close = find.byKey(const ValueKey('story-card-camera-close'));
+    final drafts = find.byKey(const ValueKey('story-card-camera-drafts'));
+    final guide = find.byKey(const ValueKey('story-card-camera-crop-guide'));
+    expect(guide, findsOneWidget);
+    expect(tester.getSize(guide).aspectRatio, closeTo(1, 0.01));
+    expect(drafts, findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(
+      tester.getCenter(drafts).dx,
+      greaterThan(tester.getCenter(close).dx),
+    );
+
+    await tester.tap(drafts);
+    expect(draftsPressed, isTrue);
+  });
+
   testWidgets('필름 도구에서 촬영 전 룩을 선택한다', (tester) async {
     StoryCardFilmState? selectedFilm;
     await tester.pumpWidget(
@@ -396,6 +433,9 @@ Widget _subject({
   ValueChanged<StoryCardFilmState>? onFilmChanged,
   StoryCardFaceDetector? faceDetector,
   Future<Uint8List?> Function()? loadCharacterImage,
+  double? guideAspectRatio,
+  int draftCount = 0,
+  VoidCallback? onDraftsPressed,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -405,6 +445,9 @@ Widget _subject({
         onFilmChanged: onFilmChanged,
         faceDetector: faceDetector,
         loadCharacterImage: loadCharacterImage,
+        guideAspectRatio: guideAspectRatio,
+        draftCount: draftCount,
+        onDraftsPressed: onDraftsPressed,
         onTextSelected: () {},
         onDrawingSelected: () {},
       ),

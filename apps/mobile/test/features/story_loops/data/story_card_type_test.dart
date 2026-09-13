@@ -4,20 +4,41 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 void main() {
-  test('defines the three supported story card formats', () {
+  test('defines the four supported story card formats in editor order', () {
+    expect(StoryCardType.editorOrder, [
+      StoryCardType.fullBleed,
+      StoryCardType.polaroid,
+      StoryCardType.fourCutGrid,
+      StoryCardType.fourCutStrip,
+    ]);
+    expect(StoryCardType.fullBleed.storageValue, 'full_bleed');
     expect(StoryCardType.polaroid.storageValue, 'polaroid');
     expect(StoryCardType.fourCutGrid.storageValue, 'four_cut_grid');
     expect(StoryCardType.fourCutStrip.storageValue, 'four_cut_strip');
 
+    expect(StoryCardType.fullBleed.canvasAspectRatio, 4 / 5);
     expect(StoryCardType.polaroid.canvasAspectRatio, 4 / 5);
     expect(StoryCardType.fourCutGrid.canvasAspectRatio, 4 / 5);
     expect(StoryCardType.fourCutStrip.canvasAspectRatio, 2 / 5);
+    expect(StoryCardType.fullBleed.requiredPhotoCount, 1);
     expect(StoryCardType.polaroid.requiredPhotoCount, 1);
     expect(StoryCardType.fourCutGrid.requiredPhotoCount, 4);
     expect(StoryCardType.fourCutStrip.requiredPhotoCount, 4);
+    expect(StoryCardType.fullBleed.supportsCaption, isFalse);
     expect(StoryCardType.polaroid.supportsCaption, isTrue);
     expect(StoryCardType.fourCutGrid.supportsCaption, isFalse);
     expect(StoryCardType.fourCutStrip.supportsCaption, isFalse);
+  });
+
+  test('full-bleed layout uses the entire card as its photo frame', () {
+    final layout = StoryCardLayout.fromSize(
+      type: StoryCardType.fullBleed,
+      size: const Size(400, 500),
+    );
+
+    expect(layout.photoRects, [const Rect.fromLTWH(0, 0, 400, 500)]);
+    expect(layout.captionRect, isNull);
+    expect(layout.photoAspectRatio(0), 4 / 5);
   });
 
   test('unknown persisted formats remain backward compatible', () {
