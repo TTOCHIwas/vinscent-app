@@ -45,6 +45,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(result, StoryCardDraftExitAction.saveDraft);
   });
+
+  testWidgets('바깥 영역을 누르면 선택 없이 임시저장 확인창을 닫는다', (tester) async {
+    StoryCardDraftExitAction? result = StoryCardDraftExitAction.discard;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              result = await showStoryCardDraftExitDialog(context: context);
+            },
+            child: const Text('열기'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(result, isNull);
+  });
 }
 
 Color? _labelColor(WidgetTester tester, Finder button) {

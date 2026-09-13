@@ -246,7 +246,7 @@ class _CalendarSettingsScreenState extends ConsumerState<CalendarSettingsScreen>
     return showDialog<_DeviceCalendarDisableChoice>(
       context: context,
       useRootNavigator: true,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,

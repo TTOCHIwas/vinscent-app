@@ -12,7 +12,7 @@ Future<StoryCardDraftExitAction?> showStoryCardDraftExitDialog({
   return showDialog<StoryCardDraftExitAction>(
     context: context,
     useRootNavigator: true,
-    barrierDismissible: false,
+    barrierDismissible: true,
     builder: (context) => const StoryCardDraftExitDialog(),
   );
 }

@@ -90,18 +90,11 @@ void main() {
     expect(result, isFalse);
   });
 
-  testWidgets('outside taps do not discard and system back cancels', (
-    tester,
-  ) async {
+  testWidgets('outside taps close the dialog and return false', (tester) async {
     bool? result;
     await _openConfirmation(tester, onResult: (value) => result = value);
 
     await tester.tapAt(const Offset(8, 8));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(result, isNull);
-
-    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(result, isFalse);
     expect(find.byType(AlertDialog), findsNothing);
