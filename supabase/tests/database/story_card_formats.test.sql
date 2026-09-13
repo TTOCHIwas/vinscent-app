@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(12);
+select plan(15);
 
 select has_column(
   'public',
@@ -146,6 +146,27 @@ values
     '82000000-0000-0000-0000-000000000001/loops/'
       || current_date::text
       || '/81000000-0000-0000-0000-000000000001/'
+      || '85000000-0000-0000-0000-000000000004/preview.png'
+  ),
+  (
+    'story-cards',
+    '82000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/81000000-0000-0000-0000-000000000001/'
+      || '85000000-0000-0000-0000-000000000004/scene.json'
+  ),
+  (
+    'story-cards',
+    '82000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/81000000-0000-0000-0000-000000000001/'
+      || '85000000-0000-0000-0000-000000000004/background.jpg'
+  ),
+  (
+    'story-cards',
+    '82000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/81000000-0000-0000-0000-000000000001/'
       || '85000000-0000-0000-0000-000000000002/preview.png'
   ),
   (
@@ -162,6 +183,69 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select lives_ok(
+  $$select * from public.upsert_today_story_loop_card_v2(
+    '85000000-0000-0000-0000-000000000004',
+    '82000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/81000000-0000-0000-0000-000000000001/'
+      || '85000000-0000-0000-0000-000000000004/preview.png',
+    '82000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/81000000-0000-0000-0000-000000000001/'
+      || '85000000-0000-0000-0000-000000000004/scene.json',
+    '82000000-0000-0000-0000-000000000001/loops/'
+      || current_date::text
+      || '/81000000-0000-0000-0000-000000000001/'
+      || '85000000-0000-0000-0000-000000000004/background.jpg',
+    true,
+    false,
+    false,
+    0,
+    0,
+    'full_bleed',
+    1,
+    false,
+    null
+  )$$,
+  'a full-bleed photo card saves with one source photo'
+);
+
+reset role;
+
+select is(
+  (
+    select card_type
+    from public.story_loop_cards
+    where artifact_revision = '85000000-0000-0000-0000-000000000004'
+  ),
+  'full_bleed',
+  'the full-bleed format is persisted'
+);
+
+set local role authenticated;
+
+select throws_ok(
+  $$select * from public.upsert_today_story_loop_card_v2(
+    '85000000-0000-0000-0000-000000000005',
+    'unused-preview',
+    'unused-scene',
+    'unused-background',
+    true,
+    false,
+    false,
+    0,
+    0,
+    'full_bleed',
+    1,
+    true,
+    null
+  )$$,
+  'P0001',
+  'invalid_story_card_caption',
+  'full-bleed cards reject polaroid captions'
+);
 
 select lives_ok(
   $$select * from public.upsert_today_story_loop_card_v2(
