@@ -59,6 +59,8 @@ class _StoryCardStackOverlay extends ConsumerStatefulWidget {
 
 class _StoryCardStackOverlayState
     extends ConsumerState<_StoryCardStackOverlay> {
+  static const _cardControlClearance = 56.0;
+
   PageController? _pageController;
   var _currentIndex = 0;
   var _isMutating = false;
@@ -103,7 +105,12 @@ class _StoryCardStackOverlayState
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _buildCardArea(itemsAsync, items),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: _cardControlClearance,
+                  ),
+                  child: _buildCardArea(itemsAsync, items),
+                ),
                 Positioned(
                   top: 0,
                   left: 0,
@@ -203,8 +210,7 @@ class _StoryCardStackOverlayState
               final item = items[index];
               final cardWidth = math.min(
                 constraints.maxWidth,
-                (constraints.maxHeight - 48) *
-                    item.card.cardType.canvasAspectRatio,
+                constraints.maxHeight * item.card.cardType.canvasAspectRatio,
               );
               return Center(
                 child: Stack(
@@ -268,7 +274,7 @@ class _StoryCardStackOverlayState
       builder: (context, constraints) {
         final cardWidth = math.min(
           constraints.maxWidth,
-          (constraints.maxHeight - 48) *
+          constraints.maxHeight *
               widget.stack.latestCard.cardType.canvasAspectRatio,
         );
         return Center(

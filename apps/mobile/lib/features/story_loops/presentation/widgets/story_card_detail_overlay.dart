@@ -72,6 +72,7 @@ class _StoryCardDetailOverlay extends ConsumerStatefulWidget {
   static const _horizontalMargin = 16.0;
   static const _verticalMargin = 24.0;
   static const _closeButtonExtent = 44.0;
+  static const _cardActionClearance = 56.0;
 
   final String cardId;
   final String? previewUrl;
@@ -102,7 +103,7 @@ class _StoryCardDetailOverlayState
             final heightBound = math.max(
               0.0,
               constraints.maxHeight -
-                  _StoryCardDetailOverlay._closeButtonExtent,
+                  _StoryCardDetailOverlay._cardActionClearance,
             );
             final cardWidth = math.min(
               widthBound,
@@ -112,16 +113,21 @@ class _StoryCardDetailOverlayState
             return Stack(
               fit: StackFit.expand,
               children: [
-                Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {},
-                    child: StoryCardPreviewSurface(
-                      surfaceKey: Key('story-card-detail-${widget.cardId}'),
-                      previewUrl: widget.previewUrl,
-                      width: cardWidth,
-                      cardType: widget.cardType,
-                      semanticsLabel: _cardSemanticsLabel,
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: _StoryCardDetailOverlay._cardActionClearance,
+                  ),
+                  child: Center(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {},
+                      child: StoryCardPreviewSurface(
+                        surfaceKey: Key('story-card-detail-${widget.cardId}'),
+                        previewUrl: widget.previewUrl,
+                        width: cardWidth,
+                        cardType: widget.cardType,
+                        semanticsLabel: _cardSemanticsLabel,
+                      ),
                     ),
                   ),
                 ),
