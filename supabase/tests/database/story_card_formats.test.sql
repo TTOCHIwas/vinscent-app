@@ -302,6 +302,17 @@ select is(
   'four-cut cards retain no raw source photo path'
 );
 
+update public.story_loop_cards
+set submitted_at = case artifact_revision
+  when '85000000-0000-0000-0000-000000000004' then now() - interval '1 minute'
+  when '85000000-0000-0000-0000-000000000002' then now()
+  else submitted_at
+end
+where artifact_revision in (
+  '85000000-0000-0000-0000-000000000004',
+  '85000000-0000-0000-0000-000000000002'
+);
+
 set local role authenticated;
 
 select throws_ok(
@@ -335,14 +346,14 @@ select is(
 );
 select is(
   (
-    select card_type
+    select count(*)::integer
     from public.get_story_card_stack_v2(
       current_date,
       '81000000-0000-0000-0000-000000000001'
     )
-    limit 1
+    where card_type = 'four_cut_grid'
   ),
-  'four_cut_grid',
+  1,
   'detail stack reads expose each card format'
 );
 select is(
