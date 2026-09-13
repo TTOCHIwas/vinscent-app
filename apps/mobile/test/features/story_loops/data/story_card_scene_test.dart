@@ -233,7 +233,9 @@ void main() {
   test('inactive photos do not make the active card saveable', () {
     final draft = StoryCardDraft(
       scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
-      additionalPhotoImageBytes: [Uint8List.fromList([2])],
+      additionalPhotoImageBytes: [
+        Uint8List.fromList([2]),
+      ],
     );
 
     expect(draft.hasPhoto, isFalse);

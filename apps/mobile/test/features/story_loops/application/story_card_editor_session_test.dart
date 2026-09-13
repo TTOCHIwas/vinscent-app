@@ -53,7 +53,9 @@ void main() {
     final session = StoryCardEditorSession.fromDraft(
       StoryCardDraft(
         scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
-        additionalPhotoImageBytes: [Uint8List.fromList([2])],
+        additionalPhotoImageBytes: [
+          Uint8List.fromList([2]),
+        ],
       ),
     );
 
