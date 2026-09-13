@@ -273,6 +273,30 @@ void main() {
     expect(find.byType(StoryCardPhotoAdjustmentScreen), findsNothing);
   });
 
+  testWidgets('하단 유형 선택기가 보여도 캔버스 좌우 스와이프로 유형을 바꾼다', (tester) async {
+    await _pumpEditor(
+      tester,
+      draft: _photoDraftForType(StoryCardType.fullBleed),
+    );
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final selectorSlide = find.byKey(
+      const ValueKey('story-card-editor-type-selector-slide'),
+    );
+
+    await tester.tapAt(tester.getCenter(canvas));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+
+    for (var index = 0; index < 3; index++) {
+      await tester.drag(canvas, const Offset(-100, 0));
+      await tester.pump();
+    }
+
+    expect(tester.getSize(canvas).aspectRatio, closeTo(2 / 5, 0.001));
+    expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+  });
+
   testWidgets('카드 유형 아이콘 선택은 캔버스를 바꾸고 2초 뒤 선택기를 내린다', (tester) async {
     await _pumpEditor(
       tester,
