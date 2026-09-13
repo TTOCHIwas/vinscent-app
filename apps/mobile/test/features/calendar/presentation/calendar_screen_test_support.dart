@@ -29,8 +29,10 @@ import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_question_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_read_repository.dart';
+import 'package:vinscent/features/story_loops/data/story_card_stack_item.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/data/today_story_loop_summary.dart';
+import 'package:vinscent/features/story_loops/application/today_story_card_stacks_provider.dart';
 
 import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
@@ -78,6 +80,7 @@ Future<GoRouter> pumpCalendar(
   CalendarCellPreviewMode previewMode = CalendarCellPreviewMode.all,
   Future<CalendarCellPreviewMode>? previewModeResult,
   SafetyReportRepository? safetyReportRepository,
+  List<StoryCardStackItem>? storyCardStackItems,
   double textScaleFactor = 1,
 }) async {
   final calendarEventRepository = _FakeCalendarEventRepository(
@@ -153,6 +156,10 @@ Future<GoRouter> pumpCalendar(
           );
         }),
         storyLoopReadRepositoryProvider.overrideWithValue(repository),
+        if (storyCardStackItems != null)
+          storyCardStackProvider.overrideWith(
+            (ref, request) => Future.value(storyCardStackItems),
+          ),
         coupleCalendarEventRepositoryProvider.overrideWithValue(
           calendarEventRepository,
         ),

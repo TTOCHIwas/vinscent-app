@@ -84,11 +84,10 @@ class _LoadedDetailSection extends StatelessWidget {
               currentUserId: currentUserId,
               onCardTap: (card) => showStoryCardDetailOverlay(
                 context: context,
-                cardId: card.id,
-                previewUrl: card.previewUrl,
-                cardType: card.cardType,
-                canReport:
-                    currentUserId != null && card.authorUserId != currentUserId,
+                date: detail.coupleDate,
+                card: card,
+                isMine:
+                    currentUserId == null || card.authorUserId == currentUserId,
               ),
             ),
           ],

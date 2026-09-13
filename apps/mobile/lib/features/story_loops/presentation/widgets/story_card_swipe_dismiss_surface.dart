@@ -5,10 +5,12 @@ class StoryCardSwipeDismissSurface extends StatefulWidget {
     super.key,
     required this.onDismissed,
     required this.child,
+    this.enabled = true,
   });
 
   final VoidCallback onDismissed;
   final Widget child;
+  final bool enabled;
 
   @override
   State<StoryCardSwipeDismissSurface> createState() =>
@@ -45,6 +47,14 @@ class _StoryCardSwipeDismissSurfaceState
   }
 
   @override
+  void didUpdateWidget(covariant StoryCardSwipeDismissSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled) {
+      _restore();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -64,7 +74,9 @@ class _StoryCardSwipeDismissSurfaceState
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   excludeFromSemantics: true,
-                  onTap: _isDismissing ? null : widget.onDismissed,
+                  onTap: !widget.enabled || _isDismissing
+                      ? null
+                      : widget.onDismissed,
                   child: IgnorePointer(
                     child: ColoredBox(
                       color: Colors.black.withValues(
@@ -75,10 +87,12 @@ class _StoryCardSwipeDismissSurfaceState
                 ),
                 GestureDetector(
                   excludeFromSemantics: true,
-                  onVerticalDragStart: _handleDragStart,
-                  onVerticalDragUpdate: _handleDragUpdate,
-                  onVerticalDragEnd: _handleDragEnd,
-                  onVerticalDragCancel: _restore,
+                  onVerticalDragStart: widget.enabled ? _handleDragStart : null,
+                  onVerticalDragUpdate: widget.enabled
+                      ? _handleDragUpdate
+                      : null,
+                  onVerticalDragEnd: widget.enabled ? _handleDragEnd : null,
+                  onVerticalDragCancel: widget.enabled ? _restore : null,
                   child: Transform.translate(
                     key: const Key('story-card-stack-dismiss-translation'),
                     offset: Offset(0, progress * _viewportHeight),

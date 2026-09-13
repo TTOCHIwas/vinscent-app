@@ -30,6 +30,7 @@ import 'widgets/story_card_editor_action_bar.dart';
 import 'widgets/story_card_editor_canvas.dart';
 import 'widgets/story_card_editor_header.dart';
 import 'widgets/story_card_film_look_selector.dart';
+import 'widgets/story_card_interactive_viewport.dart';
 import 'widgets/story_card_local_draft_sheet.dart';
 import 'widgets/story_card_photo_adjustment_screen.dart';
 import 'widgets/story_card_photo_slot_controls.dart';
@@ -78,6 +79,7 @@ class _StoryCardEditorContentState
   final _previewKey = GlobalKey();
   final _textTrashTargetKey = GlobalKey();
   final _galleryPicker = StoryCardGalleryPicker();
+  final _viewportController = StoryCardViewportController();
 
   late StoryCardEditorSession _session;
   late List<ui.Image?> _backgroundImages;
@@ -143,6 +145,7 @@ class _StoryCardEditorContentState
     _cardTypeSelectorHideTimer?.cancel();
     _cardTypeGuideFadeTimer?.cancel();
     _cardTypeGuideRemovalTimer?.cancel();
+    _viewportController.dispose();
     _disposeImages(_backgroundImages);
     super.dispose();
   }
@@ -216,51 +219,50 @@ class _StoryCardEditorContentState
         children: [
           SafeArea(
             child: Padding(
-              padding: _session.tool == StoryCardEditorTool.drawing
-                  ? StoryCardDrawingControls.canvasInsets
-                  : const EdgeInsets.only(top: 68, bottom: 72),
-              child: Center(
-                child: AspectRatio(
+              padding: storyCardEditorViewportInsets,
+              child: StoryCardInteractiveViewport(
+                controller: _viewportController,
+                aspectRatio: _draft.scene.cardType.canvasAspectRatio,
+                builder: (context, contentSize, viewportGestures) => Stack(
                   key: const ValueKey('story-card-editor-canvas'),
-                  aspectRatio: _draft.scene.cardType.canvasAspectRatio,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      RepaintBoundary(
-                        key: _previewKey,
-                        child: StoryCardEditorCanvas(
-                          backgroundImages: _backgroundImages,
-                          filmProgram: _filmProgram,
-                          scene: _draft.scene,
-                          visibleStrokes: _visibleStrokes,
-                          interactionMode: _session.tool,
-                          onStrokeStart: _startStroke,
-                          onStrokeUpdate: _updateStroke,
-                          onStrokeEnd: _endStroke,
-                          onPhotoTapped: _handlePhotoTapped,
-                          onPhotosReordered: _reorderPhotos,
-                          onCardTypeStep: _stepCardType,
-                          onCanvasTapped: _handleCanvasTapped,
-                          onTextLayerScaleStart: _startTextLayerTransform,
-                          onTextLayerScaleUpdate: _updateTextLayerTransform,
-                          onTextLayerScaleEnd: _endTextLayerTransform,
-                        ),
+                  fit: StackFit.expand,
+                  children: [
+                    RepaintBoundary(
+                      key: _previewKey,
+                      child: StoryCardEditorCanvas(
+                        backgroundImages: _backgroundImages,
+                        filmProgram: _filmProgram,
+                        scene: _draft.scene,
+                        visibleStrokes: _visibleStrokes,
+                        interactionMode: _session.tool,
+                        onStrokeStart: _startStroke,
+                        onStrokeUpdate: _updateStroke,
+                        onStrokeEnd: _endStroke,
+                        onStrokeCancel: _cancelStroke,
+                        onPhotoTapped: _handlePhotoTapped,
+                        onPhotosReordered: _reorderPhotos,
+                        onCardTypeStep: _stepCardType,
+                        onCanvasTapped: _handleCanvasTapped,
+                        onTextLayerScaleStart: _startTextLayerTransform,
+                        onTextLayerScaleUpdate: _updateTextLayerTransform,
+                        onTextLayerScaleEnd: _endTextLayerTransform,
+                        viewportGestures: viewportGestures,
                       ),
-                      if (_session.tool != StoryCardEditorTool.drawing &&
-                          !_isTextInputActive)
-                        StoryCardPhotoSlotControls(
-                          cardType: _draft.scene.cardType,
-                          hasPhotos: _draft.photoImageBytes
-                              .map((bytes) => bytes != null)
-                              .toList(growable: false),
-                          selectedEmptyIndex: _selectedEmptyPhotoIndex,
-                          isPickingGallery: _isPickingGallery,
-                          onCameraPressed: _openPhotoSlotCamera,
-                          onGalleryPressed: (index) =>
-                              unawaited(_pickPhotoForSlot(index)),
-                        ),
-                    ],
-                  ),
+                    ),
+                    if (_session.tool != StoryCardEditorTool.drawing &&
+                        !_isTextInputActive)
+                      StoryCardPhotoSlotControls(
+                        cardType: _draft.scene.cardType,
+                        hasPhotos: _draft.photoImageBytes
+                            .map((bytes) => bytes != null)
+                            .toList(growable: false),
+                        selectedEmptyIndex: _selectedEmptyPhotoIndex,
+                        isPickingGallery: _isPickingGallery,
+                        onCameraPressed: _openPhotoSlotCamera,
+                        onGalleryPressed: (index) =>
+                            unawaited(_pickPhotoForSlot(index)),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -332,6 +334,7 @@ class _StoryCardEditorContentState
                   selectedTool: _selectedDrawingTool,
                   selectedColor: _selectedColor,
                   selectedStrokeWidth: _selectedStrokeWidth,
+                  cardAspectRatio: _draft.scene.cardType.canvasAspectRatio,
                   canUndo:
                       _activeStroke == null && _draft.scene.strokes.isNotEmpty,
                   onToolChanged: (tool) {
@@ -767,7 +770,9 @@ class _StoryCardEditorContentState
   }
 
   void _stepCardType(int step) {
-    if (_session.tool == StoryCardEditorTool.drawing || step == 0) {
+    if (_session.tool == StoryCardEditorTool.drawing ||
+        _viewportController.isZoomed ||
+        step == 0) {
       return;
     }
     final types = StoryCardType.editorOrder;
@@ -783,6 +788,7 @@ class _StoryCardEditorContentState
     if (_cameraTargetPhotoIndex != null || type == _draft.scene.cardType) {
       return;
     }
+    _viewportController.reset();
     setState(() {
       _session = _session.changeCardType(type);
       _selectedPhotoIndex = 0;
@@ -792,6 +798,9 @@ class _StoryCardEditorContentState
 
   void _selectCardType(StoryCardType type) {
     _cardTypeSelectorHideTimer?.cancel();
+    if (type != _draft.scene.cardType) {
+      _viewportController.reset();
+    }
     setState(() {
       if (type != _draft.scene.cardType) {
         _session = _session.changeCardType(type);
@@ -1386,6 +1395,16 @@ class _StoryCardEditorContentState
       if (activeStroke != null) {
         _session = _session.appendStroke(activeStroke);
       }
+    });
+  }
+
+  void _cancelStroke(int pointer) {
+    if (_activePointer != pointer) {
+      return;
+    }
+    setState(() {
+      _activePointer = null;
+      _activeStroke = null;
     });
   }
 

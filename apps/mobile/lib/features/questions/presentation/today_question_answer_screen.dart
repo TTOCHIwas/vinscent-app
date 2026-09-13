@@ -384,7 +384,10 @@ class _QuestionDetailContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (cardPair.hasCard) ...[
-            _QuestionAnswerCards(cardPair: cardPair),
+            _QuestionAnswerCards(
+              cardPair: cardPair,
+              date: question.assignedDate,
+            ),
             SizedBox(height: showQuestionAsTitle ? 28 : 16),
           ],
           if (showQuestionAsTitle)
@@ -510,7 +513,10 @@ class _AnswerFormState extends ConsumerState<_AnswerForm> {
             child: Column(
               children: [
                 if (!compactLayout && cardPair.hasCard) ...[
-                  _QuestionAnswerCards(cardPair: cardPair),
+                  _QuestionAnswerCards(
+                    cardPair: cardPair,
+                    date: widget.question.assignedDate,
+                  ),
                   const SizedBox(height: 16),
                 ],
                 QuestionAnswerPromptRow(
@@ -655,9 +661,10 @@ VoidCallback? _buildAiQuestionReportAction(
 }
 
 class _QuestionAnswerCards extends StatelessWidget {
-  const _QuestionAnswerCards({required this.cardPair});
+  const _QuestionAnswerCards({required this.cardPair, required this.date});
 
   final _QuestionAnswerCardPair cardPair;
+  final DateTime date;
 
   @override
   Widget build(BuildContext context) {
@@ -667,6 +674,7 @@ class _QuestionAnswerCards extends StatelessWidget {
           : (context, cardWidth) => _QuestionAnswerStoryCard(
               card: cardPair.myCard!,
               width: cardWidth,
+              date: date,
               canReport: false,
             ),
       rightCardBuilder: cardPair.partnerCard == null
@@ -674,6 +682,7 @@ class _QuestionAnswerCards extends StatelessWidget {
           : (context, cardWidth) => _QuestionAnswerStoryCard(
               card: cardPair.partnerCard!,
               width: cardWidth,
+              date: date,
               canReport: cardPair.canReportPartnerCard,
             ),
     );
@@ -684,11 +693,13 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
   const _QuestionAnswerStoryCard({
     required this.card,
     required this.width,
+    required this.date,
     required this.canReport,
   });
 
   final StoryLoopCardDetail card;
   final double width;
+  final DateTime date;
   final bool canReport;
 
   @override
@@ -705,10 +716,9 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
         cardType: card.cardType,
         onTap: () => showStoryCardDetailOverlay(
           context: context,
-          cardId: card.id,
-          previewUrl: card.previewUrl,
-          cardType: card.cardType,
-          canReport: canReport,
+          date: date,
+          card: card,
+          isMine: !canReport,
         ),
         semanticsLabel: '스토리 카드',
       ),

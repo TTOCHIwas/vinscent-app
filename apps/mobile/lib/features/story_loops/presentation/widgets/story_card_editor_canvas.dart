@@ -11,6 +11,7 @@ import '../../application/story_card_editor_session.dart';
 import '../../data/story_card_film_look.dart';
 import '../../data/story_card_scene.dart';
 import '../../data/story_card_type.dart';
+import 'story_card_interactive_viewport.dart';
 
 class StoryCardEditorCanvas extends StatefulWidget {
   const StoryCardEditorCanvas({
@@ -23,6 +24,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
     required this.onStrokeStart,
     required this.onStrokeUpdate,
     required this.onStrokeEnd,
+    required this.onStrokeCancel,
     required this.onPhotoTapped,
     required this.onPhotosReordered,
     required this.onCardTypeStep,
@@ -30,6 +32,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
     required this.onTextLayerScaleStart,
     required this.onTextLayerScaleUpdate,
     required this.onTextLayerScaleEnd,
+    required this.viewportGestures,
   });
 
   final List<ui.Image?> backgroundImages;
@@ -40,6 +43,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
   final void Function(StoryCardPoint point, int pointer) onStrokeUpdate;
   final ValueChanged<int> onStrokeEnd;
+  final ValueChanged<int> onStrokeCancel;
   final ValueChanged<int> onPhotoTapped;
   final void Function(int fromIndex, int toIndex) onPhotosReordered;
   final ValueChanged<int> onCardTypeStep;
@@ -49,6 +53,7 @@ class StoryCardEditorCanvas extends StatefulWidget {
   final void Function(String layerId, ScaleUpdateDetails details, Size size)
   onTextLayerScaleUpdate;
   final VoidCallback onTextLayerScaleEnd;
+  final StoryCardViewportGestures viewportGestures;
 
   @override
   State<StoryCardEditorCanvas> createState() => _StoryCardEditorCanvasState();
@@ -67,6 +72,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
   int? _longPressPhotoIndex;
   bool _longPressActivated = false;
   bool _gestureHadMultiplePointers = false;
+  bool _gestureUsedViewport = false;
 
   @override
   void dispose() {
@@ -173,7 +179,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                         onPointerUp: (event) =>
                             widget.onStrokeEnd(event.pointer),
                         onPointerCancel: (event) =>
-                            widget.onStrokeEnd(event.pointer),
+                            widget.onStrokeCancel(event.pointer),
                       ),
                     ),
                 ],
@@ -198,6 +204,12 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     if (textLayerId != null) {
       _lockedTextLayerId = textLayerId;
       widget.onTextLayerScaleStart(textLayerId, details);
+      return;
+    }
+
+    if (details.pointerCount >= 2 || widget.viewportGestures.isZoomed()) {
+      _gestureUsedViewport = true;
+      widget.viewportGestures.begin(details.focalPoint);
     }
   }
 
@@ -206,6 +218,14 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     if (lockedTextLayerId != null) {
       widget.onTextLayerScaleUpdate(lockedTextLayerId, details, size);
       return;
+    }
+    if (!_gestureUsedViewport &&
+        (details.pointerCount >= 2 || widget.viewportGestures.isZoomed())) {
+      _gestureUsedViewport = true;
+      widget.viewportGestures.begin(details.focalPoint);
+    }
+    if (_gestureUsedViewport) {
+      widget.viewportGestures.update(details.focalPoint, details.scale);
     }
   }
 
@@ -216,6 +236,11 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     if (_activePointers.length > 1) {
       _gestureHadMultiplePointers = true;
       _cancelPhotoLongPress();
+      if (widget.interactionMode == StoryCardEditorTool.drawing) {
+        for (final pointer in _activePointers) {
+          widget.onStrokeCancel(pointer);
+        }
+      }
     }
 
     if (widget.interactionMode == StoryCardEditorTool.drawing) {
@@ -272,7 +297,10 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
         _longPressPointer == event.pointer &&
         _longPressPhotoIndex != null;
 
-    if (!startedOnText && !_gestureHadMultiplePointers && origin != null) {
+    if (!startedOnText &&
+        !_gestureHadMultiplePointers &&
+        !_gestureUsedViewport &&
+        origin != null) {
       final displacement = current - origin;
       if (wasLongPress) {
         final targetIndex = _photoIndexAt(current, size);
@@ -300,6 +328,10 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     _lockedTextLayerId = null;
     _textPointerTargets.clear();
     _gestureHadMultiplePointers = false;
+    if (_gestureUsedViewport) {
+      widget.viewportGestures.end();
+      _gestureUsedViewport = false;
+    }
     _cancelPhotoLongPress();
     widget.onTextLayerScaleEnd();
   }
@@ -313,6 +345,10 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     _lockedTextLayerId = null;
     _textPointerTargets.clear();
     _gestureHadMultiplePointers = false;
+    if (_gestureUsedViewport) {
+      widget.viewportGestures.end();
+      _gestureUsedViewport = false;
+    }
     _cancelPhotoLongPress();
     widget.onTextLayerScaleEnd();
   }

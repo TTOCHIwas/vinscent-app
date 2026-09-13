@@ -6,6 +6,7 @@ import 'package:vinscent/features/story_loops/application/story_card_editor_sess
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_canvas.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_interactive_viewport.dart';
 
 void main() {
   testWidgets('사진 칸 탭, 카드 유형 스와이프, 네컷 길게 눌러 이동을 구분한다', (tester) async {
@@ -32,12 +33,19 @@ void main() {
                 onStrokeStart: (_, _) {},
                 onStrokeUpdate: (_, _) {},
                 onStrokeEnd: (_) {},
+                onStrokeCancel: (_) {},
                 onPhotoTapped: (index) => tappedIndex = index,
                 onPhotosReordered: (from, to) => reordered = (from, to),
                 onCardTypeStep: (step) => typeStep = step,
                 onTextLayerScaleStart: (_, _) {},
                 onTextLayerScaleUpdate: (_, _, _) {},
                 onTextLayerScaleEnd: () {},
+                viewportGestures: StoryCardViewportGestures(
+                  isZoomed: () => false,
+                  begin: (_) {},
+                  update: (_, _) {},
+                  end: () {},
+                ),
               ),
             ),
           ),

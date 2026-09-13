@@ -51,6 +51,13 @@ void main() {
     );
 
     expect(find.byType(StoryCardTypeIcon), findsNWidgets(4));
+    expect(
+      tester
+          .widgetList<StoryCardTypeIcon>(find.byType(StoryCardTypeIcon))
+          .map((icon) => icon.color)
+          .toSet(),
+      {Colors.white},
+    );
     for (final type in StoryCardType.editorOrder) {
       expect(find.text(type.displayName), findsOneWidget);
     }
@@ -59,5 +66,33 @@ void main() {
       find.byKey(const ValueKey('test-card-type-four-cut-strip')),
     );
     expect(selected, StoryCardType.fourCutStrip);
+  });
+
+  testWidgets('카드 유형 아이콘은 한 색과 최소 라운드만 사용한다', (tester) async {
+    const iconColor = Color(0xFFE8E8E8);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Row(
+          children: StoryCardType.editorOrder
+              .map(
+                (type) =>
+                    StoryCardTypeIcon(type: type, size: 40, color: iconColor),
+              )
+              .toList(growable: false),
+        ),
+      ),
+    );
+
+    final painters = tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((paint) => paint.painter)
+        .whereType<StoryCardTypeIconPainter>()
+        .toList(growable: false);
+    expect(painters, hasLength(StoryCardType.editorOrder.length));
+    for (final painter in painters) {
+      expect(painter.color, iconColor);
+      expect(painter.fillColor, iconColor);
+      expect(painter.cornerRadius, lessThanOrEqualTo(1));
+    }
   });
 }

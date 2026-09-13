@@ -21,6 +21,8 @@ import 'package:vinscent/features/questions/presentation/question_route_context.
 import 'package:vinscent/features/questions/presentation/today_question_answer_screen.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
 import 'package:vinscent/features/safety/data/safety_report_repository.dart';
+import 'package:vinscent/features/story_loops/application/today_story_card_stacks_provider.dart';
+import 'package:vinscent/features/story_loops/data/story_card_stack_item.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
@@ -34,10 +36,10 @@ import '../../../support/couple_fixtures.dart';
 import '../../../support/story_loop_fixtures.dart';
 import '../../../support/text_finders.dart';
 
-const _storyDetailOverlayKey = Key('story-card-detail-overlay');
-const _storyDetailCloseButtonKey = Key('story-card-detail-close');
+const _storyDetailOverlayKey = Key('story-card-stack-overlay');
+const _storyDetailCloseButtonKey = Key('story-card-stack-close');
 
-Key _storyDetailCardKey(String cardId) => Key('story-card-detail-$cardId');
+Key _storyDetailCardKey(String cardId) => Key('story-card-stack-$cardId');
 
 void main() {
   group('TodayQuestionAnswerScreen', () {
@@ -1383,6 +1385,27 @@ Future<GoRouter> _pumpRouter(
         storyLoopReadRepositoryProvider.overrideWithValue(
           resolvedStoryLoopRepository,
         ),
+        storyCardStackProvider.overrideWith((ref, request) async {
+          final detail = await resolvedStoryLoopRepository.fetchDetail(
+            request.date,
+          );
+          final cards = [...?detail?.cards]
+            ..removeWhere((card) => card.authorUserId != request.authorUserId)
+            ..sort(
+              (left, right) => left.submittedAt.compareTo(right.submittedAt),
+            );
+          return [
+            for (var index = 0; index < cards.length; index++)
+              StoryCardStackItem(
+                position: index + 1,
+                card: cards[index],
+                isFeatured: false,
+                canDelete: cards[index].authorUserId == _profile.id,
+                canFeature: cards[index].authorUserId == _profile.id,
+                isRead: true,
+              ),
+          ];
+        }),
         dailyQuestionReadRepositoryProvider.overrideWithValue(
           _StoryLoopBackedDailyQuestionReadRepository(
             today: today,

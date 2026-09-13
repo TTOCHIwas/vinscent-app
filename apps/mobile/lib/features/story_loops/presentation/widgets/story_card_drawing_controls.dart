@@ -4,6 +4,7 @@ import '../../../../core/drawing/app_drawing.dart';
 import '../../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../data/story_card_scene.dart';
+import 'story_card_interactive_viewport.dart';
 
 class StoryCardDrawingControls extends StatelessWidget {
   const StoryCardDrawingControls({
@@ -11,6 +12,7 @@ class StoryCardDrawingControls extends StatelessWidget {
     required this.selectedTool,
     required this.selectedColor,
     required this.selectedStrokeWidth,
+    required this.cardAspectRatio,
     required this.canUndo,
     required this.onToolChanged,
     required this.onColorChanged,
@@ -20,14 +22,10 @@ class StoryCardDrawingControls extends StatelessWidget {
     required this.onDonePressed,
   });
 
-  static const canvasInsets = EdgeInsets.only(
-    top: AppDrawingToolbar.height + 12,
-    bottom: AppDrawingToolbar.height + AppDrawingStyleControls.height + 12,
-  );
-
   final StoryCardDrawingTool selectedTool;
   final Color selectedColor;
   final double selectedStrokeWidth;
+  final double cardAspectRatio;
   final bool canUndo;
   final ValueChanged<StoryCardDrawingTool> onToolChanged;
   final ValueChanged<Color> onColorChanged;
@@ -94,8 +92,8 @@ class StoryCardDrawingControls extends StatelessWidget {
               previewClearance: AppDrawingToolbar.height,
               canvasExtent: applyBoxFit(
                 BoxFit.contain,
-                const Size(storyCardCanvasAspectRatio, 1),
-                constraints.deflate(canvasInsets).biggest,
+                Size(cardAspectRatio, 1),
+                constraints.deflate(storyCardEditorViewportInsets).biggest,
               ).destination.shortestSide,
               selectedColor: selectedColor,
               selectedStrokeWidth: selectedStrokeWidth,

@@ -24,7 +24,7 @@ class StoryCardTypePicker extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: const Color(0xB3000000),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: SizedBox(
             height: 68,
@@ -64,7 +64,7 @@ class _StoryCardTypeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? Colors.white : const Color(0xA6FFFFFF);
+    final labelColor = isSelected ? Colors.white : const Color(0xA6FFFFFF);
     return Semantics(
       button: true,
       selected: isSelected,
@@ -75,7 +75,7 @@ class _StoryCardTypeButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            StoryCardTypeIcon(type: type, size: 25, color: color),
+            StoryCardTypeIcon(type: type, size: 25, color: Colors.white),
             const SizedBox(height: 5),
             Text(
               type.displayName,
@@ -83,7 +83,7 @@ class _StoryCardTypeButton extends StatelessWidget {
               overflow: TextOverflow.fade,
               softWrap: false,
               style: TextStyle(
-                color: color,
+                color: labelColor,
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 height: AppTypography.bodyLineHeight,

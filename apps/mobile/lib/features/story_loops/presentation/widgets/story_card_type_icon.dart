@@ -8,13 +8,11 @@ class StoryCardTypeIcon extends StatelessWidget {
     required this.type,
     this.size = 24,
     this.color = Colors.white,
-    this.fillColor,
   });
 
   final StoryCardType type;
   final double size;
   final Color color;
-  final Color? fillColor;
 
   @override
   Widget build(BuildContext context) {
@@ -22,26 +20,19 @@ class StoryCardTypeIcon extends StatelessWidget {
       width: size * type.canvasAspectRatio,
       height: size,
       child: CustomPaint(
-        painter: _StoryCardTypeIconPainter(
-          type: type,
-          color: color,
-          fillColor: fillColor ?? color.withValues(alpha: 0.78),
-        ),
+        painter: StoryCardTypeIconPainter(type: type, color: color),
       ),
     );
   }
 }
 
-class _StoryCardTypeIconPainter extends CustomPainter {
-  const _StoryCardTypeIconPainter({
-    required this.type,
-    required this.color,
-    required this.fillColor,
-  });
+class StoryCardTypeIconPainter extends CustomPainter {
+  const StoryCardTypeIconPainter({required this.type, required this.color});
 
   final StoryCardType type;
   final Color color;
-  final Color fillColor;
+  Color get fillColor => color;
+  double get cornerRadius => 1;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -52,9 +43,7 @@ class _StoryCardTypeIconPainter extends CustomPainter {
       size.width - strokeWidth,
       size.height - strokeWidth,
     );
-    final outerRadius = Radius.circular(
-      (size.shortestSide * 0.08).clamp(1.0, 2.0),
-    );
+    const outerRadius = Radius.circular(1);
     canvas.drawRRect(
       RRect.fromRectAndRadius(outer, outerRadius),
       Paint()
@@ -68,10 +57,8 @@ class _StoryCardTypeIconPainter extends CustomPainter {
     }
 
     final layout = StoryCardLayout.fromSize(type: type, size: outer.size);
-    final fill = Paint()..color = fillColor;
-    final cellRadius = Radius.circular(
-      (size.shortestSide * 0.045).clamp(0.7, 1.2),
-    );
+    final fill = Paint()..color = color;
+    const cellRadius = Radius.circular(1);
 
     final photoInset = (size.shortestSide * 0.015).clamp(0.15, 0.35);
     for (final photoRect in layout.photoRects) {
@@ -86,9 +73,7 @@ class _StoryCardTypeIconPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _StoryCardTypeIconPainter oldDelegate) {
-    return oldDelegate.type != type ||
-        oldDelegate.color != color ||
-        oldDelegate.fillColor != fillColor;
+  bool shouldRepaint(covariant StoryCardTypeIconPainter oldDelegate) {
+    return oldDelegate.type != type || oldDelegate.color != color;
   }
 }

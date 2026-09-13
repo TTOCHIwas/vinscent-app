@@ -76,7 +76,7 @@ class _StoryCardTypeOption extends StatelessWidget {
       label: type.displayName,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(2),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(

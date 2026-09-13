@@ -15,8 +15,10 @@ import '../../data/story_card_download_failure.dart';
 import '../../data/story_card_read_receipt_repository.dart';
 import '../../data/story_card_stack_item.dart';
 import '../../data/story_card_stack_preview.dart';
+import '../../data/story_loop_card_detail.dart';
 import '../../data/story_loop_write_repository.dart';
 import 'story_card_action_sheet.dart';
+import 'story_card_interactive_viewport.dart';
 import 'story_card_preview_surface.dart';
 import 'story_card_swipe_dismiss_surface.dart';
 
@@ -24,6 +26,7 @@ Future<void> showStoryCardStackOverlay({
   required BuildContext context,
   required DateTime date,
   required StoryCardStackPreview stack,
+  String? initialCardId,
 }) {
   final barrierLabel = MaterialLocalizations.of(
     context,
@@ -36,7 +39,11 @@ Future<void> showStoryCardStackOverlay({
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (context, animation, secondaryAnimation) =>
-        _StoryCardStackOverlay(date: date, stack: stack),
+        _StoryCardStackOverlay(
+          date: date,
+          stack: stack,
+          initialCardId: initialCardId,
+        ),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
@@ -47,10 +54,15 @@ Future<void> showStoryCardStackOverlay({
 }
 
 class _StoryCardStackOverlay extends ConsumerStatefulWidget {
-  const _StoryCardStackOverlay({required this.date, required this.stack});
+  const _StoryCardStackOverlay({
+    required this.date,
+    required this.stack,
+    this.initialCardId,
+  });
 
   final DateTime date;
   final StoryCardStackPreview stack;
+  final String? initialCardId;
 
   @override
   ConsumerState<_StoryCardStackOverlay> createState() =>
@@ -64,6 +76,8 @@ class _StoryCardStackOverlayState
   PageController? _pageController;
   var _currentIndex = 0;
   var _isMutating = false;
+  var _isCurrentCardZoomed = false;
+  var _isViewportInteracting = false;
   final _acknowledgedCardIds = <String>{};
 
   StoryCardStackRequest get _request => StoryCardStackRequest(
@@ -97,6 +111,7 @@ class _StoryCardStackOverlayState
     return KeyedSubtree(
       key: const Key('story-card-stack-overlay'),
       child: StoryCardSwipeDismissSurface(
+        enabled: !_isCurrentCardZoomed && !_isViewportInteracting,
         onDismissed: () => Navigator.of(context).pop(),
         child: SafeArea(
           minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -201,47 +216,41 @@ class _StoryCardStackOverlayState
           return PageView.builder(
             key: const Key('story-card-stack-pages'),
             controller: _pageController,
+            physics: _isCurrentCardZoomed || _isViewportInteracting
+                ? const NeverScrollableScrollPhysics()
+                : const PageScrollPhysics(),
             itemCount: items.length,
             onPageChanged: (index) {
-              setState(() => _currentIndex = index);
+              setState(() {
+                _currentIndex = index;
+                _isCurrentCardZoomed = false;
+                _isViewportInteracting = false;
+              });
               _acknowledgeIfNeeded(items[index]);
             },
             itemBuilder: (context, index) {
               final item = items[index];
-              final cardWidth = math.min(
-                constraints.maxWidth,
-                constraints.maxHeight * item.card.cardType.canvasAspectRatio,
-              );
-              return Center(
-                child: Stack(
-                  children: [
-                    StoryCardPreviewSurface(
-                      surfaceKey: Key('story-card-stack-${item.card.id}'),
-                      previewUrl: item.card.previewUrl,
-                      width: cardWidth,
-                      cardType: item.card.cardType,
-                      semanticsLabel: '스토리 카드 ${index + 1}',
-                    ),
-                    Positioned.fill(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: index > 0 ? _previous : null,
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: index + 1 < items.length ? _next : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              return _InteractiveStoryCardPage(
+                key: ValueKey('story-card-viewport-${item.card.id}'),
+                active: index == _currentIndex,
+                card: item.card,
+                semanticsLabel: '스토리 카드 ${index + 1}',
+                onPrevious: index > 0 ? _previous : null,
+                onNext: index + 1 < items.length ? _next : null,
+                onZoomChanged: (isZoomed) {
+                  if (index != _currentIndex ||
+                      isZoomed == _isCurrentCardZoomed) {
+                    return;
+                  }
+                  setState(() => _isCurrentCardZoomed = isZoomed);
+                },
+                onInteractionChanged: (isInteracting) {
+                  if (index != _currentIndex ||
+                      isInteracting == _isViewportInteracting) {
+                    return;
+                  }
+                  setState(() => _isViewportInteracting = isInteracting);
+                },
               );
             },
           );
@@ -337,8 +346,15 @@ class _StoryCardStackOverlayState
       return;
     }
 
+    final preferredIndex = widget.initialCardId == null
+        ? -1
+        : items.indexWhere((item) => item.card.id == widget.initialCardId);
     final firstUnreadIndex = items.indexWhere((item) => !item.isRead);
-    _currentIndex = firstUnreadIndex >= 0 ? firstUnreadIndex : items.length - 1;
+    _currentIndex = preferredIndex >= 0
+        ? preferredIndex
+        : firstUnreadIndex >= 0
+        ? firstUnreadIndex
+        : items.length - 1;
     _pageController = PageController(initialPage: _currentIndex);
     final initialItem = items[_currentIndex];
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -495,5 +511,117 @@ class _StoryCardStackOverlayState
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _InteractiveStoryCardPage extends StatefulWidget {
+  const _InteractiveStoryCardPage({
+    super.key,
+    required this.active,
+    required this.card,
+    required this.semanticsLabel,
+    required this.onZoomChanged,
+    required this.onInteractionChanged,
+    this.onPrevious,
+    this.onNext,
+  });
+
+  final bool active;
+  final StoryLoopCardDetail card;
+  final String semanticsLabel;
+  final ValueChanged<bool> onZoomChanged;
+  final ValueChanged<bool> onInteractionChanged;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  State<_InteractiveStoryCardPage> createState() =>
+      _InteractiveStoryCardPageState();
+}
+
+class _InteractiveStoryCardPageState extends State<_InteractiveStoryCardPage> {
+  late final StoryCardViewportController _viewportController;
+  var _isZoomed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewportController = StoryCardViewportController()
+      ..addListener(_handleViewportChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _InteractiveStoryCardPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active && !widget.active) {
+      _viewportController.reset();
+      widget.onInteractionChanged(false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewportController
+      ..removeListener(_handleViewportChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StoryCardInteractiveViewport(
+      controller: _viewportController,
+      aspectRatio: widget.card.cardType.canvasAspectRatio,
+      builder: (context, contentSize, gestures) {
+        return StoryCardViewportGestureRegion(
+          gestures: gestures,
+          onInteractionChanged: widget.onInteractionChanged,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              StoryCardPreviewSurface(
+                surfaceKey: Key('story-card-stack-${widget.card.id}'),
+                previewUrl: widget.card.previewUrl,
+                width: contentSize.width,
+                cardType: widget.card.cardType,
+                semanticsLabel: widget.semanticsLabel,
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: _isZoomed,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: widget.onPrevious,
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: widget.onNext,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleViewportChanged() {
+    final isZoomed = _viewportController.isZoomed;
+    if (isZoomed == _isZoomed) {
+      return;
+    }
+    setState(() => _isZoomed = isZoomed);
+    if (widget.active) {
+      widget.onZoomChanged(isZoomed);
+    }
   }
 }

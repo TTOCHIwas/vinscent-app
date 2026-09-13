@@ -17,6 +17,7 @@ import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_interactive_viewport.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_photo_adjustment_screen.dart';
 import '../../../support/color_picker_test_helpers.dart';
 
@@ -52,7 +53,7 @@ void main() {
     const Size(900, 1200),
     const Size(800, 360),
   ]) {
-    testWidgets('stroke preview uses actual 4:5 canvas dimensions on $screen', (
+    testWidgets('drawing controls overlay the unchanged card on $screen', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(screen);
@@ -103,18 +104,7 @@ void main() {
         );
         expect(button.center.dy, tools.center.dy);
       }
-      final contentTop = done.bottom + 4;
-      expect(drawingCanvas.top, greaterThanOrEqualTo(contentTop + 12));
-      expect(drawingCanvas.bottom, lessThanOrEqualTo(tools.top - 12));
-      expect(
-        drawingCanvas.center.dy,
-        closeTo((contentTop + tools.top) / 2, 0.001),
-      );
-      expect(drawingCanvas.center.dx, initialCanvas.center.dx);
-      if (initialCanvas.height <= tools.top - contentTop - 24) {
-        expect(drawingCanvas.size, initialCanvas.size);
-      }
-      expect(drawingCanvas.center.dy, lessThan(initialCanvas.center.dy));
+      expect(drawingCanvas, initialCanvas);
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(Slider)),
       );
@@ -143,6 +133,70 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('세로 네컷의 그리기 팔레트는 카드 크기를 줄이지 않는 오버레이로 표시한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpEditor(
+      tester,
+      draft: _photoDraftForType(StoryCardType.fourCutStrip),
+    );
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final initialCanvas = tester.getRect(canvas);
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+
+    final drawingCanvas = tester.getRect(canvas);
+    expect(drawingCanvas, initialCanvas);
+    expect(
+      find.byKey(const ValueKey('story-card-drawing-color-palette')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('확대한 카드에서 한 손가락 그림은 화면을 이동시키지 않는다', (tester) async {
+    await _pumpEditor(tester, draft: _existingRedPhotoDraft());
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final center = tester.getCenter(canvas);
+    final first = await tester.startGesture(center - const Offset(30, 0));
+    final second = await tester.startGesture(center + const Offset(30, 0));
+    await first.moveTo(center - const Offset(70, 0));
+    await second.moveTo(center + const Offset(70, 0));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    final viewport = tester.widget<StoryCardInteractiveViewport>(
+      find.byType(StoryCardInteractiveViewport),
+    );
+    expect(viewport.controller.scale, greaterThan(1.5));
+
+    final translationBeforePan = viewport.controller.translation;
+    await tester.drag(canvas, const Offset(0, 48));
+    await tester.pump();
+    expect(
+      viewport.controller.translation.dy,
+      greaterThan(translationBeforePan.dy),
+    );
+
+    await tester.tap(find.byIcon(Icons.brush_outlined));
+    await tester.pump();
+    final translationBeforeDrawing = viewport.controller.translation;
+    await tester.drag(canvas, const Offset(28, 0));
+    await tester.pump();
+
+    expect(viewport.controller.translation, translationBeforeDrawing);
+    expect(
+      tester
+          .widget<StoryCardDrawingControls>(
+            find.byType(StoryCardDrawingControls),
+          )
+          .canUndo,
+      isTrue,
+    );
+  });
 
   for (final cancel in [false, true]) {
     testWidgets(

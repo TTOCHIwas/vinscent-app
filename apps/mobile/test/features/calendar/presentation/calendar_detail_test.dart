@@ -9,6 +9,8 @@ import 'package:vinscent/features/questions/presentation/widgets/question_answer
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_sections.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_detail_title.dart';
 import 'package:vinscent/features/safety/data/safety_report.dart';
+import 'package:vinscent/features/story_loops/data/story_card_stack_item.dart';
+import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
@@ -215,10 +217,23 @@ void main() {
   testWidgets('opens a selected history card in the shared detail overlay', (
     tester,
   ) async {
+    final selectedCard = completedDetail.cards[1];
+    final newerCard = sampleDetailCard(
+      id: 'card-3',
+      authorUserId: selectedCard.authorUserId,
+      submittedAt: DateTime(2026, 5, 5, 9, 20),
+    );
     final repository = FakeStoryLoopReadRepository(
       details: {DateTime(2026, 5, 5): completedDetail},
     );
-    await pumpCalendar(tester, repository: repository);
+    await pumpCalendar(
+      tester,
+      repository: repository,
+      storyCardStackItems: [
+        _stackItem(selectedCard, position: 1),
+        _stackItem(newerCard, position: 2),
+      ],
+    );
 
     await tester.tap(find.text('5').first);
     await tester.pumpAndSettle();
@@ -226,8 +241,9 @@ void main() {
     await tester.tap(card);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('story-card-detail-overlay')), findsOneWidget);
-    expect(find.byKey(const Key('story-card-detail-card-2')), findsOneWidget);
+    expect(find.byKey(const Key('story-card-stack-overlay')), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.byKey(const Key('story-card-stack-card-2')), findsOneWidget);
   });
 
   testWidgets('separates schedules and shared records in date detail', (
@@ -552,4 +568,18 @@ void main() {
 
     expect(find.text('calendar question edit route'), findsOneWidget);
   });
+}
+
+StoryCardStackItem _stackItem(
+  StoryLoopCardDetail card, {
+  required int position,
+}) {
+  return StoryCardStackItem(
+    position: position,
+    card: card,
+    isFeatured: false,
+    canDelete: true,
+    canFeature: true,
+    isRead: true,
+  );
 }
