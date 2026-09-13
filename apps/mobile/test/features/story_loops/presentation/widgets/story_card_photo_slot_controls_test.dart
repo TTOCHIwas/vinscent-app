@@ -1,0 +1,61 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_photo_slot_controls.dart';
+
+void main() {
+  testWidgets('빈 사진 칸을 누르면 해당 칸 안에 촬영과 갤러리 동작을 표시한다', (
+    tester,
+  ) async {
+    int? selectedIndex;
+    int? cameraIndex;
+    int? galleryIndex;
+
+    Widget subject({int? selectedEmptyIndex}) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: SizedBox(
+              width: 320,
+              height: 400,
+              child: StoryCardPhotoSlotControls(
+                cardType: StoryCardType.fourCutGrid,
+                hasPhotos: const [true, false, false, false],
+                selectedEmptyIndex: selectedEmptyIndex,
+                onEmptySlotSelected: (index) => selectedIndex = index,
+                onCameraPressed: (index) => cameraIndex = index,
+                onGalleryPressed: (index) => galleryIndex = index,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(subject());
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-empty-photo-slot-1')),
+    );
+    expect(selectedIndex, 1);
+
+    await tester.pumpWidget(subject(selectedEmptyIndex: 1));
+    expect(
+      find.byKey(const ValueKey('story-card-photo-slot-camera-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('story-card-photo-slot-gallery-1')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-photo-slot-camera-1')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-photo-slot-gallery-1')),
+    );
+    expect(cameraIndex, 1);
+    expect(galleryIndex, 1);
+  });
+}
