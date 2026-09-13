@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -21,8 +23,9 @@ class StoryCardEditorCanvas extends StatefulWidget {
     required this.onStrokeStart,
     required this.onStrokeUpdate,
     required this.onStrokeEnd,
-    required this.onBackgroundScaleStart,
-    required this.onBackgroundScaleUpdate,
+    required this.onPhotoTapped,
+    required this.onPhotosReordered,
+    required this.onCardTypeStep,
     required this.onTextLayerScaleStart,
     required this.onTextLayerScaleUpdate,
     required this.onTextLayerScaleEnd,
@@ -36,10 +39,9 @@ class StoryCardEditorCanvas extends StatefulWidget {
   final void Function(StoryCardPoint point, int pointer) onStrokeStart;
   final void Function(StoryCardPoint point, int pointer) onStrokeUpdate;
   final ValueChanged<int> onStrokeEnd;
-  final void Function(int photoIndex, ScaleStartDetails details)
-  onBackgroundScaleStart;
-  final void Function(int photoIndex, ScaleUpdateDetails details, Size size)
-  onBackgroundScaleUpdate;
+  final ValueChanged<int> onPhotoTapped;
+  final void Function(int fromIndex, int toIndex) onPhotosReordered;
+  final ValueChanged<int> onCardTypeStep;
   final void Function(String layerId, ScaleStartDetails details)
   onTextLayerScaleStart;
   final void Function(String layerId, ScaleUpdateDetails details, Size size)
@@ -53,10 +55,22 @@ class StoryCardEditorCanvas extends StatefulWidget {
 class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
   final Set<int> _activePointers = {};
   final Map<int, String> _textPointerTargets = {};
+  final Map<int, Offset> _pointerOrigins = {};
+  final Map<int, Offset> _pointerPositions = {};
+  final Map<int, int> _photoPointerTargets = {};
 
   String? _lockedTextLayerId;
-  bool _isBackgroundTransformLocked = false;
-  int? _lockedPhotoIndex;
+  Timer? _photoLongPressTimer;
+  int? _longPressPointer;
+  int? _longPressPhotoIndex;
+  bool _longPressActivated = false;
+  bool _gestureHadMultiplePointers = false;
+
+  @override
+  void dispose() {
+    _photoLongPressTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant StoryCardEditorCanvas oldWidget) {
@@ -77,11 +91,10 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
         final size = constraints.biggest;
         return Listener(
           behavior: HitTestBehavior.opaque,
-          onPointerDown: (event) {
-            _activePointers.add(event.pointer);
-          },
-          onPointerUp: _releaseCanvasPointer,
-          onPointerCancel: _releaseCanvasPointer,
+          onPointerDown: (event) => _handleCanvasPointerDown(event, size),
+          onPointerMove: _handleCanvasPointerMove,
+          onPointerUp: (event) => _releaseCanvasPointer(event, size),
+          onPointerCancel: (event) => _cancelCanvasPointer(event.pointer),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onScaleStart: _handleScaleStart,
@@ -111,12 +124,6 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
                               event.pointer,
                               () => layer.id,
                             );
-                          },
-                          onPointerUp: (event) {
-                            _textPointerTargets.remove(event.pointer);
-                          },
-                          onPointerCancel: (event) {
-                            _textPointerTargets.remove(event.pointer);
                           },
                           child: Transform.rotate(
                             key: ValueKey(
@@ -183,45 +190,12 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
       return;
     }
 
-    if (_isBackgroundTransformLocked) {
-      if (details.pointerCount >= 2) {
-        final photoIndex = _lockedPhotoIndex;
-        if (photoIndex != null) {
-          widget.onBackgroundScaleStart(photoIndex, details);
-        }
-      }
-      return;
-    }
-
     final textLayerId = _textPointerTargets.isEmpty
         ? null
         : _textPointerTargets.values.first;
     if (textLayerId != null) {
       _lockedTextLayerId = textLayerId;
       widget.onTextLayerScaleStart(textLayerId, details);
-      return;
-    }
-
-    if (details.pointerCount >= 2 &&
-        widget.interactionMode != StoryCardEditorTool.drawing &&
-        widget.backgroundImages.any((image) => image != null)) {
-      final layout = StoryCardLayout.fromSize(
-        type: widget.scene.cardType,
-        size: context.size ?? Size.zero,
-      );
-      final photoIndex = widget.scene.cardType == StoryCardType.polaroid
-          ? 0
-          : layout.photoRects.indexWhere(
-              (rect) => rect.contains(details.localFocalPoint),
-            );
-      if (photoIndex < 0 ||
-          photoIndex >= widget.backgroundImages.length ||
-          widget.backgroundImages[photoIndex] == null) {
-        return;
-      }
-      _isBackgroundTransformLocked = true;
-      _lockedPhotoIndex = photoIndex;
-      widget.onBackgroundScaleStart(photoIndex, details);
     }
   }
 
@@ -231,27 +205,143 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
       widget.onTextLayerScaleUpdate(lockedTextLayerId, details, size);
       return;
     }
+  }
 
-    if (_isBackgroundTransformLocked && details.pointerCount >= 2) {
-      final photoIndex = _lockedPhotoIndex;
-      if (photoIndex != null) {
-        widget.onBackgroundScaleUpdate(photoIndex, details, size);
+  void _handleCanvasPointerDown(PointerDownEvent event, Size size) {
+    _activePointers.add(event.pointer);
+    _pointerOrigins[event.pointer] = event.localPosition;
+    _pointerPositions[event.pointer] = event.localPosition;
+    if (_activePointers.length > 1) {
+      _gestureHadMultiplePointers = true;
+      _cancelPhotoLongPress();
+    }
+
+    if (widget.interactionMode == StoryCardEditorTool.drawing) {
+      return;
+    }
+
+    scheduleMicrotask(() {
+      if (!mounted ||
+          !_activePointers.contains(event.pointer) ||
+          _textPointerTargets.containsKey(event.pointer)) {
+        return;
       }
+      final photoIndex = _photoIndexAt(event.localPosition, size);
+      if (photoIndex < 0) {
+        return;
+      }
+      _photoPointerTargets[event.pointer] = photoIndex;
+      if (widget.scene.cardType.isFourCut &&
+          _hasPhoto(photoIndex) &&
+          _activePointers.length == 1) {
+        _longPressPointer = event.pointer;
+        _longPressPhotoIndex = photoIndex;
+        _photoLongPressTimer = Timer(const Duration(milliseconds: 450), () {
+          if (!mounted ||
+              !_activePointers.contains(event.pointer) ||
+              _gestureHadMultiplePointers) {
+            return;
+          }
+          _longPressActivated = true;
+          unawaited(HapticFeedback.selectionClick());
+        });
+      }
+    });
+  }
+
+  void _handleCanvasPointerMove(PointerMoveEvent event) {
+    _pointerPositions[event.pointer] = event.localPosition;
+    final origin = _pointerOrigins[event.pointer];
+    if (origin == null) {
+      return;
+    }
+    if (!_longPressActivated && (event.localPosition - origin).distance > 12) {
+      _cancelPhotoLongPress();
     }
   }
 
-  void _releaseCanvasPointer(PointerEvent event) {
+  void _releaseCanvasPointer(PointerUpEvent event, Size size) {
+    final origin = _pointerOrigins[event.pointer];
+    final current = _pointerPositions[event.pointer] ?? event.localPosition;
+    final startedOnText = _textPointerTargets.containsKey(event.pointer);
+    final photoIndex = _photoPointerTargets[event.pointer];
+    final wasLongPress =
+        _longPressActivated &&
+        _longPressPointer == event.pointer &&
+        _longPressPhotoIndex != null;
+
+    if (!startedOnText && !_gestureHadMultiplePointers && origin != null) {
+      final displacement = current - origin;
+      if (wasLongPress) {
+        final targetIndex = _photoIndexAt(current, size);
+        final sourceIndex = _longPressPhotoIndex!;
+        if (targetIndex >= 0 && targetIndex != sourceIndex) {
+          widget.onPhotosReordered(sourceIndex, targetIndex);
+        }
+      } else if (displacement.dx.abs() >= 60 &&
+          displacement.dx.abs() > displacement.dy.abs() * 1.35) {
+        widget.onCardTypeStep(displacement.dx < 0 ? 1 : -1);
+      } else if (displacement.distance <= 16 && photoIndex != null) {
+        widget.onPhotoTapped(photoIndex);
+      }
+    }
+
+    _clearPointer(event.pointer);
     _activePointers.remove(event.pointer);
-    _textPointerTargets.remove(event.pointer);
     if (_activePointers.isNotEmpty) {
       return;
     }
 
     _lockedTextLayerId = null;
-    _isBackgroundTransformLocked = false;
-    _lockedPhotoIndex = null;
     _textPointerTargets.clear();
+    _gestureHadMultiplePointers = false;
+    _cancelPhotoLongPress();
     widget.onTextLayerScaleEnd();
+  }
+
+  void _cancelCanvasPointer(int pointer) {
+    _clearPointer(pointer);
+    _activePointers.remove(pointer);
+    if (_activePointers.isNotEmpty) {
+      return;
+    }
+    _lockedTextLayerId = null;
+    _textPointerTargets.clear();
+    _gestureHadMultiplePointers = false;
+    _cancelPhotoLongPress();
+    widget.onTextLayerScaleEnd();
+  }
+
+  void _clearPointer(int pointer) {
+    _pointerOrigins.remove(pointer);
+    _pointerPositions.remove(pointer);
+    _photoPointerTargets.remove(pointer);
+    _textPointerTargets.remove(pointer);
+  }
+
+  void _cancelPhotoLongPress() {
+    _photoLongPressTimer?.cancel();
+    _photoLongPressTimer = null;
+    _longPressPointer = null;
+    _longPressPhotoIndex = null;
+    _longPressActivated = false;
+  }
+
+  int _photoIndexAt(Offset position, Size size) {
+    if (size.isEmpty) {
+      return -1;
+    }
+    final layout = StoryCardLayout.fromSize(
+      type: widget.scene.cardType,
+      size: size,
+    );
+    return layout.photoRects.indexWhere((rect) => rect.contains(position));
+  }
+
+  bool _hasPhoto(int index) {
+    return index >= 0 &&
+        index < widget.backgroundImages.length &&
+        widget.backgroundImages[index] != null;
   }
 
   StoryCardPoint _normalize(Offset position, Size size) {

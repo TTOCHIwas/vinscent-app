@@ -16,6 +16,7 @@ import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_photo_adjustment_screen.dart';
 import '../../../support/color_picker_test_helpers.dart';
 
 void main() {
@@ -779,9 +780,7 @@ void main() {
     expect(erasedIntersection, const Color(0xFF000000));
   });
 
-  testWidgets('drawing done returns a photo card to background gestures', (
-    tester,
-  ) async {
+  testWidgets('drawing done restores photo adjustment entry', (tester) async {
     await _pumpEditor(tester, draft: _existingPhotoDraft());
 
     await tester.tap(find.byIcon(Icons.brush_outlined));
@@ -797,26 +796,10 @@ void main() {
     expect(find.byIcon(Icons.crop), findsNothing);
 
     final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
-    final center = tester.getCenter(canvas);
-    final first = await tester.startGesture(
-      center - const Offset(30, 0),
-      pointer: 1,
-    );
-    final second = await tester.startGesture(
-      center + const Offset(30, 0),
-      pointer: 2,
-    );
-    await tester.pump();
-    await first.moveBy(const Offset(20, 30));
-    await second.moveBy(const Offset(20, 30));
-    await tester.pump();
-    await first.up();
-    await second.up();
-    await tester.pump();
+    await tester.tapAt(tester.getCenter(canvas));
+    await _pumpPhotoAdjustmentRoute(tester);
 
-    final transform = _backgroundTransform(tester);
-    expect(transform.offsetX, isNot(0));
-    expect(transform.offsetY, isNot(0));
+    expect(find.byType(StoryCardPhotoAdjustmentScreen), findsOneWidget);
   });
 
   testWidgets('moves text with one finger', (tester) async {
@@ -991,7 +974,7 @@ void main() {
     expect(backgroundTransform.offsetY, 0);
   });
 
-  testWidgets('delivers background transform gestures to the canvas', (
+  testWidgets('does not transform a photo directly on the card canvas', (
     tester,
   ) async {
     await _pumpEditor(tester, draft: _existingPhotoDraft());
@@ -1002,13 +985,6 @@ void main() {
     await tester.pump();
 
     final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
-    final scaleDetectors = tester
-        .widgetList<GestureDetector>(
-          find.descendant(of: canvas, matching: find.byType(GestureDetector)),
-        )
-        .where((detector) => detector.onScaleUpdate != null);
-    expect(scaleDetectors, hasLength(1));
-
     final center = tester.getCenter(canvas);
     final first = await tester.startGesture(
       center - const Offset(30, 0),
@@ -1027,11 +1003,13 @@ void main() {
     await tester.pump();
 
     final transform = _backgroundTransform(tester);
-    expect(transform.offsetX, isNot(0));
-    expect(transform.offsetY, isNot(0));
+    expect(transform, const StoryCardBackgroundTransform.initial());
+    expect(find.byType(StoryCardPhotoAdjustmentScreen), findsNothing);
   });
 
-  testWidgets('moves the background only with two pointers', (tester) async {
+  testWidgets('opens photo adjustment instead of moving with one pointer', (
+    tester,
+  ) async {
     await _pumpEditor(tester, draft: _existingPhotoDraft());
 
     await tester.runAsync(
@@ -1044,89 +1022,49 @@ void main() {
     await tester.dragFrom(center, const Offset(30, 40));
     await tester.pump();
 
-    var transform = _backgroundTransform(tester);
-    expect(transform.offsetX, 0);
-    expect(transform.offsetY, 0);
-
-    final first = await tester.startGesture(
-      center - const Offset(30, 0),
-      pointer: 1,
-    );
-    final second = await tester.startGesture(
-      center + const Offset(30, 0),
-      pointer: 2,
-    );
-    await tester.pump();
-    await first.moveBy(const Offset(30, 40));
-    await second.moveBy(const Offset(30, 40));
-    await tester.pump();
-    await first.up();
-    await second.up();
-    await tester.pump();
-
-    transform = _backgroundTransform(tester);
-    expect(transform.offsetX, isNot(0));
-    expect(transform.offsetY, isNot(0));
-
-    final scaleBeforePinch = transform.scale;
-    final pinchFirst = await tester.startGesture(
-      center - const Offset(30, 0),
-      pointer: 3,
-    );
-    final pinchSecond = await tester.startGesture(
-      center + const Offset(30, 0),
-      pointer: 4,
-    );
-    await tester.pump();
-    await pinchSecond.moveBy(const Offset(60, 0));
-    await tester.pump();
-    await pinchFirst.up();
-    await pinchSecond.up();
-    await tester.pump();
-
-    expect(_backgroundTransform(tester).scale, greaterThan(scaleBeforePinch));
-  });
-
-  testWidgets('returns to background gestures after text input is cancelled', (
-    tester,
-  ) async {
-    await _pumpEditor(tester, draft: _existingPhotoTextDraft());
-
-    await _openTextInput(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('story-card-text-input-cancel')),
-    );
-    await tester.pumpAndSettle();
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
-
-    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
-    final canvasRect = tester.getRect(canvas);
-    final firstStart = Offset(
-      canvasRect.left + 30,
-      canvasRect.top + canvasRect.height * 0.75,
-    );
-    final secondStart = firstStart + const Offset(60, 0);
-    final first = await tester.startGesture(firstStart, pointer: 1);
-    final second = await tester.startGesture(secondStart, pointer: 2);
-    await tester.pump();
-    await first.moveBy(const Offset(20, 30));
-    await second.moveBy(const Offset(20, 30));
-    await tester.pump();
-    await first.up();
-    await second.up();
-    await tester.pump();
-
-    final transform = _backgroundTransform(tester);
-    expect(transform.offsetX, isNot(0));
-    expect(transform.offsetY, isNot(0));
     expect(
-      find.byKey(const ValueKey('story-card-text-input-overlay')),
-      findsNothing,
+      _backgroundTransform(tester),
+      const StoryCardBackgroundTransform.initial(),
     );
+
+    await tester.tapAt(center);
+    await _pumpPhotoAdjustmentRoute(tester);
+
+    expect(find.byType(StoryCardPhotoAdjustmentScreen), findsOneWidget);
   });
+
+  testWidgets(
+    'returns to photo adjustment entry after text input is cancelled',
+    (tester) async {
+      await _pumpEditor(tester, draft: _existingPhotoTextDraft());
+
+      await _openTextInput(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('story-card-text-input-cancel')),
+      );
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump();
+
+      final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+      final canvasRect = tester.getRect(canvas);
+      final photoPoint = Offset(
+        canvasRect.left + 30,
+        canvasRect.top + canvasRect.height * 0.25,
+      );
+      expect(
+        find.byKey(const ValueKey('story-card-text-input-overlay')),
+        findsNothing,
+      );
+
+      await tester.tapAt(photoPoint);
+      await _pumpPhotoAdjustmentRoute(tester);
+
+      expect(find.byType(StoryCardPhotoAdjustmentScreen), findsOneWidget);
+    },
+  );
 }
 
 Future<void> _pumpEditor(
@@ -1154,6 +1092,11 @@ Future<void> _openTextInput(WidgetTester tester) async {
 Future<void> _openCaptionInput(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('story-card-caption-tool')));
   await tester.pumpAndSettle();
+}
+
+Future<void> _pumpPhotoAdjustmentRoute(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
 StoryCardDraft _existingEmptyDraft() {

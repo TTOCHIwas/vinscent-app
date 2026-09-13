@@ -7,6 +7,7 @@ uniform sampler2D u_texture;
 uniform vec2 u_origin;
 uniform vec2 u_uv_scale;
 uniform vec2 u_uv_offset;
+uniform float u_rotation;
 uniform float u_background_r;
 uniform float u_background_g;
 uniform float u_background_b;
@@ -48,7 +49,16 @@ void main() {
 #ifdef IMPELLER_TARGET_OPENGLES
   local_uv.y = 1.0 - local_uv.y;
 #endif
-  vec2 uv = local_uv * u_uv_scale + u_uv_offset;
+  vec2 pan = (vec2(0.5) * (vec2(1.0) - u_uv_scale) - u_uv_offset) /
+      max(u_uv_scale, vec2(0.0001));
+  vec2 centered = local_uv - vec2(0.5) - pan;
+  float rotation_cos = cos(u_rotation);
+  float rotation_sin = sin(u_rotation);
+  vec2 unrotated = vec2(
+    rotation_cos * centered.x + rotation_sin * centered.y,
+    -rotation_sin * centered.x + rotation_cos * centered.y
+  );
+  vec2 uv = unrotated * u_uv_scale + vec2(0.5);
   vec3 background = vec3(u_background_r, u_background_g, u_background_b);
   if (outside_image(uv)) {
     frag_color = vec4(background, 1.0);

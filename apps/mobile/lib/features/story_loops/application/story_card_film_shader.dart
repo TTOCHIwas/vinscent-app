@@ -8,11 +8,13 @@ class StoryCardFilmImageMapping {
   const StoryCardFilmImageMapping({
     required this.uvScale,
     required this.uvOffset,
+    this.rotation = 0,
   });
 
   const StoryCardFilmImageMapping.identity()
     : uvScale = const ui.Offset(1, 1),
-      uvOffset = ui.Offset.zero;
+      uvOffset = ui.Offset.zero,
+      rotation = 0;
 
   factory StoryCardFilmImageMapping.cover({
     required ui.Size imageSize,
@@ -40,11 +42,13 @@ class StoryCardFilmImageMapping {
         (1 - uvScale.dx) / 2 - transform.offsetX * uvScale.dx,
         (1 - uvScale.dy) / 2 - transform.offsetY * uvScale.dy,
       ),
+      rotation: transform.rotation,
     );
   }
 
   final ui.Offset uvScale;
   final ui.Offset uvOffset;
+  final double rotation;
 }
 
 abstract final class StoryCardFilmShaderProgram {
@@ -76,6 +80,7 @@ abstract final class StoryCardFilmShader {
       mapping.uvScale.dy,
       mapping.uvOffset.dx,
       mapping.uvOffset.dy,
+      mapping.rotation,
       backgroundColor.r,
       backgroundColor.g,
       backgroundColor.b,

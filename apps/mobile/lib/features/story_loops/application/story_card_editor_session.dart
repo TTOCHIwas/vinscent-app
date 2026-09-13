@@ -21,9 +21,9 @@ class StoryCardEditorSession {
   factory StoryCardEditorSession.fromDraft(StoryCardDraft draft) {
     final hasPersistedCard = draft.existingRevision != null;
     return StoryCardEditorSession(
-      stage: hasPersistedCard
+      stage: hasPersistedCard || draft.hasDraftContent
           ? StoryCardEditorStage.decorating
-          : StoryCardEditorStage.formatSelection,
+          : StoryCardEditorStage.camera,
       tool: hasPersistedCard
           ? StoryCardEditorTool.none
           : StoryCardEditorTool.none,
@@ -42,13 +42,23 @@ class StoryCardEditorSession {
   bool get hasPersistedCard => baselineDraft.existingRevision != null;
 
   StoryCardEditorSession selectCardType(StoryCardType cardType) {
+    return changeCardType(cardType);
+  }
+
+  StoryCardEditorSession changeCardType(StoryCardType cardType) {
+    if (cardType == draft.scene.cardType) {
+      return this;
+    }
+    final nextDraft = draft.copyWith(
+      scene: draft.scene.copyWith(cardType: cardType),
+    );
     return copyWith(
-      stage: cardType == StoryCardType.polaroid
-          ? StoryCardEditorStage.camera
-          : StoryCardEditorStage.assembling,
+      stage: nextDraft.hasDraftContent
+          ? StoryCardEditorStage.decorating
+          : StoryCardEditorStage.camera,
       tool: StoryCardEditorTool.none,
-      draft: StoryCardDraft(scene: StoryCardScene.empty(cardType: cardType)),
-      hasUnsavedChanges: false,
+      draft: nextDraft,
+      hasUnsavedChanges: nextDraft.hasDraftContent || hasUnsavedChanges,
     );
   }
 
@@ -88,15 +98,40 @@ class StoryCardEditorSession {
 
   StoryCardEditorSession setPhoto(int index, Uint8List imageBytes) {
     final nextDraft = draft.withPhoto(index, imageBytes);
-    if (!draft.scene.cardType.isFourCut) {
-      return updateDraft(nextDraft);
-    }
     return updateDraft(
       nextDraft.copyWith(
-        scene: nextDraft.scene.withPhotoTransform(
-          index,
-          const StoryCardBackgroundTransform.initial(),
-        ),
+        scene: nextDraft.scene
+            .withPhotoTransform(
+              index,
+              const StoryCardBackgroundTransform.initial(),
+            )
+            .withPhotoFilm(index, const StoryCardFilmState.original()),
+      ),
+    );
+  }
+
+  StoryCardEditorSession removePhoto(int index) {
+    final nextDraft = draft.withPhoto(index, null);
+    return updateDraft(
+      nextDraft.copyWith(
+        scene: nextDraft.scene
+            .withPhotoTransform(
+              index,
+              const StoryCardBackgroundTransform.initial(),
+            )
+            .withPhotoFilm(index, const StoryCardFilmState.original()),
+      ),
+    );
+  }
+
+  StoryCardEditorSession reorderPhotos(int fromIndex, int toIndex) {
+    if (fromIndex == toIndex) {
+      return this;
+    }
+    final nextDraft = draft.reorderPhotos(fromIndex, toIndex);
+    return updateDraft(
+      nextDraft.copyWith(
+        scene: nextDraft.scene.reorderPhotoState(fromIndex, toIndex),
       ),
     );
   }
@@ -121,6 +156,13 @@ class StoryCardEditorSession {
     );
   }
 
+  StoryCardEditorSession enterPhotoCamera() {
+    return copyWith(
+      stage: StoryCardEditorStage.camera,
+      tool: StoryCardEditorTool.none,
+    );
+  }
+
   StoryCardEditorSession returnToFourCutAssembly() {
     if (!draft.scene.cardType.isFourCut) {
       throw StateError('A four-cut draft is required.');
@@ -128,6 +170,15 @@ class StoryCardEditorSession {
     return copyWith(
       stage: StoryCardEditorStage.assembling,
       tool: StoryCardEditorTool.none,
+    );
+  }
+
+  StoryCardEditorSession returnToDecorator() {
+    return copyWith(
+      stage: StoryCardEditorStage.decorating,
+      tool: draft.hasPhoto
+          ? StoryCardEditorTool.background
+          : StoryCardEditorTool.none,
     );
   }
 
@@ -191,7 +242,19 @@ class StoryCardEditorSession {
     if (!draft.hasPhoto || draft.scene.film == film) {
       return this;
     }
-    return updateDraft(draft.copyWith(scene: draft.scene.copyWith(film: film)));
+    return setPhotoFilm(0, film);
+  }
+
+  StoryCardEditorSession setPhotoFilm(int index, StoryCardFilmState film) {
+    if (index < 0 ||
+        index >= draft.photoImageBytes.length ||
+        draft.photoImageBytes[index] == null ||
+        draft.scene.photoFilms[index] == film) {
+      return this;
+    }
+    return updateDraft(
+      draft.copyWith(scene: draft.scene.withPhotoFilm(index, film)),
+    );
   }
 
   StoryCardEditorSession addTextLayer(StoryCardTextLayer layer) {
@@ -263,8 +326,10 @@ class StoryCardEditorSession {
     }
 
     return copyWith(
-      stage: StoryCardEditorStage.formatSelection,
-      draft: StoryCardDraft(scene: StoryCardScene.empty()),
+      stage: StoryCardEditorStage.camera,
+      draft: StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+      ),
       tool: StoryCardEditorTool.none,
       hasUnsavedChanges: false,
     );
@@ -274,7 +339,9 @@ class StoryCardEditorSession {
     return copyWith(
       stage: StoryCardEditorStage.camera,
       tool: StoryCardEditorTool.none,
-      draft: StoryCardDraft(scene: StoryCardScene.empty()),
+      draft: StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+      ),
       hasUnsavedChanges: false,
     );
   }

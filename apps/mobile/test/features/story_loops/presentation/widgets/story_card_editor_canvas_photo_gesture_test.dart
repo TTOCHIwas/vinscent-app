@@ -8,9 +8,7 @@ import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_canvas.dart';
 
 void main() {
-  testWidgets('사진 칸 탭, 카드 유형 스와이프, 네컷 길게 눌러 이동을 구분한다', (
-    tester,
-  ) async {
+  testWidgets('사진 칸 탭, 카드 유형 스와이프, 네컷 길게 눌러 이동을 구분한다', (tester) async {
     final image = await _solidImage();
     addTearDown(image.dispose);
     int? tappedIndex;
@@ -25,7 +23,7 @@ void main() {
               width: 320,
               height: 400,
               child: StoryCardEditorCanvas(
-                backgroundImages: [image, image, image, image],
+                backgroundImages: [image, null, image, image],
                 scene: StoryCardScene.empty(
                   cardType: StoryCardType.fourCutGrid,
                 ),
@@ -51,6 +49,9 @@ void main() {
     final rect = tester.getRect(canvas);
     await tester.tapAt(rect.topLeft + const Offset(70, 80));
     expect(tappedIndex, 0);
+
+    await tester.tapAt(rect.topLeft + const Offset(245, 80));
+    expect(tappedIndex, 1);
 
     await tester.drag(canvas, const Offset(-120, 0));
     await tester.pump();

@@ -15,18 +15,24 @@ class StoryCardDraft {
   final List<Uint8List?> additionalPhotoImageBytes;
   final int? existingRevision;
 
-  bool get hasPhoto =>
-      backgroundImageBytes != null ||
-      additionalPhotoImageBytes.any((bytes) => bytes != null);
+  bool get hasPhoto => photoImageBytes.any((bytes) => bytes != null);
+
+  bool get hasStoredPhoto =>
+      storedPhotoImageBytes.any((bytes) => bytes != null);
 
   List<Uint8List?> get photoImageBytes {
-    final photos = [backgroundImageBytes, ...additionalPhotoImageBytes];
+    final photos = storedPhotoImageBytes;
     return List.generate(
       scene.cardType.requiredPhotoCount,
       (index) => index < photos.length ? photos[index] : null,
       growable: false,
     );
   }
+
+  List<Uint8List?> get storedPhotoImageBytes => [
+    backgroundImageBytes,
+    ...additionalPhotoImageBytes,
+  ];
 
   int get photoCount => photoImageBytes.whereType<Uint8List>().length;
 
@@ -37,6 +43,9 @@ class StoryCardDraft {
       scene.cardType.isFourCut ? hasAllRequiredPhotos : hasContent;
 
   bool get hasContent => hasPhoto || scene.hasDrawing || scene.hasText;
+
+  bool get hasDraftContent =>
+      hasStoredPhoto || scene.hasDrawing || scene.hasText;
 
   StoryCardDraft copyWith({
     StoryCardScene? scene,
@@ -60,11 +69,37 @@ class StoryCardDraft {
     if (index < 0 || index >= scene.cardType.requiredPhotoCount) {
       throw RangeError.index(index, photoImageBytes, 'index');
     }
-    final photos = [...photoImageBytes]..[index] = imageBytes;
+    final photos = [...storedPhotoImageBytes];
+    while (photos.length <= index) {
+      photos.add(null);
+    }
+    photos[index] = imageBytes;
     return copyWith(
       backgroundImageBytes: photos.first,
       clearBackgroundImage: photos.first == null,
       additionalPhotoImageBytes: photos.skip(1).toList(growable: false),
+    );
+  }
+
+  StoryCardDraft reorderPhotos(int fromIndex, int toIndex) {
+    final activePhotos = photoImageBytes;
+    if (fromIndex < 0 ||
+        fromIndex >= activePhotos.length ||
+        toIndex < 0 ||
+        toIndex >= activePhotos.length) {
+      throw RangeError('Photo reorder index is outside the active card.');
+    }
+    final storedPhotos = [...storedPhotoImageBytes];
+    while (storedPhotos.length < activePhotos.length) {
+      storedPhotos.add(null);
+    }
+    final fromPhoto = storedPhotos[fromIndex];
+    storedPhotos[fromIndex] = storedPhotos[toIndex];
+    storedPhotos[toIndex] = fromPhoto;
+    return copyWith(
+      backgroundImageBytes: storedPhotos.first,
+      clearBackgroundImage: storedPhotos.first == null,
+      additionalPhotoImageBytes: storedPhotos.skip(1).toList(growable: false),
     );
   }
 }

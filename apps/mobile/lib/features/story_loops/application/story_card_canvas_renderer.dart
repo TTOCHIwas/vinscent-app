@@ -32,7 +32,7 @@ abstract final class StoryCardCanvasRenderer {
         image: index < images.length ? images[index] : null,
         transform: scene.photoTransforms[index],
         canvasBackground: scene.canvasBackground,
-        film: scene.film,
+        film: scene.photoFilms[index],
         filmProgram: filmProgram,
       );
     }
@@ -81,20 +81,24 @@ abstract final class StoryCardCanvasRenderer {
       );
       final drawWidth = image.width * coverScale * transform.scale;
       final drawHeight = image.height * coverScale * transform.scale;
-      final offsetX =
-          destination.left +
-          (destination.width - drawWidth) / 2 +
-          transform.offsetX * destination.width;
-      final offsetY =
-          destination.top +
-          (destination.height - drawHeight) / 2 +
-          transform.offsetY * destination.height;
+      final center = destination.center.translate(
+        transform.offsetX * destination.width,
+        transform.offsetY * destination.height,
+      );
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(transform.rotation);
       canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        Rect.fromLTWH(offsetX, offsetY, drawWidth, drawHeight),
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: drawWidth,
+          height: drawHeight,
+        ),
         Paint()..filterQuality = FilterQuality.high,
       );
+      canvas.restore();
     }
     canvas.restore();
   }

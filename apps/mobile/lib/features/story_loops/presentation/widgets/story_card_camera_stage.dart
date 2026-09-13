@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -36,6 +37,9 @@ class StoryCardCameraStage extends StatefulWidget {
     this.loadCharacterImage,
     this.showEditorTools = true,
     this.showGalleryButton = true,
+    this.guideAspectRatio,
+    this.draftCount = 0,
+    this.onDraftsPressed,
   });
 
   final VoidCallback onBack;
@@ -48,6 +52,9 @@ class StoryCardCameraStage extends StatefulWidget {
   final Future<Uint8List?> Function()? loadCharacterImage;
   final bool showEditorTools;
   final bool showGalleryButton;
+  final double? guideAspectRatio;
+  final int draftCount;
+  final VoidCallback? onDraftsPressed;
 
   @override
   State<StoryCardCameraStage> createState() => _StoryCardCameraStageState();
@@ -561,6 +568,8 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
             )
           else
             _CameraUnavailable(error: _captureError ?? _camera.error),
+          if (widget.guideAspectRatio case final aspectRatio?)
+            _StoryCardCameraCropGuide(aspectRatio: aspectRatio),
           if (_focusPoint case final focusPoint?)
             StoryCardCameraFocusOverlay(
               normalizedPoint: focusPoint,
@@ -576,11 +585,22 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
               children: [
                 Align(
                   alignment: Alignment.topLeft,
-                  child: IconButton(
-                    tooltip: '나가기',
-                    onPressed: widget.onBack,
-                    color: Colors.white,
-                    icon: const Icon(Icons.close, size: 30),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        key: const ValueKey('story-card-camera-close'),
+                        tooltip: '나가기',
+                        onPressed: widget.onBack,
+                        color: Colors.white,
+                        icon: const Icon(Icons.close, size: 30),
+                      ),
+                      if (widget.onDraftsPressed case final onPressed?)
+                        _CameraDraftsButton(
+                          count: widget.draftCount,
+                          onPressed: onPressed,
+                        ),
+                    ],
                   ),
                 ),
                 Align(
@@ -668,6 +688,133 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
         ],
       ),
     );
+  }
+}
+
+class _CameraDraftsButton extends StatelessWidget {
+  const _CameraDraftsButton({required this.count, required this.onPressed});
+
+  final int count;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          key: const ValueKey('story-card-camera-drafts'),
+          tooltip: '임시 저장 카드',
+          onPressed: onPressed,
+          color: Colors.white,
+          icon: const Icon(LucideIcons.archive, size: 27),
+        ),
+        if (count > 0)
+          Positioned(
+            right: 1,
+            top: 1,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE46F61),
+                  shape: BoxShape.circle,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Center(
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StoryCardCameraCropGuide extends StatelessWidget {
+  const _StoryCardCameraCropGuide({required this.aspectRatio});
+
+  final double aspectRatio;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.biggest;
+            final maxWidth = size.width * 0.86;
+            final maxHeight = size.height * 0.58;
+            final width = math.min(maxWidth, maxHeight * aspectRatio);
+            final height = width / aspectRatio;
+            final frame = Rect.fromCenter(
+              center: size.center(Offset.zero),
+              width: width,
+              height: height,
+            );
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _CameraCropMaskPainter(frame: frame),
+                  ),
+                ),
+                Positioned.fromRect(
+                  rect: frame,
+                  child: SizedBox(
+                    key: const ValueKey('story-card-camera-crop-guide'),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _CameraCropMaskPainter extends CustomPainter {
+  const _CameraCropMaskPainter({required this.frame});
+
+  final Rect frame;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final frameShape = RRect.fromRectAndRadius(frame, const Radius.circular(2));
+    final mask = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRRect(frameShape);
+    canvas.drawPath(mask, Paint()..color = const Color(0x66000000));
+    canvas.drawRRect(
+      frameShape,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xE6FFFFFF),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CameraCropMaskPainter oldDelegate) {
+    return oldDelegate.frame != frame;
   }
 }
 

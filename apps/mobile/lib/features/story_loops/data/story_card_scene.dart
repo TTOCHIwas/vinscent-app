@@ -83,6 +83,7 @@ class StoryCardScene {
     this.cardType = StoryCardType.polaroid,
     this.additionalPhotoTransforms = const [],
     this.film = const StoryCardFilmState.original(),
+    this.additionalPhotoFilms = const [],
     this.canvasBackground = StoryCardCanvasBackground.white,
     this.caption,
   });
@@ -124,6 +125,11 @@ class StoryCardScene {
           ),
         )
         .toList(growable: false);
+    final legacyFilm = StoryCardFilmState.fromJson(json['film']);
+    final serializedFilms = json['films'] as List<dynamic>?;
+    final films = serializedFilms
+        ?.map(StoryCardFilmState.fromJson)
+        .toList(growable: false);
 
     return StoryCardScene(
       backgroundTransform:
@@ -149,7 +155,10 @@ class StoryCardScene {
             ),
           )
           .toList(growable: false),
-      film: StoryCardFilmState.fromJson(json['film']),
+      film: films?.firstOrNull ?? legacyFilm,
+      additionalPhotoFilms: films == null
+          ? List<StoryCardFilmState>.filled(3, legacyFilm, growable: false)
+          : films.skip(1).toList(growable: false),
       canvasBackground: _canvasBackgroundFromJson(
         canvas?['background_color'] as String?,
       ),
@@ -163,11 +172,12 @@ class StoryCardScene {
   final List<StoryCardStroke> strokes;
   final List<StoryCardTextLayer> textLayers;
   final StoryCardFilmState film;
+  final List<StoryCardFilmState> additionalPhotoFilms;
   final StoryCardCanvasBackground canvasBackground;
   final String? caption;
 
   List<StoryCardBackgroundTransform> get photoTransforms {
-    final transforms = [backgroundTransform, ...additionalPhotoTransforms];
+    final transforms = storedPhotoTransforms;
     return List.generate(
       cardType.requiredPhotoCount,
       (index) => index < transforms.length
@@ -177,12 +187,34 @@ class StoryCardScene {
     );
   }
 
+  List<StoryCardBackgroundTransform> get storedPhotoTransforms => [
+    backgroundTransform,
+    ...additionalPhotoTransforms,
+  ];
+
+  List<StoryCardFilmState> get photoFilms {
+    final films = storedPhotoFilms;
+    return List.generate(
+      cardType.requiredPhotoCount,
+      (index) => index < films.length
+          ? films[index]
+          : const StoryCardFilmState.original(),
+      growable: false,
+    );
+  }
+
+  List<StoryCardFilmState> get storedPhotoFilms => [
+    film,
+    ...additionalPhotoFilms,
+  ];
+
   bool get hasDrawing =>
       strokes.any((stroke) => stroke.tool == StoryCardDrawingTool.pen);
 
   bool get hasText => textLayers.isNotEmpty;
 
-  bool get hasCaption => caption?.isNotEmpty ?? false;
+  bool get hasCaption =>
+      cardType.supportsCaption && (caption?.isNotEmpty ?? false);
 
   int get textCharacterCount => textLayers.fold(
     0,
@@ -205,6 +237,7 @@ class StoryCardScene {
     List<StoryCardStroke>? strokes,
     List<StoryCardTextLayer>? textLayers,
     StoryCardFilmState? film,
+    List<StoryCardFilmState>? additionalPhotoFilms,
     StoryCardCanvasBackground? canvasBackground,
     Object? caption = _storyCardCaptionUnchanged,
   }) {
@@ -216,6 +249,7 @@ class StoryCardScene {
       strokes: strokes ?? this.strokes,
       textLayers: textLayers ?? this.textLayers,
       film: film ?? this.film,
+      additionalPhotoFilms: additionalPhotoFilms ?? this.additionalPhotoFilms,
       canvasBackground: canvasBackground ?? this.canvasBackground,
       caption: identical(caption, _storyCardCaptionUnchanged)
           ? this.caption
@@ -230,16 +264,70 @@ class StoryCardScene {
     if (index < 0 || index >= cardType.requiredPhotoCount) {
       throw RangeError.index(index, photoTransforms, 'index');
     }
-    final transforms = [...photoTransforms]..[index] = transform;
+    final transforms = [backgroundTransform, ...additionalPhotoTransforms];
+    while (transforms.length <= index) {
+      transforms.add(const StoryCardBackgroundTransform.initial());
+    }
+    transforms[index] = transform;
     return copyWith(
       backgroundTransform: transforms.first,
       additionalPhotoTransforms: transforms.skip(1).toList(growable: false),
     );
   }
 
-  Map<String, dynamic> toJson() {
+  StoryCardScene withPhotoFilm(int index, StoryCardFilmState photoFilm) {
+    if (index < 0 || index >= cardType.requiredPhotoCount) {
+      throw RangeError.index(index, photoFilms, 'index');
+    }
+    final films = [film, ...additionalPhotoFilms];
+    while (films.length <= index) {
+      films.add(const StoryCardFilmState.original());
+    }
+    films[index] = photoFilm;
+    return copyWith(
+      film: films.first,
+      additionalPhotoFilms: films.skip(1).toList(growable: false),
+    );
+  }
+
+  StoryCardScene reorderPhotoState(int fromIndex, int toIndex) {
+    if (fromIndex < 0 ||
+        fromIndex >= cardType.requiredPhotoCount ||
+        toIndex < 0 ||
+        toIndex >= cardType.requiredPhotoCount) {
+      throw RangeError('Photo reorder index is outside the active card.');
+    }
+    final transforms = [backgroundTransform, ...additionalPhotoTransforms];
+    final films = [film, ...additionalPhotoFilms];
+    while (transforms.length < cardType.requiredPhotoCount) {
+      transforms.add(const StoryCardBackgroundTransform.initial());
+    }
+    while (films.length < cardType.requiredPhotoCount) {
+      films.add(const StoryCardFilmState.original());
+    }
+    final fromTransform = transforms[fromIndex];
+    transforms[fromIndex] = transforms[toIndex];
+    transforms[toIndex] = fromTransform;
+    final fromFilm = films[fromIndex];
+    films[fromIndex] = films[toIndex];
+    films[toIndex] = fromFilm;
+    return copyWith(
+      backgroundTransform: transforms.first,
+      additionalPhotoTransforms: transforms.skip(1).toList(growable: false),
+      film: films.first,
+      additionalPhotoFilms: films.skip(1).toList(growable: false),
+    );
+  }
+
+  Map<String, dynamic> toJson({bool includeInactivePhotoState = false}) {
+    final serializedTransforms = includeInactivePhotoState
+        ? storedPhotoTransforms
+        : photoTransforms;
+    final serializedFilms = includeInactivePhotoState
+        ? storedPhotoFilms
+        : photoFilms;
     return {
-      'version': 6,
+      'version': 7,
       'card_type': cardType.storageValue,
       'canvas': {
         'width_ratio': cardType == StoryCardType.fourCutStrip ? 2 : 4,
@@ -247,17 +335,23 @@ class StoryCardScene {
         'background_color': canvasBackground.name,
       },
       'background': backgroundTransform.toJson(),
-      'backgrounds': photoTransforms
+      'backgrounds': serializedTransforms
           .map((transform) => transform.toJson())
           .toList(growable: false),
       'film': film.toJson(),
+      'films': serializedFilms
+          .map((value) => value.toJson())
+          .toList(growable: false),
       'strokes': strokes.map((stroke) => stroke.toJson()).toList(),
       'text_layers': textLayers.map((layer) => layer.toJson()).toList(),
-      'caption': caption,
+      'caption': cardType.supportsCaption || includeInactivePhotoState
+          ? caption
+          : null,
     };
   }
 
-  String toJsonString() => jsonEncode(toJson());
+  String toJsonString({bool includeInactivePhotoState = false}) =>
+      jsonEncode(toJson(includeInactivePhotoState: includeInactivePhotoState));
 }
 
 class StoryCardBackgroundTransform {
@@ -265,12 +359,14 @@ class StoryCardBackgroundTransform {
     required this.scale,
     required this.offsetX,
     required this.offsetY,
+    this.rotation = 0,
   });
 
   const StoryCardBackgroundTransform.initial()
     : scale = 1,
       offsetX = 0,
-      offsetY = 0;
+      offsetY = 0,
+      rotation = 0;
 
   factory StoryCardBackgroundTransform.fromJson(Map<String, dynamic> json) {
     return StoryCardBackgroundTransform(
@@ -279,27 +375,36 @@ class StoryCardBackgroundTransform {
           .toDouble(),
       offsetX: (json['offset_x'] as num?)?.toDouble() ?? 0,
       offsetY: (json['offset_y'] as num?)?.toDouble() ?? 0,
+      rotation: (json['rotation'] as num?)?.toDouble() ?? 0,
     );
   }
 
   final double scale;
   final double offsetX;
   final double offsetY;
+  final double rotation;
 
   StoryCardBackgroundTransform copyWith({
     double? scale,
     double? offsetX,
     double? offsetY,
+    double? rotation,
   }) {
     return StoryCardBackgroundTransform(
       scale: scale ?? this.scale,
       offsetX: offsetX ?? this.offsetX,
       offsetY: offsetY ?? this.offsetY,
+      rotation: rotation ?? this.rotation,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'scale': scale, 'offset_x': offsetX, 'offset_y': offsetY};
+    return {
+      'scale': scale,
+      'offset_x': offsetX,
+      'offset_y': offsetY,
+      'rotation': rotation,
+    };
   }
 }
 

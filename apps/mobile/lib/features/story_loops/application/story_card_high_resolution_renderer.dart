@@ -52,7 +52,9 @@ class StoryCardHighResolutionRenderer implements StoryCardImageRenderer {
       }
 
       if (backgroundImage != null &&
-          source.scene.film.look != StoryCardFilmLook.original) {
+          source.scene.photoFilms.any(
+            (film) => film.look != StoryCardFilmLook.original,
+          )) {
         filmProgram = await StoryCardFilmShaderProgram.load();
       }
 

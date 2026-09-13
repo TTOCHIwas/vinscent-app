@@ -17,6 +17,7 @@ import '../application/story_card_editor_session.dart';
 import '../application/story_card_film_shader.dart';
 import '../application/story_card_gallery_picker.dart';
 import '../application/story_card_image_normalizer.dart';
+import '../application/story_card_local_draft_repository.dart';
 import '../data/story_card_draft.dart';
 import '../data/story_card_film_look.dart';
 import '../data/story_card_scene.dart';
@@ -24,15 +25,17 @@ import '../data/story_card_type.dart';
 import '../data/story_loop_write_failure.dart';
 import 'widgets/story_card_caption_input_overlay.dart';
 import 'widgets/story_card_camera_stage.dart';
+import 'widgets/story_card_draft_exit_dialog.dart';
 import 'widgets/story_card_drawing_controls.dart';
 import 'widgets/story_card_editor_action_bar.dart';
 import 'widgets/story_card_editor_canvas.dart';
 import 'widgets/story_card_editor_header.dart';
 import 'widgets/story_card_film_look_selector.dart';
-import 'widgets/story_card_photo_assembly.dart';
+import 'widgets/story_card_local_draft_sheet.dart';
+import 'widgets/story_card_photo_adjustment_screen.dart';
+import 'widgets/story_card_photo_slot_controls.dart';
 import 'widgets/story_card_text_input_overlay.dart';
 import 'widgets/story_card_text_trash_target.dart';
-import 'widgets/story_card_type_selector.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
   const StoryCardEditorScreen({super.key});
@@ -83,11 +86,9 @@ class _StoryCardEditorContentState
   Color _selectedColor = storyCardColorPalette.first;
   double _selectedStrokeWidth = storyCardNormalStrokeWidth;
   int? _activePointer;
-  double _backgroundScaleStart = 1;
-  Offset _backgroundOffsetStart = Offset.zero;
-  Offset _backgroundFocalPointStart = Offset.zero;
-  int? _backgroundTransformPhotoIndex;
   int _selectedPhotoIndex = 0;
+  int? _selectedEmptyPhotoIndex;
+  int? _cameraTargetPhotoIndex;
   StoryCardTextLayer? _textLayerTransformStart;
   Offset _textLayerFocalPointStart = Offset.zero;
   bool _isTextInputActive = false;
@@ -97,6 +98,13 @@ class _StoryCardEditorContentState
   bool _isPickingColor = false;
   bool _isPickingGallery = false;
   bool _isSaving = false;
+  bool _isSavingLocalDraft = false;
+  bool _isLocalDraftActive = false;
+  List<StoryCardLocalDraftSummary> _localDrafts = const [];
+  StoryCardType? _announcedCardType;
+  bool _isCardTypeAnnouncementVisible = false;
+  Timer? _cardTypeAnnouncementFadeTimer;
+  Timer? _cardTypeAnnouncementRemovalTimer;
   late StoryCardFilmState _cameraFilm;
   ui.FragmentProgram? _filmProgram;
   Future<ui.FragmentProgram>? _filmProgramFuture;
@@ -110,19 +118,20 @@ class _StoryCardEditorContentState
         : widget.initialDraft.scene.film.copyWith(
             seed: StoryCardFilmSeed.now(),
           );
-    _backgroundImages = List<ui.Image?>.filled(
-      _draft.scene.cardType.requiredPhotoCount,
-      null,
-      growable: false,
-    );
-    unawaited(_loadBackgroundImages(_draft.photoImageBytes));
-    if (_draft.scene.film.look != StoryCardFilmLook.original) {
+    _backgroundImages = List<ui.Image?>.filled(4, null, growable: false);
+    unawaited(_loadBackgroundImages(_draft.storedPhotoImageBytes));
+    unawaited(_refreshLocalDrafts());
+    if (_draft.scene.photoFilms.any(
+      (film) => film.look != StoryCardFilmLook.original,
+    )) {
       unawaited(_prepareFilmProgram());
     }
   }
 
   @override
   void dispose() {
+    _cardTypeAnnouncementFadeTimer?.cancel();
+    _cardTypeAnnouncementRemovalTimer?.cancel();
     _disposeImages(_backgroundImages);
     super.dispose();
   }
@@ -139,6 +148,7 @@ class _StoryCardEditorContentState
       !_isPickingColor &&
       !_isPickingGallery &&
       !_isSaving &&
+      !_isSavingLocalDraft &&
       _draft.canSave;
 
   @override
@@ -151,37 +161,38 @@ class _StoryCardEditorContentState
         }
       },
       child: switch (_session.stage) {
-        StoryCardEditorStage.formatSelection => StoryCardTypeSelector(
-          onBack: () => context.go('/home'),
-          onSelected: _selectCardType,
-        ),
-        StoryCardEditorStage.camera => StoryCardCameraStage(
-          onBack: _handleBack,
-          onImageSelected: _useBackgroundImage,
-          initialFilm: _cameraFilm,
-          onFilmChanged: (film) => _cameraFilm = film,
-          loadCharacterImage: _loadCoupleCharacterImage,
-          onTextSelected: _enterBlankTextDecorator,
-          onDrawingSelected: () =>
-              _enterBlankDecorator(StoryCardEditorTool.drawing),
-          showEditorTools: !_draft.scene.cardType.isFourCut,
-          showGalleryButton: !_draft.scene.cardType.isFourCut,
-        ),
-        StoryCardEditorStage.assembling => StoryCardPhotoAssembly(
-          cardType: _draft.scene.cardType,
-          photos: _draft.photoImageBytes,
-          selectedIndex: _selectedPhotoIndex,
-          isPickingGallery: _isPickingGallery,
-          onBack: _handleBack,
-          onPhotoSelected: _selectPhotoSlot,
-          onCameraPressed: _openFourCutCamera,
-          onGalleryPressed: () => unawaited(_pickFourCutGallery()),
-          onContinue: _draft.hasAllRequiredPhotos
-              ? _continueToFourCutDecorator
-              : null,
-        ),
+        StoryCardEditorStage.formatSelection ||
+        StoryCardEditorStage.camera => _buildCameraStage(),
+        StoryCardEditorStage.assembling ||
         StoryCardEditorStage.decorating => _buildDecorator(),
       },
+    );
+  }
+
+  Widget _buildCameraStage() {
+    final targetIndex = _cameraTargetPhotoIndex;
+    final guideAspectRatio = targetIndex == null
+        ? null
+        : StoryCardLayout.fromSize(
+            type: _draft.scene.cardType,
+            size: _draft.scene.cardType.previewSize,
+          ).photoAspectRatio(targetIndex);
+    return StoryCardCameraStage(
+      onBack: _handleBack,
+      onImageSelected: _useBackgroundImage,
+      initialFilm: _cameraFilm,
+      onFilmChanged: (film) => _cameraFilm = film,
+      loadCharacterImage: _loadCoupleCharacterImage,
+      onTextSelected: _enterBlankTextDecorator,
+      onDrawingSelected: () =>
+          _enterBlankDecorator(StoryCardEditorTool.drawing),
+      showEditorTools: targetIndex == null,
+      showGalleryButton: targetIndex == null,
+      guideAspectRatio: guideAspectRatio,
+      draftCount: _localDrafts.length,
+      onDraftsPressed: targetIndex == null
+          ? () => unawaited(_showLocalDrafts())
+          : null,
     );
   }
 
@@ -200,23 +211,43 @@ class _StoryCardEditorContentState
                 child: AspectRatio(
                   key: const ValueKey('story-card-editor-canvas'),
                   aspectRatio: _draft.scene.cardType.canvasAspectRatio,
-                  child: RepaintBoundary(
-                    key: _previewKey,
-                    child: StoryCardEditorCanvas(
-                      backgroundImages: _backgroundImages,
-                      filmProgram: _filmProgram,
-                      scene: _draft.scene,
-                      visibleStrokes: _visibleStrokes,
-                      interactionMode: _session.tool,
-                      onStrokeStart: _startStroke,
-                      onStrokeUpdate: _updateStroke,
-                      onStrokeEnd: _endStroke,
-                      onBackgroundScaleStart: _startBackgroundTransform,
-                      onBackgroundScaleUpdate: _updateBackgroundTransform,
-                      onTextLayerScaleStart: _startTextLayerTransform,
-                      onTextLayerScaleUpdate: _updateTextLayerTransform,
-                      onTextLayerScaleEnd: _endTextLayerTransform,
-                    ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      RepaintBoundary(
+                        key: _previewKey,
+                        child: StoryCardEditorCanvas(
+                          backgroundImages: _backgroundImages,
+                          filmProgram: _filmProgram,
+                          scene: _draft.scene,
+                          visibleStrokes: _visibleStrokes,
+                          interactionMode: _session.tool,
+                          onStrokeStart: _startStroke,
+                          onStrokeUpdate: _updateStroke,
+                          onStrokeEnd: _endStroke,
+                          onPhotoTapped: _handlePhotoTapped,
+                          onPhotosReordered: _reorderPhotos,
+                          onCardTypeStep: _stepCardType,
+                          onTextLayerScaleStart: _startTextLayerTransform,
+                          onTextLayerScaleUpdate: _updateTextLayerTransform,
+                          onTextLayerScaleEnd: _endTextLayerTransform,
+                        ),
+                      ),
+                      if (_session.tool != StoryCardEditorTool.drawing &&
+                          !_isTextInputActive &&
+                          !_isCaptionInputActive)
+                        StoryCardPhotoSlotControls(
+                          cardType: _draft.scene.cardType,
+                          hasPhotos: _draft.photoImageBytes
+                              .map((bytes) => bytes != null)
+                              .toList(growable: false),
+                          selectedEmptyIndex: _selectedEmptyPhotoIndex,
+                          isPickingGallery: _isPickingGallery,
+                          onCameraPressed: _openPhotoSlotCamera,
+                          onGalleryPressed: (index) =>
+                              unawaited(_pickPhotoForSlot(index)),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -256,7 +287,9 @@ class _StoryCardEditorContentState
                     onBackgroundColorPressed: _draft.hasPhoto
                         ? null
                         : _toggleCanvasBackground,
-                    onFilmPressed: _draft.hasPhoto ? _toggleFilmSelector : null,
+                    onFilmPressed: _selectedPhotoBytes == null
+                        ? null
+                        : _toggleFilmSelector,
                     isFilmSelected: _session.tool == StoryCardEditorTool.film,
                   ),
                 ),
@@ -273,7 +306,7 @@ class _StoryCardEditorContentState
                   padding: const EdgeInsets.only(bottom: 16),
                   child: StoryCardFilmLookSelector(
                     key: const ValueKey('story-card-editor-film-selector'),
-                    selectedLook: _draft.scene.film.look,
+                    selectedLook: _selectedPhotoFilm.look,
                     onLookChanged: _selectFilmLook,
                     keyPrefix: 'story-card-editor-film',
                   ),
@@ -342,6 +375,39 @@ class _StoryCardEditorContentState
               onCancelled: _cancelCaptionInput,
               onSubmitted: _submitCaptionInput,
             ),
+          if (_announcedCardType != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
+                    opacity: _isCardTypeAnnouncementVisible ? 1 : 0,
+                    child: DecoratedBox(
+                      key: const ValueKey('story-card-type-announcement'),
+                      decoration: BoxDecoration(
+                        color: const Color(0xA6000000),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 9,
+                        ),
+                        child: Text(
+                          _announcedCardType!.displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -369,7 +435,7 @@ class _StoryCardEditorContentState
       return;
     }
 
-    if (_isSaving) {
+    if (_isSaving || _isSavingLocalDraft) {
       return;
     }
     if (_isPickingGallery) {
@@ -381,40 +447,42 @@ class _StoryCardEditorContentState
     }
 
     if (_session.stage == StoryCardEditorStage.camera) {
-      if (_draft.scene.cardType.isFourCut) {
+      if (_cameraTargetPhotoIndex != null) {
         setState(() {
-          _session = _session.returnToFourCutAssembly();
+          _cameraTargetPhotoIndex = null;
+          _session = _session.returnToDecorator();
         });
       } else {
-        _returnToFormatSelection();
-      }
-      return;
-    }
-
-    if (_session.stage == StoryCardEditorStage.assembling &&
-        !_session.hasUnsavedChanges) {
-      _returnToFormatSelection();
-      return;
-    }
-
-    if (_session.stage == StoryCardEditorStage.decorating &&
-        _draft.scene.cardType.isFourCut &&
-        !_session.hasPersistedCard) {
-      setState(() {
-        _session = _session.returnToFourCutAssembly();
-      });
-      return;
-    }
-
-    if (!_session.hasUnsavedChanges) {
-      if (_session.hasPersistedCard) {
         context.go('/home');
-      } else {
-        _returnToCamera();
       }
       return;
     }
 
+    if (!_session.hasUnsavedChanges && !_isLocalDraftActive) {
+      context.go('/home');
+      return;
+    }
+
+    if (!_session.hasPersistedCard) {
+      final action = await showStoryCardDraftExitDialog(context: context);
+      if (!mounted || action == null) {
+        return;
+      }
+      switch (action) {
+        case StoryCardDraftExitAction.saveDraft:
+          await _saveLocalDraft();
+          return;
+        case StoryCardDraftExitAction.discard:
+          context.go('/home');
+          return;
+        case StoryCardDraftExitAction.continueEditing:
+          return;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
     final shouldDiscard = await showAppConfirmationDialog(
       context: context,
       title: '수정 내용을 버릴까요?',
@@ -429,32 +497,12 @@ class _StoryCardEditorContentState
     await _discardUnsavedChanges();
   }
 
-  void _returnToCamera() {
-    _cameraFilm = _draft.scene.film.seed > 0 ? _draft.scene.film : _cameraFilm;
-    final previousImages = _backgroundImages;
-    setState(() {
-      _backgroundImages = const [null];
-      _session = _session.returnToCamera();
-    });
-    _disposeImages(previousImages);
-  }
-
-  void _returnToFormatSelection() {
-    final previousImages = _backgroundImages;
-    setState(() {
-      _backgroundImages = const [null];
-      _selectedPhotoIndex = 0;
-      _session = _session.discardChanges();
-    });
-    _disposeImages(previousImages);
-  }
-
   Future<void> _discardUnsavedChanges() async {
     final nextSession = _session.discardChanges();
     late final List<ui.Image?> nextBackgroundImages;
     try {
       nextBackgroundImages = await _decodeUiImages(
-        nextSession.draft.photoImageBytes,
+        _paddedPhotoBytes(nextSession.draft.storedPhotoImageBytes),
       );
     } catch (_) {
       if (mounted) {
@@ -471,6 +519,7 @@ class _StoryCardEditorContentState
     setState(() {
       _backgroundImages = nextBackgroundImages;
       _selectedPhotoIndex = 0;
+      _selectedEmptyPhotoIndex = null;
       _activeStroke = null;
       _activePointer = null;
       _session = nextSession;
@@ -481,93 +530,91 @@ class _StoryCardEditorContentState
     _disposeImages(previousImages);
   }
 
-  void _selectCardType(StoryCardType cardType) {
-    final previousImages = _backgroundImages;
-    setState(() {
-      _session = _session.selectCardType(cardType);
-      _backgroundImages = List<ui.Image?>.filled(
-        cardType.requiredPhotoCount,
-        null,
-        growable: false,
-      );
-      _selectedPhotoIndex = 0;
-    });
-    _disposeImages(previousImages);
+  Uint8List? get _selectedPhotoBytes {
+    final photos = _draft.photoImageBytes;
+    return _selectedPhotoIndex >= 0 && _selectedPhotoIndex < photos.length
+        ? photos[_selectedPhotoIndex]
+        : null;
   }
 
-  void _selectPhotoSlot(int index) {
+  StoryCardFilmState get _selectedPhotoFilm {
+    final films = _draft.scene.photoFilms;
+    return _selectedPhotoIndex >= 0 && _selectedPhotoIndex < films.length
+        ? films[_selectedPhotoIndex]
+        : const StoryCardFilmState.original();
+  }
+
+  void _selectEmptyPhotoSlot(int index) {
     if (index < 0 || index >= _draft.scene.cardType.requiredPhotoCount) {
       return;
     }
-    setState(() => _selectedPhotoIndex = index);
-  }
-
-  void _openFourCutCamera() {
-    if (!_draft.scene.cardType.isFourCut || _isPickingGallery) {
-      return;
-    }
     setState(() {
-      _session = _session.enterFourCutCamera();
+      _selectedPhotoIndex = index;
+      _selectedEmptyPhotoIndex = index;
+      _session = _session.selectTool(StoryCardEditorTool.background);
     });
   }
 
-  void _continueToFourCutDecorator() {
-    if (!_draft.hasAllRequiredPhotos) {
+  void _handlePhotoTapped(int index) {
+    final photos = _draft.photoImageBytes;
+    if (index < 0 || index >= photos.length) {
       return;
     }
+    if (photos[index] == null) {
+      _selectEmptyPhotoSlot(index);
+      return;
+    }
+    unawaited(_openPhotoAdjustment(index));
+  }
+
+  void _openPhotoSlotCamera(int index) {
+    if (_isPickingGallery ||
+        index < 0 ||
+        index >= _draft.scene.cardType.requiredPhotoCount) {
+      return;
+    }
+    final film = _draft.scene.photoFilms[index];
     setState(() {
-      _session = _session.enterFourCutDecorator();
+      _selectedPhotoIndex = index;
+      _selectedEmptyPhotoIndex = null;
+      _cameraTargetPhotoIndex = index;
+      _cameraFilm = film.seed > 0
+          ? film
+          : film.copyWith(seed: StoryCardFilmSeed.now());
+      _session = _session.enterPhotoCamera();
     });
   }
 
-  Future<void> _pickFourCutGallery() async {
-    if (!_draft.scene.cardType.isFourCut || _isPickingGallery || _isSaving) {
+  Future<void> _pickPhotoForSlot(int index) async {
+    if (_isPickingGallery ||
+        _isSaving ||
+        index < 0 ||
+        index >= _draft.scene.cardType.requiredPhotoCount) {
       return;
     }
-
-    final currentPhotos = _draft.photoImageBytes;
-    final targetIndices = <int>[
-      _selectedPhotoIndex,
-      for (var index = 0; index < currentPhotos.length; index++)
-        if (index != _selectedPhotoIndex && currentPhotos[index] == null) index,
-    ];
 
     setState(() => _isPickingGallery = true);
     try {
-      final pickedImages = await _galleryPicker.pickNormalizedImages(
-        limit: targetIndices.length,
-      );
+      final pickedImages = await _galleryPicker.pickNormalizedImages(limit: 1);
       if (!mounted || pickedImages.isEmpty) {
         return;
       }
-
-      final decodedImages = await _decodeUiImages(pickedImages);
+      final bytes = pickedImages.single;
+      final decoded = await _decodeUiImage(bytes);
       if (!mounted) {
-        _disposeImages(decodedImages);
+        decoded.dispose();
         return;
       }
-
-      var nextSession = _session;
       final nextBackgroundImages = [..._backgroundImages];
-      final replacedImages = <ui.Image?>[];
-      for (var offset = 0; offset < pickedImages.length; offset++) {
-        final targetIndex = targetIndices[offset];
-        replacedImages.add(nextBackgroundImages[targetIndex]);
-        nextBackgroundImages[targetIndex] = decodedImages[offset];
-        nextSession = nextSession.setPhoto(targetIndex, pickedImages[offset]);
-      }
-      final nextEmptyIndex = nextSession.draft.photoImageBytes.indexWhere(
-        (photo) => photo == null,
-      );
-
+      final replacedImage = nextBackgroundImages[index];
+      nextBackgroundImages[index] = decoded;
       setState(() {
-        _session = nextSession;
+        _session = _session.setPhoto(index, bytes);
         _backgroundImages = nextBackgroundImages;
-        _selectedPhotoIndex = nextEmptyIndex >= 0
-            ? nextEmptyIndex
-            : targetIndices[pickedImages.length - 1];
+        _selectedPhotoIndex = index;
+        _selectedEmptyPhotoIndex = null;
       });
-      _disposeImages(replacedImages);
+      replacedImage?.dispose();
     } catch (_) {
       if (mounted) {
         _showSnackBar('사진을 불러오지 못했어요.');
@@ -577,6 +624,126 @@ class _StoryCardEditorContentState
         setState(() => _isPickingGallery = false);
       }
     }
+  }
+
+  Future<void> _openPhotoAdjustment(int index) async {
+    final photos = _draft.photoImageBytes;
+    if (index < 0 || index >= photos.length || photos[index] == null) {
+      return;
+    }
+    setState(() {
+      _selectedPhotoIndex = index;
+      _selectedEmptyPhotoIndex = null;
+      _session = _session.selectTool(StoryCardEditorTool.background);
+    });
+    final layout = StoryCardLayout.fromSize(
+      type: _draft.scene.cardType,
+      size: _draft.scene.cardType.previewSize,
+    );
+    final result = await Navigator.of(context).push<_PhotoAdjustmentResult>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (routeContext) => StoryCardPhotoAdjustmentScreen(
+          imageBytes: photos[index]!,
+          cropAspectRatio: layout.photoAspectRatio(index),
+          initialTransform: _draft.scene.photoTransforms[index],
+          initialFilm: _draft.scene.photoFilms[index],
+          onBack: () => Navigator.of(routeContext).pop(),
+          onDone: (transform, film) => Navigator.of(routeContext).pop(
+            _PhotoAdjustmentResult.updated(transform: transform, film: film),
+          ),
+          onRemove: () => Navigator.of(
+            routeContext,
+          ).pop(const _PhotoAdjustmentResult.removed()),
+        ),
+      ),
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+    if (result.removed) {
+      final previousImage = _backgroundImages[index];
+      final nextImages = [..._backgroundImages]..[index] = null;
+      setState(() {
+        _backgroundImages = nextImages;
+        _session = _session.removePhoto(index);
+        _selectedEmptyPhotoIndex = index;
+      });
+      previousImage?.dispose();
+      return;
+    }
+    setState(() {
+      _session = _session
+          .setPhotoTransform(index, result.transform!)
+          .setPhotoFilm(index, result.film!);
+    });
+    if (result.film!.look != StoryCardFilmLook.original) {
+      unawaited(_prepareFilmProgram());
+    }
+  }
+
+  void _reorderPhotos(int fromIndex, int toIndex) {
+    if (!_draft.scene.cardType.isFourCut ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= _draft.scene.cardType.requiredPhotoCount ||
+        toIndex >= _draft.scene.cardType.requiredPhotoCount) {
+      return;
+    }
+    final nextImages = [..._backgroundImages];
+    final moved = nextImages[fromIndex];
+    nextImages[fromIndex] = nextImages[toIndex];
+    nextImages[toIndex] = moved;
+    setState(() {
+      _backgroundImages = nextImages;
+      _session = _session.reorderPhotos(fromIndex, toIndex);
+      _selectedPhotoIndex = toIndex;
+      _selectedEmptyPhotoIndex = null;
+    });
+  }
+
+  void _stepCardType(int step) {
+    if (_session.tool == StoryCardEditorTool.drawing || step == 0) {
+      return;
+    }
+    final types = StoryCardType.editorOrder;
+    final currentIndex = types.indexOf(_draft.scene.cardType);
+    final nextIndex = (currentIndex + step).clamp(0, types.length - 1);
+    if (nextIndex == currentIndex) {
+      return;
+    }
+    final nextType = types[nextIndex];
+    setState(() {
+      _session = _session.changeCardType(nextType);
+      _selectedPhotoIndex = 0;
+      _selectedEmptyPhotoIndex = null;
+    });
+    _announceCardType(nextType);
+  }
+
+  void _announceCardType(StoryCardType type) {
+    _cardTypeAnnouncementFadeTimer?.cancel();
+    _cardTypeAnnouncementRemovalTimer?.cancel();
+    setState(() {
+      _announcedCardType = type;
+      _isCardTypeAnnouncementVisible = true;
+    });
+    _cardTypeAnnouncementFadeTimer = Timer(
+      const Duration(milliseconds: 700),
+      () {
+        if (mounted) {
+          setState(() => _isCardTypeAnnouncementVisible = false);
+        }
+      },
+    );
+    _cardTypeAnnouncementRemovalTimer = Timer(
+      const Duration(milliseconds: 980),
+      () {
+        if (mounted) {
+          setState(() => _announcedCardType = null);
+        }
+      },
+    );
   }
 
   void _selectTool(StoryCardEditorTool tool) {
@@ -668,13 +835,16 @@ class _StoryCardEditorContentState
   }
 
   void _selectFilmLook(StoryCardFilmLook look) {
-    final currentFilm = _draft.scene.film;
+    if (_selectedPhotoBytes == null) {
+      return;
+    }
+    final currentFilm = _selectedPhotoFilm;
     final nextFilm = currentFilm.copyWith(
       look: look,
       seed: currentFilm.seed > 0 ? currentFilm.seed : StoryCardFilmSeed.now(),
     );
     setState(() {
-      _session = _session.setFilm(nextFilm);
+      _session = _session.setPhotoFilm(_selectedPhotoIndex, nextFilm);
       _cameraFilm = nextFilm;
     });
     if (look != StoryCardFilmLook.original) {
@@ -685,7 +855,7 @@ class _StoryCardEditorContentState
   void _enterBlankDecorator(StoryCardEditorTool tool) {
     final previousImages = _backgroundImages;
     setState(() {
-      _backgroundImages = const [null];
+      _backgroundImages = List<ui.Image?>.filled(4, null, growable: false);
       _session = _session.enterBlankDecorator(tool: tool);
     });
     _disposeImages(previousImages);
@@ -694,7 +864,7 @@ class _StoryCardEditorContentState
   void _enterBlankTextDecorator() {
     final previousImages = _backgroundImages;
     setState(() {
-      _backgroundImages = const [null];
+      _backgroundImages = List<ui.Image?>.filled(4, null, growable: false);
       _session = _session.enterBlankDecorator(
         tool: StoryCardEditorTool.text,
         background: StoryCardCanvasBackground.black,
@@ -800,7 +970,7 @@ class _StoryCardEditorContentState
   }
 
   Future<void> _useBackgroundImage(StoryCardCameraSelection selection) async {
-    if (_isSaving) {
+    if (_isSaving || _isSavingLocalDraft) {
       return;
     }
 
@@ -820,37 +990,41 @@ class _StoryCardEditorContentState
         return;
       }
 
-      final previousImages = _backgroundImages;
-      if (_draft.scene.cardType.isFourCut) {
-        final selectedPhotoIndex = _selectedPhotoIndex;
+      final targetIndex = _cameraTargetPhotoIndex;
+      if (targetIndex != null) {
         final nextImages = [..._backgroundImages];
-        nextImages[selectedPhotoIndex] = backgroundImage;
+        final replacedImage = nextImages[targetIndex];
+        nextImages[targetIndex] = backgroundImage;
         setState(() {
           _backgroundImages = nextImages;
           _session = _session
-              .setPhoto(selectedPhotoIndex, normalizedImageBytes)
-              .returnToFourCutAssembly();
-          final nextEmptyIndex = _draft.photoImageBytes.indexWhere(
-            (photo) => photo == null,
-          );
-          if (nextEmptyIndex >= 0) {
-            _selectedPhotoIndex = nextEmptyIndex;
-          }
+              .setPhoto(targetIndex, normalizedImageBytes)
+              .setPhotoFilm(targetIndex, selection.film)
+              .returnToDecorator();
+          _selectedPhotoIndex = targetIndex;
+          _selectedEmptyPhotoIndex = null;
+          _cameraTargetPhotoIndex = null;
+          _cameraFilm = selection.film;
         });
-        previousImages[selectedPhotoIndex]?.dispose();
+        replacedImage?.dispose();
       } else {
+        final previousImages = _backgroundImages;
+        final nextImages = List<ui.Image?>.filled(4, null, growable: false)
+          ..[0] = backgroundImage;
         setState(() {
-          _backgroundImages = [backgroundImage];
+          _backgroundImages = nextImages;
           _cameraFilm = selection.film;
           _session = _session.enterPhotoDecorator(
             normalizedImageBytes,
             film: selection.film,
           );
+          _selectedPhotoIndex = 0;
+          _selectedEmptyPhotoIndex = null;
         });
         _disposeImages(previousImages);
-        if (selection.film.look != StoryCardFilmLook.original) {
-          unawaited(_prepareFilmProgram());
-        }
+      }
+      if (selection.film.look != StoryCardFilmLook.original) {
+        unawaited(_prepareFilmProgram());
       }
     } catch (_) {
       if (mounted) {
@@ -869,13 +1043,124 @@ class _StoryCardEditorContentState
         .fetchImageBytes(character);
   }
 
+  Future<void> _refreshLocalDrafts() async {
+    try {
+      final drafts = await ref
+          .read(storyCardLocalDraftRepositoryProvider)
+          .list();
+      if (mounted) {
+        setState(() => _localDrafts = drafts);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _localDrafts = const []);
+      }
+    }
+  }
+
+  Future<void> _showLocalDrafts() async {
+    await _refreshLocalDrafts();
+    if (!mounted) {
+      return;
+    }
+    final selected = await showModalBottomSheet<StoryCardLocalDraftSummary>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.72,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) => StoryCardLocalDraftSheet(
+        drafts: _localDrafts,
+        onSelected: (draft) => Navigator.of(sheetContext).pop(draft),
+      ),
+    );
+    if (!mounted || selected == null) {
+      return;
+    }
+
+    final draft = await ref
+        .read(storyCardLocalDraftRepositoryProvider)
+        .take(selected.id);
+    if (draft == null) {
+      await _refreshLocalDrafts();
+      if (mounted) {
+        _showSnackBar('임시 저장 카드가 만료되었어요.');
+      }
+      return;
+    }
+
+    late final List<ui.Image?> decoded;
+    try {
+      decoded = await _decodeUiImages(
+        _paddedPhotoBytes(draft.storedPhotoImageBytes),
+      );
+    } catch (_) {
+      if (mounted) {
+        _showSnackBar('임시 저장 카드를 불러오지 못했어요.');
+      }
+      return;
+    }
+    if (!mounted) {
+      _disposeImages(decoded);
+      return;
+    }
+
+    final previousImages = _backgroundImages;
+    final nextSession = StoryCardEditorSession.fromDraft(draft);
+    setState(() {
+      _session = nextSession;
+      _backgroundImages = decoded;
+      _cameraTargetPhotoIndex = null;
+      _selectedPhotoIndex = 0;
+      _selectedEmptyPhotoIndex = null;
+      _isLocalDraftActive = true;
+      _cameraFilm = draft.scene.photoFilms.first;
+    });
+    _disposeImages(previousImages);
+    await _refreshLocalDrafts();
+    if (draft.scene.photoFilms.any(
+      (film) => film.look != StoryCardFilmLook.original,
+    )) {
+      unawaited(_prepareFilmProgram());
+    }
+  }
+
+  Future<void> _saveLocalDraft() async {
+    if (_isSavingLocalDraft || !_draft.hasDraftContent) {
+      return;
+    }
+    setState(() => _isSavingLocalDraft = true);
+    try {
+      final preview = await _capturePreview();
+      await ref
+          .read(storyCardLocalDraftRepositoryProvider)
+          .save(draft: _draft, previewImageBytes: preview);
+      if (mounted) {
+        context.go('/home');
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnackBar('임시 저장하지 못했어요. 다시 시도해 주세요.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingLocalDraft = false);
+      }
+    }
+  }
+
   Future<void> _loadBackgroundImages(List<Uint8List?> bytes) async {
-    if (bytes.every((imageBytes) => imageBytes == null)) {
+    final paddedBytes = _paddedPhotoBytes(bytes);
+    if (paddedBytes.every((imageBytes) => imageBytes == null)) {
       return;
     }
 
     try {
-      final decoded = await _decodeUiImages(bytes);
+      final decoded = await _decodeUiImages(paddedBytes);
       if (!mounted) {
         _disposeImages(decoded);
         return;
@@ -891,6 +1176,15 @@ class _StoryCardEditorContentState
         _showSnackBar('기존 사진을 불러오지 못했어요.');
       }
     }
+  }
+
+  List<Uint8List?> _paddedPhotoBytes(Iterable<Uint8List?> bytes) {
+    final source = bytes.toList(growable: false);
+    return List<Uint8List?>.generate(
+      4,
+      (index) => index < source.length ? source[index] : null,
+      growable: false,
+    );
   }
 
   Future<List<ui.Image?>> _decodeUiImages(
@@ -992,60 +1286,6 @@ class _StoryCardEditorContentState
     });
   }
 
-  void _startBackgroundTransform(int photoIndex, ScaleStartDetails details) {
-    if (photoIndex < 0 || photoIndex >= _draft.scene.photoTransforms.length) {
-      return;
-    }
-    final transform = _draft.scene.photoTransforms[photoIndex];
-    _backgroundTransformPhotoIndex = photoIndex;
-    _backgroundScaleStart = transform.scale;
-    _backgroundOffsetStart = Offset(transform.offsetX, transform.offsetY);
-    _backgroundFocalPointStart = details.localFocalPoint;
-  }
-
-  void _updateBackgroundTransform(
-    int photoIndex,
-    ScaleUpdateDetails details,
-    Size size,
-  ) {
-    if (_backgroundTransformPhotoIndex != photoIndex ||
-        photoIndex < 0 ||
-        photoIndex >= _backgroundImages.length) {
-      return;
-    }
-    final image = _backgroundImages[photoIndex];
-    if (image == null || size.isEmpty) {
-      return;
-    }
-
-    final layout = StoryCardLayout.fromSize(
-      type: _draft.scene.cardType,
-      size: size,
-    );
-    final photoRect = layout.photoRects[photoIndex];
-    final scale = (_backgroundScaleStart * details.scale)
-        .clamp(storyCardMinBackgroundScale, storyCardMaxBackgroundScale)
-        .toDouble();
-    final focalDelta = details.localFocalPoint - _backgroundFocalPointStart;
-    final offset =
-        _backgroundOffsetStart +
-        Offset(
-          focalDelta.dx / photoRect.width,
-          focalDelta.dy / photoRect.height,
-        );
-
-    setState(() {
-      _session = _session.setPhotoTransform(
-        photoIndex,
-        StoryCardBackgroundTransform(
-          scale: scale,
-          offsetX: offset.dx,
-          offsetY: offset.dy,
-        ),
-      );
-    });
-  }
-
   void _startTextLayerTransform(String layerId, ScaleStartDetails details) {
     _textLayerTransformStart = _draft.scene.textLayers.firstWhere(
       (layer) => layer.id == layerId,
@@ -1097,7 +1337,6 @@ class _StoryCardEditorContentState
         _session = _session.removeTextLayer(layerId);
       }
       _textLayerTransformStart = null;
-      _backgroundTransformPhotoIndex = null;
       _isDraggingText = false;
       _isTextOverTrash = false;
     });
@@ -1151,7 +1390,9 @@ class _StoryCardEditorContentState
   }
 
   Future<Uint8List> _capturePreview() async {
-    if (_draft.scene.film.look != StoryCardFilmLook.original &&
+    if (_draft.scene.photoFilms.any(
+          (film) => film.look != StoryCardFilmLook.original,
+        ) &&
         _filmProgram == null) {
       await _ensureFilmProgram();
     }
@@ -1238,4 +1479,20 @@ class _StoryCardEditorError extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PhotoAdjustmentResult {
+  const _PhotoAdjustmentResult.updated({
+    required this.transform,
+    required this.film,
+  }) : removed = false;
+
+  const _PhotoAdjustmentResult.removed()
+    : removed = true,
+      transform = null,
+      film = null;
+
+  final bool removed;
+  final StoryCardBackgroundTransform? transform;
+  final StoryCardFilmState? film;
 }

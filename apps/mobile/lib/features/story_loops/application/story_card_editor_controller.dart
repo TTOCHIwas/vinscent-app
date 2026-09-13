@@ -13,6 +13,7 @@ import 'today_story_card_stacks_provider.dart';
 import 'today_story_loop_summary_provider.dart';
 import '../data/story_card_draft.dart';
 import '../data/story_card_scene.dart';
+import '../data/story_card_type.dart';
 import '../data/story_loop_write_failure.dart';
 import '../data/story_loop_write_repository.dart';
 
@@ -55,7 +56,9 @@ class StoryCardEditorController extends AsyncNotifier<StoryCardDraft> {
   }
 
   StoryCardDraft _emptyDraft() {
-    return StoryCardDraft(scene: StoryCardScene.empty());
+    return StoryCardDraft(
+      scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+    );
   }
 
   void _invalidateReadState(DateTime coupleDate) {
