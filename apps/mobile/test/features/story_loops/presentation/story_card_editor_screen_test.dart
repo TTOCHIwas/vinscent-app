@@ -14,6 +14,7 @@ import 'package:vinscent/features/story_loops/application/story_card_editor_cont
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_photo_adjustment_screen.dart';
@@ -25,15 +26,8 @@ void main() {
       tester,
     ) async {
       await _pumpEditor(tester, draft: _existingCaptionDraft());
-      await _openCaptionInput(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('story-card-caption-input')),
-        'changed caption',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey('story-card-caption-input-done')),
-      );
-      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.contrast));
+      await tester.pump();
       await tester.tap(find.byTooltip('뒤로가기'));
       await tester.pumpAndSettle();
 
@@ -49,10 +43,7 @@ void main() {
 
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(StoryCardEditorScreen), findsOneWidget);
-      expect(
-        _captionFromPainter(tester),
-        confirm ? 'center' : 'changed caption',
-      );
+      expect(_captionFromPainter(tester), 'center');
     });
   }
 
@@ -225,46 +216,127 @@ void main() {
     expect(size.width / size.height, closeTo(4 / 5, 0.001));
   });
 
-  testWidgets(
-    'edits an optional fixed caption with 50 characters and 2 lines',
-    (tester) async {
-      await _pumpEditor(tester, draft: _existingEmptyDraft());
+  testWidgets('세로 네컷 카드는 헤더와 하단 선택 영역 사이에 여백을 둔다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpEditor(
+      tester,
+      draft: _photoDraftForType(
+        StoryCardType.fourCutStrip,
+        existingRevision: 1,
+      ),
+    );
 
-      await _openCaptionInput(tester);
+    final header = tester.getRect(
+      find.byKey(const ValueKey('story-card-editor-header')),
+    );
+    final canvas = tester.getRect(
+      find.byKey(const ValueKey('story-card-editor-canvas')),
+    );
 
-      expect(
-        find.byKey(const ValueKey('story-card-caption-input-overlay')),
-        findsOneWidget,
-      );
-      final inputFinder = find.byKey(
-        const ValueKey('story-card-caption-input'),
-      );
-      final input = tester.widget<TextField>(inputFinder);
-      expect(input.maxLength, storyCardMaxCaptionCharacters);
-      expect(input.maxLines, storyCardMaxCaptionLines);
-      expect(input.textAlign, TextAlign.center);
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey('story-card-caption-input-done')),
-          matching: find.byIcon(Icons.check_rounded),
-        ),
-        findsOneWidget,
-      );
-      expect(find.byTooltip('짧은 글 입력 완료'), findsOneWidget);
+    expect(canvas.top, greaterThanOrEqualTo(header.bottom + 12));
+    expect(canvas.bottom, lessThanOrEqualTo(800 - 72));
+    expect(canvas.width / canvas.height, closeTo(2 / 5, 0.001));
+  });
 
-      await tester.enterText(inputFinder, 'first date');
-      await tester.tap(
-        find.byKey(const ValueKey('story-card-caption-input-done')),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('최초 카드 편집 안내를 닫아도 유형 선택기는 다음 조작까지 유지된다', (tester) async {
+    await _pumpEditor(
+      tester,
+      draft: _photoDraftForType(StoryCardType.fullBleed),
+    );
 
-      expect(
-        find.byKey(const ValueKey('story-card-caption-input-overlay')),
-        findsNothing,
-      );
-      expect(_captionFromPainter(tester), 'first date');
-    },
-  );
+    final guide = find.byKey(const ValueKey('story-card-editor-type-guide'));
+    final selectorSlide = find.byKey(
+      const ValueKey('story-card-editor-type-selector-slide'),
+    );
+    expect(guide, findsOneWidget);
+    expect(selectorSlide, findsOneWidget);
+    expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('story-card-editor-canvas'))),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(guide, findsNothing);
+    expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('story-card-editor-canvas'))),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(
+      tester.widget<AnimatedSlide>(selectorSlide).offset.dy,
+      greaterThan(0),
+    );
+    expect(find.byType(StoryCardPhotoAdjustmentScreen), findsNothing);
+  });
+
+  testWidgets('카드 유형 아이콘 선택은 캔버스를 바꾸고 2초 뒤 선택기를 내린다', (tester) async {
+    await _pumpEditor(
+      tester,
+      draft: _photoDraftForType(StoryCardType.fullBleed),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-editor-type-four-cut-strip')),
+    );
+    await tester.pump();
+
+    final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+    final selectorSlide = find.byKey(
+      const ValueKey('story-card-editor-type-selector-slide'),
+    );
+    expect(tester.getSize(canvas).aspectRatio, closeTo(2 / 5, 0.001));
+    expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(
+      tester.widget<AnimatedSlide>(selectorSlide).offset.dy,
+      greaterThan(0),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('story-card-type-tool')));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+  });
+
+  testWidgets('프레임 없는 사진도 전체 카드 비율 사진 조정 화면을 연다', (tester) async {
+    await _pumpEditor(
+      tester,
+      draft: _photoDraftForType(StoryCardType.fullBleed, existingRevision: 1),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('story-card-editor-canvas'))),
+    );
+    await _pumpPhotoAdjustmentRoute(tester);
+
+    final cropFrame = find.byKey(
+      const ValueKey('story-card-photo-adjustment-crop-frame'),
+    );
+    expect(find.byType(StoryCardPhotoAdjustmentScreen), findsOneWidget);
+    expect(tester.getSize(cropFrame).aspectRatio, closeTo(4 / 5, 0.01));
+  });
+
+  testWidgets('기존 폴라로이드 문구는 보존하지만 신규 입력 도구는 제공하지 않는다', (tester) async {
+    await _pumpEditor(tester, draft: _existingCaptionDraft());
+
+    expect(_captionFromPainter(tester), 'center');
+    expect(find.byKey(const ValueKey('story-card-caption-tool')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('story-card-caption-input-overlay')),
+      findsNothing,
+    );
+  });
 
   testWidgets('centers the fixed caption in the bottom area', (tester) async {
     await _pumpEditor(tester, draft: _existingCaptionDraft());
@@ -293,45 +365,8 @@ void main() {
     expect(captionBounds!.center.dx / capturedImage.width, closeTo(0.5, 0.03));
   });
 
-  testWidgets('limits the fixed caption to 50 grapheme characters', (
-    tester,
-  ) async {
-    await _pumpEditor(tester, draft: _existingEmptyDraft());
-    await _openCaptionInput(tester);
-
-    final inputFinder = find.byKey(const ValueKey('story-card-caption-input'));
-    await tester.enterText(inputFinder, 'a' * 51);
-    await tester.pump();
-
-    final input = tester.widget<TextField>(inputFinder);
-    expect(input.controller?.text, 'a' * 50);
-  });
-
-  testWidgets('keeps only the first two caption lines when text is pasted', (
-    tester,
-  ) async {
-    await _pumpEditor(tester, draft: _existingEmptyDraft());
-    await _openCaptionInput(tester);
-
-    final inputFinder = find.byKey(const ValueKey('story-card-caption-input'));
-    await tester.enterText(inputFinder, 'first\nsecond\nthird');
-    await tester.pump();
-
-    final input = tester.widget<TextField>(inputFinder);
-    expect(input.controller?.text, 'first\nsecond');
-  });
-
   testWidgets('does not enable save for a caption-only card', (tester) async {
-    await _pumpEditor(tester, draft: _existingEmptyDraft());
-    await _openCaptionInput(tester);
-    await tester.enterText(
-      find.byKey(const ValueKey('story-card-caption-input')),
-      'caption only',
-    );
-    await tester.tap(
-      find.byKey(const ValueKey('story-card-caption-input-done')),
-    );
-    await tester.pumpAndSettle();
+    await _pumpEditor(tester, draft: _existingCaptionDraft());
 
     final save = tester.widget<IconButton>(
       find.byKey(const ValueKey('story-card-editor-save')),
@@ -1089,11 +1124,6 @@ Future<void> _openTextInput(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openCaptionInput(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('story-card-caption-tool')));
-  await tester.pumpAndSettle();
-}
-
 Future<void> _pumpPhotoAdjustmentRoute(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
@@ -1116,6 +1146,15 @@ StoryCardDraft _existingPhotoDraft() {
     scene: StoryCardScene.empty(),
     backgroundImageBytes: Uint8List.fromList(image.encodePng(photo)),
     existingRevision: 1,
+  );
+}
+
+StoryCardDraft _photoDraftForType(StoryCardType type, {int? existingRevision}) {
+  final photo = image.Image(width: 4, height: 4);
+  return StoryCardDraft(
+    scene: StoryCardScene.empty(cardType: type),
+    backgroundImageBytes: Uint8List.fromList(image.encodePng(photo)),
+    existingRevision: existingRevision,
   );
 }
 

@@ -12,8 +12,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vinscent/features/story_loops/application/story_card_face_detector.dart';
 import 'package:vinscent/features/story_loops/application/story_card_face_effect.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_camera_stage.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_action_bar.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_icon.dart';
 
 void main() {
   late CameraPlatform originalPlatform;
@@ -267,13 +269,53 @@ void main() {
     expect(switchCenter.dy, closeTo(captureCenter.dy, 1));
   });
 
-  testWidgets('최초 카메라에는 카드 프레임 가이드를 표시하지 않는다', (tester) async {
+  testWidgets('최초 카메라는 기본 사진 카드 비율 가이드를 표시한다', (tester) async {
     await tester.pumpWidget(_subject());
     await tester.pumpAndSettle();
 
+    final guide = find.byKey(const ValueKey('story-card-camera-crop-guide'));
+    expect(guide, findsOneWidget);
+    expect(tester.getSize(guide).aspectRatio, closeTo(4 / 5, 0.01));
+  });
+
+  testWidgets('필름 아래 카드 유형 도구에서 아이콘과 촬영 가이드를 함께 바꾼다', (tester) async {
+    StoryCardType? selectedType;
+    await tester.pumpWidget(
+      _subject(onCardTypeChanged: (type) => selectedType = type),
+    );
+    await tester.pumpAndSettle();
+
+    final film = find.byKey(const ValueKey('story-card-film-tool'));
+    final typeTool = find.byKey(const ValueKey('story-card-type-tool'));
+    expect(tester.getCenter(film).dy, lessThan(tester.getCenter(typeTool).dy));
+
+    await tester.tap(typeTool);
+    await tester.pump();
     expect(
-      find.byKey(const ValueKey('story-card-camera-crop-guide')),
-      findsNothing,
+      find.byKey(const ValueKey('story-card-camera-type-selector')),
+      findsOneWidget,
+    );
+    expect(find.byType(StoryCardTypeIcon), findsNWidgets(5));
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-camera-type-four-cut-strip')),
+    );
+    await tester.pump();
+
+    expect(selectedType, StoryCardType.fourCutStrip);
+    final buttonIcon = tester.widget<StoryCardTypeIcon>(
+      find.descendant(of: typeTool, matching: find.byType(StoryCardTypeIcon)),
+    );
+    expect(buttonIcon.type, StoryCardType.fourCutStrip);
+    final expectedAspectRatio = StoryCardLayout.fromSize(
+      type: StoryCardType.fourCutStrip,
+      size: StoryCardType.fourCutStrip.previewSize,
+    ).photoAspectRatio(0);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('story-card-camera-crop-guide')))
+          .aspectRatio,
+      closeTo(expectedAspectRatio, 0.01),
     );
   });
 
@@ -431,6 +473,7 @@ void main() {
 
 Widget _subject({
   ValueChanged<StoryCardFilmState>? onFilmChanged,
+  ValueChanged<StoryCardType>? onCardTypeChanged,
   StoryCardFaceDetector? faceDetector,
   Future<Uint8List?> Function()? loadCharacterImage,
   double? guideAspectRatio,
@@ -443,6 +486,8 @@ Widget _subject({
         onBack: () {},
         onImageSelected: (_) {},
         onFilmChanged: onFilmChanged,
+        initialCardType: StoryCardType.fullBleed,
+        onCardTypeChanged: onCardTypeChanged,
         faceDetector: faceDetector,
         loadCharacterImage: loadCharacterImage,
         guideAspectRatio: guideAspectRatio,

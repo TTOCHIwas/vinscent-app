@@ -71,6 +71,9 @@ void main() {
 
     expect(layout.photoRects, hasLength(4));
     expect(layout.captionRect, isNull);
+    expect(layout.photoRects.first.top, closeTo(24, 0.001));
+    expect(600 - layout.photoRects.last.bottom, closeTo(24, 0.001));
+    expect(layout.photoAspectRatio(0), greaterThan(1.5));
     for (var index = 1; index < layout.photoRects.length; index++) {
       expect(
         layout.photoRects[index].top,

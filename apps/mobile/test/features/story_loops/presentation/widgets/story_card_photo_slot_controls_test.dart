@@ -45,13 +45,25 @@ void main() {
       find.byKey(const ValueKey('story-card-photo-slot-gallery-1')),
       findsOneWidget,
     );
+    final camera = find.byKey(const ValueKey('story-card-photo-slot-camera-1'));
+    final gallery = find.byKey(
+      const ValueKey('story-card-photo-slot-gallery-1'),
+    );
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(of: camera, matching: find.byType(Icon)),
+          )
+          .size,
+      30,
+    );
+    expect(
+      tester.getCenter(gallery).dx - tester.getCenter(camera).dx,
+      greaterThanOrEqualTo(64),
+    );
 
-    await tester.tap(
-      find.byKey(const ValueKey('story-card-photo-slot-camera-1')),
-    );
-    await tester.tap(
-      find.byKey(const ValueKey('story-card-photo-slot-gallery-1')),
-    );
+    await tester.tap(camera);
+    await tester.tap(gallery);
     expect(cameraIndex, 1);
     expect(galleryIndex, 1);
   });

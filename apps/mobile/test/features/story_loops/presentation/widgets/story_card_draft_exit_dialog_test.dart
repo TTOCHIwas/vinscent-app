@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_draft_exit_dialog.dart';
 
 void main() {
@@ -33,9 +34,22 @@ void main() {
       tester.getCenter(discard).dy,
       lessThan(tester.getCenter(continueEditing).dy),
     );
+    expect(_labelColor(tester, save), AppColors.brandAction);
+    expect(
+      _labelColor(tester, discard),
+      Theme.of(tester.element(discard)).colorScheme.error,
+    );
+    expect(_labelColor(tester, continueEditing), AppColors.textPrimary);
 
     await tester.tap(save);
     await tester.pumpAndSettle();
     expect(result, StoryCardDraftExitAction.saveDraft);
   });
+}
+
+Color? _labelColor(WidgetTester tester, Finder button) {
+  return tester
+      .widget<Text>(find.descendant(of: button, matching: find.byType(Text)))
+      .style
+      ?.color;
 }
