@@ -380,7 +380,7 @@ void main() {
   });
 
   testWidgets(
-    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uc5b4\ub3c4 \ub450 \uce74\ub4dc \ubb36\uc74c\uc740 compact \ubc30\uce58\ub97c \uc720\uc9c0\ud55c\ub2e4',
+    '\uc9c8\ubb38\uc774 \uc0dd\uc131\ub418\uc5b4\ub3c4 \ub450 \uce74\ub4dc \ubb36\uc74c\uc740 \ud45c\uc900 \ud06c\uae30\ub97c \uc720\uc9c0\ud55c\ub2e4',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 592));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -457,7 +457,7 @@ void main() {
         tester.getSize(myCard).aspectRatio,
         closeTo(storyCardCanvasAspectRatio, 0.01),
       );
-      expect(tester.getSize(myCard).width, closeTo(75, 0.1));
+      expect(tester.getSize(myCard).width, closeTo(147, 0.1));
       final addHalo = find.byKey(_storyAddHaloKey);
       expect(addHalo, findsOneWidget);
       expect(tester.getSize(addButton), const Size.square(44));

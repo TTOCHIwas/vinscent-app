@@ -545,7 +545,6 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                   questionIsAiGenerated: questionIsAiGenerated,
                   questionReportTarget: questionReportTarget,
                   questionOpacity: questionOpacity,
-                  hasBothCardStacks: presentation.hasBothCardStacks,
                   canAddCard: presentation.canAddCard,
                   onAddCard: presentation.canAddCard
                       ? () => context.go(storyCardEditorLocation)
@@ -656,7 +655,6 @@ class _HomeStoryLoopContent extends StatelessWidget {
     required this.questionIsAiGenerated,
     required this.questionReportTarget,
     required this.questionOpacity,
-    required this.hasBothCardStacks,
     required this.canAddCard,
     required this.onAddCard,
     required this.onQuestionTap,
@@ -671,7 +669,6 @@ class _HomeStoryLoopContent extends StatelessWidget {
   final bool questionIsAiGenerated;
   final SafetyReportTarget? questionReportTarget;
   final double questionOpacity;
-  final bool hasBothCardStacks;
   final bool canAddCard;
   final VoidCallback? onAddCard;
   final VoidCallback? onQuestionTap;
@@ -688,14 +685,11 @@ class _HomeStoryLoopContent extends StatelessWidget {
       partnerStack: partnerStack,
       canAddCard: canAddCard,
       onAddCard: onAddCard,
-      hasBothCardStacks: hasBothCardStacks,
       onCardTap: onCardTap,
     );
     final questionText = this.questionText;
     final hasStoryEntry = myStack != null || partnerStack != null || canAddCard;
-    final maximumCardHeight = hasBothCardStacks
-        ? HomeHangingStoryCards.maximumCompactHeight
-        : HomeHangingStoryCards.maximumStandardHeight;
+    const maximumCardHeight = HomeHangingStoryCards.maximumStandardHeight;
 
     if (questionText == null) {
       return LayoutBuilder(
@@ -755,7 +749,6 @@ class _HomeStoryEntry extends StatelessWidget {
     required this.partnerStack,
     required this.canAddCard,
     required this.onAddCard,
-    required this.hasBothCardStacks,
     required this.onCardTap,
   });
 
@@ -763,7 +756,6 @@ class _HomeStoryEntry extends StatelessWidget {
   final StoryCardStackPreview? partnerStack;
   final bool canAddCard;
   final VoidCallback? onAddCard;
-  final bool hasBothCardStacks;
   final ValueChanged<StoryCardStackPreview> onCardTap;
 
   @override
@@ -774,12 +766,9 @@ class _HomeStoryEntry extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final size = hasBothCardStacks
-        ? HomeHangingStoryCardSize.compact
-        : HomeHangingStoryCardSize.standard;
     final content = HomeHangingStoryCards(
       key: const Key('home-story-line'),
-      size: size,
+      size: HomeHangingStoryCardSize.standard,
       leftCardBuilder: myStack == null
           ? canAddCard
                 ? (context, cardWidth) =>
@@ -1085,7 +1074,6 @@ class _HomeStoryLoopPresentation {
     required this.questionText,
     required this.questionIsAiGenerated,
     required this.questionReportTarget,
-    required this.hasBothCardStacks,
     required this.canAddCard,
     required this.questionTargetLocation,
   });
@@ -1095,7 +1083,6 @@ class _HomeStoryLoopPresentation {
   final String? questionText;
   final bool questionIsAiGenerated;
   final SafetyReportTarget? questionReportTarget;
-  final bool hasBothCardStacks;
   final bool canAddCard;
   final String? questionTargetLocation;
 
@@ -1135,7 +1122,6 @@ class _HomeStoryLoopPresentation {
               id: question.question.dailyQuestionId,
             )
           : null,
-      hasBothCardStacks: myStack != null && partnerStack != null,
       canAddCard: canAddCard,
       questionTargetLocation: question == null
           ? null

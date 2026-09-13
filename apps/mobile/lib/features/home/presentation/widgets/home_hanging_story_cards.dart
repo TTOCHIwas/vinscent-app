@@ -20,7 +20,7 @@ class HomeHangingStoryCards extends StatelessWidget {
 
   static const maximumContentWidth = 360.0;
   static const slotGap = 16.0;
-  static const maximumStandardCardWidth = (maximumContentWidth - slotGap) / 2;
+  static const maximumStandardCardWidth = 152.0;
   static const maximumCompactCardWidth = 80.0;
   static const maximumStandardHeight =
       _cardTop + (maximumStandardCardWidth / storyCardCanvasAspectRatio);
