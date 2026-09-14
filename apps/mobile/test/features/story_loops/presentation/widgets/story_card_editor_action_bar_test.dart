@@ -14,11 +14,9 @@ void main() {
           body: Center(
             child: StoryCardEditorActionBar(
               interactionMode: StoryCardEditorTool.none,
-              hasBackground: true,
               cardType: StoryCardType.fourCutStrip,
               onAddTextPressed: () {},
               onDrawingModePressed: () {},
-              onBackgroundColorPressed: null,
               onFilmPressed: () {},
               onCardTypePressed: () => typePresses += 1,
             ),
@@ -52,11 +50,9 @@ void main() {
           body: Center(
             child: StoryCardEditorActionBar(
               interactionMode: StoryCardEditorTool.none,
-              hasBackground: true,
               cardType: StoryCardType.fullBleed,
               onAddTextPressed: () {},
               onDrawingModePressed: () {},
-              onBackgroundColorPressed: null,
               onFilmPressed: () => presses += 1,
               onCardTypePressed: () {},
             ),

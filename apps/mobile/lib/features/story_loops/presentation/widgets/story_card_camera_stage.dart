@@ -664,11 +664,9 @@ class _StoryCardCameraStageState extends State<StoryCardCameraStage>
                       padding: const EdgeInsets.only(right: 12),
                       child: StoryCardEditorActionBar(
                         interactionMode: StoryCardEditorTool.none,
-                        hasBackground: true,
                         cardType: _cardType,
                         onAddTextPressed: widget.onTextSelected,
                         onDrawingModePressed: widget.onDrawingSelected,
-                        onBackgroundColorPressed: null,
                         onFilmPressed: _toggleStyleSelector,
                         onCardTypePressed: _toggleCardTypeSelector,
                         isFilmSelected:

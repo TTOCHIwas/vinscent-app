@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/application/story_card_local_draft_repository.dart';
+import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
@@ -87,6 +89,26 @@ void main() {
 
     expect(resaved.savedAt, now);
     expect(resaved.expiresAt, now.add(const Duration(hours: 72)));
+  });
+
+  test('preserves card appearance through local draft storage', () async {
+    const appearance = StoryCardAppearance(
+      themeId: 'future-event',
+      backgroundColor: Color(0xFFB7D5C4),
+    );
+    final saved = await repository.save(
+      draft: StoryCardDraft(
+        scene: StoryCardScene.empty(
+          cardType: StoryCardType.fullBleed,
+        ).copyWith(appearance: appearance),
+        backgroundImageBytes: Uint8List.fromList([1]),
+      ),
+      previewImageBytes: Uint8List.fromList([2]),
+    );
+
+    final restored = await repository.take(saved.id);
+
+    expect(restored?.scene.appearance, appearance);
   });
 
   test('prunes an abandoned atomic-writing directory', () async {

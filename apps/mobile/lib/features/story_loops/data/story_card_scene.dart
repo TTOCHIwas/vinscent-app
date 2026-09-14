@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../core/drawing/app_drawing_style.dart';
+import 'story_card_appearance.dart';
 import 'story_card_film_look.dart';
 import 'story_card_type.dart';
 
@@ -85,8 +86,13 @@ class StoryCardScene {
     this.film = const StoryCardFilmState.original(),
     this.additionalPhotoFilms = const [],
     this.canvasBackground = StoryCardCanvasBackground.white,
+    StoryCardAppearance? appearance,
     this.caption,
-  });
+  }) : appearance =
+           appearance ??
+           (canvasBackground == StoryCardCanvasBackground.black
+               ? const StoryCardAppearance.dark()
+               : const StoryCardAppearance());
 
   factory StoryCardScene.empty({
     StoryCardCanvasBackground canvasBackground =
@@ -115,6 +121,9 @@ class StoryCardScene {
     final background = json['background'] as Map<String, dynamic>?;
     final backgrounds = json['backgrounds'] as List<dynamic>?;
     final canvas = json['canvas'] as Map<String, dynamic>?;
+    final canvasBackground = _canvasBackgroundFromJson(
+      canvas?['background_color'] as String?,
+    );
     final cardType = StoryCardType.fromStorageValue(
       json['card_type'] as String?,
     );
@@ -159,8 +168,10 @@ class StoryCardScene {
       additionalPhotoFilms: films == null
           ? List<StoryCardFilmState>.filled(3, legacyFilm, growable: false)
           : films.skip(1).toList(growable: false),
-      canvasBackground: _canvasBackgroundFromJson(
-        canvas?['background_color'] as String?,
+      canvasBackground: canvasBackground,
+      appearance: StoryCardAppearance.fromJson(
+        json['appearance'],
+        fallbackBackgroundColor: canvasBackground.color,
       ),
       caption: json['caption'] as String?,
     );
@@ -174,6 +185,7 @@ class StoryCardScene {
   final StoryCardFilmState film;
   final List<StoryCardFilmState> additionalPhotoFilms;
   final StoryCardCanvasBackground canvasBackground;
+  final StoryCardAppearance appearance;
   final String? caption;
 
   List<StoryCardBackgroundTransform> get photoTransforms {
@@ -239,6 +251,7 @@ class StoryCardScene {
     StoryCardFilmState? film,
     List<StoryCardFilmState>? additionalPhotoFilms,
     StoryCardCanvasBackground? canvasBackground,
+    StoryCardAppearance? appearance,
     Object? caption = _storyCardCaptionUnchanged,
   }) {
     return StoryCardScene(
@@ -251,6 +264,11 @@ class StoryCardScene {
       film: film ?? this.film,
       additionalPhotoFilms: additionalPhotoFilms ?? this.additionalPhotoFilms,
       canvasBackground: canvasBackground ?? this.canvasBackground,
+      appearance:
+          appearance ??
+          (canvasBackground == null
+              ? this.appearance
+              : StoryCardAppearance(backgroundColor: canvasBackground.color)),
       caption: identical(caption, _storyCardCaptionUnchanged)
           ? this.caption
           : caption as String?,
@@ -327,8 +345,9 @@ class StoryCardScene {
         ? storedPhotoFilms
         : photoFilms;
     return {
-      'version': 7,
+      'version': 8,
       'card_type': cardType.storageValue,
+      'appearance': appearance.toJson(),
       'canvas': {
         'width_ratio': cardType == StoryCardType.fourCutStrip ? 2 : 4,
         'height_ratio': 5,

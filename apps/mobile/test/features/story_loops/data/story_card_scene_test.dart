@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
+import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
@@ -35,6 +36,10 @@ void main() {
 
   test('scene JSON preserves visual layers and text count', () {
     const scene = StoryCardScene(
+      appearance: StoryCardAppearance(
+        themeId: 'future-seasonal-theme',
+        backgroundColor: Color(0xFFB7D5C4),
+      ),
       film: StoryCardFilmState(look: StoryCardFilmLook.quiet, seed: 1729),
       canvasBackground: StoryCardCanvasBackground.black,
       backgroundTransform: StoryCardBackgroundTransform(
@@ -78,6 +83,8 @@ void main() {
     expect(restored.film.look, StoryCardFilmLook.quiet);
     expect(restored.film.seed, 1729);
     expect(restored.canvasBackground, StoryCardCanvasBackground.black);
+    expect(restored.appearance.themeId, 'future-seasonal-theme');
+    expect(restored.appearance.backgroundColor, const Color(0xFFB7D5C4));
     expect(restored.hasDrawing, isTrue);
     expect(restored.strokes.first.tool, StoryCardDrawingTool.pen);
     expect(restored.strokes.last.tool, StoryCardDrawingTool.eraser);
@@ -88,7 +95,11 @@ void main() {
     expect(restored.textCharacterCount, 7);
     expect(restored.caption, 'first date');
     expect(restored.captionCharacterCount, 10);
-    expect(restored.toJson()['version'], 7);
+    expect(restored.toJson()['version'], 8);
+    expect(restored.toJson()['appearance'], {
+      'theme_id': 'future-seasonal-theme',
+      'background_color': '#ffb7d5c4',
+    });
   });
 
   test('four-cut scene preserves its type and four independent transforms', () {
@@ -108,7 +119,7 @@ void main() {
     expect(restored.photoTransforms, hasLength(4));
     expect(restored.photoTransforms[2].scale, 1.8);
     expect(restored.photoTransforms[2].offsetX, 0.2);
-    expect(restored.toJson()['version'], 7);
+    expect(restored.toJson()['version'], 8);
     expect(restored.toJson()['card_type'], 'four_cut_strip');
     expect(
       (restored.toJson()['canvas'] as Map<String, dynamic>)['width_ratio'],
@@ -137,7 +148,7 @@ void main() {
     expect(restored.photoTransforms[2].rotation, 0.35);
     expect(restored.photoFilms[2].look, StoryCardFilmLook.moment);
     expect(restored.photoFilms[2].seed, 42);
-    expect(restored.toJson()['version'], 7);
+    expect(restored.toJson()['version'], 8);
   });
 
   test('legacy global film is inherited by every photo slot', () {
@@ -188,6 +199,18 @@ void main() {
     expect(restored.film, const StoryCardFilmState.original());
     expect(restored.cardType, StoryCardType.polaroid);
     expect(restored.photoTransforms, hasLength(1));
+    expect(restored.appearance, const StoryCardAppearance());
+  });
+
+  test('legacy black canvas is inherited as the card appearance', () {
+    final restored = StoryCardScene.fromJson({
+      'version': 7,
+      'canvas': {'background_color': 'black'},
+    });
+
+    expect(restored.canvasBackground, StoryCardCanvasBackground.black);
+    expect(restored.appearance.backgroundColor, Colors.black);
+    expect(restored.appearance.themeId, StoryCardThemeId.plain);
   });
 
   test('four-cut draft requires all four photo slots before saving', () {

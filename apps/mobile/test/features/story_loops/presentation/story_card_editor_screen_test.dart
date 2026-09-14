@@ -11,12 +11,14 @@ import 'package:vinscent/core/drawing/widgets/app_color_sampler.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_width_slider.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
+import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_draft.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_style.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_interactive_viewport.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_photo_adjustment_screen.dart';
 import '../../../support/color_picker_test_helpers.dart';
@@ -27,8 +29,15 @@ void main() {
       tester,
     ) async {
       await _pumpEditor(tester, draft: _existingCaptionDraft());
-      await tester.tap(find.byIcon(Icons.contrast));
+      await tester.tap(find.byKey(const ValueKey('story-card-type-tool')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(
+        find.byKey(const ValueKey('story-card-editor-background-color-2')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 250));
       await tester.tap(find.byTooltip('뒤로가기'));
       await tester.pumpAndSettle();
 
@@ -379,8 +388,37 @@ void main() {
     );
 
     await tester.tap(find.byKey(const ValueKey('story-card-type-tool')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
+  });
+
+  testWidgets('카드 유형 패널에서 배경색을 바꾸고 직접 선택기를 연다', (tester) async {
+    await _pumpEditor(tester, draft: _existingPhotoDraft());
+
+    await tester.tap(find.byKey(const ValueKey('story-card-type-tool')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.text('배경'), findsOneWidget);
+    expect(find.byIcon(Icons.contrast), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-editor-background-color-2')),
+    );
+    await tester.pump();
+    expect(
+      _appearanceFromPainter(tester).backgroundColor,
+      storyCardBackgroundColorPalette[2],
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-editor-background-custom')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('app-hsv-color-picker-sheet')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('프레임 없는 사진도 전체 카드 비율 사진 조정 화면을 연다', (tester) async {
@@ -748,6 +786,32 @@ void main() {
           )
           .width,
       screenWidth,
+    );
+    expect(
+      tester
+          .widget<Material>(
+            find.byKey(const ValueKey('story-card-drawing-header-surface')),
+          )
+          .color,
+      storyCardEditorChromeColor,
+    );
+    expect(
+      tester
+          .widget<Material>(
+            find.byKey(const ValueKey('story-card-drawing-toolbar')),
+          )
+          .color,
+      storyCardEditorChromeColor,
+    );
+    expect(
+      tester
+          .widget<ColoredBox>(
+            find.byKey(
+              const ValueKey('story-card-drawing-style-controls-surface'),
+            ),
+          )
+          .color,
+      storyCardEditorChromeColor,
     );
     expect(
       tester
@@ -1346,6 +1410,15 @@ String? _captionFromPainter(WidgetTester tester) {
   );
   final dynamic painter = customPaint.painter;
   return painter.caption as String?;
+}
+
+StoryCardAppearance _appearanceFromPainter(WidgetTester tester) {
+  final canvas = find.byKey(const ValueKey('story-card-editor-canvas'));
+  final customPaint = tester.widget<CustomPaint>(
+    find.descendant(of: canvas, matching: find.byType(CustomPaint)).first,
+  );
+  final dynamic painter = customPaint.painter;
+  return (painter.scene as StoryCardScene).appearance;
 }
 
 Color _pixelAt(

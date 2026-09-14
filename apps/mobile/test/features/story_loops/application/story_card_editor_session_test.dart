@@ -220,6 +220,22 @@ void main() {
     expect(updated.draft.scene.textLayers, [layer]);
   });
 
+  test('updates the card appearance without changing its type', () {
+    final session = StoryCardEditorSession.fromDraft(
+      StoryCardDraft(
+        scene: StoryCardScene.empty(cardType: StoryCardType.fourCutGrid),
+      ),
+    );
+    const selectedColor = Color(0xFFB7D5C4);
+
+    final updated = session.setCardBackgroundColor(selectedColor);
+
+    expect(updated.draft.scene.cardType, StoryCardType.fourCutGrid);
+    expect(updated.draft.scene.appearance.backgroundColor, selectedColor);
+    expect(updated.hasUnsavedChanges, isTrue);
+    expect(updated.setCardBackgroundColor(selectedColor), same(updated));
+  });
+
   test('updates transforms and removes a text layer', () {
     const layer = StoryCardTextLayer(
       id: 'text-1',

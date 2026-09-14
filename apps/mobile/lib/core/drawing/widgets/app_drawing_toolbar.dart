@@ -19,6 +19,7 @@ class AppDrawingToolbar extends StatelessWidget {
     this.trailing,
     required this.keyPrefix,
     this.brightness = Brightness.dark,
+    this.backgroundColor,
   });
 
   static const height = 56.0;
@@ -34,6 +35,7 @@ class AppDrawingToolbar extends StatelessWidget {
   final Widget? trailing;
   final String keyPrefix;
   final Brightness brightness;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +68,11 @@ class AppDrawingToolbar extends StatelessWidget {
     ];
     return Material(
       key: ValueKey('$keyPrefix-toolbar'),
-      color: brightness == Brightness.light
-          ? AppColors.background
-          : const Color(0x33000000),
+      color:
+          backgroundColor ??
+          (brightness == Brightness.light
+              ? AppColors.background
+              : const Color(0x33000000)),
       child: SizedBox(
         key: ValueKey('$keyPrefix-top-controls'),
         height: height,

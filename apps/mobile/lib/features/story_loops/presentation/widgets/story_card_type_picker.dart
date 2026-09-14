@@ -4,6 +4,11 @@ import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_type.dart';
 import 'story_card_type_icon.dart';
 
+const storyCardPickerMaxWidth = 360.0;
+const storyCardPickerSurfaceColor = Color(0xB3000000);
+const storyCardPickerDividerColor = Color(0x33FFFFFF);
+const storyCardPickerCornerRadius = 2.0;
+
 class StoryCardTypePicker extends StatelessWidget {
   const StoryCardTypePicker({
     super.key,
@@ -20,32 +25,54 @@ class StoryCardTypePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: const BoxConstraints(maxWidth: storyCardPickerMaxWidth),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: const Color(0xB3000000),
-            borderRadius: BorderRadius.circular(2),
+            color: storyCardPickerSurfaceColor,
+            borderRadius: BorderRadius.circular(storyCardPickerCornerRadius),
           ),
           child: SizedBox(
             height: 68,
-            child: Row(
-              children: [
-                for (final type in StoryCardType.editorOrder)
-                  Expanded(
-                    child: _StoryCardTypeButton(
-                      key: ValueKey(
-                        '$keyPrefix-${type.storageValue.replaceAll('_', '-')}',
-                      ),
-                      type: type,
-                      isSelected: type == selectedType,
-                      onPressed: () => onSelected(type),
-                    ),
-                  ),
-              ],
+            child: StoryCardTypeOptions(
+              selectedType: selectedType,
+              onSelected: onSelected,
+              keyPrefix: keyPrefix,
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class StoryCardTypeOptions extends StatelessWidget {
+  const StoryCardTypeOptions({
+    super.key,
+    required this.selectedType,
+    required this.onSelected,
+    required this.keyPrefix,
+  });
+
+  final StoryCardType selectedType;
+  final ValueChanged<StoryCardType> onSelected;
+  final String keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final type in StoryCardType.editorOrder)
+          Expanded(
+            child: _StoryCardTypeButton(
+              key: ValueKey(
+                '$keyPrefix-${type.storageValue.replaceAll('_', '-')}',
+              ),
+              type: type,
+              isSelected: type == selectedType,
+              onPressed: () => onSelected(type),
+            ),
+          ),
+      ],
     );
   }
 }

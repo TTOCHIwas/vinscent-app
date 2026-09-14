@@ -10,11 +10,9 @@ class StoryCardEditorActionBar extends StatelessWidget {
   const StoryCardEditorActionBar({
     super.key,
     required this.interactionMode,
-    required this.hasBackground,
     required this.cardType,
     required this.onAddTextPressed,
     required this.onDrawingModePressed,
-    required this.onBackgroundColorPressed,
     required this.onCardTypePressed,
     this.onFilmPressed,
     this.isFilmSelected = false,
@@ -22,11 +20,9 @@ class StoryCardEditorActionBar extends StatelessWidget {
   });
 
   final StoryCardEditorTool interactionMode;
-  final bool hasBackground;
   final StoryCardType cardType;
   final VoidCallback onAddTextPressed;
   final VoidCallback onDrawingModePressed;
-  final VoidCallback? onBackgroundColorPressed;
   final VoidCallback onCardTypePressed;
   final VoidCallback? onFilmPressed;
   final bool isFilmSelected;
@@ -68,14 +64,6 @@ class StoryCardEditorActionBar extends StatelessWidget {
           isSelected: isCardTypeSelected,
           onPressed: onCardTypePressed,
         ),
-        if (!hasBackground) ...[
-          const SizedBox(height: 8),
-          StoryCardEditorIconButton(
-            tooltip: '배경색 전환',
-            icon: Icons.contrast,
-            onPressed: onBackgroundColorPressed,
-          ),
-        ],
       ],
     );
   }

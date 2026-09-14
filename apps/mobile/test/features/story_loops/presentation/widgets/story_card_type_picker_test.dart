@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_appearance_picker.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_icon.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_picker.dart';
 
@@ -94,5 +96,49 @@ void main() {
       expect(painter.fillColor, iconColor);
       expect(painter.cornerRadius, lessThanOrEqualTo(1));
     }
+  });
+
+  testWidgets('카드 외형 선택기는 유형과 배경색을 한 표면에서 선택한다', (tester) async {
+    StoryCardType? selectedType;
+    Color? selectedColor;
+    var customPressed = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: StoryCardAppearancePicker(
+            selectedType: StoryCardType.fullBleed,
+            selectedBackgroundColor: storyCardBackgroundColorPalette.first,
+            typeKeyPrefix: 'appearance-type',
+            backgroundKeyPrefix: 'appearance-background',
+            onTypeSelected: (value) => selectedType = value,
+            onBackgroundColorSelected: (value) => selectedColor = value,
+            onCustomColorPressed: () => customPressed = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('배경'), findsOneWidget);
+    expect(find.byType(StoryCardTypeIcon), findsNWidgets(4));
+    expect(
+      find.byKey(const ValueKey('appearance-background-custom')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('appearance-type-four-cut-grid')),
+    );
+    expect(selectedType, StoryCardType.fourCutGrid);
+
+    await tester.tap(
+      find.byKey(const ValueKey('appearance-background-color-2')),
+    );
+    expect(selectedColor, storyCardBackgroundColorPalette[2]);
+
+    await tester.tap(
+      find.byKey(const ValueKey('appearance-background-custom')),
+    );
+    expect(customPressed, isTrue);
   });
 }

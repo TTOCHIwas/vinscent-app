@@ -18,6 +18,7 @@ class AppDrawingStyleControls extends StatelessWidget {
     required this.keyPrefix,
     this.brightness = Brightness.dark,
     this.previewClearance = 0,
+    this.backgroundColor,
   });
 
   static const height = 120.0;
@@ -32,13 +33,17 @@ class AppDrawingStyleControls extends StatelessWidget {
   final String keyPrefix;
   final Brightness brightness;
   final double previewClearance;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: brightness == Brightness.light
-          ? AppColors.background
-          : const Color(0xCC000000),
+      key: ValueKey('$keyPrefix-style-controls-surface'),
+      color:
+          backgroundColor ??
+          (brightness == Brightness.light
+              ? AppColors.background
+              : const Color(0xCC000000)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

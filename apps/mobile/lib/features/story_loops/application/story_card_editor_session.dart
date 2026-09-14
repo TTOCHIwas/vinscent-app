@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import '../data/story_card_draft.dart';
 import '../data/story_card_film_look.dart';
@@ -229,6 +230,19 @@ class StoryCardEditorSession {
         : StoryCardCanvasBackground.white;
     return updateDraft(
       draft.copyWith(scene: draft.scene.copyWith(canvasBackground: background)),
+    );
+  }
+
+  StoryCardEditorSession setCardBackgroundColor(Color color) {
+    if (draft.scene.appearance.backgroundColor == color) {
+      return this;
+    }
+    return updateDraft(
+      draft.copyWith(
+        scene: draft.scene.copyWith(
+          appearance: draft.scene.appearance.copyWith(backgroundColor: color),
+        ),
+      ),
     );
   }
 

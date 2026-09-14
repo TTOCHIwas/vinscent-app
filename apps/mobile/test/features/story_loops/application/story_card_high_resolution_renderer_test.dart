@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 import 'package:vinscent/features/story_loops/application/story_card_high_resolution_renderer.dart';
+import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_download_source.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
@@ -82,6 +83,40 @@ void main() {
     expect(
       (captionPixel.r.toInt(), captionPixel.g.toInt(), captionPixel.b.toInt()),
       (255, 255, 255),
+    );
+  });
+
+  testWidgets('renders the selected card color around a polaroid photo', (
+    tester,
+  ) async {
+    final photo = image.Image(width: 8, height: 8);
+    image.fill(photo, color: image.ColorRgb8(255, 0, 0));
+    const backgroundColor = ui.Color(0xFFB7D5C4);
+    final source = StoryCardDownloadSource(
+      scene: StoryCardScene.empty().copyWith(
+        appearance: const StoryCardAppearance(backgroundColor: backgroundColor),
+      ),
+      backgroundImageBytes: image.encodePng(photo),
+      compositeImageBytes: null,
+    );
+    const renderer = StoryCardHighResolutionRenderer(
+      outputWidth: 80,
+      outputHeight: 100,
+    );
+
+    final rendered = await tester.runAsync(() => renderer.render(source));
+    final output = image.decodePng(rendered!);
+
+    expect(output, isNotNull);
+    final framePixel = output!.getPixel(2, 2);
+    expect(
+      (framePixel.r.toInt(), framePixel.g.toInt(), framePixel.b.toInt()),
+      (183, 213, 196),
+    );
+    final photoPixel = output.getPixel(40, 40);
+    expect(
+      (photoPixel.r.toInt(), photoPixel.g.toInt(), photoPixel.b.toInt()),
+      (255, 0, 0),
     );
   });
 

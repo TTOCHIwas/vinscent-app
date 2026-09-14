@@ -23,7 +23,10 @@ abstract final class StoryCardCanvasRenderer {
   }) {
     final layout = StoryCardLayout.fromSize(type: scene.cardType, size: size);
     final images = backgroundImages ?? [backgroundImage];
-    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = scene.appearance.backgroundColor,
+    );
 
     for (var index = 0; index < layout.photoRects.length; index++) {
       _drawBackground(
@@ -31,14 +34,20 @@ abstract final class StoryCardCanvasRenderer {
         destination: layout.photoRects[index],
         image: index < images.length ? images[index] : null,
         transform: scene.photoTransforms[index],
-        canvasBackground: scene.canvasBackground,
+        backgroundColor: scene.appearance.backgroundColor,
         film: scene.photoFilms[index],
         filmProgram: filmProgram,
       );
     }
     final captionRect = layout.captionRect;
     if (captionRect != null) {
-      _drawCaption(canvas, size, captionRect, scene.caption);
+      _drawCaption(
+        canvas,
+        size,
+        captionRect,
+        scene.caption,
+        scene.appearance.contentColor,
+      );
     }
     _drawStrokes(canvas, size, strokes ?? scene.strokes);
 
@@ -54,13 +63,13 @@ abstract final class StoryCardCanvasRenderer {
     required Rect destination,
     required ui.Image? image,
     required StoryCardBackgroundTransform transform,
-    required StoryCardCanvasBackground canvasBackground,
+    required Color backgroundColor,
     required StoryCardFilmState film,
     required ui.FragmentProgram? filmProgram,
   }) {
     canvas.save();
     canvas.clipRect(destination);
-    canvas.drawRect(destination, Paint()..color = canvasBackground.color);
+    canvas.drawRect(destination, Paint()..color = backgroundColor);
     if (image != null) {
       if (film.look != StoryCardFilmLook.original && filmProgram != null) {
         _drawFilteredBackground(
@@ -68,7 +77,7 @@ abstract final class StoryCardCanvasRenderer {
           destination: destination,
           image: image,
           transform: transform,
-          canvasBackground: canvasBackground,
+          backgroundColor: backgroundColor,
           film: film,
           filmProgram: filmProgram,
         );
@@ -108,7 +117,7 @@ abstract final class StoryCardCanvasRenderer {
     required Rect destination,
     required ui.Image image,
     required StoryCardBackgroundTransform transform,
-    required StoryCardCanvasBackground canvasBackground,
+    required Color backgroundColor,
     required StoryCardFilmState film,
     required ui.FragmentProgram filmProgram,
   }) {
@@ -122,7 +131,7 @@ abstract final class StoryCardCanvasRenderer {
       outputSize: destination.size,
       outputOrigin: destination.topLeft,
       mapping: mapping,
-      backgroundColor: canvasBackground.color,
+      backgroundColor: backgroundColor,
       film: film,
       image: image,
     );
@@ -143,6 +152,7 @@ abstract final class StoryCardCanvasRenderer {
     Size size,
     Rect captionRect,
     String? caption,
+    Color textColor,
   ) {
     if (caption == null || caption.isEmpty || captionRect.isEmpty) {
       return;
@@ -153,7 +163,7 @@ abstract final class StoryCardCanvasRenderer {
       text: TextSpan(
         text: caption,
         style: TextStyle(
-          color: const Color(0xFF222222),
+          color: textColor,
           fontSize: fontSize,
           fontWeight: FontWeight.w500,
           height: AppTypography.bodyLineHeight,

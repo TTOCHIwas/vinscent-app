@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/widgets/app_back_button.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'story_card_editor_style.dart';
 
 class StoryCardEditorHeader extends StatelessWidget {
   const StoryCardEditorHeader({
@@ -20,7 +21,8 @@ class StoryCardEditorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0x52000000),
+      key: const ValueKey('story-card-editor-header-surface'),
+      color: storyCardEditorChromeColor,
       child: SizedBox(
         height: 56,
         child: Padding(

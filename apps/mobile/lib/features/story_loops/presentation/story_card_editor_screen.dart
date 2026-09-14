@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/drawing/widgets/app_canvas_color_picker.dart';
 import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
+import '../../../core/presentation/widgets/app_hsv_color_picker_sheet.dart';
 import '../../characters/application/couple_character_controller.dart';
 import '../application/story_card_camera_selection.dart';
 import '../application/story_card_editor_controller.dart';
@@ -24,6 +25,7 @@ import '../data/story_card_scene.dart';
 import '../data/story_card_type.dart';
 import '../data/story_loop_write_failure.dart';
 import 'widgets/story_card_camera_stage.dart';
+import 'widgets/story_card_appearance_picker.dart';
 import 'widgets/story_card_draft_exit_dialog.dart';
 import 'widgets/story_card_drawing_controls.dart';
 import 'widgets/story_card_editor_action_bar.dart';
@@ -36,7 +38,6 @@ import 'widgets/story_card_photo_adjustment_screen.dart';
 import 'widgets/story_card_photo_slot_controls.dart';
 import 'widgets/story_card_text_input_overlay.dart';
 import 'widgets/story_card_text_trash_target.dart';
-import 'widgets/story_card_type_picker.dart';
 
 class StoryCardEditorScreen extends ConsumerWidget {
   const StoryCardEditorScreen({super.key});
@@ -291,14 +292,10 @@ class _StoryCardEditorContentState
                   padding: const EdgeInsets.only(right: 12),
                   child: StoryCardEditorActionBar(
                     interactionMode: _session.tool,
-                    hasBackground: _draft.hasPhoto,
                     cardType: _draft.scene.cardType,
                     onAddTextPressed: _selectTextTool,
                     onDrawingModePressed: () =>
                         _selectTool(StoryCardEditorTool.drawing),
-                    onBackgroundColorPressed: _draft.hasPhoto
-                        ? null
-                        : _toggleCanvasBackground,
                     onFilmPressed: _selectedPhotoBytes == null
                         ? null
                         : _toggleFilmSelector,
@@ -404,11 +401,17 @@ class _StoryCardEditorContentState
                         : const Offset(0, 1.3),
                     child: IgnorePointer(
                       ignoring: !_isCardTypeSelectorVisible,
-                      child: StoryCardTypePicker(
+                      child: StoryCardAppearancePicker(
                         key: const ValueKey('story-card-editor-type-selector'),
                         selectedType: _draft.scene.cardType,
-                        onSelected: _selectCardType,
-                        keyPrefix: 'story-card-editor-type',
+                        selectedBackgroundColor:
+                            _draft.scene.appearance.backgroundColor,
+                        onTypeSelected: _selectCardType,
+                        onBackgroundColorSelected: _selectCardBackgroundColor,
+                        onCustomColorPressed: () =>
+                            unawaited(_selectCustomCardBackgroundColor()),
+                        typeKeyPrefix: 'story-card-editor-type',
+                        backgroundKeyPrefix: 'story-card-editor-background',
                       ),
                     ),
                   ),
@@ -962,13 +965,35 @@ class _StoryCardEditorContentState
     });
   }
 
-  void _toggleCanvasBackground() {
+  void _selectCardBackgroundColor(Color color) {
     _cardTypeSelectorHideTimer?.cancel();
     setState(() {
-      _isCardTypeSelectorVisible = false;
+      _session = _session.setCardBackgroundColor(color);
+      _isCardTypeSelectorVisible = true;
       _isInitialCardTypeSelectorPinned = false;
-      _session = _session.toggleCanvasBackground();
     });
+    _scheduleCardTypeSelectorHide();
+  }
+
+  Future<void> _selectCustomCardBackgroundColor() async {
+    _cardTypeSelectorHideTimer?.cancel();
+    final selectedColor = await showAppHsvColorPickerSheet(
+      context: context,
+      initialColor: _draft.scene.appearance.backgroundColor,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (selectedColor != null) {
+      setState(() {
+        _session = _session.setCardBackgroundColor(selectedColor);
+        _isCardTypeSelectorVisible = true;
+        _isInitialCardTypeSelectorPinned = false;
+      });
+    }
+    if (_isCardTypeSelectorVisible) {
+      _scheduleCardTypeSelectorHide();
+    }
   }
 
   void _toggleFilmSelector() {

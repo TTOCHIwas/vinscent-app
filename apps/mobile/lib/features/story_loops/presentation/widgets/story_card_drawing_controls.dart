@@ -4,6 +4,7 @@ import '../../../../core/drawing/app_drawing.dart';
 import '../../../../core/drawing/widgets/app_drawing_style_controls.dart';
 import '../../../../core/drawing/widgets/app_drawing_toolbar.dart';
 import '../../data/story_card_scene.dart';
+import 'story_card_editor_style.dart';
 import 'story_card_interactive_viewport.dart';
 
 class StoryCardDrawingControls extends StatelessWidget {
@@ -43,7 +44,8 @@ class StoryCardDrawingControls extends StatelessWidget {
           Align(
             alignment: Alignment.topCenter,
             child: Material(
-              color: const Color(0x33000000),
+              key: const ValueKey('story-card-drawing-header-surface'),
+              color: storyCardEditorChromeColor,
               child: SizedBox(
                 height: AppDrawingToolbar.height,
                 width: double.infinity,
@@ -83,6 +85,7 @@ class StoryCardDrawingControls extends StatelessWidget {
                     : StoryCardDrawingTool.eraser,
               ),
               onUndoPressed: onUndoPressed,
+              backgroundColor: storyCardEditorChromeColor,
             ),
           ),
           Align(
@@ -101,6 +104,7 @@ class StoryCardDrawingControls extends StatelessWidget {
               onColorChanged: onColorChanged,
               onPickColor: onEyedropperPressed,
               onStrokeWidthChanged: onStrokeWidthChanged,
+              backgroundColor: storyCardEditorChromeColor,
             ),
           ),
         ],
