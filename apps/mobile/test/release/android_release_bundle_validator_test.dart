@@ -73,6 +73,22 @@ void main() {
     );
   });
 
+  test('accepts 4 KB ELF alignment for a 32-bit native library', () {
+    final bundle = _writeBundle(
+      temporaryDirectory,
+      bundleAlignment: 2,
+      elfAlignment: 0x1000,
+      abi: 'armeabi-v7a',
+      is64Bit: false,
+    );
+
+    final report = const AndroidReleaseBundleValidator().validate(bundle);
+
+    expect(report.nativeLibraries, hasLength(1));
+    expect(report.nativeLibraries.single.path, contains('armeabi-v7a'));
+    expect(report.nativeLibraries.single.minimumLoadAlignmentBytes, 0x1000);
+  });
+
   test('rejects a bundle without native libraries', () {
     final archive = Archive()
       ..addFile(
@@ -98,6 +114,8 @@ File _writeBundle(
   Directory directory, {
   required int bundleAlignment,
   required int elfAlignment,
+  String abi = 'arm64-v8a',
+  bool is64Bit = true,
 }) {
   final archive = Archive()
     ..addFile(
@@ -108,8 +126,10 @@ File _writeBundle(
     )
     ..addFile(
       ArchiveFile.bytes(
-        'base/lib/arm64-v8a/libexample.so',
-        _elf64(alignment: elfAlignment),
+        'base/lib/$abi/libexample.so',
+        is64Bit
+            ? _elf64(alignment: elfAlignment)
+            : _elf32(alignment: elfAlignment),
       ),
     );
 
@@ -146,6 +166,25 @@ Uint8List _elf64({required int alignment}) {
   data.setUint16(56, 1, Endian.little);
   data.setUint32(elfHeaderSize, 1, Endian.little);
   data.setUint64(elfHeaderSize + 48, alignment, Endian.little);
+
+  return bytes;
+}
+
+Uint8List _elf32({required int alignment}) {
+  const elfHeaderSize = 52;
+  const programHeaderSize = 32;
+  final bytes = Uint8List(elfHeaderSize + programHeaderSize);
+  final data = ByteData.sublistView(bytes);
+
+  bytes.setAll(0, const <int>[0x7f, 0x45, 0x4c, 0x46]);
+  bytes[4] = 1;
+  bytes[5] = 1;
+  bytes[6] = 1;
+  data.setUint32(28, elfHeaderSize, Endian.little);
+  data.setUint16(42, programHeaderSize, Endian.little);
+  data.setUint16(44, 1, Endian.little);
+  data.setUint32(elfHeaderSize, 1, Endian.little);
+  data.setUint32(elfHeaderSize + 28, alignment, Endian.little);
 
   return bytes;
 }
