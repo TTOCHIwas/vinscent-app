@@ -9,12 +9,14 @@ class AppBackButton extends StatelessWidget {
     this.color,
     this.buttonSize = 48,
     this.tooltip = '뒤로가기',
+    this.shadows,
   });
 
   final VoidCallback? onPressed;
   final Color? color;
   final double buttonSize;
   final String tooltip;
+  final List<Shadow>? shadows;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +33,7 @@ class AppBackButton extends StatelessWidget {
       tooltip: tooltip,
       iconSize: 24,
       color: iconColor,
-      icon: const Icon(Icons.chevron_left_rounded),
+      icon: Icon(Icons.chevron_left_rounded, shadows: shadows),
     );
   }
 }

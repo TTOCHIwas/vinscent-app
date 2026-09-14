@@ -19,6 +19,7 @@ class AppDrawingStyleControls extends StatelessWidget {
     this.brightness = Brightness.dark,
     this.previewClearance = 0,
     this.backgroundColor,
+    this.showContrastShadow = false,
   });
 
   static const height = 120.0;
@@ -34,6 +35,7 @@ class AppDrawingStyleControls extends StatelessWidget {
   final Brightness brightness;
   final double previewClearance;
   final Color? backgroundColor;
+  final bool showContrastShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class AppDrawingStyleControls extends StatelessWidget {
               canvasExtent: canvasExtent,
               value: selectedStrokeWidth,
               onChanged: onStrokeWidthChanged,
+              showContrastShadow: showContrastShadow,
             ),
           ),
           SizedBox(
@@ -71,6 +74,7 @@ class AppDrawingStyleControls extends StatelessWidget {
                 showSelection: showColorSelection,
                 onColorChanged: onColorChanged,
                 onPickColor: onPickColor,
+                showContrastShadow: showContrastShadow,
               ),
             ),
           ),

@@ -20,44 +20,46 @@ class StoryCardEditorHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return SizedBox(
       key: const ValueKey('story-card-editor-header-surface'),
-      color: storyCardEditorChromeColor,
-      child: SizedBox(
-        height: 56,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: AppBackButton(
-                  onPressed: onBackPressed,
-                  color: Colors.white,
-                ),
+      height: 56,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppBackButton(
+                onPressed: onBackPressed,
+                color: Colors.white,
+                shadows: storyCardEditorControlShadows,
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  key: const ValueKey('story-card-editor-save'),
-                  tooltip: '카드 올리기',
-                  color: AppColors.brandAction,
-                  disabledColor: Colors.white38,
-                  onPressed: canSave ? onSavePressed : null,
-                  icon: isSaving
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(
-                            color: AppColors.brandAction,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.check_rounded, size: 26),
-                ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                key: const ValueKey('story-card-editor-save'),
+                tooltip: '카드 올리기',
+                color: AppColors.brandAction,
+                disabledColor: Colors.white38,
+                onPressed: canSave ? onSavePressed : null,
+                icon: isSaving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          color: AppColors.brandAction,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.check_rounded,
+                        size: 26,
+                        shadows: storyCardEditorControlShadows,
+                      ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

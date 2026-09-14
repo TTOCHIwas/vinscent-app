@@ -13,6 +13,7 @@ class AppColorPalette extends StatefulWidget {
     required this.keyPrefix,
     this.showSelection = true,
     this.brightness = Brightness.dark,
+    this.showContrastShadow = false,
   });
 
   final Color selectedColor;
@@ -21,6 +22,7 @@ class AppColorPalette extends StatefulWidget {
   final String keyPrefix;
   final bool showSelection;
   final Brightness brightness;
+  final bool showContrastShadow;
 
   @override
   State<AppColorPalette> createState() => _AppColorPaletteState();
@@ -57,23 +59,37 @@ class _AppColorPaletteState extends State<AppColorPalette> {
             dimension: 48,
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: IconButton(
-                key: ValueKey('${widget.keyPrefix}-eyedropper'),
-                tooltip: '스포이드',
-                onPressed: isEnabled && widget.onPickColor != null
-                    ? _pickColor
-                    : null,
-                icon: const Icon(LucideIcons.pipette, size: 21),
-                style: IconButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size.square(40),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: const CircleBorder(),
-                  foregroundColor: iconColor,
-                  disabledForegroundColor: iconColor.withValues(alpha: 0.45),
-                  backgroundColor: widget.selectedColor,
-                  disabledBackgroundColor: widget.selectedColor,
-                  side: BorderSide(color: borderColor),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: widget.showContrastShadow
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x52000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 1),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: IconButton(
+                  key: ValueKey('${widget.keyPrefix}-eyedropper'),
+                  tooltip: '스포이드',
+                  onPressed: isEnabled && widget.onPickColor != null
+                      ? _pickColor
+                      : null,
+                  icon: const Icon(LucideIcons.pipette, size: 21),
+                  style: IconButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size.square(40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: const CircleBorder(),
+                    foregroundColor: iconColor,
+                    disabledForegroundColor: iconColor.withValues(alpha: 0.45),
+                    backgroundColor: widget.selectedColor,
+                    disabledBackgroundColor: widget.selectedColor,
+                    side: BorderSide(color: borderColor),
+                  ),
                 ),
               ),
             ),
@@ -120,6 +136,15 @@ class _AppColorPaletteState extends State<AppColorPalette> {
                                         : Colors.transparent,
                                     width: 2,
                                   ),
+                                  boxShadow: widget.showContrastShadow
+                                      ? const [
+                                          BoxShadow(
+                                            color: Color(0x52000000),
+                                            blurRadius: 5,
+                                            offset: Offset(0, 1),
+                                          ),
+                                        ]
+                                      : null,
                                 ),
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(

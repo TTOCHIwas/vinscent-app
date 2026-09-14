@@ -45,7 +45,7 @@ class StoryCardDrawingControls extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: Material(
               key: const ValueKey('story-card-drawing-header-surface'),
-              color: storyCardEditorChromeColor,
+              color: Colors.transparent,
               child: SizedBox(
                 height: AppDrawingToolbar.height,
                 width: double.infinity,
@@ -59,7 +59,11 @@ class StoryCardDrawingControls extends StatelessWidget {
                         key: const ValueKey('story-card-drawing-done'),
                         tooltip: '그리기 완료',
                         color: Colors.white,
-                        icon: const Icon(Icons.check_rounded, size: 26),
+                        icon: const Icon(
+                          Icons.check_rounded,
+                          size: 26,
+                          shadows: storyCardEditorControlShadows,
+                        ),
                         onPressed: onDonePressed,
                       ),
                     ),
@@ -85,7 +89,8 @@ class StoryCardDrawingControls extends StatelessWidget {
                     : StoryCardDrawingTool.eraser,
               ),
               onUndoPressed: onUndoPressed,
-              backgroundColor: storyCardEditorChromeColor,
+              backgroundColor: Colors.transparent,
+              showContrastShadow: true,
             ),
           ),
           Align(
@@ -104,7 +109,8 @@ class StoryCardDrawingControls extends StatelessWidget {
               onColorChanged: onColorChanged,
               onPickColor: onEyedropperPressed,
               onStrokeWidthChanged: onStrokeWidthChanged,
-              backgroundColor: storyCardEditorChromeColor,
+              backgroundColor: Colors.transparent,
+              showContrastShadow: true,
             ),
           ),
         ],

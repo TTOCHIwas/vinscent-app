@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 import 'package:vinscent/core/drawing/widgets/app_color_sampler.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_style_controls.dart';
+import 'package:vinscent/core/drawing/widgets/app_drawing_toolbar.dart';
 import 'package:vinscent/core/drawing/widgets/app_drawing_width_slider.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
 import 'package:vinscent/features/story_loops/application/story_card_editor_controller.dart';
@@ -18,7 +20,6 @@ import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/story_card_editor_screen.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_drawing_controls.dart';
-import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_style.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_interactive_viewport.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_photo_adjustment_screen.dart';
 import '../../../support/color_picker_test_helpers.dart';
@@ -267,11 +268,24 @@ void main() {
 
     expect(tester.getSize(header).height, 56);
     expect(tester.getTopLeft(header).dy, 0);
-    expect(tester.getRect(save).overlaps(tester.getRect(textTool)), isFalse);
     expect(
-      find.descendant(of: save, matching: find.byIcon(Icons.check_rounded)),
-      findsOneWidget,
+      tester.widget(
+        find.byKey(const ValueKey('story-card-editor-header-surface')),
+      ),
+      isNot(isA<ColoredBox>()),
     );
+    expect(tester.getRect(save).overlaps(tester.getRect(textTool)), isFalse);
+    final saveIcon = tester.widget<Icon>(
+      find.descendant(of: save, matching: find.byIcon(Icons.check_rounded)),
+    );
+    expect(saveIcon.shadows, isNotEmpty);
+    final backIcon = tester.widget<Icon>(
+      find.descendant(
+        of: header,
+        matching: find.byIcon(Icons.chevron_left_rounded),
+      ),
+    );
+    expect(backIcon.shadows, isNotEmpty);
     expect(find.byTooltip('카드 올리기'), findsOneWidget);
     expect(find.byTooltip('카드 삭제'), findsNothing);
     expect(find.text('올리기'), findsNothing);
@@ -801,7 +815,7 @@ void main() {
             find.byKey(const ValueKey('story-card-drawing-header-surface')),
           )
           .color,
-      storyCardEditorChromeColor,
+      Colors.transparent,
     );
     expect(
       tester
@@ -809,7 +823,7 @@ void main() {
             find.byKey(const ValueKey('story-card-drawing-toolbar')),
           )
           .color,
-      storyCardEditorChromeColor,
+      Colors.transparent,
     );
     expect(
       tester
@@ -819,8 +833,27 @@ void main() {
             ),
           )
           .color,
-      storyCardEditorChromeColor,
+      Colors.transparent,
     );
+    expect(
+      tester
+          .widget<AppDrawingToolbar>(find.byType(AppDrawingToolbar))
+          .showContrastShadow,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<AppDrawingStyleControls>(find.byType(AppDrawingStyleControls))
+          .showContrastShadow,
+      isTrue,
+    );
+    final doneIcon = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const ValueKey('story-card-drawing-done')),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+    );
+    expect(doneIcon.shadows, isNotEmpty);
     expect(
       tester
           .getSize(

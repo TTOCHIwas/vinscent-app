@@ -20,6 +20,7 @@ class AppDrawingToolbar extends StatelessWidget {
     required this.keyPrefix,
     this.brightness = Brightness.dark,
     this.backgroundColor,
+    this.showContrastShadow = false,
   });
 
   static const height = 56.0;
@@ -36,12 +37,14 @@ class AppDrawingToolbar extends StatelessWidget {
   final String keyPrefix;
   final Brightness brightness;
   final Color? backgroundColor;
+  final bool showContrastShadow;
 
   @override
   Widget build(BuildContext context) {
     final tools = [
       AppDrawingToolButton(
         brightness: brightness,
+        showContrastShadow: showContrastShadow,
         buttonKey: ValueKey('$keyPrefix-pen'),
         tooltip: '펜',
         icon: const Icon(Icons.edit),
@@ -50,6 +53,7 @@ class AppDrawingToolbar extends StatelessWidget {
       ),
       AppDrawingToolButton(
         brightness: brightness,
+        showContrastShadow: showContrastShadow,
         buttonKey: ValueKey('$keyPrefix-eraser'),
         tooltip: '지우개',
         icon: const AppSvgIcon(AppIcons.eraser),
@@ -60,6 +64,7 @@ class AppDrawingToolbar extends StatelessWidget {
       ),
       AppDrawingToolButton(
         brightness: brightness,
+        showContrastShadow: showContrastShadow,
         buttonKey: ValueKey('$keyPrefix-undo'),
         tooltip: '되돌리기',
         icon: const Icon(Icons.undo),
@@ -114,6 +119,7 @@ class AppDrawingToolbar extends StatelessWidget {
                 const SizedBox(width: 24),
                 AppDrawingToolButton(
                   brightness: brightness,
+                  showContrastShadow: showContrastShadow,
                   buttonKey: ValueKey('$keyPrefix-clear'),
                   tooltip: '전체 삭제',
                   icon: const Icon(Icons.delete_outline),
@@ -138,6 +144,7 @@ class AppDrawingToolButton extends StatelessWidget {
     required this.onPressed,
     this.isSelected = false,
     this.brightness = Brightness.dark,
+    this.showContrastShadow = false,
   });
 
   final Key buttonKey;
@@ -146,40 +153,55 @@ class AppDrawingToolButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isSelected;
   final Brightness brightness;
+  final bool showContrastShadow;
 
   @override
   Widget build(BuildContext context) {
     final isLight = brightness == Brightness.light;
-    return SizedBox.square(
-      dimension: 48,
-      child: IconButton(
-        key: buttonKey,
-        tooltip: tooltip,
-        onPressed: onPressed,
-        icon: icon,
-        color: isLight
-            ? AppColors.textPrimary
-            : isSelected
-            ? Colors.black
-            : Colors.white,
-        disabledColor: isLight
-            ? AppColors.actionDisabledContent
-            : Colors.white38,
-        style: IconButton.styleFrom(
-          shape: const CircleBorder(),
-          backgroundColor: isLight
-              ? isSelected
-                    ? AppColors.formSurface
-                    : Colors.transparent
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: showContrastShadow
+            ? const [
+                BoxShadow(
+                  color: Color(0x52000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 1),
+                ),
+              ]
+            : null,
+      ),
+      child: SizedBox.square(
+        dimension: 48,
+        child: IconButton(
+          key: buttonKey,
+          tooltip: tooltip,
+          onPressed: onPressed,
+          icon: icon,
+          color: isLight
+              ? AppColors.textPrimary
               : isSelected
-              ? Colors.white
-              : const Color(0x52000000),
-          disabledBackgroundColor: isLight
-              ? Colors.transparent
-              : const Color(0x33000000),
-          side: isLight
-              ? BorderSide.none
-              : BorderSide(color: isSelected ? Colors.white : Colors.white38),
+              ? Colors.black
+              : Colors.white,
+          disabledColor: isLight
+              ? AppColors.actionDisabledContent
+              : Colors.white38,
+          style: IconButton.styleFrom(
+            shape: const CircleBorder(),
+            backgroundColor: isLight
+                ? isSelected
+                      ? AppColors.formSurface
+                      : Colors.transparent
+                : isSelected
+                ? Colors.white
+                : const Color(0x52000000),
+            disabledBackgroundColor: isLight
+                ? Colors.transparent
+                : const Color(0x33000000),
+            side: isLight
+                ? BorderSide.none
+                : BorderSide(color: isSelected ? Colors.white : Colors.white38),
+          ),
         ),
       ),
     );

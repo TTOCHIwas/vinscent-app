@@ -11,6 +11,7 @@ class AppDrawingWidthSlider extends StatefulWidget {
     required this.onChanged,
     this.brightness = Brightness.dark,
     this.previewClearance = 0,
+    this.showContrastShadow = false,
   });
 
   final double canvasExtent;
@@ -18,6 +19,7 @@ class AppDrawingWidthSlider extends StatefulWidget {
   final ValueChanged<double>? onChanged;
   final Brightness brightness;
   final double previewClearance;
+  final bool showContrastShadow;
 
   @override
   State<AppDrawingWidthSlider> createState() => _AppDrawingWidthSliderState();
@@ -41,7 +43,11 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
       height: 48,
       child: Row(
         children: [
-          _StrokeWidthMark(thickness: 1.5, color: trackColor),
+          _StrokeWidthMark(
+            thickness: 1.5,
+            color: trackColor,
+            showContrastShadow: widget.showContrastShadow,
+          ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -59,6 +65,26 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
+                    if (widget.showContrastShadow)
+                      Positioned(
+                        left: _trackPadding,
+                        right: _trackPadding,
+                        top: 23,
+                        child: IgnorePointer(
+                          child: Container(
+                            height: 2,
+                            decoration: const BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x66000000),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     Semantics(
                       label: '굵기',
                       child: SliderTheme(
@@ -74,11 +100,11 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
                               ? AppColors.actionDisabled
                               : Colors.white54,
                           overlayColor: Colors.transparent,
-                          thumbShape: const RoundSliderThumbShape(
+                          thumbShape: RoundSliderThumbShape(
                             enabledThumbRadius: 10,
                             disabledThumbRadius: 10,
-                            elevation: 1,
-                            pressedElevation: 3,
+                            elevation: widget.showContrastShadow ? 2 : 1,
+                            pressedElevation: widget.showContrastShadow ? 4 : 3,
                           ),
                           overlayShape: const RoundSliderOverlayShape(
                             overlayRadius: _trackPadding,
@@ -133,7 +159,11 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
               },
             ),
           ),
-          _StrokeWidthMark(thickness: 6, color: trackColor),
+          _StrokeWidthMark(
+            thickness: 6,
+            color: trackColor,
+            showContrastShadow: widget.showContrastShadow,
+          ),
         ],
       ),
     );
@@ -141,10 +171,15 @@ class _AppDrawingWidthSliderState extends State<AppDrawingWidthSlider> {
 }
 
 class _StrokeWidthMark extends StatelessWidget {
-  const _StrokeWidthMark({required this.thickness, required this.color});
+  const _StrokeWidthMark({
+    required this.thickness,
+    required this.color,
+    required this.showContrastShadow,
+  });
 
   final double thickness;
   final Color color;
+  final bool showContrastShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +193,9 @@ class _StrokeWidthMark extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(thickness / 2),
+              boxShadow: showContrastShadow
+                  ? const [BoxShadow(color: Color(0x66000000), blurRadius: 4)]
+                  : null,
             ),
           ),
         ),
