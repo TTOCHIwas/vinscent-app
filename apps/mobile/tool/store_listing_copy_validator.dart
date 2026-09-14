@@ -172,6 +172,12 @@ final class StoreListingCopyValidator {
         'googlePlay.fullDescription.',
       );
     }
+    if (copy.appStorePromotionalText != copy.playShortDescription) {
+      errors.add(
+        'appStore.promotionalText must exactly match '
+        'googlePlay.shortDescription.',
+      );
+    }
 
     errors.sort();
     return List.unmodifiable(errors);
