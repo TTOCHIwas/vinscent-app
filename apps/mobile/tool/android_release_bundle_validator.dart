@@ -84,21 +84,20 @@ class AndroidReleaseBundleValidator {
               );
             }
 
-            final minimumAlignment = _minimumLoadAlignment(
-              bytes,
-              path: entry.name,
-            );
-            if (minimumAlignment < _requiredPageAlignment ||
-                minimumAlignment % _requiredPageAlignment != 0) {
+            final loadAlignment = _readLoadAlignment(bytes, path: entry.name);
+            if (loadAlignment.is64Bit &&
+                (loadAlignment.minimumBytes < _requiredPageAlignment ||
+                    loadAlignment.minimumBytes % _requiredPageAlignment != 0)) {
               throw AndroidReleaseBundleValidationException(
-                '${entry.name} has $minimumAlignment-byte ELF LOAD alignment; '
-                'at least $_requiredPageAlignment-byte alignment is required.',
+                '${entry.name} is a 64-bit ELF with '
+                '${loadAlignment.minimumBytes}-byte LOAD alignment; at least '
+                '$_requiredPageAlignment-byte alignment is required.',
               );
             }
 
             return AndroidNativeLibraryAlignment(
               path: entry.name,
-              minimumLoadAlignmentBytes: minimumAlignment,
+              minimumLoadAlignmentBytes: loadAlignment.minimumBytes,
             );
           })
           .toList(growable: false);
@@ -142,7 +141,10 @@ class AndroidReleaseBundleValidator {
     }
   }
 
-  int _minimumLoadAlignment(Uint8List bytes, {required String path}) {
+  _ElfLoadAlignment _readLoadAlignment(
+    Uint8List bytes, {
+    required String path,
+  }) {
     if (bytes.length < 64 ||
         bytes[0] != 0x7f ||
         bytes[1] != 0x45 ||
@@ -217,7 +219,10 @@ class AndroidReleaseBundleValidator {
         'Native library has no aligned ELF LOAD segments: $path',
       );
     }
-    return minimumAlignment;
+    return _ElfLoadAlignment(
+      minimumBytes: minimumAlignment,
+      is64Bit: elfClass == 2,
+    );
   }
 
   int _readUint16(ByteData data, int offset, Endian endian, String path) {
@@ -242,6 +247,13 @@ class AndroidReleaseBundleValidator {
       );
     }
   }
+}
+
+class _ElfLoadAlignment {
+  const _ElfLoadAlignment({required this.minimumBytes, required this.is64Bit});
+
+  final int minimumBytes;
+  final bool is64Bit;
 }
 
 class _ProtoMessage {

@@ -52,7 +52,7 @@ void main() {
     );
   });
 
-  test('rejects a native library with 4 KB ELF alignment', () {
+  test('rejects a 64-bit native library with 4 KB ELF alignment', () {
     final bundle = _writeBundle(
       temporaryDirectory,
       bundleAlignment: 2,
