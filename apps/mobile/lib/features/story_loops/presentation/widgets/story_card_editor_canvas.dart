@@ -207,7 +207,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
       return;
     }
 
-    if (details.pointerCount >= 2 || widget.viewportGestures.isZoomed()) {
+    if (_canUseViewport(details.pointerCount)) {
       _gestureUsedViewport = true;
       widget.viewportGestures.begin(details.focalPoint);
     }
@@ -219,14 +219,21 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
       widget.onTextLayerScaleUpdate(lockedTextLayerId, details, size);
       return;
     }
-    if (!_gestureUsedViewport &&
-        (details.pointerCount >= 2 || widget.viewportGestures.isZoomed())) {
+    if (!_gestureUsedViewport && _canUseViewport(details.pointerCount)) {
       _gestureUsedViewport = true;
       widget.viewportGestures.begin(details.focalPoint);
     }
-    if (_gestureUsedViewport) {
+    if (_gestureUsedViewport &&
+        (widget.interactionMode != StoryCardEditorTool.drawing ||
+            details.pointerCount >= 2)) {
       widget.viewportGestures.update(details.focalPoint, details.scale);
     }
+  }
+
+  bool _canUseViewport(int pointerCount) {
+    return pointerCount >= 2 ||
+        (widget.interactionMode != StoryCardEditorTool.drawing &&
+            widget.viewportGestures.isZoomed());
   }
 
   void _handleCanvasPointerDown(PointerDownEvent event, Size size) {
@@ -322,6 +329,12 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     _clearPointer(event.pointer);
     _activePointers.remove(event.pointer);
     if (_activePointers.isNotEmpty) {
+      if (widget.interactionMode == StoryCardEditorTool.drawing &&
+          _gestureUsedViewport &&
+          _activePointers.length < 2) {
+        widget.viewportGestures.end();
+        _gestureUsedViewport = false;
+      }
       return;
     }
 

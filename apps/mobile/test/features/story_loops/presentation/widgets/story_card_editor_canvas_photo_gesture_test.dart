@@ -9,6 +9,58 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_ed
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_interactive_viewport.dart';
 
 void main() {
+  testWidgets('그림 모드의 한 손가락 입력은 확대 상태에서도 펜에만 전달한다', (tester) async {
+    var viewportBeginCount = 0;
+    var viewportUpdateCount = 0;
+    var strokeStartCount = 0;
+    var strokeUpdateCount = 0;
+    var strokeEndCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 320,
+              height: 400,
+              child: StoryCardEditorCanvas(
+                backgroundImages: const [],
+                scene: StoryCardScene.empty(cardType: StoryCardType.fullBleed),
+                visibleStrokes: const [],
+                interactionMode: StoryCardEditorTool.drawing,
+                onStrokeStart: (_, _) => strokeStartCount += 1,
+                onStrokeUpdate: (_, _) => strokeUpdateCount += 1,
+                onStrokeEnd: (_) => strokeEndCount += 1,
+                onStrokeCancel: (_) {},
+                onPhotoTapped: (_) {},
+                onPhotosReordered: (_, _) {},
+                onCardTypeStep: (_) {},
+                onTextLayerScaleStart: (_, _) {},
+                onTextLayerScaleUpdate: (_, _, _) {},
+                onTextLayerScaleEnd: () {},
+                viewportGestures: StoryCardViewportGestures(
+                  isZoomed: () => true,
+                  begin: (_) => viewportBeginCount += 1,
+                  update: (_, _) => viewportUpdateCount += 1,
+                  end: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(find.byType(StoryCardEditorCanvas), const Offset(80, 40));
+    await tester.pump();
+
+    expect(strokeStartCount, 1);
+    expect(strokeUpdateCount, greaterThan(0));
+    expect(strokeEndCount, 1);
+    expect(viewportBeginCount, 0);
+    expect(viewportUpdateCount, 0);
+  });
+
   testWidgets('사진 칸 탭, 카드 유형 스와이프, 네컷 길게 눌러 이동을 구분한다', (tester) async {
     final image = await _solidImage();
     addTearDown(image.dispose);
