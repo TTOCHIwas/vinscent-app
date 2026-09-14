@@ -4,6 +4,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_appearance.dart';
 import '../../data/story_card_type.dart';
 import 'story_card_editor_style.dart';
+import 'story_card_picker_surface.dart';
 import 'story_card_type_picker.dart';
 
 class StoryCardAppearancePicker extends StatelessWidget {
@@ -28,43 +29,35 @@ class StoryCardAppearancePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: storyCardPickerMaxWidth),
-        child: DecoratedBox(
-          key: const ValueKey('story-card-appearance-picker-surface'),
-          decoration: BoxDecoration(
-            color: storyCardEditorChromeColor,
-            borderRadius: BorderRadius.circular(storyCardPickerCornerRadius),
+    return StoryCardPickerSurface(
+      surfaceKey: const ValueKey('story-card-appearance-picker-surface'),
+      color: storyCardEditorChromeColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 68,
+            child: StoryCardTypeOptions(
+              selectedType: selectedType,
+              onSelected: onTypeSelected,
+              keyPrefix: typeKeyPrefix,
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 68,
-                child: StoryCardTypeOptions(
-                  selectedType: selectedType,
-                  onSelected: onTypeSelected,
-                  keyPrefix: typeKeyPrefix,
-                ),
-              ),
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: storyCardPickerDividerColor,
-              ),
-              SizedBox(
-                height: 60,
-                child: _StoryCardBackgroundOptions(
-                  selectedColor: selectedBackgroundColor,
-                  onSelected: onBackgroundColorSelected,
-                  onCustomPressed: onCustomColorPressed,
-                  keyPrefix: backgroundKeyPrefix,
-                ),
-              ),
-            ],
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: storyCardPickerDividerColor,
           ),
-        ),
+          SizedBox(
+            height: 60,
+            child: _StoryCardBackgroundOptions(
+              selectedColor: selectedBackgroundColor,
+              onSelected: onBackgroundColorSelected,
+              onCustomPressed: onCustomColorPressed,
+              keyPrefix: backgroundKeyPrefix,
+            ),
+          ),
+        ],
       ),
     );
   }

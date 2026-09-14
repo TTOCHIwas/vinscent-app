@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_type.dart';
+import 'story_card_picker_surface.dart';
 import 'story_card_type_icon.dart';
-
-const storyCardPickerMaxWidth = 360.0;
-const storyCardPickerSurfaceColor = Color(0xB3000000);
-const storyCardPickerDividerColor = Color(0x33FFFFFF);
-const storyCardPickerCornerRadius = 2.0;
 
 class StoryCardTypePicker extends StatelessWidget {
   const StoryCardTypePicker({
@@ -23,22 +19,13 @@ class StoryCardTypePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: storyCardPickerMaxWidth),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: storyCardPickerSurfaceColor,
-            borderRadius: BorderRadius.circular(storyCardPickerCornerRadius),
-          ),
-          child: SizedBox(
-            height: 68,
-            child: StoryCardTypeOptions(
-              selectedType: selectedType,
-              onSelected: onSelected,
-              keyPrefix: keyPrefix,
-            ),
-          ),
+    return StoryCardPickerSurface(
+      child: SizedBox(
+        height: 68,
+        child: StoryCardTypeOptions(
+          selectedType: selectedType,
+          onSelected: onSelected,
+          keyPrefix: keyPrefix,
         ),
       ),
     );

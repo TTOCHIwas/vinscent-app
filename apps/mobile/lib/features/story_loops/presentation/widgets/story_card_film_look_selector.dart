@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_film_look.dart';
+import 'story_card_editor_style.dart';
+import 'story_card_picker_surface.dart';
 
 class StoryCardFilmLookSelector extends StatelessWidget {
   const StoryCardFilmLookSelector({
@@ -17,30 +19,23 @@ class StoryCardFilmLookSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0xB3000000),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: SizedBox(
-            height: 58,
-            child: Row(
-              children: [
-                for (final look in StoryCardFilmLook.values)
-                  Expanded(
-                    child: _FilmLookButton(
-                      key: ValueKey('$keyPrefix-${look.id}'),
-                      look: look,
-                      isSelected: look == selectedLook,
-                      onPressed: () => onLookChanged(look),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+    return StoryCardPickerSurface(
+      surfaceKey: const ValueKey('story-card-film-picker-surface'),
+      color: storyCardEditorChromeColor,
+      child: SizedBox(
+        height: 68,
+        child: Row(
+          children: [
+            for (final look in StoryCardFilmLook.values)
+              Expanded(
+                child: _FilmLookButton(
+                  key: ValueKey('$keyPrefix-${look.id}'),
+                  look: look,
+                  isSelected: look == selectedLook,
+                  onPressed: () => onLookChanged(look),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -83,7 +78,7 @@ class _FilmLookButton extends StatelessWidget {
               maxLines: 1,
               style: TextStyle(
                 color: isSelected ? Colors.white : const Color(0xB3FFFFFF),
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 height: AppTypography.bodyLineHeight,
                 letterSpacing: 0,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
+import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_appearance_picker.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_style.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_film_look_selector.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_icon.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_picker.dart';
 
@@ -149,5 +151,54 @@ void main() {
       find.byKey(const ValueKey('appearance-background-custom')),
     );
     expect(customPressed, isTrue);
+  });
+
+  testWidgets('필터와 카드 외형 선택기는 같은 선택기 표면 규칙을 사용한다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              StoryCardFilmLookSelector(
+                selectedLook: StoryCardFilmLook.original,
+                onLookChanged: (_) {},
+                keyPrefix: 'shared-film-picker',
+              ),
+              const SizedBox(height: 16),
+              StoryCardAppearancePicker(
+                selectedType: StoryCardType.fullBleed,
+                selectedBackgroundColor: storyCardBackgroundColorPalette.first,
+                onTypeSelected: (_) {},
+                onBackgroundColorSelected: (_) {},
+                onCustomColorPressed: () {},
+                typeKeyPrefix: 'shared-type-picker',
+                backgroundKeyPrefix: 'shared-background-picker',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final filmSurface = find.byKey(
+      const ValueKey('story-card-film-picker-surface'),
+    );
+    final appearanceSurface = find.byKey(
+      const ValueKey('story-card-appearance-picker-surface'),
+    );
+    final filmDecoration = tester.widget<DecoratedBox>(filmSurface).decoration;
+    final appearanceDecoration = tester
+        .widget<DecoratedBox>(appearanceSurface)
+        .decoration;
+
+    expect(filmDecoration, appearanceDecoration);
+    expect(
+      tester.getSize(filmSurface).width,
+      tester.getSize(appearanceSurface).width,
+    );
+    expect(tester.getSize(filmSurface).height, 68);
+    expect(tester.widget<Text>(find.text('원본')).style?.fontSize, 11);
   });
 }
