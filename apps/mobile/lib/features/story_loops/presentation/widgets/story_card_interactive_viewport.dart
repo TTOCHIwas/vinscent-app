@@ -129,11 +129,13 @@ class StoryCardInteractiveViewport extends StatefulWidget {
     required this.controller,
     required this.aspectRatio,
     required this.builder,
+    this.clipContent = true,
   });
 
   final StoryCardViewportController controller;
   final double aspectRatio;
   final StoryCardViewportBuilder builder;
+  final bool clipContent;
 
   @override
   State<StoryCardInteractiveViewport> createState() =>
@@ -188,26 +190,28 @@ class _StoryCardInteractiveViewportState
           child: widget.builder(context, contentSize, _gestures),
         );
 
-        return SizedBox.expand(
-          key: _viewportKey,
-          child: ClipRect(
-            child: AnimatedBuilder(
-              animation: widget.controller,
-              child: card,
-              builder: (context, child) => Center(
-                child: Transform.translate(
-                  key: const ValueKey('story-card-viewport-translation'),
-                  offset: widget.controller.translation,
-                  child: Transform.scale(
-                    key: const ValueKey('story-card-viewport-scale'),
-                    scale: widget.controller.scale,
-                    alignment: Alignment.center,
-                    child: child,
-                  ),
-                ),
+        final transformedCard = AnimatedBuilder(
+          animation: widget.controller,
+          child: card,
+          builder: (context, child) => Center(
+            child: Transform.translate(
+              key: const ValueKey('story-card-viewport-translation'),
+              offset: widget.controller.translation,
+              child: Transform.scale(
+                key: const ValueKey('story-card-viewport-scale'),
+                scale: widget.controller.scale,
+                alignment: Alignment.center,
+                child: child,
               ),
             ),
           ),
+        );
+
+        return SizedBox.expand(
+          key: _viewportKey,
+          child: widget.clipContent
+              ? ClipRect(child: transformedCard)
+              : transformedCard,
         );
       },
     );

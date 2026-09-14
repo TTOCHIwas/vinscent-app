@@ -82,6 +82,14 @@ void main() {
       final slider = tester.widget<AppDrawingWidthSlider>(
         find.byType(AppDrawingWidthSlider),
       );
+      expect(
+        tester
+            .widget<StoryCardInteractiveViewport>(
+              find.byType(StoryCardInteractiveViewport),
+            )
+            .clipContent,
+        isFalse,
+      );
       expect(slider.canvasExtent, closeTo(canvas.shortestSide, 0.001));
       expect(canvas.width / canvas.height, closeTo(4 / 5, 0.001));
       final widthControl = tester.getRect(

@@ -218,52 +218,55 @@ class _StoryCardEditorContentState
       child: Stack(
         fit: StackFit.expand,
         children: [
-          SafeArea(
-            child: Padding(
-              padding: storyCardEditorViewportInsets,
-              child: StoryCardInteractiveViewport(
-                controller: _viewportController,
-                aspectRatio: _draft.scene.cardType.canvasAspectRatio,
-                builder: (context, contentSize, viewportGestures) => Stack(
-                  key: const ValueKey('story-card-editor-canvas'),
-                  fit: StackFit.expand,
-                  children: [
-                    RepaintBoundary(
-                      key: _previewKey,
-                      child: StoryCardEditorCanvas(
-                        backgroundImages: _backgroundImages,
-                        filmProgram: _filmProgram,
-                        scene: _draft.scene,
-                        visibleStrokes: _visibleStrokes,
-                        interactionMode: _session.tool,
-                        onStrokeStart: _startStroke,
-                        onStrokeUpdate: _updateStroke,
-                        onStrokeEnd: _endStroke,
-                        onStrokeCancel: _cancelStroke,
-                        onPhotoTapped: _handlePhotoTapped,
-                        onPhotosReordered: _reorderPhotos,
-                        onCardTypeStep: _stepCardType,
-                        onCanvasTapped: _handleCanvasTapped,
-                        onTextLayerScaleStart: _startTextLayerTransform,
-                        onTextLayerScaleUpdate: _updateTextLayerTransform,
-                        onTextLayerScaleEnd: _endTextLayerTransform,
-                        viewportGestures: viewportGestures,
+          ClipRect(
+            child: SafeArea(
+              child: Padding(
+                padding: storyCardEditorViewportInsets,
+                child: StoryCardInteractiveViewport(
+                  controller: _viewportController,
+                  aspectRatio: _draft.scene.cardType.canvasAspectRatio,
+                  clipContent: false,
+                  builder: (context, contentSize, viewportGestures) => Stack(
+                    key: const ValueKey('story-card-editor-canvas'),
+                    fit: StackFit.expand,
+                    children: [
+                      RepaintBoundary(
+                        key: _previewKey,
+                        child: StoryCardEditorCanvas(
+                          backgroundImages: _backgroundImages,
+                          filmProgram: _filmProgram,
+                          scene: _draft.scene,
+                          visibleStrokes: _visibleStrokes,
+                          interactionMode: _session.tool,
+                          onStrokeStart: _startStroke,
+                          onStrokeUpdate: _updateStroke,
+                          onStrokeEnd: _endStroke,
+                          onStrokeCancel: _cancelStroke,
+                          onPhotoTapped: _handlePhotoTapped,
+                          onPhotosReordered: _reorderPhotos,
+                          onCardTypeStep: _stepCardType,
+                          onCanvasTapped: _handleCanvasTapped,
+                          onTextLayerScaleStart: _startTextLayerTransform,
+                          onTextLayerScaleUpdate: _updateTextLayerTransform,
+                          onTextLayerScaleEnd: _endTextLayerTransform,
+                          viewportGestures: viewportGestures,
+                        ),
                       ),
-                    ),
-                    if (_session.tool != StoryCardEditorTool.drawing &&
-                        !_isTextInputActive)
-                      StoryCardPhotoSlotControls(
-                        cardType: _draft.scene.cardType,
-                        hasPhotos: _draft.photoImageBytes
-                            .map((bytes) => bytes != null)
-                            .toList(growable: false),
-                        selectedEmptyIndex: _selectedEmptyPhotoIndex,
-                        isPickingGallery: _isPickingGallery,
-                        onCameraPressed: _openPhotoSlotCamera,
-                        onGalleryPressed: (index) =>
-                            unawaited(_pickPhotoForSlot(index)),
-                      ),
-                  ],
+                      if (_session.tool != StoryCardEditorTool.drawing &&
+                          !_isTextInputActive)
+                        StoryCardPhotoSlotControls(
+                          cardType: _draft.scene.cardType,
+                          hasPhotos: _draft.photoImageBytes
+                              .map((bytes) => bytes != null)
+                              .toList(growable: false),
+                          selectedEmptyIndex: _selectedEmptyPhotoIndex,
+                          isPickingGallery: _isPickingGallery,
+                          onCameraPressed: _openPhotoSlotCamera,
+                          onGalleryPressed: (index) =>
+                              unawaited(_pickPhotoForSlot(index)),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_appearance_picker.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_style.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_icon.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_picker.dart';
 
@@ -121,6 +122,14 @@ void main() {
 
     expect(find.text('배경'), findsOneWidget);
     expect(find.byType(StoryCardTypeIcon), findsNWidgets(4));
+    expect(storyCardEditorChromeColor, const Color(0x33000000));
+    final surface = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('story-card-appearance-picker-surface')),
+    );
+    expect(
+      (surface.decoration as BoxDecoration).color,
+      storyCardEditorChromeColor,
+    );
     expect(
       find.byKey(const ValueKey('appearance-background-custom')),
       findsOneWidget,

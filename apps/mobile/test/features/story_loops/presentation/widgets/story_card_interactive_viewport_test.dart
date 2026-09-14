@@ -72,4 +72,49 @@ void main() {
     await tester.pump();
     expect(controller.translation.dy, greaterThan(beforePan.dy));
   });
+
+  testWidgets('확대된 카드는 안전 여백을 넘어 투명 크롬 뒤까지 그려진다', (tester) async {
+    final controller = StoryCardViewportController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 300,
+            height: 500,
+            child: ColoredBox(
+              color: Colors.black,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 100),
+                child: StoryCardInteractiveViewport(
+                  controller: controller,
+                  aspectRatio: 4 / 5,
+                  clipContent: false,
+                  builder: (context, size, gestures) => const ColoredBox(
+                    key: ValueKey('overflow-card'),
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    controller.beginGesture(const Offset(150, 150));
+    controller.updateGesture(focalPoint: const Offset(150, 150), scale: 2);
+    await tester.pump();
+
+    final viewport = find.byType(StoryCardInteractiveViewport);
+    expect(
+      find.descendant(of: viewport, matching: find.byType(ClipRect)),
+      findsNothing,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('overflow-card'))).dy,
+      lessThan(100),
+    );
+  });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_appearance.dart';
 import '../../data/story_card_type.dart';
+import 'story_card_editor_style.dart';
 import 'story_card_type_picker.dart';
 
 class StoryCardAppearancePicker extends StatelessWidget {
@@ -31,8 +32,9 @@ class StoryCardAppearancePicker extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: storyCardPickerMaxWidth),
         child: DecoratedBox(
+          key: const ValueKey('story-card-appearance-picker-surface'),
           decoration: BoxDecoration(
-            color: storyCardPickerSurfaceColor,
+            color: storyCardEditorChromeColor,
             borderRadius: BorderRadius.circular(storyCardPickerCornerRadius),
           ),
           child: Column(
