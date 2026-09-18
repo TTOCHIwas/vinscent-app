@@ -6,6 +6,7 @@ import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../story_loops/data/story_loop_card_preview.dart';
 import '../../../story_loops/data/story_card_scene.dart';
+import '../../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../calendar_expanded_cell_layout.dart';
 
 class CalendarMonthCardPreview extends StatelessWidget {
@@ -39,7 +40,7 @@ class CalendarMonthCardPreview extends StatelessWidget {
       calendarMonthCompactPreviewSize,
       math.min(compactWidthFromCell, compactWidthFromHeight),
     );
-    final cardWidth =
+    final cardSlotWidth =
         compactCardWidth +
         ((expandedLayout.cardWidth - compactCardWidth) * progress);
     final compactCardHeight = compactCardWidth / storyCardCanvasAspectRatio;
@@ -65,9 +66,18 @@ class CalendarMonthCardPreview extends StatelessWidget {
         for (var index = 0; index < cards.length; index++)
           Positioned(
             left: _lerpCoordinate(
-              compactOrigin.dx + compactOffsets[index].dx,
+              compactOrigin.dx +
+                  compactOffsets[index].dx +
+                  _horizontalCardInset(
+                    slotWidth: compactCardWidth,
+                    card: cards[index],
+                  ),
               expandedLayout.cardOrigin.dx +
-                  expandedLayout.cardOffsets[index].dx,
+                  expandedLayout.cardOffsets[index].dx +
+                  _horizontalCardInset(
+                    slotWidth: expandedLayout.cardWidth,
+                    card: cards[index],
+                  ),
               progress,
             ),
             top: _lerpCoordinate(
@@ -78,7 +88,10 @@ class CalendarMonthCardPreview extends StatelessWidget {
             ),
             child: _MonthStorySurface(
               card: cards[index],
-              width: cardWidth,
+              width: StoryCardPreviewSurface.widthInFourByFiveSlot(
+                cardSlotWidth,
+                cards[index].cardType,
+              ),
               previewCacheExtent: previewCacheExtent,
               angle: switch (index) {
                 0 when cards.length == 2 => -0.12,
@@ -93,6 +106,17 @@ class CalendarMonthCardPreview extends StatelessWidget {
 
   double _lerpCoordinate(double start, double end, double progress) {
     return start + ((end - start) * progress);
+  }
+
+  double _horizontalCardInset({
+    required double slotWidth,
+    required StoryLoopCardPreview card,
+  }) {
+    final cardWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
+      slotWidth,
+      card.cardType,
+    );
+    return (slotWidth - cardWidth) / 2;
   }
 }
 
@@ -111,14 +135,19 @@ class _MonthStorySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = width / storyCardCanvasAspectRatio;
+    final aspectRatio = card.cardType.canvasAspectRatio;
+    final height = width / aspectRatio;
+    final cacheWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
+      previewCacheExtent,
+      card.cardType,
+    );
 
     return Transform.rotate(
       angle: angle,
       child: SizedBox(
         width: width,
         child: AspectRatio(
-          aspectRatio: storyCardCanvasAspectRatio,
+          aspectRatio: aspectRatio,
           child: DecoratedBox(
             key: ValueKey('calendar-month-story-card-${card.id}'),
             decoration: const BoxDecoration(
@@ -137,10 +166,7 @@ class _MonthStorySurface extends StatelessWidget {
               child: AppSizedNetworkImage(
                 url: card.previewUrl,
                 logicalSize: Size(width, height),
-                cacheLogicalSize: Size(
-                  previewCacheExtent,
-                  previewCacheExtent / storyCardCanvasAspectRatio,
-                ),
+                cacheLogicalSize: Size(cacheWidth, cacheWidth / aspectRatio),
                 gaplessPlayback: true,
                 fallbackBuilder: (_) => _MonthStoryPlaceholder(card: card),
               ),
