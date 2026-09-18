@@ -7,6 +7,7 @@ import 'package:vinscent/features/calendar/data/couple_calendar_event.dart';
 import 'package:vinscent/features/calendar/data/public_holiday.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/story_loops/data/story_card_scene.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 
 import '../../../support/story_loop_fixtures.dart';
 import 'calendar_screen_test_support.dart';
@@ -836,6 +837,45 @@ void main() {
       );
     },
   );
+
+  testWidgets('달력 미리보기에서 세로 네컷 카드 비율을 유지한다', (tester) async {
+    final date = DateTime(2026, 5, 10);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 52,
+            height: 72,
+            child: CalendarMonthStoryCell(
+              date: date,
+              textColor: AppColors.textPrimary,
+              isSelected: false,
+              summary: sampleMonthSummaryDay(
+                coupleDate: date,
+                cards: [
+                  samplePreviewCard(
+                    id: 'four-cut-strip',
+                    cardType: StoryCardType.fourCutStrip,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final preview = find.byKey(
+      const ValueKey('calendar-month-story-card-four-cut-strip'),
+    );
+    expect(preview, findsOneWidget);
+    final previewSize = tester.getSize(preview);
+    expect(
+      previewSize.width / previewSize.height,
+      closeTo(StoryCardType.fourCutStrip.canvasAspectRatio, 0.001),
+    );
+  });
 
   testWidgets('spreads two mixed cards below event artwork', (tester) async {
     tester.view.physicalSize = const Size(360, 800);

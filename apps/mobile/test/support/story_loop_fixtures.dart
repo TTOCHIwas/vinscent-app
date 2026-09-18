@@ -2,6 +2,7 @@ import 'package:vinscent/core/date/app_date_policy.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/questions/data/daily_question.dart';
 import 'package:vinscent/features/questions/data/daily_question_answer_state.dart';
+import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_detail.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_card_preview.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_detail.dart';
@@ -98,12 +99,14 @@ StoryLoopCardPreview samplePreviewCard({
   String authorUserId = 'user-a',
   String previewPath = 'previews/card-1.png',
   DateTime? submittedAt,
+  StoryCardType cardType = StoryCardType.polaroid,
 }) {
   return StoryLoopCardPreview(
     id: id,
     authorUserId: authorUserId,
     previewPath: previewPath,
     submittedAt: submittedAt ?? DateTime.parse('2026-07-06T09:00:00Z'),
+    cardType: cardType,
   );
 }
 
