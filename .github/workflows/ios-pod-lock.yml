@@ -1,0 +1,82 @@
+name: iOS Pod lock
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha_confirmation:
+        description: Full main commit SHA to resolve
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-pod-lock
+  cancel-in-progress: false
+
+env:
+  CI: true
+  FLUTTER_SUPPRESS_ANALYTICS: true
+
+jobs:
+  resolve:
+    name: Resolve CocoaPods lock
+    runs-on: macos-26
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Require an exact main commit
+        env:
+          CONFIRMED_COMMIT_SHA: ${{ inputs.commit_sha_confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "iOS Pod locks must be resolved from main." >&2
+            exit 1
+          fi
+          if [[ ! "$CONFIRMED_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "commit_sha_confirmation must be a full lowercase commit SHA." >&2
+            exit 1
+          fi
+          if [[ "$CONFIRMED_COMMIT_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Confirmed commit does not match the workflow commit." >&2
+            exit 1
+          fi
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        env:
+          PUB_CACHE: ${{ runner.temp }}/danjjan-pub-cache
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+          pub-cache: false
+      - name: Resolve Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+      - name: Resolve CocoaPods dependencies
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+          BUNDLE_PATH: ${{ runner.temp }}/danjjan-ios-bundle
+          BUNDLE_APP_CONFIG: ${{ runner.temp }}/danjjan-ios-bundle-config
+          BUNDLE_FROZEN: true
+        run: |
+          set -euo pipefail
+          export GEM_HOME="$RUNNER_TEMP/danjjan-ios-ruby-gems"
+          export PATH="$GEM_HOME/bin:$PATH"
+          gem install bundler --version 2.4.22 --no-document
+          bundle _2.4.22_ install --jobs 4 --retry 3
+          bundle _2.4.22_ exec pod install --project-directory=apps/mobile/ios
+          test -s apps/mobile/ios/Podfile.lock
+      - name: Upload resolved Pod lock
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: danjjan-ios-pod-lock-${{ github.sha }}
+          path: apps/mobile/ios/Podfile.lock
+          if-no-files-found: error
+          retention-days: 7
