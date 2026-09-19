@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_film_look.dart';
-import 'story_card_editor_style.dart';
 import 'story_card_picker_surface.dart';
 
 class StoryCardFilmLookSelector extends StatelessWidget {
@@ -21,7 +20,6 @@ class StoryCardFilmLookSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoryCardPickerSurface(
       surfaceKey: const ValueKey('story-card-film-picker-surface'),
-      color: storyCardEditorChromeColor,
       child: SizedBox(
         height: 68,
         child: Row(

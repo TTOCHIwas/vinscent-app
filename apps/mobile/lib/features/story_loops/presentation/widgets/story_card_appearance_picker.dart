@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../data/story_card_appearance.dart';
 import '../../data/story_card_type.dart';
-import 'story_card_editor_style.dart';
 import 'story_card_picker_surface.dart';
 import 'story_card_type_picker.dart';
 
@@ -31,7 +30,6 @@ class StoryCardAppearancePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoryCardPickerSurface(
       surfaceKey: const ValueKey('story-card-appearance-picker-surface'),
-      color: storyCardEditorChromeColor,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

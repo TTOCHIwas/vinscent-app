@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 const storyCardPickerMaxWidth = 360.0;
-const storyCardPickerSurfaceColor = Color(0xB3000000);
+const storyCardPickerSurfaceColor = Color(0xCC000000);
 const storyCardPickerDividerColor = Color(0x33FFFFFF);
 const storyCardPickerCornerRadius = 2.0;
 
