@@ -4,8 +4,8 @@ import 'package:vinscent/features/story_loops/data/story_card_appearance.dart';
 import 'package:vinscent/features/story_loops/data/story_card_film_look.dart';
 import 'package:vinscent/features/story_loops/data/story_card_type.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_appearance_picker.dart';
-import 'package:vinscent/features/story_loops/presentation/widgets/story_card_editor_style.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_film_look_selector.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_picker_surface.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_icon.dart';
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_type_picker.dart';
 
@@ -124,14 +124,14 @@ void main() {
 
     expect(find.text('배경'), findsOneWidget);
     expect(find.byType(StoryCardTypeIcon), findsNWidgets(4));
-    expect(storyCardEditorChromeColor, const Color(0x33000000));
     final surface = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('story-card-appearance-picker-surface')),
     );
     expect(
       (surface.decoration as BoxDecoration).color,
-      storyCardEditorChromeColor,
+      storyCardPickerSurfaceColor,
     );
+    expect(storyCardPickerSurfaceColor.a, greaterThanOrEqualTo(0.7));
     expect(
       find.byKey(const ValueKey('appearance-background-custom')),
       findsOneWidget,
