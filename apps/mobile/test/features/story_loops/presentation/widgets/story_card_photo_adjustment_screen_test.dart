@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -105,5 +106,103 @@ void main() {
     expect(savedTransform!.offsetX, isNot(0));
     expect(savedTransform!.offsetY, isNot(0));
     expect(savedTransform!.rotation.abs(), greaterThan(0.1));
+  });
+
+  testWidgets('초기화는 사진 변형만 기본값으로 돌리고 필터는 보존한다', (tester) async {
+    StoryCardBackgroundTransform? savedTransform;
+    StoryCardFilmState? savedFilm;
+    final source = image.Image(width: 40, height: 30);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StoryCardPhotoAdjustmentScreen(
+          imageBytes: Uint8List.fromList(image.encodeJpg(source)),
+          cropAspectRatio: 1,
+          initialTransform: const StoryCardBackgroundTransform(
+            scale: 1.8,
+            offsetX: 0.3,
+            offsetY: -0.2,
+            rotation: 0.7,
+          ),
+          initialFilm: const StoryCardFilmState(
+            look: StoryCardFilmLook.warmth,
+            seed: 7,
+          ),
+          onBack: () {},
+          onDone: (transform, film) {
+            savedTransform = transform;
+            savedFilm = film;
+          },
+          onRemove: () {},
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-photo-adjustment-reset')),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-photo-adjustment-done')),
+    );
+
+    expect(savedTransform?.scale, 1);
+    expect(savedTransform?.offsetX, 0);
+    expect(savedTransform?.offsetY, 0);
+    expect(savedTransform?.rotation, 0);
+    expect(savedFilm?.look, StoryCardFilmLook.warmth);
+  });
+
+  testWidgets('직각에 스냅할 때 정렬 가이드를 보이고 제스처가 끝나면 숨긴다', (tester) async {
+    StoryCardBackgroundTransform? savedTransform;
+    final source = image.Image(width: 40, height: 30);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StoryCardPhotoAdjustmentScreen(
+          imageBytes: Uint8List.fromList(image.encodeJpg(source)),
+          cropAspectRatio: 1,
+          initialTransform: const StoryCardBackgroundTransform.initial(),
+          initialFilm: const StoryCardFilmState.original(),
+          onBack: () {},
+          onDone: (transform, _) => savedTransform = transform,
+          onRemove: () {},
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final gestureTarget = find.byKey(
+      const ValueKey('story-card-photo-adjustment-gesture'),
+    );
+    final center = tester.getCenter(gestureTarget);
+    final first = await tester.startGesture(
+      center - const Offset(40, 0),
+      pointer: 1,
+    );
+    final second = await tester.startGesture(
+      center + const Offset(40, 0),
+      pointer: 2,
+    );
+    await tester.pump();
+    await first.moveTo(center - const Offset(0, 40));
+    await second.moveTo(center + const Offset(0, 40));
+    await tester.pump();
+
+    final guide = find.byKey(
+      const ValueKey('story-card-photo-adjustment-alignment-guide'),
+    );
+    expect(tester.widget<AnimatedOpacity>(guide).opacity, 1);
+
+    await first.up();
+    await second.up();
+    await tester.pump();
+    expect(tester.widget<AnimatedOpacity>(guide).opacity, 0);
+
+    await tester.tap(
+      find.byKey(const ValueKey('story-card-photo-adjustment-done')),
+    );
+    expect(savedTransform?.rotation, closeTo(math.pi / 2, 0.01));
   });
 }
