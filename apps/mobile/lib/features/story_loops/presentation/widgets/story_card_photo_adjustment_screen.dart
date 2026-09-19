@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../data/story_card_film_look.dart';
 import '../../data/story_card_scene.dart';
 import 'story_card_film_filtered_preview.dart';
 import 'story_card_film_look_selector.dart';
+import 'story_card_rotation_snap.dart';
 
 typedef StoryCardPhotoAdjustmentDone =
     void Function(
@@ -43,13 +44,22 @@ class StoryCardPhotoAdjustmentScreen extends StatefulWidget {
 }
 
 class _StoryCardPhotoAdjustmentScreenState
-    extends State<StoryCardPhotoAdjustmentScreen> {
+    extends State<StoryCardPhotoAdjustmentScreen>
+    with SingleTickerProviderStateMixin {
+  static const _resetDuration = Duration(milliseconds: 180);
+  static const _rotationGestureThreshold = 0.002;
+
   ui.Image? _image;
   Object? _decodeError;
   late StoryCardBackgroundTransform _transform;
   late StoryCardFilmState _film;
+  late final AnimationController _resetController;
+  final _rotationSnapController = StoryCardRotationSnapController();
   StoryCardBackgroundTransform? _gestureStart;
+  StoryCardBackgroundTransform? _resetStart;
   Offset _focalPointStart = Offset.zero;
+  bool _rotationGestureDetected = false;
+  bool _showAlignmentGuide = false;
 
   @override
   void initState() {
@@ -58,11 +68,16 @@ class _StoryCardPhotoAdjustmentScreenState
     _film = widget.initialFilm.seed > 0
         ? widget.initialFilm
         : widget.initialFilm.copyWith(seed: StoryCardFilmSeed.now());
+    _resetController = AnimationController(
+      vsync: this,
+      duration: _resetDuration,
+    )..addListener(_animateReset);
     unawaited(_decodeImage());
   }
 
   @override
   void dispose() {
+    _resetController.dispose();
     _image?.dispose();
     super.dispose();
   }
@@ -100,7 +115,7 @@ class _StoryCardPhotoAdjustmentScreenState
                 onScaleStart: _handleScaleStart,
                 onScaleUpdate: (details) =>
                     _handleScaleUpdate(details, frame.size),
-                onScaleEnd: (_) => _gestureStart = null,
+                onScaleEnd: _handleScaleEnd,
                 child: _AdjustmentPhoto(
                   image: _image,
                   decodeError: _decodeError,
@@ -111,6 +126,18 @@ class _StoryCardPhotoAdjustmentScreenState
               ),
               IgnorePointer(
                 child: CustomPaint(painter: _CropMaskPainter(frame: frame)),
+              ),
+              IgnorePointer(
+                child: AnimatedOpacity(
+                  key: const ValueKey(
+                    'story-card-photo-adjustment-alignment-guide',
+                  ),
+                  opacity: _showAlignmentGuide ? 1 : 0,
+                  duration: const Duration(milliseconds: 140),
+                  child: CustomPaint(
+                    painter: _OrthogonalAlignmentGuidePainter(frame: frame),
+                  ),
+                ),
               ),
               Positioned.fromRect(
                 rect: frame,
@@ -142,7 +169,7 @@ class _StoryCardPhotoAdjustmentScreenState
                   child: IconButton(
                     key: const ValueKey('story-card-photo-adjustment-done'),
                     tooltip: '사진 적용',
-                    onPressed: () => widget.onDone(_transform, _film),
+                    onPressed: _completeAdjustment,
                     color: Colors.white,
                     icon: const Icon(Icons.check_rounded, size: 28),
                   ),
@@ -151,15 +178,33 @@ class _StoryCardPhotoAdjustmentScreenState
               Positioned(
                 right: 14,
                 bottom: MediaQuery.paddingOf(context).bottom + 82,
-                child: IconButton(
-                  key: const ValueKey('story-card-photo-adjustment-remove'),
-                  tooltip: '사진 제거',
-                  onPressed: widget.onRemove,
-                  color: Colors.white,
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0x8A000000),
-                  ),
-                  icon: const Icon(LucideIcons.trash2, size: 23),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: const ValueKey('story-card-photo-adjustment-reset'),
+                      tooltip: '사진 조정 초기화',
+                      onPressed: _isTransformInitial ? null : _resetTransform,
+                      color: Colors.white,
+                      disabledColor: Colors.white38,
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0x8A000000),
+                        disabledBackgroundColor: const Color(0x52000000),
+                      ),
+                      icon: const Icon(LucideIcons.rotateCcw, size: 23),
+                    ),
+                    const SizedBox(height: 8),
+                    IconButton(
+                      key: const ValueKey('story-card-photo-adjustment-remove'),
+                      tooltip: '사진 제거',
+                      onPressed: widget.onRemove,
+                      color: Colors.white,
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0x8A000000),
+                      ),
+                      icon: const Icon(LucideIcons.trash2, size: 23),
+                    ),
+                  ],
                 ),
               ),
               Positioned(
@@ -202,8 +247,15 @@ class _StoryCardPhotoAdjustmentScreenState
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
+    _resetController.stop();
+    _resetStart = null;
     _gestureStart = _transform;
     _focalPointStart = details.localFocalPoint;
+    _rotationSnapController.begin(_transform.rotation);
+    _rotationGestureDetected = false;
+    if (_showAlignmentGuide) {
+      setState(() => _showAlignmentGuide = false);
+    }
   }
 
   void _handleScaleUpdate(ScaleUpdateDetails details, Size frameSize) {
@@ -212,6 +264,17 @@ class _StoryCardPhotoAdjustmentScreenState
       return;
     }
     final delta = details.localFocalPoint - _focalPointStart;
+    _rotationGestureDetected =
+        _rotationGestureDetected ||
+        (details.pointerCount > 1 &&
+            details.rotation.abs() > _rotationGestureThreshold);
+    final rotation = _rotationSnapController.resolve(
+      start.rotation + details.rotation,
+    );
+    final showAlignmentGuide = _rotationGestureDetected && rotation.isSnapped;
+    if (showAlignmentGuide && (!_showAlignmentGuide || rotation.didSnap)) {
+      unawaited(HapticFeedback.selectionClick());
+    }
     setState(() {
       _transform = StoryCardBackgroundTransform(
         scale: (start.scale * details.scale)
@@ -223,9 +286,64 @@ class _StoryCardPhotoAdjustmentScreenState
         offsetY: (start.offsetY + delta.dy / frameSize.height)
             .clamp(-2.0, 2.0)
             .toDouble(),
-        rotation: start.rotation + details.rotation,
+        rotation: rotation.angle,
+      );
+      _showAlignmentGuide = showAlignmentGuide;
+    });
+  }
+
+  void _handleScaleEnd(ScaleEndDetails details) {
+    _gestureStart = null;
+    _rotationSnapController.end();
+    _rotationGestureDetected = false;
+    if (_showAlignmentGuide) {
+      setState(() => _showAlignmentGuide = false);
+    }
+  }
+
+  bool get _isTransformInitial {
+    const initial = StoryCardBackgroundTransform.initial();
+    return (_transform.scale - initial.scale).abs() < 0.0001 &&
+        (_transform.offsetX - initial.offsetX).abs() < 0.0001 &&
+        (_transform.offsetY - initial.offsetY).abs() < 0.0001 &&
+        (_transform.rotation - initial.rotation).abs() < 0.0001;
+  }
+
+  void _resetTransform() {
+    _gestureStart = null;
+    _rotationSnapController.end();
+    _rotationGestureDetected = false;
+    _resetStart = _transform;
+    setState(() => _showAlignmentGuide = false);
+    unawaited(HapticFeedback.selectionClick());
+    _resetController.forward(from: 0);
+  }
+
+  void _animateReset() {
+    final start = _resetStart;
+    if (start == null) {
+      return;
+    }
+    final progress = Curves.easeOutCubic.transform(_resetController.value);
+    setState(() {
+      _transform = _lerpTransform(
+        start,
+        const StoryCardBackgroundTransform.initial(),
+        progress,
       );
     });
+    if (_resetController.isCompleted) {
+      _resetStart = null;
+    }
+  }
+
+  void _completeAdjustment() {
+    if (_resetController.isAnimating) {
+      _resetController.stop();
+      _resetStart = null;
+      _transform = const StoryCardBackgroundTransform.initial();
+    }
+    widget.onDone(_transform, _film);
   }
 
   void _selectFilm(StoryCardFilmLook look) {
@@ -233,6 +351,19 @@ class _StoryCardPhotoAdjustmentScreenState
       _film = _film.copyWith(look: look);
     });
   }
+}
+
+StoryCardBackgroundTransform _lerpTransform(
+  StoryCardBackgroundTransform start,
+  StoryCardBackgroundTransform end,
+  double progress,
+) {
+  return StoryCardBackgroundTransform(
+    scale: ui.lerpDouble(start.scale, end.scale, progress)!,
+    offsetX: ui.lerpDouble(start.offsetX, end.offsetX, progress)!,
+    offsetY: ui.lerpDouble(start.offsetY, end.offsetY, progress)!,
+    rotation: ui.lerpDouble(start.rotation, end.rotation, progress)!,
+  );
 }
 
 class _AdjustmentPhoto extends StatelessWidget {
@@ -326,6 +457,40 @@ class _CropMaskPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CropMaskPainter oldDelegate) {
+    return oldDelegate.frame != frame;
+  }
+}
+
+class _OrthogonalAlignmentGuidePainter extends CustomPainter {
+  const _OrthogonalAlignmentGuidePainter({required this.frame});
+
+  final Rect frame;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (frame.isEmpty) {
+      return;
+    }
+    final horizontalStart = Offset(frame.left, frame.center.dy);
+    final horizontalEnd = Offset(frame.right, frame.center.dy);
+    final verticalStart = Offset(frame.center.dx, frame.top);
+    final verticalEnd = Offset(frame.center.dx, frame.bottom);
+    final shadowPaint = Paint()
+      ..color = const Color(0x66000000)
+      ..strokeWidth = 3;
+    final guidePaint = Paint()
+      ..color = const Color(0xE6FFFFFF)
+      ..strokeWidth = 1;
+
+    canvas
+      ..drawLine(horizontalStart, horizontalEnd, shadowPaint)
+      ..drawLine(verticalStart, verticalEnd, shadowPaint)
+      ..drawLine(horizontalStart, horizontalEnd, guidePaint)
+      ..drawLine(verticalStart, verticalEnd, guidePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrthogonalAlignmentGuidePainter oldDelegate) {
     return oldDelegate.frame != frame;
   }
 }
