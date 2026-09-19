@@ -28,6 +28,34 @@ void main() {
     expect(controller.isZoomed, isFalse);
   });
 
+  test('최소 배율을 지나친 핀치는 기본 상태를 다시 확대하지 않는다', () {
+    final controller = StoryCardViewportController();
+    addTearDown(controller.dispose);
+    controller.configure(
+      viewportSize: const Size(300, 500),
+      contentSize: const Size(240, 300),
+    );
+
+    controller.beginGesture(const Offset(150, 250));
+    controller.updateGesture(focalPoint: const Offset(150, 250), scale: 4);
+    controller.endGesture();
+    expect(controller.scale, 4);
+
+    controller.beginGesture(const Offset(150, 250));
+    controller.updateGesture(focalPoint: const Offset(150, 250), scale: 0.25);
+    expect(controller.scale, 1);
+
+    controller.updateGesture(focalPoint: const Offset(150, 250), scale: 0.5);
+    controller.endGesture();
+    expect(controller.scale, 1);
+    expect(controller.translation, Offset.zero);
+
+    controller.beginGesture(const Offset(150, 250));
+    controller.updateGesture(focalPoint: const Offset(150, 250), scale: 1.5);
+    controller.endGesture();
+    expect(controller.scale, 1.5);
+  });
+
   testWidgets('두 손가락으로 카드를 확대하고 한 손가락으로 이동한다', (tester) async {
     final controller = StoryCardViewportController();
     addTearDown(controller.dispose);
