@@ -19,6 +19,7 @@ class StoryCardViewportController extends ChangeNotifier {
   double _gestureStartScale = _minimumScale;
   Offset _gestureStartTranslation = Offset.zero;
   Offset _gestureStartFocalPoint = Offset.zero;
+  bool _isMinimumScaleLocked = false;
 
   double get scale => _scale;
   Offset get translation => _translation;
@@ -31,6 +32,7 @@ class StoryCardViewportController extends ChangeNotifier {
   }
 
   void beginGesture(Offset focalPoint) {
+    _isMinimumScaleLocked = false;
     _gestureStartScale = _scale;
     _gestureStartTranslation = _translation;
     _gestureStartFocalPoint = focalPoint;
@@ -40,11 +42,17 @@ class StoryCardViewportController extends ChangeNotifier {
     if (_viewportSize.isEmpty || _contentSize.isEmpty) {
       return;
     }
+    if (_isMinimumScaleLocked) {
+      _setTransform(scale: _minimumScale, translation: Offset.zero);
+      return;
+    }
     final nextScale = (_gestureStartScale * scale).clamp(
       _minimumScale,
       maxScale,
     );
     if (nextScale <= _minimumScale + _scaleEpsilon) {
+      _isMinimumScaleLocked =
+          _gestureStartScale > _minimumScale + _scaleEpsilon;
       _setTransform(scale: _minimumScale, translation: Offset.zero);
       return;
     }
@@ -62,6 +70,7 @@ class StoryCardViewportController extends ChangeNotifier {
   }
 
   void endGesture() {
+    _isMinimumScaleLocked = false;
     if (!isZoomed) {
       reset();
       return;
