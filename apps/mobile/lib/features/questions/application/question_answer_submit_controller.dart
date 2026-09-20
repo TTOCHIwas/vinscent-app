@@ -60,6 +60,7 @@ class QuestionAnswerSubmitController
           );
 
       ref.invalidate(dailyQuestionDetailProvider);
+      ref.invalidate(todayDailyQuestionProvider);
       ref.invalidate(questionDetailProvider);
       ref.invalidate(storyLoopDetailProvider(targetDate));
       ref.invalidate(storyLoopDetailProvider(null));

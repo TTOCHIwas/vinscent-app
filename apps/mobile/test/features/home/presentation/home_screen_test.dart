@@ -284,6 +284,143 @@ void main() {
     expect(router.canPop(), isTrue);
   });
 
+  testWidgets('전날 미답변 질문은 캐릭터와 기능 안내보다 우선한다', (tester) async {
+    final carriedQuestion = sampleDailyQuestion(
+      assignedDate: _today.subtract(const Duration(days: 1)),
+    );
+
+    await _pumpHome(
+      tester,
+      couple: activeCouple(
+        currentDate: _today,
+        characterSetupStatus: CoupleCharacterSetupStatus.defaultCharacter,
+      ),
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      questionState: AsyncData(
+        _questionSnapshot(
+          question: carriedQuestion,
+          coupleDate: carriedQuestion.assignedDate,
+        ),
+      ),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    expect(
+      findTextIgnoringWordJoiners(carriedQuestion.questionText),
+      findsOneWidget,
+    );
+    expect(findTextIgnoringWordJoiners(_characterSetupPrompt), findsNothing);
+    expect(findTextIgnoringWordJoiners(HomeGuide.card.message), findsNothing);
+  });
+
+  testWidgets('질문 조회 중에는 카드나 캐릭터 권유를 보이지 않는다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: activeCouple(
+        currentDate: _today,
+        characterSetupStatus: CoupleCharacterSetupStatus.defaultCharacter,
+      ),
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      questionState: const AsyncLoading<DailyQuestionDetailSnapshot?>(),
+      recordingOverview: _emptyRecordingOverview,
+      settle: false,
+    );
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(_characterSetupPrompt), findsNothing);
+    expect(findTextIgnoringWordJoiners(HomeGuide.card.message), findsNothing);
+  });
+
+  testWidgets('질문 조회 실패 시 권유 대신 재시도를 보여준다', (tester) async {
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: _emptyTodaySummary(coupleDate: _today),
+      questionState: AsyncError(
+        Exception('question lookup failed'),
+        StackTrace.empty,
+      ),
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(HomeGuide.card.message), findsNothing);
+  });
+
+  testWidgets('질문 갱신 중에는 마지막 미답변 질문을 유지한다', (tester) async {
+    final carriedQuestion = sampleDailyQuestion(
+      assignedDate: _today.subtract(const Duration(days: 1)),
+    );
+    final refreshCompleter = Completer<DailyQuestionDetailSnapshot?>();
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        question: StoryLoopQuestionSummary(
+          question: carriedQuestion,
+          myAnswerExists: false,
+          partnerAnswerExists: false,
+          answerCount: 0,
+        ),
+      ),
+      questionRefreshFuture: refreshCompleter.future,
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    final questionFinder = findTextIgnoringWordJoiners(
+      carriedQuestion.questionText,
+    );
+    expect(questionFinder, findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeScreen)),
+    );
+    container.read(_questionRefreshRevisionProvider.notifier).advance();
+    await tester.pump();
+
+    expect(questionFinder, findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('답변한 질문의 갱신 중에는 다음 안내를 보류한다', (tester) async {
+    final answeredQuestion = sampleDailyQuestion(
+      assignedDate: _today.subtract(const Duration(days: 1)),
+    );
+    final refreshCompleter = Completer<DailyQuestionDetailSnapshot?>();
+
+    await _pumpHome(
+      tester,
+      couple: _activeCouple,
+      today: _today,
+      todaySummary: sampleTodaySummary(
+        coupleDate: _today,
+        question: StoryLoopQuestionSummary(
+          question: answeredQuestion,
+          myAnswerExists: true,
+          partnerAnswerExists: false,
+          answerCount: 1,
+        ),
+      ),
+      questionRefreshFuture: refreshCompleter.future,
+      recordingOverview: _emptyRecordingOverview,
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeScreen)),
+    );
+    container.read(_questionRefreshRevisionProvider.notifier).advance();
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(findTextIgnoringWordJoiners(HomeGuide.card.message), findsNothing);
+  });
+
   testWidgets('내 카드를 작성했고 녹음이 없으면 첫 녹음을 안내한다', (tester) async {
     await _pumpHome(
       tester,
@@ -2100,6 +2237,8 @@ Future<void> _pumpHome(
   AiProactiveSuggestionStore? proactiveStore,
   AiCurrentLocationService? proactiveLocationService,
   SafetyReportRepository? safetyReportRepository,
+  AsyncValue<DailyQuestionDetailSnapshot?>? questionState,
+  Future<DailyQuestionDetailSnapshot?>? questionRefreshFuture,
   TextScaler? textScaler,
   bool settle = true,
 }) async {
@@ -2125,9 +2264,19 @@ Future<void> _pumpHome(
         todayStoryCardStacksProvider.overrideWith(
           (ref) => _loadTodayCardStacks(resolvedStoryRepository, couple),
         ),
-        todayDailyQuestionProvider.overrideWith(
-          (ref) => _loadTodayQuestion(resolvedStoryRepository),
-        ),
+        if (questionState != null)
+          todayDailyQuestionProvider.overrideWithValue(questionState)
+        else if (questionRefreshFuture != null)
+          todayDailyQuestionProvider.overrideWith((ref) {
+            final revision = ref.watch(_questionRefreshRevisionProvider);
+            return revision == 0
+                ? _loadTodayQuestion(resolvedStoryRepository)
+                : questionRefreshFuture;
+          })
+        else
+          todayDailyQuestionProvider.overrideWith(
+            (ref) => _loadTodayQuestion(resolvedStoryRepository),
+          ),
         storyCardStackProvider.overrideWith(
           (ref, request) =>
               _loadStoryCardStack(resolvedStoryRepository, request),
@@ -2248,6 +2397,31 @@ Future<DailyQuestionDetailSnapshot?> _loadTodayQuestion(
           : null,
       partnerAnswerText: questionSummary.partnerAnswerExists ? '상대 답변' : null,
       answerCount: questionSummary.answerCount,
+    ),
+  );
+}
+
+DailyQuestionDetailSnapshot _questionSnapshot({
+  required DailyQuestion question,
+  required DateTime coupleDate,
+  bool hasMyAnswer = false,
+  bool hasPartnerAnswer = false,
+}) {
+  return DailyQuestionDetailSnapshot(
+    coupleId: question.coupleId,
+    coupleDate: coupleDate,
+    accessMode: CoupleAccessMode.active,
+    canAnswerQuestion: true,
+    question: question,
+    answerState: DailyQuestionAnswerState(
+      dailyQuestionId: question.dailyQuestionId,
+      status: question.status,
+      myAnswerId: hasMyAnswer ? 'my-answer-id' : null,
+      myAnswerText: hasMyAnswer ? '내 답변' : null,
+      partnerAnswerExists: hasPartnerAnswer,
+      partnerAnswerId: hasPartnerAnswer ? 'partner-answer-id' : null,
+      partnerAnswerText: hasPartnerAnswer ? '상대 답변' : null,
+      answerCount: (hasMyAnswer ? 1 : 0) + (hasPartnerAnswer ? 1 : 0),
     ),
   );
 }
@@ -2470,6 +2644,20 @@ final _profile = UserProfile(
 );
 
 final _dailyQuestion = sampleDailyQuestion(assignedDate: _today);
+
+final _questionRefreshRevisionProvider =
+    NotifierProvider.autoDispose<_QuestionRefreshRevision, int>(
+      _QuestionRefreshRevision.new,
+    );
+
+class _QuestionRefreshRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void advance() {
+    state += 1;
+  }
+}
 
 TodayStoryLoopSummary _completedTodaySummary() {
   return sampleTodaySummary(

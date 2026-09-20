@@ -293,10 +293,12 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
     );
     final cardsAsync = ref.watch(todayStoryCardStacksProvider);
     final questionAsync = ref.watch(todayDailyQuestionProvider);
-    final cards = cardsAsync.asData?.value;
-    final question = questionAsync.asData?.value;
+    final cards = cardsAsync.value;
+    final question = questionAsync.value;
+    final hasUnansweredQuestion =
+        question != null && !question.answerState.hasMyAnswer;
 
-    if (cardsAsync.isLoading && questionAsync.isLoading) {
+    if (!hasUnansweredQuestion && questionAsync.isLoading) {
       return const Center(
         child: SizedBox.square(
           dimension: 24,
@@ -304,7 +306,27 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
         ),
       );
     }
-    if (cardsAsync.hasError && questionAsync.hasError) {
+    if (!hasUnansweredQuestion && questionAsync.hasError) {
+      return Center(
+        child: IconButton(
+          onPressed: () {
+            ref.invalidate(todayStoryCardStacksProvider);
+            ref.invalidate(todayDailyQuestionProvider);
+          },
+          tooltip: _homeStoryRetryTooltip,
+          icon: const Icon(Icons.refresh_rounded),
+        ),
+      );
+    }
+    if (question == null && cards == null && cardsAsync.isLoading) {
+      return const Center(
+        child: SizedBox.square(
+          dimension: 24,
+          child: AppLoadingIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    if (question == null && cards == null && cardsAsync.hasError) {
       return Center(
         child: IconButton(
           onPressed: () {
@@ -401,7 +423,9 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
         ),
       ),
     );
-    final characterGuideText = characterPromptState.needsSetup
+    final hasUnansweredQuestion = presentation.questionText != null;
+    final characterGuideText =
+        !hasUnansweredQuestion && characterPromptState.needsSetup
         ? _homeCharacterSetupPrompt
         : null;
     final questionTargetLocation = characterGuideText == null
@@ -489,23 +513,23 @@ class _ResolvedHomeStoryLoopPreview extends ConsumerWidget {
                         .dismiss(proactiveRequest, proactiveSuggestion),
               builder: (visibleSuggestionText, dismissSuggestion) {
                 final questionText =
+                    presentation.questionText ??
                     characterGuideText ??
                     visibleFeedbackText ??
-                    presentation.questionText ??
                     guide?.message ??
                     visibleSuggestionText;
                 final bool questionIsAiGenerated;
                 final SafetyReportTarget? questionReportTarget;
-                if (characterGuideText != null) {
+                if (presentation.questionText != null) {
+                  questionIsAiGenerated = presentation.questionIsAiGenerated;
+                  questionReportTarget = presentation.questionReportTarget;
+                } else if (characterGuideText != null) {
                   questionIsAiGenerated = false;
                   questionReportTarget = null;
                 } else if (visibleFeedbackText != null) {
                   questionIsAiGenerated =
                       visibleAiMessage?.isGenerated ?? false;
                   questionReportTarget = visibleAiMessage?.reportTarget;
-                } else if (presentation.questionText != null) {
-                  questionIsAiGenerated = presentation.questionIsAiGenerated;
-                  questionReportTarget = presentation.questionReportTarget;
                 } else if (guide != null) {
                   questionIsAiGenerated = false;
                   questionReportTarget = null;
