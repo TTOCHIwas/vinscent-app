@@ -42,6 +42,7 @@ void main() {
       final polaroid = fourCut.changeCardType(StoryCardType.polaroid);
 
       expect(fourCut.stage, StoryCardEditorStage.decorating);
+      expect(fourCut.draft.scene.layoutVersion, storyCardCurrentLayoutVersion);
       expect(fourCut.draft.photoImageBytes.first, same(firstPhoto));
       expect(fourCut.draft.scene.textLayers, [layer]);
       expect(polaroid.draft.photoImageBytes.single, same(firstPhoto));

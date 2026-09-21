@@ -95,7 +95,8 @@ void main() {
     expect(restored.textCharacterCount, 7);
     expect(restored.caption, 'first date');
     expect(restored.captionCharacterCount, 10);
-    expect(restored.toJson()['version'], 8);
+    expect(restored.toJson()['version'], 9);
+    expect(restored.layoutVersion, storyCardCurrentLayoutVersion);
     expect(restored.toJson()['appearance'], {
       'theme_id': 'future-seasonal-theme',
       'background_color': '#ffb7d5c4',
@@ -119,11 +120,19 @@ void main() {
     expect(restored.photoTransforms, hasLength(4));
     expect(restored.photoTransforms[2].scale, 1.8);
     expect(restored.photoTransforms[2].offsetX, 0.2);
-    expect(restored.toJson()['version'], 8);
+    expect(restored.toJson()['version'], 9);
+    expect(restored.layoutVersion, storyCardCurrentLayoutVersion);
+    expect(restored.previewSize, const Size(640, 1680));
+    expect(restored.canvasAspectRatio, 8 / 21);
+    expect(restored.toJson()['layout_version'], storyCardCurrentLayoutVersion);
     expect(restored.toJson()['card_type'], 'four_cut_strip');
     expect(
       (restored.toJson()['canvas'] as Map<String, dynamic>)['width_ratio'],
-      2,
+      8,
+    );
+    expect(
+      (restored.toJson()['canvas'] as Map<String, dynamic>)['height_ratio'],
+      21,
     );
   });
 
@@ -148,7 +157,7 @@ void main() {
     expect(restored.photoTransforms[2].rotation, 0.35);
     expect(restored.photoFilms[2].look, StoryCardFilmLook.moment);
     expect(restored.photoFilms[2].seed, 42);
-    expect(restored.toJson()['version'], 8);
+    expect(restored.toJson()['version'], 9);
   });
 
   test('legacy global film is inherited by every photo slot', () {
@@ -164,6 +173,25 @@ void main() {
       everyElement(
         const StoryCardFilmState(look: StoryCardFilmLook.warmth, seed: 91),
       ),
+    );
+    expect(restored.layoutVersion, storyCardLegacyLayoutVersion);
+    expect(restored.previewSize, const Size(800, 1000));
+  });
+
+  test('legacy four-cut scenes retain their original frame geometry', () {
+    final restored = StoryCardScene.fromJson({
+      'version': 8,
+      'card_type': 'four_cut_strip',
+      'canvas': {'width_ratio': 2, 'height_ratio': 5},
+    });
+
+    expect(restored.layoutVersion, storyCardLegacyLayoutVersion);
+    expect(restored.previewSize, const Size(640, 1600));
+    expect(restored.canvasAspectRatio, 2 / 5);
+    expect(restored.toJson()['layout_version'], storyCardLegacyLayoutVersion);
+    expect(
+      (restored.toJson()['canvas'] as Map<String, dynamic>)['width_ratio'],
+      2,
     );
   });
 

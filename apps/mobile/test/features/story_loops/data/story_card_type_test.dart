@@ -18,8 +18,8 @@ void main() {
 
     expect(StoryCardType.fullBleed.canvasAspectRatio, 4 / 5);
     expect(StoryCardType.polaroid.canvasAspectRatio, 4 / 5);
-    expect(StoryCardType.fourCutGrid.canvasAspectRatio, 4 / 5);
-    expect(StoryCardType.fourCutStrip.canvasAspectRatio, 2 / 5);
+    expect(StoryCardType.fourCutGrid.canvasAspectRatio, 20 / 27);
+    expect(StoryCardType.fourCutStrip.canvasAspectRatio, 8 / 21);
     expect(StoryCardType.fullBleed.requiredPhotoCount, 1);
     expect(StoryCardType.polaroid.requiredPhotoCount, 1);
     expect(StoryCardType.fourCutGrid.requiredPhotoCount, 4);
@@ -63,6 +63,37 @@ void main() {
     expect(layout.photoRects[3].top, layout.photoRects[2].top);
   });
 
+  test('spacious grid frame adds vertical room without resizing photos', () {
+    final legacySize = StoryCardType.fourCutGrid.previewSizeFor(
+      storyCardLegacyLayoutVersion,
+    );
+    final currentSize = StoryCardType.fourCutGrid.previewSizeFor(
+      storyCardCurrentLayoutVersion,
+    );
+    final legacy = StoryCardLayout.fromSize(
+      type: StoryCardType.fourCutGrid,
+      size: legacySize,
+      layoutVersion: storyCardLegacyLayoutVersion,
+    );
+    final current = StoryCardLayout.fromSize(
+      type: StoryCardType.fourCutGrid,
+      size: currentSize,
+      layoutVersion: storyCardCurrentLayoutVersion,
+    );
+
+    expect(legacySize, const Size(800, 1000));
+    expect(currentSize, const Size(800, 1080));
+    expect(
+      current.photoRects.first.top,
+      greaterThan(legacy.photoRects.first.top),
+    );
+    expect(
+      currentSize.height - current.photoRects.last.bottom,
+      greaterThan(legacySize.height - legacy.photoRects.last.bottom),
+    );
+    expect(current.photoRects.first.size, legacy.photoRects.first.size);
+  });
+
   test('strip layout resolves four vertically ordered cells', () {
     final layout = StoryCardLayout.fromSize(
       type: StoryCardType.fourCutStrip,
@@ -80,5 +111,43 @@ void main() {
         greaterThan(layout.photoRects[index - 1].bottom),
       );
     }
+  });
+
+  test('spacious strip frame adds balanced top and bottom room', () {
+    final legacySize = StoryCardType.fourCutStrip.previewSizeFor(
+      storyCardLegacyLayoutVersion,
+    );
+    final currentSize = StoryCardType.fourCutStrip.previewSizeFor(
+      storyCardCurrentLayoutVersion,
+    );
+    final legacy = StoryCardLayout.fromSize(
+      type: StoryCardType.fourCutStrip,
+      size: legacySize,
+      layoutVersion: storyCardLegacyLayoutVersion,
+    );
+    final current = StoryCardLayout.fromSize(
+      type: StoryCardType.fourCutStrip,
+      size: currentSize,
+      layoutVersion: storyCardCurrentLayoutVersion,
+    );
+
+    expect(legacySize, const Size(640, 1600));
+    expect(currentSize, const Size(640, 1680));
+    expect(
+      current.photoRects.first.top,
+      greaterThan(legacy.photoRects.first.top),
+    );
+    expect(
+      currentSize.height - current.photoRects.last.bottom,
+      closeTo(current.photoRects.first.top, 0.001),
+    );
+    expect(
+      current.photoRects.first.width,
+      closeTo(legacy.photoRects.first.width, 0.001),
+    );
+    expect(
+      current.photoRects.first.height,
+      closeTo(legacy.photoRects.first.height, 1),
+    );
   });
 }

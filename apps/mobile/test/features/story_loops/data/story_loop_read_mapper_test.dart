@@ -28,9 +28,11 @@ void main() {
     expect(summary.cards, hasLength(2));
     expect(summary.cards.first.id, 'card-1');
     expect(summary.cards.first.cardType, StoryCardType.fourCutGrid);
+    expect(summary.cards.first.layoutVersion, storyCardCurrentLayoutVersion);
     expect(summary.cards.first.previewUrl, 'https://example.com/first');
     expect(summary.cards.last.id, 'card-2');
     expect(summary.cards.last.cardType, StoryCardType.fourCutStrip);
+    expect(summary.cards.last.layoutVersion, storyCardCurrentLayoutVersion);
     expect(summary.cards.last.previewUrl, 'https://example.com/second');
     expect(summary.question?.question.questionSource, QuestionSource.curated);
     expect(
@@ -100,6 +102,7 @@ void main() {
     expect(monthDay.loopStatus, StoryLoopStatus.waitingPartnerCard);
     expect(monthDay.cardCount, 1);
     expect(monthDay.cards.single.id, 'card-3');
+    expect(monthDay.cards.single.layoutVersion, storyCardLegacyLayoutVersion);
 
     final summary = mapper.mapTodaySummary({
       'couple_id': 'couple-1',
@@ -135,11 +138,13 @@ Map<String, dynamic> _summaryRow() {
     'first_card_author_user_id': 'user-1',
     'first_card_preview_path': 'cards/first.png',
     'first_card_type': 'four_cut_grid',
+    'first_card_layout_version': 2,
     'first_card_submitted_at': '2026-07-21T08:00:00Z',
     'second_card_id': 'card-2',
     'second_card_author_user_id': 'user-2',
     'second_card_preview_path': 'cards/second.png',
     'second_card_type': 'four_cut_strip',
+    'second_card_layout_version': 2,
     'second_card_submitted_at': '2026-07-21T08:30:00Z',
     'daily_question_id': 'daily-question-1',
     'question_id': 'question-1',

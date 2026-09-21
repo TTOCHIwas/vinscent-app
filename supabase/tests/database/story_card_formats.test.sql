@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(15);
+select plan(25);
 
 select has_column(
   'public',
@@ -18,6 +18,19 @@ select col_default_is(
   'polaroid',
   'existing and legacy clients default to polaroid'
 );
+select has_column(
+  'public',
+  'story_loop_cards',
+  'layout_version',
+  'story cards persist the frame geometry version'
+);
+select col_default_is(
+  'public',
+  'story_loop_cards',
+  'layout_version',
+  '1',
+  'existing and legacy clients retain the original frame geometry'
+);
 select has_function(
   'public',
   'upsert_today_story_loop_card_v2',
@@ -26,6 +39,15 @@ select has_function(
     'integer', 'integer', 'text', 'integer', 'boolean', 'integer'
   ],
   'the format-aware write boundary exists'
+);
+select has_function(
+  'public',
+  'upsert_today_story_loop_card_v3',
+  array[
+    'uuid', 'text', 'text', 'text', 'boolean', 'boolean', 'boolean',
+    'integer', 'integer', 'text', 'integer', 'boolean', 'integer', 'integer'
+  ],
+  'the layout-aware write boundary exists'
 );
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
@@ -138,6 +160,15 @@ select is(
   'polaroid',
   'rows inserted without a format remain polaroids'
 );
+select is(
+  (
+    select layout_version
+    from public.story_loop_cards
+    where id = '84000000-0000-0000-0000-000000000001'
+  ),
+  1,
+  'rows inserted without layout metadata retain legacy geometry'
+);
 
 insert into storage.objects (bucket_id, name)
 values
@@ -223,6 +254,15 @@ select is(
   'full_bleed',
   'the full-bleed format is persisted'
 );
+select is(
+  (
+    select layout_version
+    from public.story_loop_cards
+    where artifact_revision = '85000000-0000-0000-0000-000000000004'
+  ),
+  1,
+  'legacy write clients persist legacy geometry'
+);
 
 set local role authenticated;
 
@@ -248,7 +288,7 @@ select throws_ok(
 );
 
 select lives_ok(
-  $$select * from public.upsert_today_story_loop_card_v2(
+  $$select * from public.upsert_today_story_loop_card_v3(
     '85000000-0000-0000-0000-000000000002',
     '82000000-0000-0000-0000-000000000001/loops/'
       || current_date::text
@@ -267,9 +307,10 @@ select lives_ok(
     'four_cut_grid',
     4,
     false,
+    2,
     null
   )$$,
-  'a complete four-cut card saves without raw background artifacts'
+  'a complete spacious four-cut card saves without raw background artifacts'
 );
 
 reset role;
@@ -294,6 +335,15 @@ select is(
 );
 select is(
   (
+    select layout_version
+    from public.story_loop_cards
+    where artifact_revision = '85000000-0000-0000-0000-000000000002'
+  ),
+  2,
+  'the spacious frame geometry version is persisted'
+);
+select is(
+  (
     select background_image_path
     from public.story_loop_cards
     where artifact_revision = '85000000-0000-0000-0000-000000000002'
@@ -314,6 +364,28 @@ where artifact_revision in (
 );
 
 set local role authenticated;
+
+select throws_ok(
+  $$select * from public.upsert_today_story_loop_card_v3(
+    '85000000-0000-0000-0000-000000000006',
+    'unused-preview',
+    'unused-scene',
+    null,
+    true,
+    false,
+    false,
+    0,
+    0,
+    'four_cut_grid',
+    4,
+    false,
+    99,
+    null
+  )$$,
+  'P0001',
+  'invalid_story_card_layout_version',
+  'unknown frame geometry versions are rejected'
+);
 
 select throws_ok(
   $$select * from public.upsert_today_story_loop_card_v2(
@@ -370,6 +442,42 @@ select is(
   ),
   'four_cut_grid',
   'calendar reads expose featured card formats'
+);
+select is(
+  (
+    select latest_layout_version
+    from public.get_today_story_card_stacks_v3()
+    where author_user_id = '81000000-0000-0000-0000-000000000001'
+  ),
+  2,
+  'home stack reads expose the latest frame geometry version'
+);
+select is(
+  (
+    select layout_version
+    from public.get_story_card_stack_v3(
+      current_date,
+      '81000000-0000-0000-0000-000000000001'
+    )
+    where card_type = 'four_cut_grid'
+  ),
+  2,
+  'detail stack reads expose each frame geometry version'
+);
+select is(
+  (
+    select case
+      when first_card_author_user_id =
+        '81000000-0000-0000-0000-000000000001'
+        then first_card_layout_version
+      when second_card_author_user_id =
+        '81000000-0000-0000-0000-000000000001'
+        then second_card_layout_version
+    end
+    from public.get_story_loop_month_summary_v3(current_date)
+  ),
+  2,
+  'calendar reads expose featured card frame geometry versions'
 );
 
 select * from finish();
