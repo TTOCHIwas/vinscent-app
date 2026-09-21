@@ -36,7 +36,7 @@ void main() {
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('strip-icon'))).aspectRatio,
-      closeTo(2 / 5, 0.001),
+      closeTo(StoryCardType.fourCutStrip.canvasAspectRatio, 0.001),
     );
   });
 

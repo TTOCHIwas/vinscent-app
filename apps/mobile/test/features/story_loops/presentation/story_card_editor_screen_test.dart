@@ -321,7 +321,10 @@ void main() {
 
     expect(canvas.top, greaterThanOrEqualTo(header.bottom + 12));
     expect(canvas.bottom, lessThanOrEqualTo(800 - 72));
-    expect(canvas.width / canvas.height, closeTo(2 / 5, 0.001));
+    expect(
+      canvas.width / canvas.height,
+      closeTo(StoryCardType.fourCutStrip.canvasAspectRatio, 0.001),
+    );
   });
 
   testWidgets('최초 카드 편집 안내를 닫아도 유형 선택기는 다음 조작까지 유지된다', (tester) async {
@@ -378,7 +381,10 @@ void main() {
       await tester.pump();
     }
 
-    expect(tester.getSize(canvas).aspectRatio, closeTo(2 / 5, 0.001));
+    expect(
+      tester.getSize(canvas).aspectRatio,
+      closeTo(StoryCardType.fourCutStrip.canvasAspectRatio, 0.001),
+    );
     expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
   });
 
@@ -399,7 +405,10 @@ void main() {
     final selectorSlide = find.byKey(
       const ValueKey('story-card-editor-type-selector-slide'),
     );
-    expect(tester.getSize(canvas).aspectRatio, closeTo(2 / 5, 0.001));
+    expect(
+      tester.getSize(canvas).aspectRatio,
+      closeTo(StoryCardType.fourCutStrip.canvasAspectRatio, 0.001),
+    );
     expect(tester.widget<AnimatedSlide>(selectorSlide).offset, Offset.zero);
 
     await tester.pump(const Duration(seconds: 2));

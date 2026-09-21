@@ -100,6 +100,7 @@ StoryLoopCardPreview samplePreviewCard({
   String previewPath = 'previews/card-1.png',
   DateTime? submittedAt,
   StoryCardType cardType = StoryCardType.polaroid,
+  int layoutVersion = storyCardLegacyLayoutVersion,
 }) {
   return StoryLoopCardPreview(
     id: id,
@@ -107,6 +108,7 @@ StoryLoopCardPreview samplePreviewCard({
     previewPath: previewPath,
     submittedAt: submittedAt ?? DateTime.parse('2026-07-06T09:00:00Z'),
     cardType: cardType,
+    layoutVersion: layoutVersion,
   );
 }
 

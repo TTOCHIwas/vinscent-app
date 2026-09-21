@@ -856,6 +856,7 @@ void main() {
                   samplePreviewCard(
                     id: 'four-cut-strip',
                     cardType: StoryCardType.fourCutStrip,
+                    layoutVersion: storyCardCurrentLayoutVersion,
                   ),
                 ],
               ),
