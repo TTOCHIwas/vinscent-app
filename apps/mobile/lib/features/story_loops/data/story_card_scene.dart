@@ -82,13 +82,18 @@ class StoryCardScene {
     required this.strokes,
     required this.textLayers,
     this.cardType = StoryCardType.polaroid,
+    this.layoutVersion = storyCardCurrentLayoutVersion,
     this.additionalPhotoTransforms = const [],
     this.film = const StoryCardFilmState.original(),
     this.additionalPhotoFilms = const [],
     this.canvasBackground = StoryCardCanvasBackground.white,
     StoryCardAppearance? appearance,
     this.caption,
-  }) : appearance =
+  }) : assert(
+         layoutVersion == storyCardLegacyLayoutVersion ||
+             layoutVersion == storyCardCurrentLayoutVersion,
+       ),
+       appearance =
            appearance ??
            (canvasBackground == StoryCardCanvasBackground.black
                ? const StoryCardAppearance.dark()
@@ -98,12 +103,14 @@ class StoryCardScene {
     StoryCardCanvasBackground canvasBackground =
         StoryCardCanvasBackground.white,
     StoryCardType cardType = StoryCardType.polaroid,
+    int layoutVersion = storyCardCurrentLayoutVersion,
   }) {
     return StoryCardScene(
       backgroundTransform: const StoryCardBackgroundTransform.initial(),
       strokes: const [],
       textLayers: const [],
       cardType: cardType,
+      layoutVersion: layoutVersion,
       film: const StoryCardFilmState.original(),
       canvasBackground: canvasBackground,
     );
@@ -150,6 +157,7 @@ class StoryCardScene {
           ? const []
           : transforms.skip(1).toList(growable: false),
       cardType: cardType,
+      layoutVersion: storyCardLayoutVersionFromValue(json['layout_version']),
       strokes: strokes
           .map(
             (stroke) => StoryCardStroke.fromJson(
@@ -180,6 +188,7 @@ class StoryCardScene {
   final StoryCardBackgroundTransform backgroundTransform;
   final List<StoryCardBackgroundTransform> additionalPhotoTransforms;
   final StoryCardType cardType;
+  final int layoutVersion;
   final List<StoryCardStroke> strokes;
   final List<StoryCardTextLayer> textLayers;
   final StoryCardFilmState film;
@@ -187,6 +196,10 @@ class StoryCardScene {
   final StoryCardCanvasBackground canvasBackground;
   final StoryCardAppearance appearance;
   final String? caption;
+
+  Size get previewSize => cardType.previewSizeFor(layoutVersion);
+
+  double get canvasAspectRatio => cardType.canvasAspectRatioFor(layoutVersion);
 
   List<StoryCardBackgroundTransform> get photoTransforms {
     final transforms = storedPhotoTransforms;
@@ -246,6 +259,7 @@ class StoryCardScene {
     StoryCardBackgroundTransform? backgroundTransform,
     List<StoryCardBackgroundTransform>? additionalPhotoTransforms,
     StoryCardType? cardType,
+    int? layoutVersion,
     List<StoryCardStroke>? strokes,
     List<StoryCardTextLayer>? textLayers,
     StoryCardFilmState? film,
@@ -259,6 +273,7 @@ class StoryCardScene {
       additionalPhotoTransforms:
           additionalPhotoTransforms ?? this.additionalPhotoTransforms,
       cardType: cardType ?? this.cardType,
+      layoutVersion: layoutVersion ?? this.layoutVersion,
       strokes: strokes ?? this.strokes,
       textLayers: textLayers ?? this.textLayers,
       film: film ?? this.film,
@@ -345,12 +360,35 @@ class StoryCardScene {
         ? storedPhotoFilms
         : photoFilms;
     return {
-      'version': 8,
+      'version': 9,
       'card_type': cardType.storageValue,
+      'layout_version': layoutVersion,
       'appearance': appearance.toJson(),
       'canvas': {
-        'width_ratio': cardType == StoryCardType.fourCutStrip ? 2 : 4,
-        'height_ratio': 5,
+        'width_ratio': switch (cardType) {
+          StoryCardType.fourCutGrid
+              when layoutVersion == storyCardCurrentLayoutVersion =>
+            20,
+          StoryCardType.fourCutStrip
+              when layoutVersion == storyCardCurrentLayoutVersion =>
+            8,
+          StoryCardType.fourCutStrip => 2,
+          StoryCardType.fullBleed ||
+          StoryCardType.polaroid ||
+          StoryCardType.fourCutGrid => 4,
+        },
+        'height_ratio': switch (cardType) {
+          StoryCardType.fourCutGrid
+              when layoutVersion == storyCardCurrentLayoutVersion =>
+            27,
+          StoryCardType.fourCutStrip
+              when layoutVersion == storyCardCurrentLayoutVersion =>
+            21,
+          StoryCardType.fullBleed ||
+          StoryCardType.polaroid ||
+          StoryCardType.fourCutGrid ||
+          StoryCardType.fourCutStrip => 5,
+        },
         'background_color': canvasBackground.name,
       },
       'background': backgroundTransform.toJson(),

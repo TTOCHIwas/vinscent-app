@@ -189,7 +189,8 @@ class _StoryCardEditorContentState
         ? null
         : StoryCardLayout.fromSize(
             type: _draft.scene.cardType,
-            size: _draft.scene.cardType.previewSize,
+            size: _draft.scene.previewSize,
+            layoutVersion: _draft.scene.layoutVersion,
           ).photoAspectRatio(targetIndex);
     return StoryCardCameraStage(
       onBack: _handleBack,
@@ -224,7 +225,7 @@ class _StoryCardEditorContentState
                 padding: storyCardEditorViewportInsets,
                 child: StoryCardInteractiveViewport(
                   controller: _viewportController,
-                  aspectRatio: _draft.scene.cardType.canvasAspectRatio,
+                  aspectRatio: _draft.scene.canvasAspectRatio,
                   clipContent: false,
                   builder: (context, contentSize, viewportGestures) => Stack(
                     key: const ValueKey('story-card-editor-canvas'),
@@ -256,6 +257,7 @@ class _StoryCardEditorContentState
                           !_isTextInputActive)
                         StoryCardPhotoSlotControls(
                           cardType: _draft.scene.cardType,
+                          layoutVersion: _draft.scene.layoutVersion,
                           hasPhotos: _draft.photoImageBytes
                               .map((bytes) => bytes != null)
                               .toList(growable: false),
@@ -334,7 +336,7 @@ class _StoryCardEditorContentState
                   selectedTool: _selectedDrawingTool,
                   selectedColor: _selectedColor,
                   selectedStrokeWidth: _selectedStrokeWidth,
-                  cardAspectRatio: _draft.scene.cardType.canvasAspectRatio,
+                  cardAspectRatio: _draft.scene.canvasAspectRatio,
                   canUndo:
                       _activeStroke == null && _draft.scene.strokes.isNotEmpty,
                   onToolChanged: (tool) {
@@ -711,7 +713,8 @@ class _StoryCardEditorContentState
     });
     final layout = StoryCardLayout.fromSize(
       type: _draft.scene.cardType,
-      size: _draft.scene.cardType.previewSize,
+      size: _draft.scene.previewSize,
+      layoutVersion: _draft.scene.layoutVersion,
     );
     final result = await Navigator.of(context).push<_PhotoAdjustmentResult>(
       MaterialPageRoute(
@@ -1555,8 +1558,7 @@ class _StoryCardEditorContentState
     if (renderObject.size.width <= 0) {
       throw StateError('Story card preview boundary has an invalid size.');
     }
-    final pixelRatio =
-        _draft.scene.cardType.previewSize.width / renderObject.size.width;
+    final pixelRatio = _draft.scene.previewSize.width / renderObject.size.width;
     final image = await renderObject.toImage(pixelRatio: pixelRatio);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();

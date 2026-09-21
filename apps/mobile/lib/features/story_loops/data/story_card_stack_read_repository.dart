@@ -38,7 +38,7 @@ class SupabaseStoryCardStackReadRepository
 
   @override
   Future<List<StoryCardStackPreview>> fetchTodayStacks() async {
-    final rows = await _runRows('get_today_story_card_stacks_v2');
+    final rows = await _runRows('get_today_story_card_stacks_v3');
     final previewUrls = await _createPreviewUrls(
       rows.map((row) => row['latest_card_preview_path'] as String),
     );
@@ -58,7 +58,7 @@ class SupabaseStoryCardStackReadRepository
     required String authorUserId,
   }) async {
     final rows = await _runRows(
-      'get_story_card_stack_v2',
+      'get_story_card_stack_v3',
       params: {
         'target_date': _formatDate(date),
         'target_author_user_id': authorUserId,

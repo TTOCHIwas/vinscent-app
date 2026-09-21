@@ -98,6 +98,7 @@ void main() {
     final layout = StoryCardLayout.fromSize(
       type: StoryCardType.fourCutStrip,
       size: const Size(240, 600),
+      layoutVersion: storyCardLegacyLayoutVersion,
     );
 
     expect(layout.photoRects, hasLength(4));

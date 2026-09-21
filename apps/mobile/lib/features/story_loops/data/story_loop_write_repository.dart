@@ -117,7 +117,7 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
       stage = 'finalize-rpc';
       final data = await Supabase.instance.client
           .rpc(
-            'upsert_today_story_loop_card_v2',
+            'upsert_today_story_loop_card_v3',
             params: {
               'requested_artifact_revision': artifactRevision,
               'requested_preview_path': artifactPaths.previewPath,
@@ -133,6 +133,7 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
               'requested_card_type': cardType.storageValue,
               'requested_photo_count': draft.photoCount,
               'requested_has_caption': draft.scene.hasCaption,
+              'requested_layout_version': draft.scene.layoutVersion,
               'expected_revision': draft.existingRevision,
             },
           )
@@ -369,7 +370,8 @@ class SupabaseStoryLoopWriteRepository implements StoryLoopWriteRepository {
         StoryLoopWriteFailureReason.contentRequired,
       'invalid_story_card_type' ||
       'invalid_story_card_photo_count' ||
-      'invalid_story_card_caption' =>
+      'invalid_story_card_caption' ||
+      'invalid_story_card_layout_version' =>
         StoryLoopWriteFailureReason.invalidCardFormat,
       'invalid_story_card_text_content' =>
         StoryLoopWriteFailureReason.invalidTextContent,

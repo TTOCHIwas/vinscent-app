@@ -11,6 +11,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
     required this.previewUrl,
     required this.width,
     this.cardType = StoryCardType.polaroid,
+    this.layoutVersion = storyCardLegacyLayoutVersion,
     this.surfaceKey,
     this.onTap,
     this.semanticsLabel,
@@ -21,6 +22,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
   final String? previewUrl;
   final double width;
   final StoryCardType cardType;
+  final int layoutVersion;
   final Key? surfaceKey;
   final VoidCallback? onTap;
   final String? semanticsLabel;
@@ -29,15 +31,18 @@ class StoryCardPreviewSurface extends StatelessWidget {
 
   static double widthInFourByFiveSlot(
     double slotWidth,
-    StoryCardType cardType,
-  ) {
+    StoryCardType cardType, {
+    int layoutVersion = storyCardLegacyLayoutVersion,
+  }) {
     return slotWidth *
-        (cardType.canvasAspectRatio / storyCardCanvasAspectRatio);
+        (cardType.canvasAspectRatioFor(layoutVersion) /
+            storyCardCanvasAspectRatio);
   }
 
   @override
   Widget build(BuildContext context) {
-    final height = width / cardType.canvasAspectRatio;
+    final aspectRatio = cardType.canvasAspectRatioFor(layoutVersion);
+    final height = width / aspectRatio;
     final borderRadius = BorderRadius.circular(cornerRadius);
 
     return Semantics(
@@ -52,7 +57,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
           child: SizedBox(
             width: width,
             child: AspectRatio(
-              aspectRatio: cardType.canvasAspectRatio,
+              aspectRatio: aspectRatio,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.white,

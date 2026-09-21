@@ -107,6 +107,9 @@ class StoryLoopReadMapper {
           cardType: StoryCardType.fromStorageValue(
             row['first_card_type'] as String?,
           ),
+          layoutVersion: storyCardLayoutVersionFromValue(
+            row['first_card_layout_version'],
+          ),
           previewUrl: previewUrlsByPath[previewPath],
         ),
       );
@@ -123,6 +126,9 @@ class StoryLoopReadMapper {
           submittedAt: _parseDateTime(row['second_card_submitted_at']),
           cardType: StoryCardType.fromStorageValue(
             row['second_card_type'] as String?,
+          ),
+          layoutVersion: storyCardLayoutVersionFromValue(
+            row['second_card_layout_version'],
           ),
           previewUrl: previewUrlsByPath[previewPath],
         ),
@@ -184,6 +190,9 @@ class StoryLoopReadMapper {
       revision: _toInt(row['${prefix}_revision']),
       cardType: StoryCardType.fromStorageValue(
         row['${prefix}_type'] as String?,
+      ),
+      layoutVersion: storyCardLayoutVersionFromValue(
+        row['${prefix}_layout_version'],
       ),
       previewUrl: previewUrlsByPath[previewPath],
     );

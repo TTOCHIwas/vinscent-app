@@ -707,6 +707,7 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
     final previewWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
       width,
       card.cardType,
+      layoutVersion: card.layoutVersion,
     );
     return Center(
       child: StoryCardPreviewSurface(
@@ -714,6 +715,7 @@ class _QuestionAnswerStoryCard extends StatelessWidget {
         previewUrl: card.previewUrl,
         width: previewWidth,
         cardType: card.cardType,
+        layoutVersion: card.layoutVersion,
         onTap: () => showStoryCardDetailOverlay(
           context: context,
           date: date,

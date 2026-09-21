@@ -12,6 +12,7 @@ class StoryLoopCardDetail {
     required this.submittedAt,
     required this.revision,
     this.cardType = StoryCardType.polaroid,
+    this.layoutVersion = storyCardLegacyLayoutVersion,
     this.previewUrl,
   });
 
@@ -25,9 +26,16 @@ class StoryLoopCardDetail {
   final DateTime submittedAt;
   final int revision;
   final StoryCardType cardType;
+  final int layoutVersion;
   final String? previewUrl;
 
-  StoryLoopCardDetail copyWith({StoryCardType? cardType, String? previewUrl}) {
+  double get canvasAspectRatio => cardType.canvasAspectRatioFor(layoutVersion);
+
+  StoryLoopCardDetail copyWith({
+    StoryCardType? cardType,
+    int? layoutVersion,
+    String? previewUrl,
+  }) {
     return StoryLoopCardDetail(
       id: id,
       authorUserId: authorUserId,
@@ -39,6 +47,7 @@ class StoryLoopCardDetail {
       submittedAt: submittedAt,
       revision: revision,
       cardType: cardType ?? this.cardType,
+      layoutVersion: layoutVersion ?? this.layoutVersion,
       previewUrl: previewUrl ?? this.previewUrl,
     );
   }

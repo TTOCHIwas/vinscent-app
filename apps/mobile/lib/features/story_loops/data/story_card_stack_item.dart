@@ -29,6 +29,7 @@ class StoryCardStackItem {
         submittedAt: DateTime.parse(json['submitted_at'] as String),
         revision: (json['revision'] as num).toInt(),
         cardType: StoryCardType.fromStorageValue(json['card_type'] as String?),
+        layoutVersion: storyCardLayoutVersionFromValue(json['layout_version']),
         previewUrl: previewUrl,
       ),
       isFeatured: json['is_featured'] as bool? ?? false,

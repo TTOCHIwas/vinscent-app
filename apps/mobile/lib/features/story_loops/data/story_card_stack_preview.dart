@@ -26,6 +26,9 @@ class StoryCardStackPreview {
         cardType: StoryCardType.fromStorageValue(
           json['latest_card_type'] as String?,
         ),
+        layoutVersion: storyCardLayoutVersionFromValue(
+          json['latest_layout_version'],
+        ),
         previewUrl: previewUrl,
       ),
       latestCardIsFeatured: json['latest_card_is_featured'] as bool? ?? false,

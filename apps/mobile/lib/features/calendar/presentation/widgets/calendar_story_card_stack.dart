@@ -110,6 +110,7 @@ class _CalendarStoryCard extends StatelessWidget {
     final previewWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
       width,
       card.cardType,
+      layoutVersion: card.layoutVersion,
     );
     return SizedBox(
       width: width,
@@ -119,6 +120,7 @@ class _CalendarStoryCard extends StatelessWidget {
           previewUrl: card.previewUrl,
           width: previewWidth,
           cardType: card.cardType,
+          layoutVersion: card.layoutVersion,
           onTap: onTap,
           semanticsLabel: '스토리 카드',
         ),

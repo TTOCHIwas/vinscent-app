@@ -21,7 +21,11 @@ abstract final class StoryCardCanvasRenderer {
     List<StoryCardStroke>? strokes,
     bool includeTextLayers = true,
   }) {
-    final layout = StoryCardLayout.fromSize(type: scene.cardType, size: size);
+    final layout = StoryCardLayout.fromSize(
+      type: scene.cardType,
+      size: size,
+      layoutVersion: scene.layoutVersion,
+    );
     final images = backgroundImages ?? [backgroundImage];
     canvas.drawRect(
       Offset.zero & size,

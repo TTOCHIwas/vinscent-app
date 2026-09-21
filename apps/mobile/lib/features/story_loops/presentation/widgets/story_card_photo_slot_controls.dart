@@ -7,6 +7,7 @@ class StoryCardPhotoSlotControls extends StatelessWidget {
   const StoryCardPhotoSlotControls({
     super.key,
     required this.cardType,
+    this.layoutVersion = storyCardCurrentLayoutVersion,
     required this.hasPhotos,
     required this.selectedEmptyIndex,
     required this.onCameraPressed,
@@ -15,6 +16,7 @@ class StoryCardPhotoSlotControls extends StatelessWidget {
   });
 
   final StoryCardType cardType;
+  final int layoutVersion;
   final List<bool> hasPhotos;
   final int? selectedEmptyIndex;
   final ValueChanged<int> onCameraPressed;
@@ -28,6 +30,7 @@ class StoryCardPhotoSlotControls extends StatelessWidget {
         final layout = StoryCardLayout.fromSize(
           type: cardType,
           size: constraints.biggest,
+          layoutVersion: layoutVersion,
         );
         return Stack(
           children: [

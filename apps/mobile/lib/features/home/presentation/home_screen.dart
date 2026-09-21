@@ -1014,6 +1014,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
     final previewWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
       slotWidth,
       card.cardType,
+      layoutVersion: card.layoutVersion,
     );
     return Padding(
       padding: const EdgeInsets.only(top: 5, right: 5),
@@ -1028,7 +1029,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
                 angle: _backLayerStyles[depth - 1].angle,
                 child: Container(
                   width: previewWidth,
-                  height: previewWidth / card.cardType.canvasAspectRatio,
+                  height: previewWidth / card.canvasAspectRatio,
                   decoration: const BoxDecoration(
                     color: AppColors.white,
                     boxShadow: [
@@ -1053,6 +1054,7 @@ class _HomeStoryCardStackThumbnail extends StatelessWidget {
               previewUrl: card.previewUrl,
               width: previewWidth,
               cardType: card.cardType,
+              layoutVersion: card.layoutVersion,
               cornerRadius: 0,
               showShadow: false,
               onTap: onTap,

@@ -1,5 +1,14 @@
 import 'dart:ui';
 
+const storyCardLegacyLayoutVersion = 1;
+const storyCardCurrentLayoutVersion = 2;
+
+int storyCardLayoutVersionFromValue(Object? value) {
+  return (value as num?)?.toInt() == storyCardCurrentLayoutVersion
+      ? storyCardCurrentLayoutVersion
+      : storyCardLegacyLayoutVersion;
+}
+
 enum StoryCardType {
   fullBleed,
   polaroid,
@@ -27,12 +36,19 @@ enum StoryCardType {
     StoryCardType.fourCutStrip => '세로 네컷',
   };
 
-  double get canvasAspectRatio => switch (this) {
-    StoryCardType.fullBleed ||
-    StoryCardType.polaroid ||
-    StoryCardType.fourCutGrid => 4 / 5,
-    StoryCardType.fourCutStrip => 2 / 5,
-  };
+  double get canvasAspectRatio =>
+      canvasAspectRatioFor(storyCardCurrentLayoutVersion);
+
+  double canvasAspectRatioFor(int layoutVersion) {
+    final version = storyCardLayoutVersionFromValue(layoutVersion);
+    return switch (this) {
+      StoryCardType.fullBleed || StoryCardType.polaroid => 4 / 5,
+      StoryCardType.fourCutGrid =>
+        version == storyCardCurrentLayoutVersion ? 20 / 27 : 4 / 5,
+      StoryCardType.fourCutStrip =>
+        version == storyCardCurrentLayoutVersion ? 8 / 21 : 2 / 5,
+    };
+  }
 
   int get requiredPhotoCount => switch (this) {
     StoryCardType.fullBleed || StoryCardType.polaroid => 1,
@@ -46,12 +62,23 @@ enum StoryCardType {
     StoryCardType.fullBleed || StoryCardType.polaroid => false,
   };
 
-  Size get previewSize => switch (this) {
-    StoryCardType.fullBleed ||
-    StoryCardType.polaroid ||
-    StoryCardType.fourCutGrid => const Size(800, 1000),
-    StoryCardType.fourCutStrip => const Size(640, 1600),
-  };
+  Size get previewSize => previewSizeFor(storyCardCurrentLayoutVersion);
+
+  Size previewSizeFor(int layoutVersion) {
+    final version = storyCardLayoutVersionFromValue(layoutVersion);
+    return switch (this) {
+      StoryCardType.fullBleed ||
+      StoryCardType.polaroid => const Size(800, 1000),
+      StoryCardType.fourCutGrid =>
+        version == storyCardCurrentLayoutVersion
+            ? const Size(800, 1080)
+            : const Size(800, 1000),
+      StoryCardType.fourCutStrip =>
+        version == storyCardCurrentLayoutVersion
+            ? const Size(640, 1680)
+            : const Size(640, 1600),
+    };
+  }
 
   static StoryCardType fromStorageValue(String? value) {
     return StoryCardType.values.firstWhere(
@@ -67,12 +94,13 @@ class StoryCardLayout {
   factory StoryCardLayout.fromSize({
     required StoryCardType type,
     required Size size,
+    int layoutVersion = storyCardCurrentLayoutVersion,
   }) {
     return switch (type) {
       StoryCardType.fullBleed => StoryCardLayout._fullBleed(size),
       StoryCardType.polaroid => StoryCardLayout._polaroid(size),
-      StoryCardType.fourCutGrid => StoryCardLayout._grid(size),
-      StoryCardType.fourCutStrip => StoryCardLayout._strip(size),
+      StoryCardType.fourCutGrid => StoryCardLayout._grid(size, layoutVersion),
+      StoryCardType.fourCutStrip => StoryCardLayout._strip(size, layoutVersion),
     };
   }
 
@@ -103,20 +131,34 @@ class StoryCardLayout {
     );
   }
 
-  factory StoryCardLayout._grid(Size size) {
-    final inset = size.width * 0.06;
+  factory StoryCardLayout._grid(Size size, int layoutVersion) {
+    final isCurrent =
+        storyCardLayoutVersionFromValue(layoutVersion) ==
+        storyCardCurrentLayoutVersion;
+    final horizontalInset = size.width * 0.06;
+    final verticalInset = size.width * (isCurrent ? 0.11 : 0.06);
     final gap = size.width * 0.03;
-    final cellWidth = (size.width - inset * 2 - gap) / 2;
-    final cellHeight = (size.height - inset * 2 - gap) / 2;
+    final cellWidth = (size.width - horizontalInset * 2 - gap) / 2;
+    final cellHeight = (size.height - verticalInset * 2 - gap) / 2;
 
     return StoryCardLayout(
       photoRects: [
-        Rect.fromLTWH(inset, inset, cellWidth, cellHeight),
-        Rect.fromLTWH(inset + cellWidth + gap, inset, cellWidth, cellHeight),
-        Rect.fromLTWH(inset, inset + cellHeight + gap, cellWidth, cellHeight),
+        Rect.fromLTWH(horizontalInset, verticalInset, cellWidth, cellHeight),
         Rect.fromLTWH(
-          inset + cellWidth + gap,
-          inset + cellHeight + gap,
+          horizontalInset + cellWidth + gap,
+          verticalInset,
+          cellWidth,
+          cellHeight,
+        ),
+        Rect.fromLTWH(
+          horizontalInset,
+          verticalInset + cellHeight + gap,
+          cellWidth,
+          cellHeight,
+        ),
+        Rect.fromLTWH(
+          horizontalInset + cellWidth + gap,
+          verticalInset + cellHeight + gap,
           cellWidth,
           cellHeight,
         ),
@@ -125,9 +167,12 @@ class StoryCardLayout {
     );
   }
 
-  factory StoryCardLayout._strip(Size size) {
+  factory StoryCardLayout._strip(Size size, int layoutVersion) {
+    final isCurrent =
+        storyCardLayoutVersionFromValue(layoutVersion) ==
+        storyCardCurrentLayoutVersion;
     final horizontalInset = size.width * 0.06;
-    final verticalInset = size.width * 0.10;
+    final verticalInset = size.width * (isCurrent ? 0.1625 : 0.10);
     final gap = size.width * 0.03;
     final photoWidth = size.width - horizontalInset * 2;
     final photoHeight = (size.height - verticalInset * 2 - gap * 3) / 4;

@@ -51,7 +51,10 @@ class StoryCardEditorSession {
       return this;
     }
     final nextDraft = draft.copyWith(
-      scene: draft.scene.copyWith(cardType: cardType),
+      scene: draft.scene.copyWith(
+        cardType: cardType,
+        layoutVersion: storyCardCurrentLayoutVersion,
+      ),
     );
     return copyWith(
       stage: nextDraft.hasDraftContent

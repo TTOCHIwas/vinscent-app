@@ -388,6 +388,7 @@ class _StoryCardEditorCanvasState extends State<StoryCardEditorCanvas> {
     final layout = StoryCardLayout.fromSize(
       type: widget.scene.cardType,
       size: size,
+      layoutVersion: widget.scene.layoutVersion,
     );
     return layout.photoRects.indexWhere((rect) => rect.contains(position));
   }

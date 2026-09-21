@@ -91,6 +91,7 @@ class CalendarMonthCardPreview extends StatelessWidget {
               width: StoryCardPreviewSurface.widthInFourByFiveSlot(
                 cardSlotWidth,
                 cards[index].cardType,
+                layoutVersion: cards[index].layoutVersion,
               ),
               previewCacheExtent: previewCacheExtent,
               angle: switch (index) {
@@ -115,6 +116,7 @@ class CalendarMonthCardPreview extends StatelessWidget {
     final cardWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
       slotWidth,
       card.cardType,
+      layoutVersion: card.layoutVersion,
     );
     return (slotWidth - cardWidth) / 2;
   }
@@ -135,11 +137,12 @@ class _MonthStorySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aspectRatio = card.cardType.canvasAspectRatio;
+    final aspectRatio = card.canvasAspectRatio;
     final height = width / aspectRatio;
     final cacheWidth = StoryCardPreviewSurface.widthInFourByFiveSlot(
       previewCacheExtent,
       card.cardType,
+      layoutVersion: card.layoutVersion,
     );
 
     return Transform.rotate(

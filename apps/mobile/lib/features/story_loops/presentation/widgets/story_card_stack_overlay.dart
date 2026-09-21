@@ -283,8 +283,7 @@ class _StoryCardStackOverlayState
       builder: (context, constraints) {
         final cardWidth = math.min(
           constraints.maxWidth,
-          constraints.maxHeight *
-              widget.stack.latestCard.cardType.canvasAspectRatio,
+          constraints.maxHeight * widget.stack.latestCard.canvasAspectRatio,
         );
         return Center(
           child: Stack(
@@ -297,6 +296,7 @@ class _StoryCardStackOverlayState
                 previewUrl: widget.stack.latestCard.previewUrl,
                 width: cardWidth,
                 cardType: widget.stack.latestCard.cardType,
+                layoutVersion: widget.stack.latestCard.layoutVersion,
                 semanticsLabel: '스토리 카드',
               ),
               const SizedBox.square(
@@ -571,7 +571,7 @@ class _InteractiveStoryCardPageState extends State<_InteractiveStoryCardPage> {
   Widget build(BuildContext context) {
     return StoryCardInteractiveViewport(
       controller: _viewportController,
-      aspectRatio: widget.card.cardType.canvasAspectRatio,
+      aspectRatio: widget.card.canvasAspectRatio,
       builder: (context, contentSize, gestures) {
         return StoryCardViewportGestureRegion(
           gestures: gestures,
@@ -584,6 +584,7 @@ class _InteractiveStoryCardPageState extends State<_InteractiveStoryCardPage> {
                 previewUrl: widget.card.previewUrl,
                 width: contentSize.width,
                 cardType: widget.card.cardType,
+                layoutVersion: widget.card.layoutVersion,
                 semanticsLabel: widget.semanticsLabel,
               ),
               Positioned.fill(
