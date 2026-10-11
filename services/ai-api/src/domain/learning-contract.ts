@@ -122,6 +122,7 @@ export interface RecentCompletedQuestionContext {
 }
 
 export interface CompletedQuestionContext {
+  monthlyReflections?: Array<{month:string;question:string;answers:Array<CompletedQuestionAnswer & {version:number}>}>;
   coupleId: string;
   question: {
     dailyQuestionId: string;
@@ -143,6 +144,7 @@ export interface CompletedQuestionContext {
 }
 
 export interface AnonymizedCompletedQuestionContext {
+  monthlyReflections?: Array<{month:string;question:string;answers:Array<{answerId:string;participantKey:ParticipantKey;text:string;version:number}>}>;
   question: CompletedQuestionContext['question'];
   answers: Array<{
     answerId: string;
@@ -500,6 +502,13 @@ export function anonymizeCompletedQuestionContext(
 
   return {
     question: { ...context.question },
+    ...(context.monthlyReflections === undefined ? {} : {monthlyReflections: context.monthlyReflections.map((reflection) => ({
+      month:reflection.month,question:reflection.question,answers:reflection.answers.map((answer) => {
+        const participantKey = participants.get(answer.userId);
+        if (participantKey === undefined) throw new Error('monthly reflection has an unknown participant');
+        return {answerId:answer.answerId,participantKey,text:answer.text,version:answer.version};
+      }),
+    }))}),
     answers: context.answers.map((answer) => ({
       answerId: answer.answerId,
       participantKey: participants.get(answer.userId)!,

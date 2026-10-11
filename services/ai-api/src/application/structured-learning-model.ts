@@ -956,6 +956,10 @@ function buildPersonalizedQuestionPrompt(
     recent_exposed_questions: context.recentExposedQuestionTexts ?? [],
     pending_question_candidates: context.pendingQuestionTexts ?? [],
   };
+  if ((context.monthlyReflections?.length ?? 0) > 0) {
+    data.monthly_reflections = context.monthlyReflections;
+    data.monthly_reflection_policy = 'monthly_reflections는 해당 월의 바람과 회고이며 영구 취향이나 관계 진단이 아니야. 실제 답변만 참고하고 완료된 사건으로 가정하지 마.';
+  }
   if (options?.rejectedText !== null && options?.rejectedText !== undefined) {
     data.rejected_question = options.rejectedText;
   }

@@ -329,6 +329,16 @@ function parseCompletedQuestionContext(
 
   return {
     coupleId: requireString(record.couple_id, 160),
+    monthlyReflections: (record.monthly_reflections === undefined ? [] : requireArray(record.monthly_reflections)).map((reflection) => {
+      const item = requireRecord(reflection);
+      const answers = requireArray(item.answers);
+      if (answers.length !== 2) throw new TypeError('shared monthly context requires two answers');
+      return {month:requireString(item.month,10),question:requireString(item.question,300),answers:answers.map((answer) => {
+        const value = requireRecord(answer);
+        return {answerId:requireString(value.answer_id,160),userId:requireString(value.user_id,160),
+          text:requireString(value.text,500),version:requireInteger(value.version,1)};
+      })};
+    }),
     question: {
       dailyQuestionId: requireString(question.daily_question_id, 160),
       questionId: requireString(question.question_id, 160),
