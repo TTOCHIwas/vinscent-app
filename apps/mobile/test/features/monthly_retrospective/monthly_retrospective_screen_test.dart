@@ -173,8 +173,9 @@ class _Controller extends MonthlyRetrospectiveController {
   @override
   Future<void> save(RetrospectiveReflection reflection, String text) async {
     savedVersions.add(reflection.version);
-    if (reflection.version != state.requireValue.reflection!.version)
+    if (reflection.version != state.requireValue.reflection!.version) {
       throw StateError('version conflict');
+    }
     replace(_fixture(answer: text, version: reflection.version + 1));
   }
 

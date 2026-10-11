@@ -36,6 +36,7 @@ import 'package:vinscent/features/recordings/presentation/widgets/character_reco
 import 'package:vinscent/features/settings/presentation/settings_screen.dart';
 import 'package:vinscent/features/settings/presentation/widgets/settings_page_header.dart';
 import 'package:vinscent/features/shell/presentation/app_shell.dart';
+import 'package:vinscent/features/shell/application/shell_navigation_guard.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_header.dart';
 import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
@@ -50,6 +51,56 @@ import '../../support/safety_fixtures.dart';
 import '../../support/story_loop_fixtures.dart';
 
 void main() {
+  testWidgets('shell tab and system back respect the monthly draft guard', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+    final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+    router.go('/ai');
+    await tester.pumpAndSettle();
+    final guard = ProviderScope.containerOf(
+      tester.element(find.byType(AppShell)),
+    ).read(shellNavigationGuardProvider);
+    var confirmations = 0;
+    guard.register(Object(), '/ai', () async {
+      confirmations++;
+      return false;
+    });
+    await tester.tap(find.byType(ShellTab).at(0));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/ai');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/ai');
+    expect(confirmations, 2);
+  });
+  testWidgets('monthly record route returns to its AI page on back', (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+    final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+    router.go('/ai');
+    await tester.pumpAndSettle();
+    router.push('/ai/monthly-record?date=2026-05-30');
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarScreen), findsOneWidget);
+    expect(
+      GoRouterState.of(tester.element(find.byType(CalendarScreen))).uri.path,
+      '/ai/monthly-record',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/ai');
+    expect(find.byType(AiTabHeader), findsOneWidget);
+  });
   testWidgets('widget launch URI does not become a GoRouter location', (
     tester,
   ) async {
