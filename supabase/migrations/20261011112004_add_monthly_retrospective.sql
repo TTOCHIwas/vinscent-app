@@ -10,6 +10,8 @@ create table private.story_card_write_receipts (
   couple_id uuid not null references public.couples(id) on delete cascade,
   author_user_id uuid not null references auth.users(id) on delete cascade,
   couple_date date not null,
+  request_body jsonb not null,
+  format_request jsonb,
   directly_deleted boolean not null default false
 );
 create table private.story_card_daily_counts (
@@ -24,8 +26,11 @@ create function private.count_saved_story_card()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into private.story_card_write_receipts
-    (artifact_revision, card_id, couple_id, author_user_id, couple_date)
-  values (new.artifact_revision, new.id, new.couple_id, new.author_user_id, new.couple_date);
+    (artifact_revision, card_id, couple_id, author_user_id, couple_date,request_body)
+  values (new.artifact_revision, new.id, new.couple_id, new.author_user_id, new.couple_date,
+    jsonb_build_object('preview',new.preview_path,'scene',new.scene_data_path,'background',new.background_image_path,
+      'photo',new.has_photo,'drawing',new.has_drawing,'text',new.has_text,
+      'layers',new.text_layer_count,'characters',new.text_character_count));
   insert into private.story_card_daily_counts (couple_id, author_user_id, couple_date, card_count)
   values (new.couple_id, new.author_user_id, new.couple_date, 1)
   on conflict (couple_id, author_user_id, couple_date)
@@ -63,8 +68,12 @@ begin
       or receipt.couple_date <> private.current_date_in_timezone(c.timezone)
       or receipt.directly_deleted then perform private.raise_app_error('story_card_locked'); end if;
     select * into card from public.story_loop_cards where id = receipt.card_id;
-    if not found or card.preview_path is distinct from btrim(requested_preview_path)
-      or card.scene_data_path is distinct from btrim(requested_scene_data_path)
+    if not found or receipt.request_body is distinct from jsonb_build_object(
+      'preview',btrim(requested_preview_path),'scene',btrim(requested_scene_data_path),
+      'background',nullif(btrim(requested_background_image_path),''),'photo',requested_has_photo,
+      'drawing',requested_has_drawing,'text',requested_has_text,'layers',requested_text_layer_count,
+      'characters',requested_text_character_count)
+      or expected_revision is not null
     then perform private.raise_app_error('story_card_locked'); end if;
     return query select card.story_loop_id, dsl.status, card.id, card.revision, false, dq.id
       from public.daily_story_loops dsl left join public.daily_questions dq
@@ -288,8 +297,9 @@ declare c public.couples%rowtype; data jsonb; r public.monthly_retrospectives%ro
   content private.monthly_retrospective_content%rowtype; generation_token uuid; questions jsonb; versions jsonb;
 begin
   select * into c from public.couples where status='active' and user_b_id is not null
-    and requested_user_id in(user_a_id,user_b_id);
+    and requested_user_id in(user_a_id,user_b_id) for update;
   if not found then perform private.raise_app_error('active_couple_required'); end if;
+  perform pg_advisory_xact_lock(hashtext('ai_consent'),hashtext(c.id::text));
   data := private.monthly_retrospective_data(c.id,requested_user_id);
   if not (data->>'ai_enabled')::boolean or not (data->>'has_records')::boolean
     or (data->>'completed_questions')::integer=0 then return jsonb_build_object('claimed',false); end if;
@@ -312,10 +322,13 @@ returns boolean language plpgsql security definer set search_path = '' as $$
 declare r public.monthly_retrospectives%rowtype; c public.couples%rowtype;
   content private.monthly_retrospective_content%rowtype; versions jsonb;
 begin
-  select * into r from public.monthly_retrospectives where id=requested_retrospective_id for update;
+  select * into r from public.monthly_retrospectives where id=requested_retrospective_id;
   if not found then return false; end if;
-  select * into c from public.couples where id=r.couple_id and status='active' and user_b_id is not null;
+  select * into c from public.couples where id=r.couple_id and status='active' and user_b_id is not null for update;
   if not found or not private.have_all_couple_members_granted_ai_consent(c.id) or r.available_until<=now() then return false; end if;
+  perform pg_advisory_xact_lock(hashtext('ai_consent'),hashtext(c.id::text));
+  if not private.have_all_couple_members_granted_ai_consent(c.id) then return false; end if;
+  select * into r from public.monthly_retrospectives where id=requested_retrospective_id for update;
   select * into content from private.monthly_retrospective_content where retrospective_id=r.id for update;
   select jsonb_object_agg(user_id::text,revision) into versions from public.ai_user_consents where couple_id=c.id;
   if content.retrospective_id is null or content.token is null or content.token is distinct from requested_token or content.lease_until is null or content.lease_until<=now()

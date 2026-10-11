@@ -15,7 +15,7 @@ create table public.story_loop_cards(
   has_photo boolean,has_drawing boolean default false,has_text boolean default false,text_layer_count integer default 0,
   text_character_count integer default 0,revision integer default 1,submitted_at timestamptz default now(),
   card_type text default 'full_bleed',layout_version integer default 1,is_featured boolean default false,
-  photo_count integer default 1,has_caption boolean default false
+  photo_count integer default 1
 );
 create table public.questions(id uuid primary key,question_text text);
 create table public.daily_questions(id uuid primary key,couple_id uuid,assigned_date date,question_id uuid);
