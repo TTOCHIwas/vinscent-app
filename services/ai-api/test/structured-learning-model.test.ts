@@ -68,6 +68,21 @@ const context: AnonymizedCompletedQuestionContext = {
   ],
 };
 
+test('personalized questions receive month-scoped reflections separately from permanent memories', async () => {
+  let prompt = '';
+  const model = new StructuredLearningModel({generateStructured: async (request) => {
+    prompt = request.prompt;
+    return {value:{question_text:'함께 쉬고 싶을 때 어떤 시간을 보내고 싶어?',category:'daily_life',mood:'curious',rationale:'함께 쉬는 방식의 빈 정보를 확인해'},usage:{inputTokenCount:null,outputTokenCount:null,latencyMs:1}};
+  }});
+  await model.generatePersonalizedQuestion({...context,monthlyReflections:[{
+    month:'2026-09',question:'다음 달 무엇을 하고 싶어?',answers:[{answerId:'r-a',participantKey:'partner_a',text:'함께 커피 마시기',version:2},{answerId:'r-b',participantKey:'partner_b',text:'같이 산책하기',version:1}],
+  }]});
+  assert.ok(prompt.includes('monthly_reflections'));
+  assert.ok(prompt.includes('함께 커피 마시기'));
+  assert.ok(prompt.includes('영구 취향'));
+  assert.ok(prompt.includes('2026-09'));
+});
+
 const generalQuestionContext: GeneralQuestionContext = {
   foundationProgress: {
     completedCount: 24,
