@@ -13,7 +13,7 @@ const data = async () => (await sql('select public.get_current_monthly_retrospec
 const login = (id) => sql("select set_config('test.user',$1,false)",[id]);
 
 before(async () => {
-  await db.exec(await readFile(new URL('monthly-fixture.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../test-fixtures/monthly-retrospective.sql',import.meta.url),'utf8'));
   const actualCardContract=await readFile(new URL('../../migrations/20260921090000_add_story_card_layout_versions.sql',import.meta.url),'utf8');
   await db.exec(actualCardContract.slice(actualCardContract.indexOf('create or replace function public.upsert_today_story_loop_card_v2('),
     actualCardContract.indexOf('create function public.get_today_story_card_stacks_v3(')));
