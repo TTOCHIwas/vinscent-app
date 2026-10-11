@@ -100,6 +100,7 @@
       "sensitivity": "configuration",
       "description": "Cloudflare account identifier used by Workers AI REST requests.",
       "functions": [
+        "generate-monthly-retrospective",
         "process-ai-learning-jobs"
       ]
     },
@@ -110,6 +111,7 @@
       "sensitivity": "secret",
       "description": "Cloudflare API token authorized to invoke Workers AI models.",
       "functions": [
+        "generate-monthly-retrospective",
         "process-ai-learning-jobs"
       ]
     },
@@ -120,6 +122,7 @@
       "sensitivity": "configuration",
       "description": "Optional Cloudflare Workers AI model override.",
       "functions": [
+        "generate-monthly-retrospective",
         "process-ai-learning-jobs"
       ]
     },
@@ -355,6 +358,7 @@
         "delete-account",
         "dispatch-scheduled-notifications",
         "generate-ai-proactive-suggestion",
+        "generate-monthly-retrospective",
         "monitor-storage-cleanup-health",
         "process-ai-learning-jobs",
         "process-safety-moderation-alerts",
@@ -377,6 +381,7 @@
         "delete-account",
         "dispatch-scheduled-notifications",
         "generate-ai-proactive-suggestion",
+        "generate-monthly-retrospective",
         "monitor-storage-cleanup-health",
         "process-ai-learning-jobs",
         "process-safety-moderation-alerts",
