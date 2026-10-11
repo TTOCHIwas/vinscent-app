@@ -8,6 +8,8 @@ import '../data/monthly_retrospective_repository.dart';
 final monthlyRetrospectiveControllerProvider = AsyncNotifierProvider.autoDispose<MonthlyRetrospectiveController, MonthlyRetrospective>(MonthlyRetrospectiveController.new, retry: (_, _) => null);
 
 class MonthlyRetrospectiveController extends AsyncNotifier<MonthlyRetrospective> {
+  int _epoch = 0;
+  bool _writing = false;
   @override
   Future<MonthlyRetrospective> build() async {
     final couple = await ref.watch(coupleControllerProvider.future);
@@ -23,7 +25,10 @@ class MonthlyRetrospectiveController extends AsyncNotifier<MonthlyRetrospective>
   }
 
   Future<void> refresh() async {
-    state = await AsyncValue.guard(() => ref.read(monthlyRetrospectiveRepositoryProvider).fetch());
+    if (_writing) return;
+    final epoch = ++_epoch;
+    final result = await AsyncValue.guard(() => ref.read(monthlyRetrospectiveRepositoryProvider).fetch());
+    if (ref.mounted && epoch == _epoch && !_writing) state = result;
   }
 
   Future<void> generate() async {
@@ -38,11 +43,26 @@ class MonthlyRetrospectiveController extends AsyncNotifier<MonthlyRetrospective>
   }
 
   Future<void> save(RetrospectiveReflection reflection, String text) async {
-    final data = await ref.read(monthlyRetrospectiveRepositoryProvider).save(reflection, text);
-    state = AsyncData(data);
+    await _write(() => ref.read(monthlyRetrospectiveRepositoryProvider).save(reflection, text));
   }
 
   Future<void> useBasicQuestion(String id) async {
-    state = AsyncData(await ref.read(monthlyRetrospectiveRepositoryProvider).useBasicQuestion(id));
+    await _write(() => ref.read(monthlyRetrospectiveRepositoryProvider).useBasicQuestion(id));
+  }
+
+  Future<void> _write(Future<MonthlyRetrospective> Function() operation) async {
+    if (_writing) throw StateError('답변을 저장하고 있어요');
+    _writing = true;
+    ++_epoch;
+    try {
+      final result = await operation();
+      if (ref.mounted) state = AsyncData(result);
+    } catch (_) {
+      _writing = false;
+      if (ref.mounted) await refresh();
+      rethrow;
+    } finally {
+      _writing = false;
+    }
   }
 }
