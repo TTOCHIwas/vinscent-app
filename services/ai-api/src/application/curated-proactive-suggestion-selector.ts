@@ -42,6 +42,7 @@ export interface CuratedProactiveSuggestionSelectionContext {
   hasCardToday: boolean;
   recordingAvailable: boolean;
   weather: ProactiveWeatherContext | null;
+  reflectionAnswerTexts?: readonly string[];
 }
 
 export interface SelectedCuratedProactiveSuggestion
@@ -299,6 +300,8 @@ export class CuratedProactiveSuggestionSelector {
     const eligible = this.#catalog.filter((entry) =>
       isCuratedProactiveSuggestionEligible(entry, context)
     );
+    const reflectionMatch = selectReflectionActivity(eligible, context.reflectionAnswerTexts ?? []);
+    if (reflectionMatch !== undefined) return { ...reflectionMatch };
     const dayNumber = utcDayNumber(context.localDate);
     const preferredTargetIndex = positiveModulo(
       dayNumber + stableHash(`${context.userId}|target`),
@@ -340,6 +343,28 @@ export class CuratedProactiveSuggestionSelector {
       kind: selected.kind,
     };
   }
+}
+
+function selectReflectionActivity(
+  eligible: readonly CuratedProactiveSuggestion[], answers: readonly string[],
+): CuratedProactiveSuggestion | undefined {
+  const activities: readonly [RegExp, string][] = [
+    [/커피|카페|음료/, 'together_06'],
+    [/영화|영상/, 'together_08'],
+    [/노래|음악/, 'together_02'],
+    [/간식/, 'together_01'],
+    [/산책|걷기|걸어/, 'weather_12'],
+  ];
+  for (const answer of answers) {
+    if (/싫|않|안\s|못|그만|말자|원하지/.test(answer) || !/싶|함께|같이|다시/.test(answer)) continue;
+    for (const [pattern, id] of activities) {
+      if (pattern.test(answer)) {
+        const match = eligible.find((entry) => entry.id === id);
+        if (match !== undefined) return match;
+      }
+    }
+  }
+  return undefined;
 }
 
 export function isCuratedProactiveSuggestionEligible(

@@ -121,6 +121,9 @@ export class GenerateProactiveSuggestionUseCase {
       generatedAt,
       baseContext,
     );
+    const reflectionAnswerTexts = baseContext.recentCompletedQuestions.flatMap((question) =>
+      question.answers.filter((answer) => /^\[\d{4}-\d{2} 회고\] /.test(answer.text)).map((answer) => answer.text)
+    );
     const candidate = this.#selector.select({
       userId,
       localDate: baseContext.localDate,
@@ -128,6 +131,7 @@ export class GenerateProactiveSuggestionUseCase {
       hasCardToday: baseContext.hasCardToday,
       recordingAvailable: true,
       weather,
+      ...(reflectionAnswerTexts.length > 0 ? {reflectionAnswerTexts} : {}),
     });
 
     const lifetimeMinutes = candidate.kind === 'sunset_card' ? 45 : 180;
