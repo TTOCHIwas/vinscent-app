@@ -336,7 +336,7 @@ function parseCompletedQuestionContext(
       return {month:requireString(item.month,10),question:requireString(item.question,300),answers:answers.map((answer) => {
         const value = requireRecord(answer);
         return {answerId:requireString(value.answer_id,160),userId:requireString(value.user_id,160),
-          text:requireString(value.text,500),version:requireInteger(value.version,1)};
+          text:requireReflectionText(value.text),version:requireInteger(value.version,1)};
       })};
     }),
     question: {
@@ -575,6 +575,13 @@ function requireString(value: unknown, maximum: number): string {
     throw new TypeError('invalid string');
   }
   return normalized;
+}
+
+function requireReflectionText(value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > 500) {
+    throw new TypeError('invalid monthly reflection');
+  }
+  return value;
 }
 
 function requireNullableString(
