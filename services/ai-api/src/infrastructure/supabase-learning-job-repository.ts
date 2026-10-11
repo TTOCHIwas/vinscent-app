@@ -333,7 +333,7 @@ function parseCompletedQuestionContext(
       const item = requireRecord(reflection);
       const answers = requireArray(item.answers);
       if (answers.length !== 2) throw new TypeError('shared monthly context requires two answers');
-      return {month:requireString(item.month,10),question:requireString(item.question,300),answers:answers.map((answer) => {
+      return {month:requireString(item.month,10),question:requireReflectionText(item.question,300),answers:answers.map((answer) => {
         const value = requireRecord(answer);
         return {answerId:requireString(value.answer_id,160),userId:requireString(value.user_id,160),
           text:requireReflectionText(value.text),version:requireInteger(value.version,1)};
@@ -577,8 +577,8 @@ function requireString(value: unknown, maximum: number): string {
   return normalized;
 }
 
-function requireReflectionText(value: unknown): string {
-  if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > 500) {
+function requireReflectionText(value: unknown, maximum = 500): string {
+  if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > maximum) {
     throw new TypeError('invalid monthly reflection');
   }
   return value;
