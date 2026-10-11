@@ -270,7 +270,7 @@
 - 24개 질문 미완료 상태에서도 회고 제공, 기존 AI 기능과 일반 질문 상태 불변.
 - 후속 AI 컨텍스트의 질문·월·최신 답변 반영, 동의 철회 제외, 일시적 바람의 영구 취향 오인 방지.
 
-위 동작 검증과 프로젝트의 `code-architecture-and-verification.md` 기준을 적용했다. 실제 Supabase 전체 migration과 기기 검증은 11절의 잔여 항목이다.
+위 동작 검증과 프로젝트의 `code-architecture-and-verification.md` 기준을 적용했다. 실제 Supabase 전체 migration·운영 배포 결과와 기기 검증 잔여 항목은 11절에 기록한다.
 
 ## 10. 추가 확정 사항
 
@@ -307,16 +307,18 @@
 | AI 서비스 전체 테스트 | 283개 통과 |
 | Supabase Edge 함수 테스트 | 129개 통과 |
 | Embedded PostgreSQL 계약 테스트 | 13개 통과 |
+| 전체 Supabase migration·pgTAP | PostgreSQL 17의 분리된 로컬 프로젝트에서 45개 파일, 928개 테스트 통과 |
+| 실제 로컬 DB lint | 오류 없음 |
+| Android 앱 모듈 네이티브 단위 테스트 | 23개 통과 |
 | Deno 타입 검사 | 월간 회고 생성, AI 학습 작업, 선제 추천 함수 통과 |
 | 코드 리뷰 | 발견한 결함 수정 후 HIGH·CRITICAL 없음 |
 
 Embedded DB 테스트는 PGlite에서 신규 migration 두 개와 기존 카드 v2/v3 함수의 실제 SQL을 실행한다. 기존 환경 테이블·일부 기반 함수는 fixture를 사용하므로 실제 Supabase 전체 migration, pg_cron 실행, 원격 권한·스토리지 검증을 대신하지 않는다.
 
-### 운영 적용 순서와 남은 확인
+### 운영 적용과 남은 확인
 
-1. Docker 엔진이 동작하는 환경에서 전체 Supabase migration을 적용하고 DB 계약·기존 회귀 테스트를 실행한다. 이번 환경에서는 Docker 엔진이 응답하지 않아 수행하지 못했다.
-2. `20261011112004_add_monthly_retrospective.sql`과 `20261011143000_connect_monthly_retrospective.sql`을 순서대로 적용한다. 생성 캐시 정리 작업과 서비스 역할 전용 함수 권한을 확인한다.
-3. `supabase/runtime-environment.manifest.json`에 정의한 기존 Supabase·Cloudflare 환경 변수를 확인하고 `generate-monthly-retrospective`, `process-ai-learning-jobs`, `generate-ai-proactive-suggestion`을 함께 배포한다. 생성 동의를 철회하거나 관계를 종료하면 진행 중 결과도 반영되지 않는지 확인한다.
-4. 업데이트한 모바일 앱에서 두 계정으로 통계·장면·답변 공개·수정 충돌·월 전환을 확인한다. 네 페이지의 실제 기기 화면과 키보드 배치를 확인한다.
+2026-10-11에 전체 migration·DB 회귀 검증을 완료하고 운영 프로젝트 `bovpxpmcjxcwlbpwmdck`에 신규 migration 두 개와 Edge 함수 배포를 완료했다. 원격 조회·저장 권한, 생성 준비 함수 보호, 답변 테이블 직접 접근 차단 및 매시간 캐시 정리 작업을 확인했다. 인증 없는 생성 요청은 401로 차단됐다.
 
-원격 배포, 실제 모델 호출의 생성 품질 평가, 실제 기기 화면 검증은 이번 로컬 구현·테스트에 포함되지 않는다.
+배포 소스 SHA, CI·배포 실행, 모바일 빌드 번호와 artifact 근거는 [월간 회고 배포 기록](release/monthly-retrospective-2026-10-11.md)에 기록한다.
+
+실제 모델 호출의 생성 품질 평가와 실제 기기 검증은 남아 있다. 베타 앱의 두 계정으로 통계·장면·답변 공개·수정 충돌·월 전환 및 동의 철회·관계 종료를 확인하고, 네 페이지의 실제 화면과 키보드 배치를 확인한다.
