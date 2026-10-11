@@ -38,6 +38,7 @@ export function createAiLearningModel(
   });
 
   return {
+    client,
     model: new StructuredLearningModel(client),
     provider: 'cloudflare' as const,
     modelName,
