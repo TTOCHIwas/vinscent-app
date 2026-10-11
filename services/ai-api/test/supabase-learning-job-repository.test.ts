@@ -25,7 +25,7 @@ test('repository maps claimed jobs and worker context', async () => {
     get_ai_processing_job_context: {
       data: {
         couple_id: 'couple-1',
-        monthly_reflections:[{month:'2026-09',question:'다음 달 함께 하고 싶은 일은?',answers:[
+        monthly_reflections:[{month:'2026-09',question:'다음 달 함께 하고 싶은 일은? '+ '😀'.repeat(200),answers:[
           {answer_id:'r-a',user_id:'user-a',text:'😀'.repeat(500),version:2},
           {answer_id:'r-b',user_id:'user-b',text:'같이 산책하기',version:1},
         ]}],
