@@ -285,7 +285,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'monthly-record',
                     name: 'monthlyRetrospectiveRecord',
                     builder: (context, state) => CalendarScreen(
-                      initialDate: parseCalendarDate(state.uri.queryParameters['date']),
+                      initialDate: parseCalendarDate(
+                        state.uri.queryParameters['date'],
+                      ),
                     ),
                   ),
                   GoRoute(

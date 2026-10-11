@@ -39,7 +39,14 @@ class _AiScreenState extends ConsumerState<AiScreen> {
     super.initState();
     _questionComposerController = AiDirectQuestionComposerController();
     _navigationGuard = ref.read(shellNavigationGuardProvider);
-    _navigationGuard.register(this, '/ai', () async => !_showMonthly || await (_monthlyKey.currentState?.confirmLeave() ?? Future.value(true)));
+    _navigationGuard.register(
+      this,
+      '/ai',
+      () async =>
+          !_showMonthly ||
+          await (_monthlyKey.currentState?.confirmLeave() ??
+              Future.value(true)),
+    );
   }
 
   @override
@@ -69,7 +76,9 @@ class _AiScreenState extends ConsumerState<AiScreen> {
         onRetry: () => ref.invalidate(aiLearningControllerProvider),
       ),
       data: (data) {
-        if (!_showMonthly) _scheduleVisibleReviewAcknowledgement(data, hasUnseenMemory);
+        if (!_showMonthly) {
+          _scheduleVisibleReviewAcknowledgement(data, hasUnseenMemory);
+        }
         return AiLearningDashboardView(
           dashboard: data,
           directQuestionComposerController: _questionComposerController,
@@ -81,41 +90,71 @@ class _AiScreenState extends ConsumerState<AiScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-          child: Row(children: [
-            Expanded(child: TextButton(onPressed: () async {
-              if (_showMonthly && !await (_monthlyKey.currentState?.confirmLeave() ?? Future.value(true))) return;
-              if (mounted) setState(() => _showMonthly = false);
-            }, child: Text('AI 질문', style: TextStyle(fontWeight: !_showMonthly ? FontWeight.bold : FontWeight.normal)))),
-            Expanded(child: TextButton(onPressed: () => setState(() => _showMonthly = true), child: Text('월간 회고', style: TextStyle(fontWeight: _showMonthly ? FontWeight.bold : FontWeight.normal)))),
-          ]),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () async {
+                    if (_showMonthly &&
+                        !await (_monthlyKey.currentState?.confirmLeave() ??
+                            Future.value(true))) {
+                      return;
+                    }
+                    if (mounted) setState(() => _showMonthly = false);
+                  },
+                  child: Text(
+                    'AI 질문',
+                    style: TextStyle(
+                      fontWeight: !_showMonthly
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TextButton(
+                  onPressed: () => setState(() => _showMonthly = true),
+                  child: Text(
+                    '월간 회고',
+                    style: TextStyle(
+                      fontWeight: _showMonthly
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         if (_showMonthly)
           Expanded(child: MonthlyRetrospectiveScreen(key: _monthlyKey))
         else ...[
-        AiTabHeader(
-          isQuestionReady: isQuestionReady,
-          remainingQuestionCount: remainingQuestionCount,
-          onHistoryPressed: isQuestionReady
-              ? () => context.push('/ai/ask')
-              : null,
-          onMemoryPressed: isQuestionReady
-              ? () => context.push('/ai/memories')
-              : null,
-          showMemoryAttention: hasUnseenMemory,
-        ),
-        Expanded(
-          child: ListenableBuilder(
-            listenable: _questionComposerController.focusNode,
-            child: content,
-            builder: (context, child) => AppKeyboardAccessoryLayout(
-              isActive: _questionComposerController.focusNode.hasFocus,
-              accessory: AiDirectQuestionKeyboardAccessory(
-                controller: _questionComposerController,
+          AiTabHeader(
+            isQuestionReady: isQuestionReady,
+            remainingQuestionCount: remainingQuestionCount,
+            onHistoryPressed: isQuestionReady
+                ? () => context.push('/ai/ask')
+                : null,
+            onMemoryPressed: isQuestionReady
+                ? () => context.push('/ai/memories')
+                : null,
+            showMemoryAttention: hasUnseenMemory,
+          ),
+          Expanded(
+            child: ListenableBuilder(
+              listenable: _questionComposerController.focusNode,
+              child: content,
+              builder: (context, child) => AppKeyboardAccessoryLayout(
+                isActive: _questionComposerController.focusNode.hasFocus,
+                accessory: AiDirectQuestionKeyboardAccessory(
+                  controller: _questionComposerController,
+                ),
+                child: child!,
               ),
-              child: child!,
             ),
           ),
-        ),
         ],
       ],
     );

@@ -104,7 +104,12 @@ class _AppShellState extends ConsumerState<AppShell> {
       canPop: canPop || widget.location == '/home',
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop && !canPop && widget.location != '/home') {
-          if (await ref.read(shellNavigationGuardProvider).allows(widget.location) && context.mounted) context.go('/home');
+          if (await ref
+                  .read(shellNavigationGuardProvider)
+                  .allows(widget.location) &&
+              context.mounted) {
+            context.go('/home');
+          }
         }
       },
       child: Scaffold(
@@ -136,8 +141,15 @@ class _AppShellState extends ConsumerState<AppShell> {
     return true;
   }
 
-  Future<void> _openBranch(BuildContext context, int index, String location) async {
-    if (!await ref.read(shellNavigationGuardProvider).allows(widget.location) || !context.mounted) return;
+  Future<void> _openBranch(
+    BuildContext context,
+    int index,
+    String location,
+  ) async {
+    if (!await ref.read(shellNavigationGuardProvider).allows(widget.location) ||
+        !context.mounted) {
+      return;
+    }
     final shell = widget.navigationShell;
     if (shell == null) {
       context.go(location);

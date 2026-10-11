@@ -13,12 +13,22 @@ class MonthlyRetrospective {
       summary = row['summary'] as String?,
       contentStatus = row['content_status'] as String,
       moments = (row['moments'] as List)
-          .map((v) => RetrospectiveMoment.fromJson(Map<String, dynamic>.from(v as Map)))
+          .map(
+            (v) => RetrospectiveMoment.fromJson(
+              Map<String, dynamic>.from(v as Map),
+            ),
+          )
           .toList(growable: false),
       conversation = row['conversation'] == null
-          ? null : RetrospectiveConversation.fromJson(Map<String, dynamic>.from(row['conversation'] as Map)),
+          ? null
+          : RetrospectiveConversation.fromJson(
+              Map<String, dynamic>.from(row['conversation'] as Map),
+            ),
       reflection = row['reflection'] == null
-          ? null : RetrospectiveReflection.fromJson(Map<String, dynamic>.from(row['reflection'] as Map));
+          ? null
+          : RetrospectiveReflection.fromJson(
+              Map<String, dynamic>.from(row['reflection'] as Map),
+            );
 
   final String coupleId;
   final DateTime month;
@@ -36,13 +46,23 @@ class MonthlyRetrospective {
   final RetrospectiveConversation? conversation;
   final RetrospectiveReflection? reflection;
 
-  bool get needsGeneration => hasRecords && aiEnabled && completedQuestions > 0 && contentStatus != 'ready';
+  bool get needsGeneration =>
+      hasRecords &&
+      aiEnabled &&
+      completedQuestions > 0 &&
+      contentStatus != 'ready';
 }
 
 class RetrospectiveMoment {
   RetrospectiveMoment.fromJson(Map<String, dynamic> row)
-    : date = DateTime.parse(row['date'] as String), question = row['question'] as String?,
-      cards = (row['cards'] as List).map((v) => RetrospectiveCard.fromJson(Map<String, dynamic>.from(v as Map))).toList(growable: false);
+    : date = DateTime.parse(row['date'] as String),
+      question = row['question'] as String?,
+      cards = (row['cards'] as List)
+          .map(
+            (v) =>
+                RetrospectiveCard.fromJson(Map<String, dynamic>.from(v as Map)),
+          )
+          .toList(growable: false);
   final DateTime date;
   final String? question;
   final List<RetrospectiveCard> cards;
@@ -50,7 +70,8 @@ class RetrospectiveMoment {
 
 class RetrospectiveCard {
   RetrospectiveCard.fromJson(Map<String, dynamic> row)
-    : id = row['id'] as String, previewPath = row['preview_path'] as String,
+    : id = row['id'] as String,
+      previewPath = row['preview_path'] as String,
       authorUserId = row['author_user_id'] as String,
       aspectRatio = (row['aspect_ratio'] as num).toDouble();
   final String id;
@@ -61,8 +82,10 @@ class RetrospectiveCard {
 
 class RetrospectiveConversation {
   RetrospectiveConversation.fromJson(Map<String, dynamic> row)
-    : date = DateTime.parse(row['date'] as String), question = row['question'] as String,
-      myAnswer = row['my_answer'] as String, partnerAnswer = row['partner_answer'] as String,
+    : date = DateTime.parse(row['date'] as String),
+      question = row['question'] as String,
+      myAnswer = row['my_answer'] as String,
+      partnerAnswer = row['partner_answer'] as String,
       partnerAnswerId = row['partner_answer_id'] as String;
   final DateTime date;
   final String question;
@@ -73,10 +96,14 @@ class RetrospectiveConversation {
 
 class RetrospectiveReflection {
   RetrospectiveReflection.fromJson(Map<String, dynamic> row)
-    : id = row['id'] as String, question = row['question'] as String?,
-      source = row['source'] as String?, myAnswer = row['my_answer'] as String?,
-      partnerAnswer = row['partner_answer'] as String?, partnerAnswerId = row['partner_answer_id'] as String?,
-      partnerAnswerExists = row['partner_answer_exists'] as bool, version = (row['version'] as num).toInt();
+    : id = row['id'] as String,
+      question = row['question'] as String?,
+      source = row['source'] as String?,
+      myAnswer = row['my_answer'] as String?,
+      partnerAnswer = row['partner_answer'] as String?,
+      partnerAnswerId = row['partner_answer_id'] as String?,
+      partnerAnswerExists = row['partner_answer_exists'] as bool,
+      version = (row['version'] as num).toInt();
   final String id;
   final String? question;
   final String? source;

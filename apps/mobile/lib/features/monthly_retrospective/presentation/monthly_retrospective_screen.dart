@@ -176,8 +176,9 @@ class MonthlyRetrospectiveScreenState
                   !_saving &&
                   _savedText != (data.reflection?.myAnswer ?? ''))) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && identical(_previousData, data))
+              if (mounted && identical(_previousData, data)) {
                 setState(() => _sync(data));
+              }
             });
           }
           if (data.needsGeneration &&

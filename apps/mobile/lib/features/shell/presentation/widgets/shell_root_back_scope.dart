@@ -61,7 +61,10 @@ class _ShellRootBackScopeState extends ConsumerState<ShellRootBackScope> {
             _handleExitRequest();
           case _ShellRootBackAction.returnHome:
             final location = GoRouterState.of(context).uri.path;
-            if (await ref.read(shellNavigationGuardProvider).allows(location) && context.mounted) context.go('/home');
+            if (await ref.read(shellNavigationGuardProvider).allows(location) &&
+                context.mounted) {
+              context.go('/home');
+            }
         }
       },
       child: widget.child,

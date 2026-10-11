@@ -8,7 +8,11 @@ class ShellNavigationGuard {
   Future<bool> Function()? _confirm;
   Future<bool>? _pending;
 
-  void register(Object owner, String location, Future<bool> Function() confirm) {
+  void register(
+    Object owner,
+    String location,
+    Future<bool> Function() confirm,
+  ) {
     _owner = owner;
     _location = location;
     _confirm = confirm;
