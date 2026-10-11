@@ -4,13 +4,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../application/shell_navigation_guard.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 
 enum _ShellRootBackAction { confirmExit, returnHome }
 
-class ShellRootBackScope extends StatefulWidget {
+class ShellRootBackScope extends ConsumerStatefulWidget {
   const ShellRootBackScope.home({super.key, required this.child})
     : _action = _ShellRootBackAction.confirmExit;
 
@@ -32,10 +34,10 @@ class ShellRootBackScope extends StatefulWidget {
   final _ShellRootBackAction _action;
 
   @override
-  State<ShellRootBackScope> createState() => _ShellRootBackScopeState();
+  ConsumerState<ShellRootBackScope> createState() => _ShellRootBackScopeState();
 }
 
-class _ShellRootBackScopeState extends State<ShellRootBackScope> {
+class _ShellRootBackScopeState extends ConsumerState<ShellRootBackScope> {
   Timer? _exitConfirmationTimer;
   bool _exitConfirmationActive = false;
 
@@ -49,7 +51,7 @@ class _ShellRootBackScopeState extends State<ShellRootBackScope> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
           return;
         }
@@ -58,7 +60,8 @@ class _ShellRootBackScopeState extends State<ShellRootBackScope> {
           case _ShellRootBackAction.confirmExit:
             _handleExitRequest();
           case _ShellRootBackAction.returnHome:
-            context.go('/home');
+            final location = GoRouterState.of(context).uri.path;
+            if (await ref.read(shellNavigationGuardProvider).allows(location) && context.mounted) context.go('/home');
         }
       },
       child: widget.child,

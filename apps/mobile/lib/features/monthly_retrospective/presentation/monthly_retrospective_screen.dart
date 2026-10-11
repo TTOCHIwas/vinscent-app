@@ -30,6 +30,7 @@ class MonthlyRetrospectiveScreenState extends ConsumerState<MonthlyRetrospective
   bool _editing = false;
   bool _saving = false;
   bool _generating = false;
+  MonthlyRetrospective? _previousData;
   bool get _dirty => _answer.text != _savedText;
 
   @override
@@ -74,12 +75,7 @@ class MonthlyRetrospectiveScreenState extends ConsumerState<MonthlyRetrospective
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(monthlyRetrospectiveControllerProvider);
-    return PopScope(
-      canPop: !_dirty,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (!didPop && await confirmLeave() && context.mounted) Navigator.of(context).pop(result);
-      },
-      child: Material(key: const Key('monthly-retrospective-surface'), color: AppColors.background,
+    return Material(key: const Key('monthly-retrospective-surface'), color: AppColors.background,
         child: state.when(
           loading: () => const Center(child: AppLoadingIndicator()),
           error: (error, stack) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -87,6 +83,16 @@ class MonthlyRetrospectiveScreenState extends ConsumerState<MonthlyRetrospective
             TextButton(onPressed: () => ref.invalidate(monthlyRetrospectiveControllerProvider), child: const Text('다시 시도')),
           ]))),
           data: (data) {
+            if (_previousData != null && _previousData!.month != data.month && _dirty) {
+              return ListView(padding: const EdgeInsets.all(24),children: [
+                const Text('새로운 월간 회고가 도착했어요. 이전 달의 작성 중인 답변은 아래에 남겨 두었어요.'),
+                const SizedBox(height:16), SelectableText(_answer.text),
+                TextButton(onPressed: () async {
+                  if (await confirmLeave() && mounted) setState(() { _previousData = data; _sync(data); });
+                }, child: const Text('새 회고 열기')),
+              ]);
+            }
+            _previousData = data;
             if (_reflectionId != data.reflection?.id) {
               WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() => _sync(data)); });
             }
@@ -121,7 +127,6 @@ class MonthlyRetrospectiveScreenState extends ConsumerState<MonthlyRetrospective
             ]);
           },
         ),
-      ),
     );
   }
 
@@ -159,7 +164,7 @@ class MonthlyRetrospectiveScreenState extends ConsumerState<MonthlyRetrospective
 
   void _openRecord(DateTime date) {
     final formatted = '${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
-    context.push('/calendar?date=$formatted');
+    context.push('/ai/monthly-record?date=$formatted');
   }
 
   List<Widget> _conversation(RetrospectiveConversation conversation) => [

@@ -282,6 +282,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         const AiFocusedQuestionScreen(),
                   ),
                   GoRoute(
+                    path: 'monthly-record',
+                    name: 'monthlyRetrospectiveRecord',
+                    builder: (context, state) => CalendarScreen(
+                      initialDate: parseCalendarDate(state.uri.queryParameters['date']),
+                    ),
+                  ),
+                  GoRoute(
                     path: 'ask',
                     name: 'aiDirectQuestion',
                     builder: (context, state) => const AiDirectQuestionScreen(),

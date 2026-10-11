@@ -13,6 +13,7 @@ import '../application/ai_learning_controller.dart';
 import '../application/ai_memory_attention_controller.dart';
 import '../data/ai_learning_dashboard.dart';
 import '../../monthly_retrospective/presentation/monthly_retrospective_screen.dart';
+import '../../shell/application/shell_navigation_guard.dart';
 import 'ai_direct_question_composer_controller.dart';
 import 'widgets/ai_direct_question_keyboard_accessory.dart';
 import 'widgets/ai_learning_dashboard_view.dart';
@@ -31,16 +32,20 @@ class _AiScreenState extends ConsumerState<AiScreen> {
   String? _scheduledAttentionSignature;
   bool _showMonthly = false;
   final _monthlyKey = GlobalKey<MonthlyRetrospectiveScreenState>();
+  late final ShellNavigationGuard _navigationGuard;
 
   @override
   void initState() {
     super.initState();
     _questionComposerController = AiDirectQuestionComposerController();
+    _navigationGuard = ref.read(shellNavigationGuardProvider);
+    _navigationGuard.register(this, '/ai', () async => !_showMonthly || await (_monthlyKey.currentState?.confirmLeave() ?? Future.value(true)));
   }
 
   @override
   void dispose() {
     _questionComposerController.dispose();
+    _navigationGuard.unregister(this);
     super.dispose();
   }
 

@@ -6,10 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../application/app_attention_summary.dart';
+import '../application/shell_navigation_guard.dart';
 import 'widgets/app_bottom_bar.dart';
 import 'widgets/shell_bottom_bar_visibility_notification.dart';
 
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
     required this.child,
@@ -36,7 +37,7 @@ class AppShell extends StatefulWidget {
   final bool observeAttention;
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 
   bool get _hidesBottomBar {
     return location.startsWith('/home/recordings') ||
@@ -48,7 +49,7 @@ class AppShell extends StatefulWidget {
   }
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   bool _isBottomBarRequestedHidden = false;
 
   @override
@@ -101,9 +102,9 @@ class _AppShellState extends State<AppShell> {
 
     return PopScope(
       canPop: canPop || widget.location == '/home',
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && widget.location != '/home') {
-          context.go('/home');
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop && !canPop && widget.location != '/home') {
+          if (await ref.read(shellNavigationGuardProvider).allows(widget.location) && context.mounted) context.go('/home');
         }
       },
       child: Scaffold(
@@ -135,7 +136,8 @@ class _AppShellState extends State<AppShell> {
     return true;
   }
 
-  void _openBranch(BuildContext context, int index, String location) {
+  Future<void> _openBranch(BuildContext context, int index, String location) async {
+    if (!await ref.read(shellNavigationGuardProvider).allows(widget.location) || !context.mounted) return;
     final shell = widget.navigationShell;
     if (shell == null) {
       context.go(location);
