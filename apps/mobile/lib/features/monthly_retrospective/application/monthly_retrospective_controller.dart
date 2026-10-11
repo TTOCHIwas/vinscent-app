@@ -5,29 +5,45 @@ import '../../couple/data/couple.dart';
 import '../data/monthly_retrospective.dart';
 import '../data/monthly_retrospective_repository.dart';
 
-final monthlyRetrospectiveControllerProvider = AsyncNotifierProvider.autoDispose<MonthlyRetrospectiveController, MonthlyRetrospective>(MonthlyRetrospectiveController.new, retry: (_, _) => null);
+final monthlyRetrospectiveControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      MonthlyRetrospectiveController,
+      MonthlyRetrospective
+    >(MonthlyRetrospectiveController.new, retry: (_, _) => null);
 
-class MonthlyRetrospectiveController extends AsyncNotifier<MonthlyRetrospective> {
+class MonthlyRetrospectiveController
+    extends AsyncNotifier<MonthlyRetrospective> {
   int _epoch = 0;
   bool _writing = false;
   @override
   Future<MonthlyRetrospective> build() async {
     final couple = await ref.watch(coupleControllerProvider.future);
-    if (couple == null || !couple.canReadSharedData || couple.status != CoupleStatus.active) {
+    if (couple == null ||
+        !couple.canReadSharedData ||
+        couple.status != CoupleStatus.active) {
       throw StateError('연결된 커플만 월간 회고를 볼 수 있어요');
     }
     final repository = ref.read(monthlyRetrospectiveRepositoryProvider);
     final data = await repository.fetch();
     final remaining = data.availableUntil.difference(DateTime.now().toUtc());
-    final timer = Timer(remaining.isNegative ? const Duration(minutes: 1) : remaining, () => ref.invalidateSelf());
+    final timer = Timer(
+      remaining.isNegative ? const Duration(minutes: 1) : remaining,
+      () => ref.invalidateSelf(),
+    );
     ref.onDispose(timer.cancel);
+    final updates = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (ref.mounted) unawaited(refresh());
+    });
+    ref.onDispose(updates.cancel);
     return data;
   }
 
   Future<void> refresh() async {
     if (_writing) return;
     final epoch = ++_epoch;
-    final result = await AsyncValue.guard(() => ref.read(monthlyRetrospectiveRepositoryProvider).fetch());
+    final result = await AsyncValue.guard(
+      () => ref.read(monthlyRetrospectiveRepositoryProvider).fetch(),
+    );
     if (ref.mounted && epoch == _epoch && !_writing) state = result;
   }
 
@@ -43,11 +59,18 @@ class MonthlyRetrospectiveController extends AsyncNotifier<MonthlyRetrospective>
   }
 
   Future<void> save(RetrospectiveReflection reflection, String text) async {
-    await _write(() => ref.read(monthlyRetrospectiveRepositoryProvider).save(reflection, text));
+    await _write(
+      () => ref
+          .read(monthlyRetrospectiveRepositoryProvider)
+          .save(reflection, text),
+    );
   }
 
   Future<void> useBasicQuestion(String id) async {
-    await _write(() => ref.read(monthlyRetrospectiveRepositoryProvider).useBasicQuestion(id));
+    await _write(
+      () =>
+          ref.read(monthlyRetrospectiveRepositoryProvider).useBasicQuestion(id),
+    );
   }
 
   Future<void> _write(Future<MonthlyRetrospective> Function() operation) async {
