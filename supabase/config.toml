@@ -400,6 +400,9 @@ verify_jwt = false
 [functions.process-storage-cleanup]
 verify_jwt = false
 
+[functions.generate-monthly-retrospective]
+verify_jwt = false
+
 [functions.purge-disconnected-couple-archives]
 verify_jwt = false
 

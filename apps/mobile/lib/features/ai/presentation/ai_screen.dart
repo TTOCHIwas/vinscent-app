@@ -12,6 +12,7 @@ import '../application/ai_direct_question_controller.dart';
 import '../application/ai_learning_controller.dart';
 import '../application/ai_memory_attention_controller.dart';
 import '../data/ai_learning_dashboard.dart';
+import '../../monthly_retrospective/presentation/monthly_retrospective_screen.dart';
 import 'ai_direct_question_composer_controller.dart';
 import 'widgets/ai_direct_question_keyboard_accessory.dart';
 import 'widgets/ai_learning_dashboard_view.dart';
@@ -28,6 +29,8 @@ class AiScreen extends ConsumerStatefulWidget {
 class _AiScreenState extends ConsumerState<AiScreen> {
   late final AiDirectQuestionComposerController _questionComposerController;
   String? _scheduledAttentionSignature;
+  bool _showMonthly = false;
+  final _monthlyKey = GlobalKey<MonthlyRetrospectiveScreenState>();
 
   @override
   void initState() {
@@ -61,7 +64,7 @@ class _AiScreenState extends ConsumerState<AiScreen> {
         onRetry: () => ref.invalidate(aiLearningControllerProvider),
       ),
       data: (data) {
-        _scheduleVisibleReviewAcknowledgement(data, hasUnseenMemory);
+        if (!_showMonthly) _scheduleVisibleReviewAcknowledgement(data, hasUnseenMemory);
         return AiLearningDashboardView(
           dashboard: data,
           directQuestionComposerController: _questionComposerController,
@@ -71,6 +74,19 @@ class _AiScreenState extends ConsumerState<AiScreen> {
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+          child: Row(children: [
+            Expanded(child: TextButton(onPressed: () async {
+              if (_showMonthly && !await (_monthlyKey.currentState?.confirmLeave() ?? Future.value(true))) return;
+              if (mounted) setState(() => _showMonthly = false);
+            }, child: Text('AI 질문', style: TextStyle(fontWeight: !_showMonthly ? FontWeight.bold : FontWeight.normal)))),
+            Expanded(child: TextButton(onPressed: () => setState(() => _showMonthly = true), child: Text('월간 회고', style: TextStyle(fontWeight: _showMonthly ? FontWeight.bold : FontWeight.normal)))),
+          ]),
+        ),
+        if (_showMonthly)
+          Expanded(child: MonthlyRetrospectiveScreen(key: _monthlyKey))
+        else ...[
         AiTabHeader(
           isQuestionReady: isQuestionReady,
           remainingQuestionCount: remainingQuestionCount,
@@ -95,6 +111,7 @@ class _AiScreenState extends ConsumerState<AiScreen> {
             ),
           ),
         ),
+        ],
       ],
     );
   }

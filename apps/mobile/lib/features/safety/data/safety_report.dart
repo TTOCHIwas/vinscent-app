@@ -2,6 +2,7 @@ enum SafetyReportTargetType {
   partner('partner'),
   storyCard('story_card'),
   questionAnswer('question_answer'),
+  monthlyReflectionAnswer('monthly_reflection_answer'),
   recording('recording'),
   calendarEvent('calendar_event'),
   character('character'),
