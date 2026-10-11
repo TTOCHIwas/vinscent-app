@@ -310,7 +310,8 @@ bool _isAiTarget(SafetyReportTargetType targetType) {
     SafetyReportTargetType.aiFeedback ||
     SafetyReportTargetType.aiDirectAnswer ||
     SafetyReportTargetType.aiProactiveSuggestion ||
-    SafetyReportTargetType.aiMemory => true,
+    SafetyReportTargetType.aiMemory ||
+    SafetyReportTargetType.aiMonthlyRetrospective => true,
     _ => false,
   };
 }

@@ -3,6 +3,7 @@ enum SafetyReportTargetType {
   storyCard('story_card'),
   questionAnswer('question_answer'),
   monthlyReflectionAnswer('monthly_reflection_answer'),
+  aiMonthlyRetrospective('ai_monthly_retrospective'),
   recording('recording'),
   calendarEvent('calendar_event'),
   character('character'),
