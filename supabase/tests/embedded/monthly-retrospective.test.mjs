@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { before, after, test } from 'node:test';
+import { before, beforeEach, after, test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 
@@ -14,13 +14,23 @@ const login = (id) => sql("select set_config('test.user',$1,false)",[id]);
 
 before(async () => {
   await db.exec(await readFile(new URL('monthly-fixture.sql',import.meta.url),'utf8'));
+  const actualCardContract=await readFile(new URL('../../migrations/20260921090000_add_story_card_layout_versions.sql',import.meta.url),'utf8');
+  await db.exec(actualCardContract.slice(actualCardContract.indexOf('create or replace function public.upsert_today_story_loop_card_v2('),
+    actualCardContract.indexOf('create function public.get_today_story_card_stacks_v3(')));
   await db.exec(await readFile(new URL('../../migrations/20261011112004_add_monthly_retrospective.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../migrations/20261011143000_connect_monthly_retrospective.sql',import.meta.url),'utf8'));
   await sql('insert into auth.users values($1),($2)',[a,b]);
   await sql("insert into public.couples values($1,$2,$3,'UTC','active')",[c,a,b]);
   month = (await sql("select to_char(date_trunc('month',now())-interval '1 month','YYYY-MM-DD') as month"))[0].month;
   await login(a);
 });
 after(() => db.close());
+beforeEach(async()=>{
+  await db.exec('truncate public.monthly_retrospectives,public.story_loop_cards,public.daily_story_loops,public.daily_question_answers,public.daily_questions,public.questions,public.ai_user_consents,public.safety_reports,private.story_card_write_receipts,private.story_card_daily_counts cascade');
+  await sql("update public.couples set status='active' where id=$1",[c]);
+  await sql('update private.story_card_count_coverage set started_at=now()');
+  await login(a);
+});
 
 async function card(day,user=a,photo=true,featured=true) {
   return (await sql(`insert into public.story_loop_cards(couple_id,couple_date,author_user_id,artifact_revision,preview_path,scene_data_path,has_photo,is_featured)
@@ -31,6 +41,20 @@ async function question(day,answers) {
   const daily=(await sql('insert into public.daily_questions values(gen_random_uuid(),$1,$2::date+($3::integer-1),$4) returning id',[c,month,day,id]))[0].id;
   for(let i=0;i<answers.length;i++) await sql('insert into public.daily_question_answers(daily_question_id,user_id,answer_text) values($1,$2,$3)',[daily,i===0?a:b,answers[i]]);
   return daily;
+}
+
+async function sharedReflection() {
+  await question(11,['함께 쉰 시간','같이 커피 마셨어']);
+  const id=(await data()).reflection.id;
+  await login(b);
+  await sql('select public.submit_current_monthly_retrospective_answer($1,$2,0)',[id,'같이 산책하기']);
+  await login(a);
+  await sql('select public.submit_current_monthly_retrospective_answer($1,$2,0)',[id,'같이 커피 마시기']);
+  await sql('insert into public.ai_user_consents values($1,$2,1,true),($1,$3,1,true)',[c,a,b]);
+  const claim=(await sql('select public.prepare_monthly_retrospective_generation($1) as data',[a]))[0].data;
+  await sql('select public.finish_monthly_retrospective_generation($1,$2,$3::jsonb)',[id,claim.token,
+    JSON.stringify({title:'함께 쉰 시간',summary_sentences:['함께 쉬었어.','커피를 마셨다고 남겼어.'],question:'다음에는 무엇을 할까?'})]);
+  return id;
 }
 
 test('empty month has no input, and incomplete counts are not zero', async () => {
@@ -58,6 +82,7 @@ test('selects photo dates by answer presence, stripped length and early ties',as
 });
 
 test('retains each author featured card rather than exposing rollover siblings',async()=>{
+  await card(3);
   await card(3,b);
   await card(3,a,true,false);
   const result=await data();
@@ -66,6 +91,7 @@ test('retains each author featured card rather than exposing rollover siblings',
 });
 
 test('fixed question survives generation and partner stays hidden until own answer',async()=>{
+  await question(11,['함께 커피 마셨어','같이 커피 마셨지']);
   const first=await data();const id=first.reflection.id;
   await login(b);
   await sql('select public.submit_current_monthly_retrospective_answer($1,$2,0)',[id,'같이 산책하기']);
@@ -100,6 +126,7 @@ test('direct deletion decrements and replay creates only one counted card',async
 });
 
 test('automatic row removal preserves write counts and full-month coverage returns a number',async()=>{
+  await card(3);
   const id=await card(9,a,true,false);
   const before=(await sql('select sum(card_count)::integer as total from private.story_card_daily_counts where couple_date<$1::date+interval \'1 month\'',[month]))[0].total;
   await sql('delete from public.story_loop_cards where id=$1',[id]);
@@ -107,11 +134,73 @@ test('automatic row removal preserves write counts and full-month coverage retur
   assert.equal((await data()).card_count,before);
 });
 
+test('v3 replay protects all visual metadata without counting again',async()=>{
+  const artifact=(await sql('select gen_random_uuid() as id'))[0].id;
+  const write="select * from public.upsert_today_story_loop_card_v3($1,'p','s',null,true,false,false,0,0,$2,4,false,$3,null)";
+  const saved=(await sql(write,[artifact,'four_cut_grid',2]))[0];
+  assert.equal((await sql(write,[artifact,'four_cut_grid',2]))[0].card_id,saved.card_id);
+  await assert.rejects(sql(write,[artifact,'four_cut_strip',2]));
+  await assert.rejects(sql(write,[artifact,'four_cut_grid',1]));
+});
+
+test('new report targets verify partner visibility and snapshots on server',async()=>{
+  await sharedReflection();
+  const result=await data();
+  const report=(await sql("select public.submit_safety_report('monthly_reflection_answer',$1,'other',null,null) as id",[result.reflection.partner_answer_id]))[0].id;
+  assert.equal((await sql('select content_snapshot from public.safety_reports where id=$1',[report]))[0].content_snapshot,'같이 산책하기');
+  await assert.rejects(sql("select public.submit_safety_report('monthly_reflection_answer',$1,'other',null,null)",[result.reflection.my_answer_id]));
+  const aiReport=(await sql("select public.submit_safety_report('ai_monthly_retrospective',$1,'unsafe_ai',null,'forged content') as id",[result.reflection.id]))[0].id;
+  assert.equal((await sql('select content_snapshot from public.safety_reports where id=$1',[aiReport]))[0].content_snapshot.includes('forged content'),false);
+});
+
+test('latest shared reflections reach question context without changing ordinary questions',async()=>{
+  await sharedReflection();
+  const result=await data();
+  await sql('select public.submit_current_monthly_retrospective_answer($1,$2,1)',[result.reflection.id,'수정한 커피 이야기']);
+  const context=(await sql('select public.get_ai_processing_job_context(gen_random_uuid()) as data'))[0].data;
+  assert.equal(context.monthly_reflections.length,1);
+  assert.equal(context.monthly_reflections[0].answers.find(answer=>answer.user_id===a).text,'수정한 커피 이야기');
+  assert.equal(context.monthly_reflections[0].answers.find(answer=>answer.user_id===a).version,2);
+});
+
 test('expired answers and disconnected couples cannot be read or written',async()=>{
+  await sharedReflection();
   const id=(await data()).reflection.id;
   await sql("update public.monthly_retrospectives set available_until=now()-interval '1 second' where id=$1",[id]);
   await assert.rejects(sql('select public.submit_current_monthly_retrospective_answer($1,$2,1)',[id,'늦은 저장']));
   await sql("update public.couples set status='disconnected' where id=$1",[c]);
   await assert.rejects(data());
   await assert.rejects(sql('select public.prepare_monthly_retrospective_generation($1)',[a]));
+});
+
+test('complete empty counts are zero and two photo dates fill a missing segment',async()=>{
+  await sql("update private.story_card_count_coverage set started_at=$1::date-interval '1 day'",[month]);
+  assert.equal((await data()).card_count,0);
+  await card(2);await card(4);await question(2,['가']);await question(4,['긴 답변']);
+  assert.deepEqual((await data()).moments.map(m=>Number(m.date.slice(-2))),[2,4]);
+});
+
+test('consent revision change rejects a late result and expired cache is purged',async()=>{
+  await sharedReflection();
+  const id=(await data()).reflection.id;
+  await sql("update private.monthly_retrospective_content set status='failed',title=null,summary=null where retrospective_id=$1",[id]);
+  const claim=(await sql('select public.prepare_monthly_retrospective_generation($1) as data',[a]))[0].data;
+  await sql('update public.ai_user_consents set revision=revision+1 where user_id=$1',[b]);
+  const completed=(await sql('select public.finish_monthly_retrospective_generation($1,$2,$3::jsonb) as value',[id,claim.token,
+    JSON.stringify({title:'늦은 결과',summary_sentences:['첫 문장.','둘째 문장.'],question:'어땠어?'})]))[0].value;
+  assert.equal(completed,false);
+  await sql("update private.monthly_retrospective_content set expires_at=now()-interval '1 second'");
+  await sql('select private.purge_expired_monthly_retrospective_content()');
+  assert.equal((await sql('select count(*)::integer as count from private.monthly_retrospective_content'))[0].count,0);
+  assert.equal((await sql('select count(*)::integer as count from public.monthly_retrospective_answers'))[0].count,2);
+});
+
+test('authenticated role cannot read permanent answers or invoke generation internals directly',async()=>{
+  await sharedReflection();
+  await db.exec('set role authenticated');
+  try {
+    await assert.rejects(sql('select * from public.monthly_retrospective_answers'));
+    await assert.rejects(sql('select public.prepare_monthly_retrospective_generation($1)',[a]));
+    await assert.rejects(sql('select * from private.monthly_retrospective_content'));
+  } finally { await db.exec('reset role'); }
 });

@@ -14,7 +14,8 @@ create table public.story_loop_cards(
   artifact_revision uuid,preview_path text,scene_data_path text,background_image_path text,
   has_photo boolean,has_drawing boolean default false,has_text boolean default false,text_layer_count integer default 0,
   text_character_count integer default 0,revision integer default 1,submitted_at timestamptz default now(),
-  card_type text default 'full_bleed',layout_version integer default 1,is_featured boolean default false
+  card_type text default 'full_bleed',layout_version integer default 1,is_featured boolean default false,
+  photo_count integer default 1,has_caption boolean default false
 );
 create table public.questions(id uuid primary key,question_text text);
 create table public.daily_questions(id uuid primary key,couple_id uuid,assigned_date date,question_id uuid);
@@ -45,3 +46,12 @@ create function public.delete_story_card(target_card_id uuid) returns void langu
 if not exists(select 1 from public.story_loop_cards where id=target_card_id and author_user_id=auth.uid() and couple_date=private.current_date_in_timezone('UTC')) then raise exception 'story_card_locked'; end if;
 delete from public.story_loop_cards where id=target_card_id;end$$;
 create function private.get_ai_user_personalization_context(uuid,uuid,integer) returns jsonb language sql stable as $$select '{"recent_completed_questions":[]}'::jsonb$$;
+create function public.get_ai_processing_job_context(uuid) returns jsonb language sql as $$select jsonb_build_object('couple_id',id) from public.couples limit 1$$;
+create table public.safety_reports(
+  id uuid primary key default gen_random_uuid(),reporter_user_id uuid,reported_user_id uuid,couple_id uuid,
+  target_type text,target_id text,reason text,details text,content_snapshot text,
+  constraint safety_reports_target_type_check check(target_type in('partner')),
+  unique(reporter_user_id,target_type,target_id)
+);
+create function private.resolve_safety_report_target(uuid,uuid,uuid,text,text,text)
+returns table(reported_user_id uuid,content_snapshot text) language sql as $$select null::uuid,null::text where false$$;
