@@ -46,7 +46,7 @@ DB 전체 테스트 중 embedded fixture가 pgTAP 테스트로 잘못 발견되�
 | --- | --- | --- | --- |
 | iOS 서명 후보 | [38140630423](https://github.com/TTOCHIwas/vinscent-app/actions/runs/38140630423) | `2026101101` | 성공, 업로드 없음 |
 | Android 내부 테스트 | [38141274680](https://github.com/TTOCHIwas/vinscent-app/actions/runs/38141274680) | `2026101102` | 성공, internal 트랙 completed 릴리스 commit 확인 |
-| iOS TestFlight | [38141955159](https://github.com/TTOCHIwas/vinscent-app/actions/runs/38141955159) | `2026101102` | 업로드 성공; Apple 처리·내부 테스터 배포 상태 미확인 |
+| iOS TestFlight | [38141955159](https://github.com/TTOCHIwas/vinscent-app/actions/runs/38141955159) | `2026101102` | Apple 처리 완료, 기존 내부 그룹 배포 및 두 테스터 설치 확인 |
 
 iOS 후보를 내려받아 IPA·archive·entitlement·privacy 목록의 SHA-256 5개를 모두 검증했다. 앱과 위젯 식별자, production push, App Group, Apple 로그인 권한 및 디버그 허용 해제 상태를 확인한 뒤 같은 소스를 새 빌드 번호로 TestFlight에 업로드하는 실행을 시작했다. Apple 업로드 성공과 빌드 처리·테스터 배포 상태는 따로 기록한다.
 
@@ -69,11 +69,13 @@ Android는 `internal`, `completed`, `단짠 1.0.0 (2026101102)` 릴리스로 `20
 - 배포 archive SHA-256: `5b3d8ad10b5b53c98408ab1fe96c67525898f58684cfdd690476bfae7c8cc173`.
 - Apple delivery UUID: `8a40c9e7-8dcb-45b3-a395-9628763ca47d`.
 
-App Store Connect는 암호 입력이 필요한 로그인 페이지에 있어 Apple 처리 완료, 내부 그룹의 빌드 배정·자동 배포 여부는 확인하지 못했다. 기존 인증·서명 자산은 변경하지 않았으며, 로그인 후 TestFlight의 실제 상태를 확인해야 한다.
+2026-10-12 07:23 KST에 사용자 로그인 후 App Store Connect에서 Apple 처리 완료와 내부 배포를 확인했다. 앱 ID는 `6801395995`이며, 빌드 `1.0.0 (2026101102)`는 기존 `단짠 내부 테스트` 그룹에 연결돼 있다. 그룹의 기존 두 테스터 모두 해당 빌드가 `설치됨`으로 표시됐고 설치 날짜는 2026-10-12였다. 두 기기는 iPhone 13, iOS 26.6.1로 표시됐다. 그룹과 테스터, 인증·서명 자산은 변경하지 않았다.
+
+확인 경로: [기존 내부 테스트 그룹](https://appstoreconnect.apple.com/teams/586ee3e2-cc50-43ae-906b-a31849fb536e/apps/6801395995/testflight/groups/fd92aeab-3f0d-4764-9e7c-7fe838b90585).
 
 ## 실제 기기에서 남은 확인
 
-현재 환경에는 실행 가능한 Android 기기·에뮬레이터 및 iPhone이 없어 실기기 검증은 미수행이다. 자동 테스트와 서명된 릴리스 빌드 성공을 실기기 성공으로 기록하지 않는다.
+현재 환경에는 제어 가능한 Android 기기·에뮬레이터 및 iPhone이 없어 기능별 실기기 검증은 미수행이다. TestFlight 내부 테스터 두 명의 최신 빌드 설치 상태는 확인했지만, 자동 테스트·빌드·설치 성공을 아래 기능별 검증 통과로 기록하지 않는다.
 
 베타 앱을 설치한 두 계정으로 다음 항목을 확인한다.
 
