@@ -2,6 +2,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/monthly_retrospective/data/monthly_retrospective.dart';
 
 void main() {
+  test(
+    'reads dated gallery cards without changing old response compatibility',
+    () {
+      final legacy = MonthlyRetrospective.fromJson(_row(null, false));
+      expect(legacy.gallery, isEmpty);
+      final data = MonthlyRetrospective.fromJson({
+        ..._row(7, true),
+        'gallery': [
+          {
+            'id': 'c1',
+            'date': '2026-09-12',
+            'author_user_id': 'u1',
+            'preview_path': 'preview',
+            'aspect_ratio': 8 / 21,
+            'card_type': 'four_cut_strip',
+            'layout_version': 2,
+          },
+        ],
+      });
+      expect(data.gallery.single.date, DateTime(2026, 9, 12));
+      expect(data.gallery.single.aspectRatio, 8 / 21);
+      expect(data.gallery.single.layoutVersion, 2);
+      expect(data.cardCount, 7);
+    },
+  );
   test('distinguishes incomplete card counts from a complete zero', () {
     final incomplete = MonthlyRetrospective.fromJson(_row(null, false));
     final complete = MonthlyRetrospective.fromJson(_row(0, true));

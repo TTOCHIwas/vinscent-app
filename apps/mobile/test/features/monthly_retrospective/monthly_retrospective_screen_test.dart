@@ -29,7 +29,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('마음 남기기'));
+      await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('수정하기'));
       await tester.pumpAndSettle();
@@ -75,7 +75,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('마음 남기기'));
+    await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('수정하기'));
     await tester.pumpAndSettle();
@@ -112,7 +112,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('마음 남기기'));
+    await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
     await tester.pumpAndSettle();
     (container.read(monthlyRetrospectiveControllerProvider.notifier)
             as _Controller)
@@ -141,8 +141,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('지난달 이야기'), findsOneWidget);
-      expect(find.text('그날의 기억'), findsOneWidget);
+      expect(find.text('지난달 이야기'), findsNothing);
+      expect(find.text('그날의 기억'), findsNothing);
       expect(find.text('우리의 답'), findsNothing);
       expect(find.text('집계 불가'), findsOneWidget);
       expect(find.text('남긴 카드'), findsOneWidget);
@@ -154,13 +154,13 @@ void main() {
             .color,
         AppColors.background,
       );
-      await tester.tap(find.text('마음 남기기'));
+      await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsOneWidget);
       await tester.enterText(find.byType(TextField), '다음 달 같이 산책하기');
-      await tester.tap(find.text('지난달 이야기'));
+      await tester.tap(find.byKey(const Key('monthly-page-indicator-0')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('마음 남기기'));
+      await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
       await tester.pumpAndSettle();
       expect(find.text('다음 달 같이 산책하기'), findsOneWidget);
     },

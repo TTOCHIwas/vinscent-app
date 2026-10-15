@@ -19,6 +19,7 @@ before(async () => {
     actualCardContract.indexOf('create function public.get_today_story_card_stacks_v3(')));
   await db.exec(await readFile(new URL('../../migrations/20261011112004_add_monthly_retrospective.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../migrations/20261011143000_connect_monthly_retrospective.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../migrations/20261015112808_add_monthly_retrospective_gallery.sql',import.meta.url),'utf8'));
   await sql('insert into auth.users values($1),($2)',[a,b]);
   await sql("insert into public.couples values($1,$2,$3,'UTC','active')",[c,a,b]);
   month = (await sql("select to_char(date_trunc('month',now())-interval '1 month','YYYY-MM-DD') as month"))[0].month;
@@ -88,6 +89,23 @@ test('retains each author featured card rather than exposing rollover siblings',
   const result=await data();
   assert.equal(result.moments[0].cards.length,2);
   assert.equal(result.moments[0].cards[0].aspect_ratio,0.8);
+});
+
+test('gallery includes all retained photo and non-photo cards in date order',async()=>{
+  const late = await card(25);
+  const early = await card(2,a,false);
+  const partner = await card(2,b);
+  const sibling = await card(2,a,true,false);
+  await card(0); await card(40);
+  const result = await data();
+  assert.deepEqual(result.gallery.map(c=>c.id),[early,partner,late]);
+  assert.equal(result.gallery.some(c=>c.id===sibling),false);
+  assert.equal(result.gallery[0].date,month.slice(0,8)+'02');
+  assert.equal(result.gallery[0].card_type,'full_bleed');
+  assert.equal(result.gallery[0].aspect_ratio,0.8);
+  await login(b);
+  assert.deepEqual((await data()).gallery,result.gallery);
+  await login(a);
 });
 
 test('fixed question survives generation and partner stays hidden until own answer',async()=>{
