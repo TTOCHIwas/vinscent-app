@@ -12,7 +12,8 @@ import '../../safety/data/safety_report.dart';
 import '../../safety/presentation/safety_report_sheet.dart';
 import '../application/monthly_retrospective_controller.dart';
 import '../data/monthly_retrospective.dart';
-import '../data/monthly_retrospective_repository.dart';
+import 'widgets/monthly_card_clotheslines.dart';
+import 'widgets/monthly_retrospective_pager.dart';
 
 class MonthlyRetrospectiveScreen extends ConsumerStatefulWidget {
   const MonthlyRetrospectiveScreen({super.key});
@@ -24,7 +25,6 @@ class MonthlyRetrospectiveScreen extends ConsumerStatefulWidget {
 class MonthlyRetrospectiveScreenState
     extends ConsumerState<MonthlyRetrospectiveScreen> {
   final _answer = TextEditingController();
-  String _page = '지난달 이야기';
   String? _reflectionId;
   String _savedText = '';
   String? _generatedMonth;
@@ -190,11 +190,10 @@ class MonthlyRetrospectiveScreenState
           }
           final pages = [
             '지난달 이야기',
-            '그날의 기억',
+            if (data.hasRecords) '그날의 기억',
             if (data.conversation != null) '우리의 답',
-            '마음 남기기',
+            if (data.hasRecords) '마음 남기기',
           ];
-          final selected = pages.contains(_page) ? _page : pages.first;
           return Column(
             children: [
               Padding(
@@ -211,26 +210,6 @@ class MonthlyRetrospectiveScreenState
                   ],
                 ),
               ),
-              if (data.hasRecords)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final page in pages)
-                        TextButton(
-                          onPressed: () => setState(() => _page = page),
-                          child: Text(
-                            page,
-                            style: AppTextStyles.homeBody.copyWith(
-                              color: selected == page
-                                  ? AppColors.brandAccent
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
               if (_failure != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -242,27 +221,31 @@ class MonthlyRetrospectiveScreenState
                   ),
                 ),
               Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => ref
-                      .read(monthlyRetrospectiveControllerProvider.notifier)
-                      .refresh(),
-                  child: ListView(
-                    key: ValueKey('${data.month}:$selected'),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-                    children: !data.hasRecords
-                        ? [
-                            const Text(
-                              '지난달에는 남긴 기록이 없어요',
-                              style: AppTextStyles.homeBody,
-                            ),
-                          ]
-                        : switch (selected) {
-                            '그날의 기억' => _moments(data),
-                            '우리의 답' => _conversation(data.conversation!),
-                            '마음 남기기' => _reflection(data),
-                            _ => _overview(data),
-                          },
+                child: MonthlyRetrospectivePager(
+                  month: data.month,
+                  pages: pages,
+                  pageBuilder: (page) => RefreshIndicator(
+                    onRefresh: () => ref
+                        .read(monthlyRetrospectiveControllerProvider.notifier)
+                        .refresh(),
+                    child: ListView(
+                      key: PageStorageKey('${data.month}:$page'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                      children: !data.hasRecords
+                          ? [
+                              const Text(
+                                '지난달에는 남긴 기록이 없어요',
+                                style: AppTextStyles.homeBody,
+                              ),
+                            ]
+                          : switch (page) {
+                              '그날의 기억' => _moments(data),
+                              '우리의 답' => _conversation(data.conversation!),
+                              '마음 남기기' => _reflection(data),
+                              _ => _overview(data),
+                            },
+                    ),
                   ),
                 ),
               ),
@@ -276,16 +259,6 @@ class MonthlyRetrospectiveScreenState
   List<Widget> _overview(MonthlyRetrospective data) => [
     Text(data.title, style: AppTextStyles.pageTitle),
     const SizedBox(height: 24),
-    if (data.moments.isNotEmpty) ...[
-      _CardImages(
-        cards: data.moments.expand((m) => m.cards).take(2).toList(),
-        onPressed: (card) {
-          final moment = data.moments.firstWhere((m) => m.cards.contains(card));
-          _openRecord(moment.date);
-        },
-      ),
-      const SizedBox(height: 24),
-    ],
     Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -305,6 +278,15 @@ class MonthlyRetrospectiveScreenState
           : () => _reportAi(data.reflection!.id),
     ),
     if (data.needsGeneration) _generationAction(),
+    if (data.gallery.isNotEmpty) ...[
+      const SizedBox(height: 28),
+      MonthlyCardClotheslines(
+        cards: [for (final card in data.gallery) (date: card.date, card: card)],
+        compact: true,
+        showDates: true,
+        onOpenRecord: _openRecord,
+      ),
+    ],
   ];
 
   Widget _stat(String value, String label) => Expanded(
@@ -330,9 +312,12 @@ class MonthlyRetrospectiveScreenState
               style: AppTextStyles.homeBodyMedium,
             ),
             const SizedBox(height: 16),
-            _CardImages(
-              cards: moment.cards,
-              onPressed: (_) => _openRecord(moment.date),
+            MonthlyCardClotheslines(
+              cards: [
+                for (final card in moment.cards)
+                  (date: moment.date, card: card),
+              ],
+              onOpenRecord: _openRecord,
             ),
             if (moment.question != null) ...[
               const SizedBox(height: 16),
@@ -577,49 +562,4 @@ class MonthlyRetrospectiveScreenState
       id: id,
     ),
   );
-}
-
-class _CardImages extends ConsumerWidget {
-  const _CardImages({required this.cards, required this.onPressed});
-  final List<RetrospectiveCard> cards;
-  final void Function(RetrospectiveCard) onPressed;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      FutureBuilder<Map<String, String>>(
-        future: ref
-            .watch(monthlyRetrospectiveRepositoryProvider)
-            .previewUrls(cards),
-        builder: (context, snapshot) => Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final card in cards)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Semantics(
-                    button: true,
-                    label: '그날의 카드 보기',
-                    child: InkWell(
-                      onTap: () => onPressed(card),
-                      child: AspectRatio(
-                        aspectRatio: card.aspectRatio,
-                        child: snapshot.data?[card.previewPath] == null
-                            ? const ColoredBox(
-                                color: AppColors.formSurface,
-                                child: Center(child: Text('카드 미리보기')),
-                              )
-                            : Image.network(
-                                snapshot.data![card.previewPath]!,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, error, stack) =>
-                                    const Center(child: Text('사진을 불러오지 못했어요')),
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
 }

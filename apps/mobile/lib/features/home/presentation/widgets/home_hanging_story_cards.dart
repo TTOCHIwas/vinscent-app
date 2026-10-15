@@ -16,7 +16,21 @@ class HomeHangingStoryCards extends StatelessWidget {
     this.leadingBuilder,
     this.leftCardBuilder,
     this.rightCardBuilder,
-  });
+  }) : _galleryBuilders = null,
+       _gallerySlotCount = null;
+
+  const HomeHangingStoryCards.gallery({
+    super.key,
+    required List<HomeHangingStoryCardBuilder> cardBuilders,
+    required int slotsPerRow,
+    this.size = HomeHangingStoryCardSize.compact,
+  }) : assert(slotsPerRow >= 1 && slotsPerRow <= 4),
+       assert(cardBuilders.length <= slotsPerRow),
+       _galleryBuilders = cardBuilders,
+       _gallerySlotCount = slotsPerRow,
+       leadingBuilder = null,
+       leftCardBuilder = null,
+       rightCardBuilder = null;
 
   static const maximumContentWidth = 360.0;
   static const slotGap = 16.0;
@@ -37,10 +51,13 @@ class HomeHangingStoryCards extends StatelessWidget {
   final HomeHangingStoryCardBuilder? leadingBuilder;
   final HomeHangingStoryCardBuilder? leftCardBuilder;
   final HomeHangingStoryCardBuilder? rightCardBuilder;
+  final List<HomeHangingStoryCardBuilder>? _galleryBuilders;
+  final int? _gallerySlotCount;
 
   @override
   Widget build(BuildContext context) {
-    if (leadingBuilder == null &&
+    if ((_galleryBuilders?.isEmpty ?? true) &&
+        leadingBuilder == null &&
         leftCardBuilder == null &&
         rightCardBuilder == null) {
       return const SizedBox.shrink();
@@ -51,7 +68,7 @@ class HomeHangingStoryCards extends StatelessWidget {
         final contentWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth.clamp(0.0, maximumContentWidth).toDouble()
             : maximumContentWidth;
-        final slotCount = leadingBuilder == null ? 2 : 3;
+        final slotCount = _gallerySlotCount ?? (leadingBuilder == null ? 2 : 3);
         final resolvedSlotGap = slotCount == 3 ? 10.0 : slotGap;
         final slotWidth = math.max(
           0.0,
@@ -85,9 +102,18 @@ class HomeHangingStoryCards extends StatelessWidget {
         final contentHeight = constraints.hasBoundedHeight
             ? math.min(preferredHeight, constraints.maxHeight)
             : math.min(preferredHeight, maximumHeight);
-        final builders = leadingBuilder == null
-            ? [leftCardBuilder, rightCardBuilder]
-            : [leadingBuilder, leftCardBuilder, rightCardBuilder];
+        final builders =
+            _galleryBuilders ??
+            (leadingBuilder == null
+                ? <HomeHangingStoryCardBuilder?>[
+                    leftCardBuilder,
+                    rightCardBuilder,
+                  ]
+                : <HomeHangingStoryCardBuilder?>[
+                    leadingBuilder,
+                    leftCardBuilder,
+                    rightCardBuilder,
+                  ]);
 
         return Align(
           alignment: Alignment.topCenter,
@@ -151,6 +177,7 @@ class HomeHangingStoryCards extends StatelessWidget {
     if (slotCount == 2) {
       return index == 0 ? _leftRotation : _rightRotation;
     }
+    if (slotCount != 3) return index.isEven ? _leftRotation : _rightRotation;
     return switch (index) {
       0 => _leftRotation,
       1 => 0,

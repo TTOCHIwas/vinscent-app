@@ -1,3 +1,5 @@
+import '../../story_loops/data/story_card_type.dart';
+
 class MonthlyRetrospective {
   MonthlyRetrospective.fromJson(Map<String, dynamic> row)
     : coupleId = row['couple_id'] as String,
@@ -12,6 +14,13 @@ class MonthlyRetrospective {
       title = row['title'] as String,
       summary = row['summary'] as String?,
       contentStatus = row['content_status'] as String,
+      gallery = (row['gallery'] as List? ?? const [])
+          .map(
+            (v) => RetrospectiveGalleryCard.fromJson(
+              Map<String, dynamic>.from(v as Map),
+            ),
+          )
+          .toList(growable: false),
       moments = (row['moments'] as List)
           .map(
             (v) => RetrospectiveMoment.fromJson(
@@ -42,6 +51,7 @@ class MonthlyRetrospective {
   final String title;
   final String? summary;
   final String contentStatus;
+  final List<RetrospectiveGalleryCard> gallery;
   final List<RetrospectiveMoment> moments;
   final RetrospectiveConversation? conversation;
   final RetrospectiveReflection? reflection;
@@ -73,11 +83,23 @@ class RetrospectiveCard {
     : id = row['id'] as String,
       previewPath = row['preview_path'] as String,
       authorUserId = row['author_user_id'] as String,
-      aspectRatio = (row['aspect_ratio'] as num).toDouble();
+      aspectRatio = (row['aspect_ratio'] as num).toDouble(),
+      cardType = StoryCardType.fromStorageValue(row['card_type'] as String?),
+      layoutVersion = storyCardLayoutVersionFromValue(row['layout_version']);
   final String id;
   final String previewPath;
   final String authorUserId;
   final double aspectRatio;
+  final StoryCardType cardType;
+  final int layoutVersion;
+}
+
+class RetrospectiveGalleryCard extends RetrospectiveCard {
+  RetrospectiveGalleryCard.fromJson(super.row)
+    : date = DateTime.parse(row['date'] as String),
+      super.fromJson();
+
+  final DateTime date;
 }
 
 class RetrospectiveConversation {

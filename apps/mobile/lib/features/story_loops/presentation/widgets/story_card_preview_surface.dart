@@ -17,6 +17,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
     this.semanticsLabel,
     this.cornerRadius = 1,
     this.showShadow = true,
+    this.aspectRatioOverride,
   });
 
   final String? previewUrl;
@@ -28,6 +29,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
   final String? semanticsLabel;
   final double cornerRadius;
   final bool showShadow;
+  final double? aspectRatioOverride;
 
   static double widthInFourByFiveSlot(
     double slotWidth,
@@ -41,7 +43,8 @@ class StoryCardPreviewSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aspectRatio = cardType.canvasAspectRatioFor(layoutVersion);
+    final aspectRatio =
+        aspectRatioOverride ?? cardType.canvasAspectRatioFor(layoutVersion);
     final height = width / aspectRatio;
     final borderRadius = BorderRadius.circular(cornerRadius);
 
