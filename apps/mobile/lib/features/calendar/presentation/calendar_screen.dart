@@ -14,6 +14,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/application/couple_current_date_provider.dart';
+import '../../couple/data/couple.dart';
+import '../../monthly_retrospective/application/monthly_retrospective_controller.dart';
+import '../../monthly_retrospective/application/monthly_retrospective_availability_provider.dart';
 import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notification.dart';
 import '../application/calendar_cell_preview_mode_controller.dart';
 import '../application/couple_default_calendar_event_resolver.dart';
@@ -165,6 +168,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             : publicHolidays[calendarDateOnly(selectedDate)];
         final canGoPrevious = _canGoPrevious(relationshipStartMonth);
         final canGoNext = _canGoNext();
+        final isRetrospectiveMonth =
+            _visibleMonth == DateTime(today.year, today.month - 1);
+        final retrospective =
+            couple.status == CoupleStatus.active && isRetrospectiveMonth
+            ? ref
+                  .watch(monthlyRetrospectiveAvailabilityProvider)
+                  .when(
+                    data: (data) => data,
+                    loading: () => null,
+                    error: (error, stack) => null,
+                  )
+            : null;
+        final showRetrospective =
+            retrospective != null &&
+            retrospective.coupleId == couple.id &&
+            retrospective.month == _visibleMonth &&
+            retrospective.hasRecords &&
+            retrospective.availableUntil.isAfter(
+              ref.watch(monthlyRetrospectiveClockProvider)(),
+            );
 
         final content = Column(
           children: [
@@ -190,6 +213,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       relationshipStartDate: couple.relationshipStartDate!,
                       today: today,
                     )
+                  : null,
+              onRetrospectivePressed: showRetrospective
+                  ? () => context.push('/calendar/monthly')
                   : null,
               onPreviewModeSelected: previewMode == null
                   ? null
@@ -748,6 +774,7 @@ class _CalendarMonthHeader extends StatelessWidget {
     required this.onPreviousPressed,
     required this.onNextPressed,
     required this.onAddPressed,
+    required this.onRetrospectivePressed,
     required this.onPreviewModeSelected,
   });
 
@@ -758,6 +785,7 @@ class _CalendarMonthHeader extends StatelessWidget {
   final VoidCallback? onPreviousPressed;
   final VoidCallback? onNextPressed;
   final VoidCallback? onAddPressed;
+  final VoidCallback? onRetrospectivePressed;
   final ValueChanged<CalendarCellPreviewMode>? onPreviewModeSelected;
 
   @override
@@ -765,57 +793,86 @@ class _CalendarMonthHeader extends StatelessWidget {
     return SizedBox(
       height: 56,
       width: double.infinity,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            left: 12,
-            top: 0,
-            bottom: 0,
-            child: CalendarCellPreviewFilterButton(
-              key: const Key('calendar-cell-preview-filter'),
-              selectedMode: previewMode,
-              onSelected: onPreviewModeSelected,
-            ),
-          ),
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final buttonSize = constraints.maxWidth < 380 ? 32.0 : 40.0;
+          final edgePadding = constraints.maxWidth < 380 ? 8.0 : 12.0;
+          final sideWidth = math.max(
+            40.0,
+            buttonSize * (onRetrospectivePressed == null ? 1 : 2),
+          );
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: edgePadding),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                _MonthIconButton(
-                  key: const Key('calendar-previous-month'),
-                  icon: Icons.chevron_left,
-                  semanticLabel: '이전 달',
-                  onPressed: canGoPrevious ? onPreviousPressed : null,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: CalendarCellPreviewFilterButton(
+                    key: const Key('calendar-cell-preview-filter'),
+                    selectedMode: previewMode,
+                    onSelected: onPreviewModeSelected,
+                  ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatMonth(visibleMonth),
-                  maxLines: 1,
-                  style: AppTextStyles.pageTitle,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: sideWidth),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _MonthIconButton(
+                        key: const Key('calendar-previous-month'),
+                        icon: Icons.chevron_left,
+                        semanticLabel: '이전 달',
+                        dimension: buttonSize,
+                        onPressed: canGoPrevious ? onPreviousPressed : null,
+                      ),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _formatMonth(visibleMonth),
+                            maxLines: 1,
+                            style: AppTextStyles.pageTitle,
+                          ),
+                        ),
+                      ),
+                      _MonthIconButton(
+                        key: const Key('calendar-next-month'),
+                        icon: Icons.chevron_right,
+                        semanticLabel: '다음 달',
+                        dimension: buttonSize,
+                        onPressed: canGoNext ? onNextPressed : null,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 4),
-                _MonthIconButton(
-                  key: const Key('calendar-next-month'),
-                  icon: Icons.chevron_right,
-                  semanticLabel: '다음 달',
-                  onPressed: canGoNext ? onNextPressed : null,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (onRetrospectivePressed != null)
+                        _MonthIconButton(
+                          key: const Key('calendar-monthly-retrospective'),
+                          icon: Icons.auto_awesome_outlined,
+                          semanticLabel: '지난달 월간 회고',
+                          onPressed: onRetrospectivePressed,
+                          dimension: buttonSize,
+                        ),
+                      _MonthIconButton(
+                        key: const Key('calendar-add-event'),
+                        icon: Icons.add,
+                        semanticLabel: '일정 추가',
+                        onPressed: onAddPressed,
+                        dimension: buttonSize,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-          Positioned(
-            right: 12,
-            top: 0,
-            bottom: 0,
-            child: _MonthIconButton(
-              key: const Key('calendar-add-event'),
-              icon: Icons.add,
-              semanticLabel: '일정 추가',
-              onPressed: onAddPressed,
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -827,11 +884,13 @@ class _MonthIconButton extends StatelessWidget {
     required this.icon,
     required this.semanticLabel,
     required this.onPressed,
+    this.dimension = 40,
   });
 
   final IconData icon;
   final String semanticLabel;
   final VoidCallback? onPressed;
+  final double dimension;
 
   @override
   Widget build(BuildContext context) {
@@ -844,7 +903,7 @@ class _MonthIconButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(20),
         child: SizedBox.square(
-          dimension: 40,
+          dimension: dimension,
           child: Icon(
             icon,
             size: 24,

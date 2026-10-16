@@ -22,6 +22,7 @@ import '../features/couple/presentation/couple_waiting_screen.dart';
 import '../features/couple/presentation/question_delivery_time_screen.dart';
 import '../features/couple/presentation/relationship_start_date_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/monthly_retrospective/presentation/monthly_retrospective_route.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_controller.dart';
 import '../features/questions/presentation/today_question_answer_screen.dart';
@@ -239,6 +240,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         initialDate: initialDate ?? DateTime.now(),
                       );
                     },
+                  ),
+                  GoRoute(
+                    path: 'monthly',
+                    name: 'calendarMonthlyRetrospective',
+                    builder: (context, state) =>
+                        const MonthlyRetrospectiveRoute(),
+                    routes: [
+                      GoRoute(
+                        path: 'record',
+                        builder: (context, state) => CalendarScreen(
+                          initialDate: parseCalendarDate(
+                            state.uri.queryParameters['date'],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'event/:eventId',

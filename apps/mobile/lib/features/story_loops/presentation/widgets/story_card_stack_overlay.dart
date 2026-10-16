@@ -16,6 +16,7 @@ import '../../data/story_card_read_receipt_repository.dart';
 import '../../data/story_card_stack_item.dart';
 import '../../data/story_card_stack_preview.dart';
 import '../../data/story_loop_card_detail.dart';
+import '../../data/story_loop_card_preview.dart';
 import '../../data/story_loop_write_repository.dart';
 import 'story_card_action_sheet.dart';
 import 'story_card_interactive_viewport.dart';
@@ -27,6 +28,38 @@ Future<void> showStoryCardStackOverlay({
   required DateTime date,
   required StoryCardStackPreview stack,
   String? initialCardId,
+}) => _showStoryCardOverlay(
+  context: context,
+  date: date,
+  authorUserId: stack.authorUserId,
+  isMine: stack.isMine,
+  preview: stack.latestCard,
+  initialCardId: initialCardId,
+);
+
+Future<void> showStoryCardByIdOverlay({
+  required BuildContext context,
+  required DateTime date,
+  required String authorUserId,
+  required String cardId,
+  required bool isMine,
+}) => _showStoryCardOverlay(
+  context: context,
+  date: date,
+  authorUserId: authorUserId,
+  isMine: isMine,
+  initialCardId: cardId,
+  requireInitialCard: true,
+);
+
+Future<void> _showStoryCardOverlay({
+  required BuildContext context,
+  required DateTime date,
+  required String authorUserId,
+  required bool isMine,
+  StoryLoopCardPreview? preview,
+  String? initialCardId,
+  bool requireInitialCard = false,
 }) {
   final barrierLabel = MaterialLocalizations.of(
     context,
@@ -41,8 +74,11 @@ Future<void> showStoryCardStackOverlay({
     pageBuilder: (context, animation, secondaryAnimation) =>
         _StoryCardStackOverlay(
           date: date,
-          stack: stack,
+          authorUserId: authorUserId,
+          isMine: isMine,
+          preview: preview,
           initialCardId: initialCardId,
+          requireInitialCard: requireInitialCard,
         ),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
@@ -56,13 +92,19 @@ Future<void> showStoryCardStackOverlay({
 class _StoryCardStackOverlay extends ConsumerStatefulWidget {
   const _StoryCardStackOverlay({
     required this.date,
-    required this.stack,
+    required this.authorUserId,
+    required this.isMine,
+    this.preview,
     this.initialCardId,
+    this.requireInitialCard = false,
   });
 
   final DateTime date;
-  final StoryCardStackPreview stack;
+  final String authorUserId;
+  final bool isMine;
+  final StoryLoopCardPreview? preview;
   final String? initialCardId;
+  final bool requireInitialCard;
 
   @override
   ConsumerState<_StoryCardStackOverlay> createState() =>
@@ -82,7 +124,7 @@ class _StoryCardStackOverlayState
 
   StoryCardStackRequest get _request => StoryCardStackRequest(
     date: widget.date,
-    authorUserId: widget.stack.authorUserId,
+    authorUserId: widget.authorUserId,
   );
 
   @override
@@ -97,6 +139,9 @@ class _StoryCardStackOverlayState
     final loadedItems = itemsAsync.asData?.value;
     final items = loadedItems == null
         ? null
+        : widget.requireInitialCard &&
+              !loadedItems.any((item) => item.card.id == widget.initialCardId)
+        ? <StoryCardStackItem>[]
         : _sortChronologically(loadedItems);
     if (items != null && items.isNotEmpty) {
       _initializePageController(items);
@@ -271,32 +316,39 @@ class _StoryCardStackOverlayState
     }
 
     if (items != null) {
-      return const Center(
+      return Center(
         child: Text(
-          '남아 있는 카드가 없어요.',
-          style: TextStyle(color: AppColors.textInverse),
+          widget.requireInitialCard ? '이 카드는 더 이상 볼 수 없어요.' : '남아 있는 카드가 없어요.',
+          style: const TextStyle(color: AppColors.textInverse),
         ),
       );
     }
 
+    final preview = widget.preview;
+    if (preview == null) {
+      return const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.textInverse,
+        ),
+      );
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = math.min(
           constraints.maxWidth,
-          constraints.maxHeight * widget.stack.latestCard.canvasAspectRatio,
+          constraints.maxHeight * preview.canvasAspectRatio,
         );
         return Center(
           child: Stack(
             alignment: Alignment.center,
             children: [
               StoryCardPreviewSurface(
-                surfaceKey: Key(
-                  'story-card-stack-${widget.stack.latestCard.id}',
-                ),
-                previewUrl: widget.stack.latestCard.previewUrl,
+                surfaceKey: Key('story-card-stack-${preview.id}'),
+                previewUrl: preview.previewUrl,
                 width: cardWidth,
-                cardType: widget.stack.latestCard.cardType,
-                layoutVersion: widget.stack.latestCard.layoutVersion,
+                cardType: preview.cardType,
+                layoutVersion: preview.layoutVersion,
                 semanticsLabel: '스토리 카드',
               ),
               const SizedBox.square(
@@ -410,7 +462,7 @@ class _StoryCardStackOverlayState
       context: context,
       cardId: item.card.id,
       showDelete: item.canDelete,
-      showReport: !widget.stack.isMine,
+      showReport: !widget.isMine,
     );
     if (!mounted || action == null) {
       return;

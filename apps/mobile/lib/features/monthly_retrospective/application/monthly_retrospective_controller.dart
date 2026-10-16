@@ -5,6 +5,11 @@ import '../../couple/data/couple.dart';
 import '../data/monthly_retrospective.dart';
 import '../data/monthly_retrospective_repository.dart';
 
+final monthlyRetrospectiveClockProvider = Provider<DateTime Function()>(
+  (ref) =>
+      () => DateTime.now().toUtc(),
+);
+
 final monthlyRetrospectiveControllerProvider =
     AsyncNotifierProvider.autoDispose<
       MonthlyRetrospectiveController,
@@ -25,7 +30,9 @@ class MonthlyRetrospectiveController
     }
     final repository = ref.read(monthlyRetrospectiveRepositoryProvider);
     final data = await repository.fetch();
-    final remaining = data.availableUntil.difference(DateTime.now().toUtc());
+    final remaining = data.availableUntil.difference(
+      ref.read(monthlyRetrospectiveClockProvider)(),
+    );
     final timer = Timer(
       remaining.isNegative ? const Duration(minutes: 1) : remaining,
       () => ref.invalidateSelf(),

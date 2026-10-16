@@ -3,30 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final shellNavigationGuardProvider = Provider((ref) => ShellNavigationGuard());
 
 class ShellNavigationGuard {
-  Object? _owner;
-  String? _location;
-  Future<bool> Function()? _confirm;
-  Future<bool>? _pending;
+  final _registrations =
+      <Object, ({String location, Future<bool> Function() confirm})>{};
+  final _pending = <Object, Future<bool>>{};
 
   void register(
     Object owner,
     String location,
     Future<bool> Function() confirm,
   ) {
-    _owner = owner;
-    _location = location;
-    _confirm = confirm;
+    _registrations.remove(owner);
+    _registrations[owner] = (location: location, confirm: confirm);
   }
 
   void unregister(Object owner) {
-    if (!identical(owner, _owner)) return;
-    _owner = null;
-    _location = null;
-    _confirm = null;
+    _registrations.remove(owner);
   }
 
   Future<bool> allows(String location) {
-    if (_confirm == null || location != _location) return Future.value(true);
-    return _pending ??= _confirm!().whenComplete(() => _pending = null);
+    for (final owner in _registrations.keys.toList().reversed) {
+      final registration = _registrations[owner]!;
+      if (registration.location == location) {
+        return _pending[owner] ??= registration.confirm().whenComplete(() {
+          _pending.remove(owner);
+        });
+      }
+    }
+    return Future.value(true);
   }
 }

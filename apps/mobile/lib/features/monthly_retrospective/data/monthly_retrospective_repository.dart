@@ -12,6 +12,7 @@ final monthlyRetrospectiveRepositoryProvider =
     );
 
 abstract interface class MonthlyRetrospectiveRepository {
+  Future<MonthlyRetrospectiveAvailability> fetchAvailability();
   Future<MonthlyRetrospective> fetch();
   Future<void> generate();
   Future<MonthlyRetrospective> save(
@@ -33,7 +34,7 @@ class SupabaseMonthlyRetrospectiveRepository
     return Supabase.instance.client;
   }
 
-  Future<MonthlyRetrospective> _read(
+  Future<Map<String, dynamic>> _readRow(
     String name, [
     Map<String, Object?>? params,
   ]) async {
@@ -43,8 +44,19 @@ class SupabaseMonthlyRetrospectiveRepository
     if (data is! Map) {
       throw const FormatException('Invalid monthly retrospective');
     }
-    return MonthlyRetrospective.fromJson(Map<String, dynamic>.from(data));
+    return Map<String, dynamic>.from(data);
   }
+
+  Future<MonthlyRetrospective> _read(
+    String name, [
+    Map<String, Object?>? params,
+  ]) async => MonthlyRetrospective.fromJson(await _readRow(name, params));
+
+  @override
+  Future<MonthlyRetrospectiveAvailability> fetchAvailability() async =>
+      MonthlyRetrospectiveAvailability.fromJson(
+        await _readRow('get_current_monthly_retrospective_availability'),
+      );
 
   @override
   Future<MonthlyRetrospective> fetch() =>

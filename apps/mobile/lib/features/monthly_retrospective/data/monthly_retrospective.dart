@@ -1,5 +1,18 @@
 import '../../story_loops/data/story_card_type.dart';
 
+class MonthlyRetrospectiveAvailability {
+  MonthlyRetrospectiveAvailability.fromJson(Map<String, dynamic> row)
+    : coupleId = row['couple_id'] as String,
+      month = DateTime.parse(row['month'] as String),
+      availableUntil = DateTime.parse(row['available_until'] as String),
+      hasRecords = row['has_records'] as bool;
+
+  final String coupleId;
+  final DateTime month;
+  final DateTime availableUntil;
+  final bool hasRecords;
+}
+
 class MonthlyRetrospective {
   MonthlyRetrospective.fromJson(Map<String, dynamic> row)
     : coupleId = row['couple_id'] as String,
