@@ -14,6 +14,78 @@ import 'package:vinscent/features/story_loops/presentation/widgets/story_card_in
 import 'package:vinscent/features/story_loops/presentation/widgets/story_card_stack_overlay.dart';
 
 void main() {
+  testWidgets(
+    'does not substitute another card when the requested historical ID is gone',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            storyCardStackProvider.overrideWith(
+              (ref, request) async => [_item(id: 'another-card', minute: 2)],
+            ),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => showStoryCardByIdOverlay(
+                    context: context,
+                    date: DateTime(2026, 9, 14),
+                    authorUserId: 'author-id',
+                    cardId: 'removed-card',
+                    isMine: false,
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await _open(tester);
+      expect(find.text('이 카드는 더 이상 볼 수 없어요.'), findsOneWidget);
+      expect(find.byKey(const Key('story-card-stack-menu')), findsNothing);
+    },
+  );
+  testWidgets('opens the requested historical card directly from its ID', (
+    tester,
+  ) async {
+    StoryCardStackRequest? requested;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storyCardStackProvider.overrideWith((ref, request) async {
+            requested = request;
+            return [
+              _item(id: 'card-1', minute: 1),
+              _item(id: 'card-2', minute: 2),
+            ];
+          }),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showStoryCardByIdOverlay(
+                  context: context,
+                  date: DateTime(2026, 9, 14),
+                  authorUserId: 'author-id',
+                  cardId: 'card-1',
+                  isMine: false,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await _open(tester);
+    expect(requested?.date, DateTime(2026, 9, 14));
+    expect(requested?.authorUserId, 'author-id');
+    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.byKey(const Key('story-card-stack-overlay')), findsOneWidget);
+  });
   testWidgets('호출 화면이 지정한 카드를 공통 상세보기의 초기 카드로 연다', (tester) async {
     final items = [
       _item(id: 'card-1', minute: 1),

@@ -17,11 +17,223 @@ import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_e
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_month_story_cell.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_month_summary_day.dart';
 import 'package:vinscent/features/story_loops/data/story_loop_status.dart';
+import 'package:vinscent/features/monthly_retrospective/data/monthly_retrospective.dart';
 
 import '../../../support/story_loop_fixtures.dart';
 import 'calendar_screen_test_support.dart';
 
+MonthlyRetrospective _retrospective({
+  bool hasRecords = true,
+  String availableUntil = '2026-11-01T00:00:00Z',
+}) => MonthlyRetrospective.fromJson({
+  'couple_id': 'couple-id',
+  'month': '2026-09-01',
+  'available_until': availableUntil,
+  'recorded_days': 2,
+  'card_count': null,
+  'card_count_complete': false,
+  'completed_questions': 0,
+  'has_records': hasRecords,
+  'ai_enabled': false,
+  'title': '우리의 9월',
+  'summary': null,
+  'content_status': 'basic',
+  'moments': [],
+  'conversation': null,
+  'reflection': {
+    'id': 'r1',
+    'question': '다음 달 함께하고 싶은 일은?',
+    'source': 'basic',
+    'my_answer': null,
+    'partner_answer': null,
+    'partner_answer_exists': false,
+    'version': 0,
+  },
+});
+
 void main() {
+  for (final width in [320.0, 390.0]) {
+    testWidgets(
+      'keeps month centered at $width with and without recap action',
+      (tester) async {
+        await tester.binding.setSurfaceSize(Size(width, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await pumpCalendar(
+          tester,
+          repository: FakeStoryLoopReadRepository(),
+          today: DateTime(2026, 10, 10),
+          initialDate: DateTime(2026, 9, 7),
+          relationshipStartDate: DateTime(2026, 1, 1),
+          retrospective: _retrospective(),
+          textScaleFactor: 1.6,
+        );
+        expect(
+          find.byKey(const Key('calendar-monthly-retrospective')),
+          findsOneWidget,
+        );
+        expect(
+          tester.getCenter(find.text('2026년 09월')).dx,
+          closeTo(width / 2, 0.5),
+        );
+        await tester.tap(find.byKey(const Key('calendar-next-month')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('calendar-monthly-retrospective')),
+          findsNothing,
+        );
+        expect(
+          tester.getCenter(find.text('2026년 10월')).dx,
+          closeTo(width / 2, 0.5),
+        );
+        expect(
+          tester
+              .getRect(find.byKey(const Key('calendar-cell-preview-filter')))
+              .right,
+          lessThanOrEqualTo(
+            tester
+                .getRect(find.byKey(const Key('calendar-previous-month')))
+                .left,
+          ),
+        );
+        await tester.tap(find.byKey(const Key('calendar-previous-month')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('calendar-monthly-retrospective')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const Key('calendar-previous-month')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('calendar-monthly-retrospective')),
+          findsNothing,
+        );
+        expect(
+          tester.getCenter(find.text('2026년 08월')).dx,
+          closeTo(width / 2, 0.5),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets('hides recap for an empty or expired month', (tester) async {
+    for (final retrospective in [
+      _retrospective(hasRecords: false),
+      _retrospective(availableUntil: '2026-10-01T00:00:00Z'),
+      _retrospective(availableUntil: '2026-10-10T01:00:00Z'),
+    ]) {
+      await pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        today: DateTime(2026, 10, 10),
+        initialDate: DateTime(2026, 9, 7),
+        retrospective: retrospective,
+      );
+      expect(
+        find.byKey(const Key('calendar-monthly-retrospective')),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    }
+  });
+  testWidgets(
+    'opens last month recap left of add and restores the calendar date and scroll',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final router = await pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        today: DateTime(2026, 10, 10),
+        initialDate: DateTime(2026, 9, 7),
+        relationshipStartDate: DateTime(2026, 1, 1),
+        retrospective: _retrospective(),
+      );
+      final recap = tester.getRect(
+        find.byKey(const Key('calendar-monthly-retrospective')),
+      );
+      final add = tester.getRect(find.byKey(const Key('calendar-add-event')));
+      final next = tester.getRect(find.byKey(const Key('calendar-next-month')));
+      expect(recap.right, lessThanOrEqualTo(add.left));
+      expect(next.right, lessThanOrEqualTo(recap.left));
+      final scroll = tester
+          .widget<CustomScrollView>(
+            find.byKey(const Key('calendar-scroll-view')),
+          )
+          .controller!;
+      final offset = scroll.offset;
+      await tester.tap(find.byKey(const Key('calendar-monthly-retrospective')));
+      await tester.pumpAndSettle();
+      expect(router.canPop(), isTrue);
+      expect(find.text('2026년 9월').hitTestable(), findsOneWidget);
+      await tester.tap(find.byTooltip('캘린더로 돌아가기'));
+      await tester.pumpAndSettle();
+      expect(find.text('2026년 09월'), findsOneWidget);
+      expect(find.text('9월 7일'), findsOneWidget);
+      expect(scroll.offset, offset);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'calendar recap back keeps the draft on cancel and returns on discard',
+    (tester) async {
+      final router = await pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(),
+        retrospective: _retrospective(),
+        today: DateTime(2026, 10, 10),
+        initialDate: DateTime(2026, 9, 7),
+      );
+      await tester.tap(find.byKey(const Key('calendar-monthly-retrospective')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '작성 중인 한마디');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('캘린더로 돌아가기'));
+      await tester.pumpAndSettle();
+      expect(find.text('작성 중인 답변이 있어요'), findsOneWidget);
+      await tester.tap(find.text('계속 작성'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        '작성 중인 한마디',
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('닫기'));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/calendar');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('repeated recap back closes only one route', (tester) async {
+    final router = await pumpCalendar(
+      tester,
+      repository: FakeStoryLoopReadRepository(),
+      retrospective: _retrospective(),
+      today: DateTime(2026, 10, 10),
+      initialDate: DateTime(2026, 9, 7),
+    );
+    await tester.tap(find.byKey(const Key('calendar-monthly-retrospective')));
+    await tester.pumpAndSettle();
+    final back = tester.widget<IconButton>(
+      find
+          .ancestor(
+            of: find.byTooltip('캘린더로 돌아가기'),
+            matching: find.byType(IconButton),
+          )
+          .first,
+    );
+    back.onPressed!();
+    back.onPressed!();
+    await tester.pumpAndSettle();
+    expect(router.canPop(), isFalse);
+    expect(find.byKey(const Key('calendar-scroll-view')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('keeps the date label inside its marker when text is enlarged', (
     tester,
   ) async {

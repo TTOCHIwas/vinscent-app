@@ -17,6 +17,10 @@ import 'package:vinscent/features/calendar/data/couple_calendar_event_repository
 import 'package:vinscent/features/calendar/data/couple_member_birthday.dart';
 import 'package:vinscent/features/calendar/data/public_holiday.dart';
 import 'package:vinscent/features/calendar/presentation/calendar_screen.dart';
+import 'package:vinscent/features/monthly_retrospective/application/monthly_retrospective_controller.dart';
+import 'package:vinscent/features/monthly_retrospective/application/monthly_retrospective_availability_provider.dart';
+import 'package:vinscent/features/monthly_retrospective/data/monthly_retrospective.dart';
+import 'package:vinscent/features/monthly_retrospective/presentation/monthly_retrospective_route.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
@@ -82,6 +86,7 @@ Future<GoRouter> pumpCalendar(
   SafetyReportRepository? safetyReportRepository,
   List<StoryCardStackItem>? storyCardStackItems,
   double textScaleFactor = 1,
+  MonthlyRetrospective? retrospective,
 }) async {
   final calendarEventRepository = _FakeCalendarEventRepository(
     events: calendarEvents,
@@ -106,6 +111,12 @@ Future<GoRouter> pumpCalendar(
                   ),
           );
         },
+        routes: [
+          GoRoute(
+            path: 'monthly',
+            builder: (context, state) => const MonthlyRetrospectiveRoute(),
+          ),
+        ],
       ),
       GoRoute(
         path: '/calendar/question',
@@ -131,6 +142,29 @@ Future<GoRouter> pumpCalendar(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        monthlyRetrospectiveAvailabilityProvider.overrideWith(
+          (ref) async => retrospective == null
+              ? null
+              : MonthlyRetrospectiveAvailability.fromJson({
+                  'couple_id': retrospective.coupleId,
+                  'month': retrospective.month.toIso8601String(),
+                  'available_until': retrospective.availableUntil
+                      .toIso8601String(),
+                  'has_records': retrospective.hasRecords,
+                }),
+        ),
+        monthlyRetrospectiveClockProvider.overrideWithValue(
+          () => DateTime.utc(
+            (today ?? DateTime(2026, 5, 10)).year,
+            (today ?? DateTime(2026, 5, 10)).month,
+            (today ?? DateTime(2026, 5, 10)).day,
+            12,
+          ),
+        ),
+        monthlyRetrospectiveControllerProvider.overrideWithBuild(
+          (ref, notifier) async =>
+              retrospective ?? (throw StateError('No test retrospective')),
+        ),
         todayControllerProvider.overrideWithBuild(
           (ref, notifier) => today ?? DateTime(2026, 5, 10),
         ),

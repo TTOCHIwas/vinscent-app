@@ -79,6 +79,9 @@ class _Controller extends MonthlyRetrospectiveController {
 }
 
 class _Repository implements MonthlyRetrospectiveRepository {
+  @override
+  Future<MonthlyRetrospectiveAvailability> fetchAvailability() =>
+      throw UnimplementedError();
   final pending = Completer<MonthlyRetrospective>();
   @override
   Future<MonthlyRetrospective> fetch() => pending.future;
