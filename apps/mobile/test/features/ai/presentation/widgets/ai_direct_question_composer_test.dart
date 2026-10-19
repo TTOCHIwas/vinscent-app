@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -204,10 +205,10 @@ void main() {
     );
     await tester.pump();
 
-    final input = tester.widget<TextField>(
+    final input = tester.widget<CupertinoTextField>(
       find.descendant(
         of: find.byKey(const Key('ai-direct-question-input')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
     );
     expect(input.controller?.text, '상대는 지친 날에 어떤 걸 좋아할까?');
@@ -227,7 +228,7 @@ void main() {
     final character = find.byKey(const Key('ai-direct-guide-character'));
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
 
     expect(tester.widget<CoupleCharacterAvatar>(character).size, 220);
@@ -251,14 +252,14 @@ void main() {
       _FakeDirectQuestionRepository(history: _history(remainingCount: 0)),
     );
 
-    final input = tester.widget<TextField>(
+    final input = tester.widget<CupertinoTextField>(
       find.descendant(
         of: find.byKey(const Key('ai-direct-question-input')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
     );
     expect(input.enabled, isFalse);
-    expect(input.decoration?.hintText, '오늘 질문은 모두 사용했어');
+    expect(input.placeholder, '오늘 질문은 모두 사용했어');
   });
 
   testWidgets('keeps input focus when the keyboard inset changes', (
@@ -273,7 +274,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     final editableText = find.descendant(
       of: input,
@@ -355,10 +356,10 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
-    expect(tester.widget<TextField>(input).minLines, 1);
-    expect(tester.widget<TextField>(input).maxLines, 2);
+    expect(tester.widget<CupertinoTextField>(input).minLines, 1);
+    expect(tester.widget<CupertinoTextField>(input).maxLines, 2);
 
     await tester.tap(input);
     await tester.pump();
@@ -374,8 +375,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(CoupleCharacterAvatar), findsOneWidget);
-    expect(tester.widget<TextField>(input).minLines, 1);
-    expect(tester.widget<TextField>(input).maxLines, 3);
+    expect(tester.widget<CupertinoTextField>(input).minLines, 1);
+    expect(tester.widget<CupertinoTextField>(input).maxLines, 3);
     expect((inputDock.padding as EdgeInsets).bottom, 8);
 
     final editableText = tester.widget<EditableText>(
@@ -418,7 +419,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
 
     await tester.tap(input);
@@ -430,7 +431,7 @@ void main() {
       find.byKey(const Key('ai-direct-question-input-dock')),
     );
     expect((inputDock.padding as EdgeInsets).bottom, 8);
-    expect(tester.widget<TextField>(input).minLines, 1);
+    expect(tester.widget<CupertinoTextField>(input).minLines, 1);
 
     tester.view.viewInsets = FakeViewPadding.zero;
     await tester.pump();
@@ -439,8 +440,8 @@ void main() {
       find.byKey(const Key('ai-direct-question-input-dock')),
     );
     expect((inputDock.padding as EdgeInsets).bottom, 104);
-    expect(tester.widget<TextField>(input).minLines, 1);
-    expect(tester.widget<TextField>(input).maxLines, 2);
+    expect(tester.widget<CupertinoTextField>(input).minLines, 1);
+    expect(tester.widget<CupertinoTextField>(input).maxLines, 2);
   });
 
   testWidgets('aligns the iOS input clearance with the bottom dock', (
@@ -484,7 +485,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     final editableText = tester.widget<EditableText>(
       find.descendant(of: input, matching: find.byType(EditableText)),
@@ -507,7 +508,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     await tester.tap(input);
     await tester.pump();
@@ -520,7 +521,7 @@ void main() {
     await tester.pump();
 
     expect(repository.submittedQuestions, ['이번 주말에는 어떤 시간을 보내면 좋을까?']);
-    expect(tester.widget<TextField>(input).controller?.text, isEmpty);
+    expect(tester.widget<CupertinoTextField>(input).controller?.text, isEmpty);
     expect(find.byKey(const Key('ai-direct-keyboard-accessory')), findsNothing);
   });
 
@@ -532,7 +533,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     await tester.enterText(input, '상대는 어떤 순간에 가장 편안해할까?');
     await tester.pump();
@@ -541,7 +542,7 @@ void main() {
     await tester.pump();
 
     expect(repository.submittedQuestions, ['상대는 어떤 순간에 가장 편안해할까?']);
-    expect(tester.widget<TextField>(input).controller?.text, isEmpty);
+    expect(tester.widget<CupertinoTextField>(input).controller?.text, isEmpty);
   });
 
   testWidgets(

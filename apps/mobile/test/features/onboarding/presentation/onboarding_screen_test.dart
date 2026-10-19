@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,9 +22,11 @@ void main() {
       AppActionTone.brand,
     );
 
-    final textField = tester.widget<TextField>(find.byType(TextField));
-    expect(textField.decoration?.filled, isTrue);
-    expect(textField.decoration?.border, isA<OutlineInputBorder>());
+    final textField = tester.widget<CupertinoTextField>(
+      find.byType(CupertinoTextField),
+    );
+    expect(textField.placeholder, '닉네임');
+    expect(textField.decoration?.border, isNotNull);
   });
 
   testWidgets('explains the birthday calendar purpose on the second step', (
@@ -33,7 +36,7 @@ void main() {
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
 
-    await tester.enterText(find.byType(TextField), '또치');
+    await tester.enterText(find.byType(CupertinoTextField), '또치');
     await tester.pump();
     await tester.tap(find.text('다음'));
     await tester.pumpAndSettle();

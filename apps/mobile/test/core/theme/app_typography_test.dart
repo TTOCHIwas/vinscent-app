@@ -161,6 +161,7 @@ void main() {
       (AppTextStyles.logoLabel, 1.2),
       (AppTextStyles.sectionTitle, 24 / 18),
       (AppTextStyles.pageTitle, 28 / 20),
+      (AppTextStyles.contentTitle, 32 / 24),
       (AppTextStyles.compactError, 18 / 13),
       (AppTextStyles.drawingToolLabel, 18 / 13),
       (AppTextStyles.storyEditorTitle, 20 / 16),

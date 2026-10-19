@@ -111,12 +111,10 @@ Future<GoRouter> pumpCalendar(
                   ),
           );
         },
-        routes: [
-          GoRoute(
-            path: 'monthly',
-            builder: (context, state) => const MonthlyRetrospectiveRoute(),
-          ),
-        ],
+      ),
+      GoRoute(
+        path: '/monthly',
+        builder: (context, state) => const MonthlyRetrospectiveRoute(),
       ),
       GoRoute(
         path: '/calendar/question',

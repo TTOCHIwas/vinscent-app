@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +20,6 @@ import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_repository.dart';
 import 'package:vinscent/features/ai/data/ai_proactive_suggestion_store.dart';
-import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
@@ -328,7 +329,7 @@ void main() {
       settle: false,
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
     expect(findTextIgnoringWordJoiners(_characterSetupPrompt), findsNothing);
     expect(findTextIgnoringWordJoiners(HomeGuide.card.message), findsNothing);
   });
@@ -385,7 +386,7 @@ void main() {
     await tester.pump();
 
     expect(questionFinder, findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(CupertinoActivityIndicator), findsNothing);
   });
 
   testWidgets('답변한 질문의 갱신 중에는 다음 안내를 보류한다', (tester) async {
@@ -417,7 +418,7 @@ void main() {
     container.read(_questionRefreshRevisionProvider.notifier).advance();
     await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
     expect(findTextIgnoringWordJoiners(HomeGuide.card.message), findsNothing);
   });
 
@@ -712,13 +713,20 @@ void main() {
     expect(generatedIndicator, findsOneWidget);
 
     final generatedContentRect = tester.getRect(find.byKey(_questionBubbleKey));
+    final generatedGroup = tester.getRect(
+      find.descendant(
+        of: find.byKey(_questionBubbleKey),
+        matching: find.byType(AiGeneratedContent),
+      ),
+    );
+    expect(
+      generatedGroup.center.dx,
+      closeTo(generatedContentRect.center.dx, 0.01),
+    );
     final questionTextRect = tester.getRect(questionText);
     final generatedBadgeRect = tester.getRect(generatedBadge);
-    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
-    expect(
-      generatedBadgeRect.center.dy,
-      inInclusiveRange(questionTextRect.top, questionTextRect.bottom),
-    );
+    expect(questionTextRect.top - generatedBadgeRect.bottom, closeTo(8, 0.01));
+    expect(generatedBadgeRect.left, questionTextRect.left);
     expect(
       generatedBadgeRect.center.dx,
       lessThanOrEqualTo(generatedContentRect.right),
@@ -1497,7 +1505,7 @@ void main() {
 
       expect(find.text(_storyLabel), findsNothing);
       expect(find.text(_storyLoadingMessage), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
     },
   );
 

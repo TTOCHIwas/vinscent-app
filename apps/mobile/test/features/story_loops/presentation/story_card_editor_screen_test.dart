@@ -623,7 +623,8 @@ void main() {
 
     var input = tester.widget<TextField>(find.byType(TextField));
     expect(input.style?.color, selectedColor);
-    expect(input.cursorColor, selectedColor);
+    expect(input.cursorColor!.r, input.cursorColor!.g);
+    expect(input.cursorColor!.g, input.cursorColor!.b);
 
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();

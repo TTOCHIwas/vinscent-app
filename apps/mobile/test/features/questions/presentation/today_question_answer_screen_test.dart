@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/presentation/widgets/character_placeholder.dart';
 import 'package:vinscent/core/presentation/widgets/character_speech_message.dart';
-import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/application/ai_question_feedback_provider.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
@@ -57,7 +57,7 @@ void main() {
       expect(find.text('이곳을 눌러서 답변을 입력해주세요'), findsOneWidget);
       expect(find.text('상대방 답변'), findsOneWidget);
       expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.text('저장'), findsNothing);
     });
 
@@ -135,7 +135,7 @@ void main() {
       expect(find.text('수정'), findsNothing);
       expect(find.text('hello'), findsOneWidget);
       expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.text('저장'), findsNothing);
     });
 
@@ -220,7 +220,7 @@ void main() {
       expect(find.text('답변하기'), findsNothing);
       expect(find.text('내 답변을 저장하면 상대방 답변을 확인할 수 있어요'), findsOneWidget);
       expect(find.text('partner answer'), findsNothing);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.byKey(const Key('partner-answer-report')), findsNothing);
     });
 
@@ -238,13 +238,13 @@ void main() {
       expect(find.text('partner answer'), findsOneWidget);
       expect(find.byKey(const Key('question-detail-title')), findsOneWidget);
       expect(find.byKey(const Key('question-answer-prompt')), findsNothing);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
 
       await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
       expect(router.routeInformationProvider.value.uri.path, '/home/question');
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
     });
 
     testWidgets('reports an AI-generated question title', (tester) async {
@@ -539,17 +539,23 @@ void main() {
         );
         final characterRect = tester.getRect(character);
         final messageRect = tester.getRect(message);
+        final area = tester.getRect(
+          find.descendant(
+            of: feedback,
+            matching: find.byKey(const Key('character-speech-message-area')),
+          ),
+        );
 
         expect(characterRect.right, lessThan(messageRect.left));
         expect(
-          (characterRect.left + messageRect.right) / 2,
+          (characterRect.left + area.right) / 2,
           closeTo(layout.width / 2, 0.5),
           reason:
               'feedback and character should form one centered row at '
               '${layout.width}px and ${layout.textScaleFactor}x text',
         );
         expect(
-          messageRect.right - characterRect.left,
+          area.right - characterRect.left,
           lessThanOrEqualTo(360),
           reason: 'feedback row should keep a readable maximum width',
         );
@@ -587,7 +593,7 @@ void main() {
       await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
       expect(find.byKey(const Key('answer-save-action')), findsNothing);
       expect(find.text('상대방 답변'), findsNothing);
     });
@@ -603,7 +609,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller
+            ?.text,
         'hello',
       );
       expect(find.byKey(const Key('answer-save-action')), findsNothing);
@@ -661,12 +670,12 @@ void main() {
       expect(find.text('history question'), findsOneWidget);
       expect(find.text('history answer'), findsOneWidget);
       expect(find.text('partner answer'), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
 
       await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
     });
 
     testWidgets('shows invalid date state for malformed route date', (
@@ -778,7 +787,7 @@ void main() {
       await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
     });
 
     testWidgets('does not swipe before relationship start date', (
@@ -966,7 +975,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('question-answer-prompt')), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
       expect(find.text('저장'), findsNothing);
       final saveBar = find.byKey(const Key('answer-save-bar'));
       final characterCount = find.byKey(const Key('answer-character-count'));
@@ -979,7 +988,7 @@ void main() {
         of: saveAction,
         matching: find.byIcon(Icons.check_rounded),
       );
-      final textFieldRect = tester.getRect(find.byType(TextField));
+      final textFieldRect = tester.getRect(find.byType(CupertinoTextField));
       final saveBarRect = tester.getRect(saveBar);
       final screenHeight =
           tester.view.physicalSize.height / tester.view.devicePixelRatio;
@@ -1052,19 +1061,15 @@ void main() {
       await _openAnswerKeyboard(tester);
 
       expect(find.text('05월 31일'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
       expect(find.byType(CharacterPlaceholder), findsOneWidget);
       expect(find.text('답변 입력'), findsOneWidget);
       expect(find.text('0 / 500'), findsOneWidget);
-      final decoration = tester
-          .widget<TextField>(find.byType(TextField))
-          .decoration!;
-      expect(decoration.filled, isTrue);
-      expect(decoration.fillColor, AppColors.settingsIconBackground);
-      expect(
-        (decoration.border! as OutlineInputBorder).borderSide,
-        BorderSide.none,
+      final input = tester.widget<CupertinoTextField>(
+        find.byType(CupertinoTextField),
       );
+      expect(input.decoration, isNull);
+      expect(input.expands, isTrue);
 
       await tester.tap(find.byKey(const Key('answer-save-action')));
       await tester.pump();
@@ -1087,7 +1092,7 @@ void main() {
       );
       await _openAnswerKeyboard(tester);
 
-      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.enterText(find.byType(CupertinoTextField), 'hello');
       await tester.pump();
 
       expect(find.text('5 / 500'), findsOneWidget);
@@ -1097,7 +1102,7 @@ void main() {
 
       expect(repository.submitCallCount, 1);
       expect(repository.submittedAnswers, ['hello']);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.text('수정'), findsNothing);
       expect(find.text('hello'), findsOneWidget);
       expect(find.text('상대방은 아직 답변하지 않았어요'), findsOneWidget);
@@ -1119,7 +1124,7 @@ void main() {
       );
       await _openAnswerKeyboard(tester);
 
-      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.enterText(find.byType(CupertinoTextField), 'hello');
       await tester.pump();
 
       await tester.tap(find.byKey(const Key('answer-save-action')));
@@ -1128,11 +1133,14 @@ void main() {
       expect(repository.submitCallCount, 1);
       expect(repository.submittedAnswers, ['hello']);
       expect(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller
+            ?.text,
         'hello',
       );
       expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
 
       await _openAnswerKeyboard(tester);
       await tester.tap(find.byKey(const Key('answer-save-action')));
@@ -1141,7 +1149,7 @@ void main() {
       expect(repository.submitCallCount, 2);
       expect(repository.submittedAnswers, ['hello', 'hello']);
       expect(find.text('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'), findsNothing);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.text('hello'), findsOneWidget);
     });
 
@@ -1155,7 +1163,7 @@ void main() {
       );
       await _openAnswerKeyboard(tester);
 
-      await tester.enterText(find.byType(TextField), 'a' * 501);
+      await tester.enterText(find.byType(CupertinoTextField), 'a' * 501);
       await tester.pump();
 
       expect(find.text('501 / 500'), findsOneWidget);
@@ -1179,7 +1187,10 @@ void main() {
       await _openAnswerKeyboard(tester);
 
       expect(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller
+            ?.text,
         'hello',
       );
       expect(find.text('저장'), findsNothing);
@@ -1206,7 +1217,7 @@ void main() {
         initialLocation: '/home/question/edit',
       );
 
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.byKey(const Key('answer-save-action')), findsNothing);
       expect(find.text('답변을 작성할 수 없어요'), findsOneWidget);
       expect(repository.submitCallCount, 0);
@@ -1226,12 +1237,12 @@ void main() {
       await tester.tap(find.text('내 답변'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
 
       await tester.tap(find.byTooltip('뒤로가기'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(find.text('today question'), findsOneWidget);
     });
 
@@ -1251,13 +1262,13 @@ void main() {
         );
         await _openAnswerKeyboard(tester);
 
-        await tester.enterText(find.byType(TextField), 'hello');
+        await tester.enterText(find.byType(CupertinoTextField), 'hello');
         await tester.pump();
 
         await tester.tap(find.byKey(const Key('answer-save-action')));
         await tester.pumpAndSettle();
 
-        expect(find.byType(TextField), findsNothing);
+        expect(find.byType(CupertinoTextField), findsNothing);
         expect(find.text('hello'), findsOneWidget);
         expect(find.text('today question'), findsOneWidget);
       },
@@ -1280,7 +1291,7 @@ Future<void> _submitUnsafeAiReport(WidgetTester tester) async {
 }
 
 Future<void> _openAnswerKeyboard(WidgetTester tester) async {
-  await tester.tap(find.byType(TextField));
+  await tester.tap(find.byType(CupertinoTextField));
   tester.view.viewInsets = const FakeViewPadding(bottom: 300);
   await tester.pumpAndSettle();
 }

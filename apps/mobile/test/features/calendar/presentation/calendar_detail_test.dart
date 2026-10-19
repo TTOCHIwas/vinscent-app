@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/features/ai/data/ai_learning_dashboard.dart';
-import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/calendar/presentation/widgets/calendar_story_card_stack.dart';
 import 'package:vinscent/features/calendar/data/public_holiday.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_answer_prompt_row.dart';
@@ -112,6 +111,11 @@ void main() {
     );
     expect(find.text('history question'), findsOneWidget);
     expect(find.byKey(const Key('question-detail-title')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byType(QuestionDetailTitle)).dy -
+          tester.getBottomLeft(cardStack).dy,
+      closeTo(32, 0.01),
+    );
     expect(find.byType(QuestionAnswerPromptRow), findsNothing);
     expect(find.byKey(const Key('calendar-schedule-section')), findsNothing);
     expect(find.byKey(const Key('calendar-story-section')), findsOneWidget);
@@ -152,14 +156,57 @@ void main() {
     final feedbackMessageRect = tester.getRect(
       find.byKey(const Key('ai-question-feedback-prompt')),
     );
+    final feedbackAreaRect = tester.getRect(
+      find.descendant(
+        of: find.byKey(const Key('ai-question-feedback')),
+        matching: find.byKey(const Key('character-speech-message-area')),
+      ),
+    );
     expect(feedbackCharacterRect.right, lessThan(feedbackMessageRect.left));
     expect(
-      (feedbackCharacterRect.left + feedbackMessageRect.right) / 2,
+      (feedbackCharacterRect.left + feedbackAreaRect.right) / 2,
       closeTo(tester.getCenter(detailContent).dx, 0.5),
     );
     expect(findTextIgnoringWordJoiners('둘 다 소중한 대상을 바로 떠올렸네'), findsOneWidget);
     expect(find.text('그 날의 표현 횟수'), findsNothing);
   });
+
+  for (final scale in [1.0, 1.5]) {
+    testWidgets('cardless detail starts at the content top at scale $scale', (
+      tester,
+    ) async {
+      final date = DateTime(2026, 5, 5);
+      await pumpCalendar(
+        tester,
+        repository: FakeStoryLoopReadRepository(
+          details: {
+            date: sampleStoryLoopDetail(
+              coupleDate: date,
+              canEditStory: false,
+              canAnswerQuestion: false,
+              cardCount: 0,
+              cards: const [],
+              question: completedDetail.question,
+            ),
+          },
+        ),
+        initialDate: date,
+        textScaleFactor: scale,
+      );
+
+      expect(find.byType(CalendarStoryCardStack), findsNothing);
+      final question = tester.getRect(find.byType(QuestionDetailTitle));
+      final content = tester.getRect(
+        find.byKey(const Key('calendar-story-detail-content')),
+      );
+      final sectionTitle = tester.getRect(find.text('우리 기록'));
+      expect(question.top, closeTo(content.top, 0.01));
+      expect(question.top - sectionTitle.bottom, closeTo(18, 0.01));
+      expect(find.text('my answer'), findsOneWidget);
+      expect(find.text('partner answer'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('reports an AI-generated question from calendar detail', (
     tester,
@@ -180,6 +227,7 @@ void main() {
     await scrollCalendarUp(tester);
     final indicator = find.byKey(const Key('ai-generated-content-indicator'));
     await tester.ensureVisible(indicator);
+    await tester.pumpAndSettle();
     final questionTitle = find.byType(QuestionDetailTitle);
     final generatedBadge = find.byKey(const Key('ai-generated-content-badge'));
     final renderedQuestion = find.byKey(const Key('question-detail-title'));
@@ -187,13 +235,13 @@ void main() {
       tester.widget<QuestionDetailTitle>(questionTitle).textAlign,
       TextAlign.start,
     );
-    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
     expect(
       tester.getRect(generatedBadge).center.dy,
-      inInclusiveRange(
-        tester.getRect(renderedQuestion).top,
-        tester.getRect(renderedQuestion).bottom,
-      ),
+      closeTo(tester.getRect(find.text('우리 기록')).center.dy, 0.01),
+    );
+    expect(
+      tester.getRect(renderedQuestion).top,
+      greaterThan(tester.getRect(indicator).bottom),
     );
     await tester.tap(indicator);
     await tester.pumpAndSettle();
@@ -213,6 +261,80 @@ void main() {
       ),
     );
   });
+
+  for (final cardCount in [0, 2]) {
+    for (final scale in [1.0, 1.5]) {
+      testWidgets(
+        'AI record heading stays inline with $cardCount cards at scale $scale',
+        (tester) async {
+          final date = DateTime(2026, 5, 5);
+          await pumpCalendar(
+            tester,
+            repository: FakeStoryLoopReadRepository(
+              details: {
+                date: sampleStoryLoopDetail(
+                  coupleDate: date,
+                  cardCount: cardCount,
+                  cards: completedDetail.cards.take(cardCount).toList(),
+                  question: aiCompletedDetail.question,
+                  canEditStory: false,
+                  canAnswerQuestion: false,
+                ),
+              },
+            ),
+            initialDate: date,
+            textScaleFactor: scale,
+          );
+
+          final heading = tester.getRect(find.text('우리 기록'));
+          final badge = tester.getRect(
+            find.byKey(const Key('ai-generated-content-badge')),
+          );
+          final infoIcon = tester.getRect(
+            find.byKey(const Key('ai-generated-content-info-icon')),
+          );
+          final infoButton = tester.getRect(
+            find.byKey(const Key('ai-generated-content-indicator')),
+          );
+          final question = find.byType(QuestionDetailTitle);
+          expect(badge.center.dy, closeTo(heading.center.dy, 0.01));
+          expect(infoIcon.center.dy, closeTo(badge.center.dy, 0.01));
+          expect(badge.left, greaterThan(heading.right));
+          expect(infoButton.size, const Size.square(44));
+          expect(
+            find.descendant(
+              of: question,
+              matching: find.byKey(const Key('ai-generated-content-indicator')),
+            ),
+            findsNothing,
+          );
+          if (cardCount == 0) {
+            expect(
+              tester.getTopLeft(question).dy - infoButton.bottom,
+              closeTo(18, 0.01),
+            );
+            expect(
+              tester
+                  .getTopLeft(find.byKey(const Key('question-detail-title')))
+                  .dy,
+              closeTo(tester.getTopLeft(question).dy, 0.01),
+            );
+          } else {
+            expect(
+              tester.getTopLeft(question).dy -
+                  tester.getBottomLeft(find.byType(CalendarStoryCardStack)).dy,
+              closeTo(32, 0.01),
+            );
+          }
+          final text = tester.widget<Text>(
+            find.descendant(of: question, matching: find.byType(Text)),
+          );
+          expect(text.semanticsLabel, startsWith('AI 생성 질문:'));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   testWidgets('opens a selected history card in the shared detail overlay', (
     tester,

@@ -1,11 +1,68 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/monthly_retrospective/data/monthly_retrospective.dart';
 import 'package:vinscent/features/monthly_retrospective/data/monthly_retrospective_repository.dart';
 import 'package:vinscent/features/monthly_retrospective/presentation/widgets/monthly_card_scatter.dart';
+import 'package:vinscent/features/story_loops/presentation/widgets/story_card_preview_surface.dart';
 
 void main() {
+  testWidgets('keeps old cards ready while a newly added card awaits signing', (
+    tester,
+  ) async {
+    final repository = _Repository()..urls = {'preview-0': 'unavailable'};
+    final count = ValueNotifier(1);
+    addTearDown(count.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          monthlyRetrospectiveRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: ValueListenableBuilder(
+              valueListenable: count,
+              builder: (context, value, _) => MonthlyCardScatter(
+                cards: [
+                  for (var i = 0; i < value; i++)
+                    (date: _card(i).date, card: _card(i)),
+                ],
+                onOpenCard: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    repository.pending = Completer<Map<String, String>>();
+    count.value = 2;
+    await tester.pump();
+    await tester.pump();
+    final surfaces = tester
+        .widgetList<StoryCardPreviewSurface>(
+          find.byType(StoryCardPreviewSurface),
+        )
+        .toList();
+    expect(surfaces[0].isLoading, false);
+    expect(surfaces[1].isLoading, true);
+    repository.pending!.complete({
+      'preview-0': 'unavailable',
+      'preview-1': 'unavailable',
+    });
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widgetList<StoryCardPreviewSurface>(
+            find.byType(StoryCardPreviewSurface),
+          )
+          .every((card) => !card.isLoading),
+      true,
+    );
+  });
+
   test(
     'selects at most eight stable cards across both authors and the month',
     () {
@@ -81,6 +138,16 @@ void main() {
     );
     expect(opened?.card.id, selected.last.card.id);
     expect(opened?.date, selected.last.date);
+    opened = null;
+    final lastCard = tester.renderObject<RenderBox>(
+      find.byKey(ValueKey('monthly-card-${selected.last.card.id}')),
+    );
+    await tester.tapAt(
+      lastCard.localToGlobal(
+        Offset(lastCard.size.width - 4, lastCard.size.height - 4),
+      ),
+    );
+    expect(opened?.card.id, selected.last.card.id);
     expect(tester.takeException(), isNull);
   });
 
@@ -150,6 +217,8 @@ RetrospectiveGalleryCard _card(int index) => RetrospectiveGalleryCard.fromJson({
 
 class _Repository implements MonthlyRetrospectiveRepository {
   int calls = 0;
+  Map<String, String> urls = {};
+  Completer<Map<String, String>>? pending;
   List<String> requestedPaths = [];
   @override
   Future<Map<String, String>> previewUrls(
@@ -157,7 +226,7 @@ class _Repository implements MonthlyRetrospectiveRepository {
   ) async {
     calls++;
     requestedPaths = cards.map((card) => card.previewPath).toList();
-    return {};
+    return pending?.future ?? urls;
   }
 
   @override

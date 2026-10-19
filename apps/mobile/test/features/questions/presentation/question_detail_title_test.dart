@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
-import 'package:vinscent/features/ai/presentation/widgets/ai_generated_content_indicator.dart';
 import 'package:vinscent/features/questions/presentation/widgets/question_detail_title.dart';
 
 void main() {
@@ -59,7 +58,33 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.byType(AiGeneratedContentBadgeOverlay), findsNothing);
+    final titleRect = tester.getRect(
+      find.byKey(const Key('question-detail-title')),
+    );
+    final badgeRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-badge')),
+    );
+    expect(titleRect.top - badgeRect.bottom, closeTo(8, 0.01));
+    expect(badgeRect.left, titleRect.left);
+  });
+
+  testWidgets('keeps a short AI question flush with its start-aligned marker', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 272,
+            child: QuestionDetailTitle(
+              questionText: '왜?',
+              textAlign: TextAlign.start,
+              showGeneratedIndicator: true,
+            ),
+          ),
+        ),
+      ),
+    );
 
     final titleRect = tester.getRect(
       find.byKey(const Key('question-detail-title')),
@@ -67,10 +92,14 @@ void main() {
     final badgeRect = tester.getRect(
       find.byKey(const Key('ai-generated-content-badge')),
     );
-    expect(
-      badgeRect.center.dy,
-      inInclusiveRange(titleRect.top, titleRect.bottom),
+    final indicatorRect = tester.getRect(
+      find.byKey(const Key('ai-generated-content-indicator')),
     );
+    final groupRect = tester.getRect(find.byType(QuestionDetailTitle));
+    expect(badgeRect.left, titleRect.left);
+    expect(indicatorRect.left, greaterThanOrEqualTo(groupRect.left));
+    expect(indicatorRect.right, lessThanOrEqualTo(groupRect.right));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('forwards generated indicator presses', (tester) async {

@@ -155,7 +155,7 @@ void main() {
       find.byKey(const Key('calendar-event-title-field')),
     );
     final titleFocusedBorder =
-        titleField.decoration?.focusedBorder as UnderlineInputBorder;
+        titleField.decoration?.focusedBorder as OutlineInputBorder;
     final repeatControl = tester
         .widget<SegmentedButton<CoupleCalendarEventRepeatRule>>(
           find.byType(SegmentedButton<CoupleCalendarEventRepeatRule>),
@@ -165,10 +165,10 @@ void main() {
       find.byKey(const Key('calendar-event-reminder-toggle')),
     );
 
-    expect(titleField.decoration?.filled, isFalse);
+    expect(titleField.decoration?.filled, isTrue);
     expect(
       titleFocusedBorder.borderSide,
-      const BorderSide(color: AppColors.settingsDivider),
+      const BorderSide(color: AppColors.actionPrimary),
     );
     expect(titleField.decoration?.counterText, isEmpty);
     expect(

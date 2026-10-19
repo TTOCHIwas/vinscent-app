@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:vinscent/app/app.dart';
 import 'package:vinscent/core/assets/app_icons.dart';
 import 'package:vinscent/core/date/today_controller.dart';
 import 'package:vinscent/core/presentation/widgets/app_svg_icon.dart';
+import 'package:vinscent/core/presentation/widgets/app_page_header.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 import 'package:vinscent/core/theme/app_typography.dart';
 import 'package:vinscent/features/auth/application/auth_controller.dart';
@@ -20,6 +22,9 @@ import 'package:vinscent/features/characters/application/couple_character_contro
 import 'package:vinscent/features/characters/presentation/character_editor_screen.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/home/presentation/home_screen.dart';
+import 'package:vinscent/features/monthly_retrospective/application/monthly_retrospective_controller.dart';
+import 'package:vinscent/features/monthly_retrospective/data/monthly_retrospective.dart';
+import 'package:vinscent/features/monthly_retrospective/presentation/monthly_retrospective_screen.dart';
 import 'package:vinscent/features/profile/application/profile_controller.dart';
 import 'package:vinscent/features/profile/data/user_profile.dart';
 import 'package:vinscent/features/safety/application/ugc_safety_policy_controller.dart';
@@ -51,6 +56,271 @@ import '../../support/safety_fixtures.dart';
 import '../../support/story_loop_fixtures.dart';
 
 void main() {
+  for (final dirty in [false, true]) {
+    testWidgets(
+      'direct retrospective system back has one owner, dirty: $dirty',
+      (tester) async {
+        await _pumpApp(
+          tester,
+          question: _dailyQuestion,
+          todayAnswerState: pendingAnswerState,
+          retrospective: _retrospective,
+        );
+        final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+        router.go('/monthly');
+        await tester.pumpAndSettle();
+        if (dirty) {
+          await tester.ensureVisible(
+            find.byKey(const Key('monthly-reflection')),
+          );
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(CupertinoTextField), '직접 진입 초안');
+          await tester.pumpAndSettle();
+        }
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        if (dirty) {
+          expect(find.text('작성 중인 답변이 있어요'), findsOneWidget);
+          await tester.tap(find.text('계속 작성'));
+          await tester.pumpAndSettle();
+          expect(find.byType(MonthlyRetrospectiveScreen), findsOneWidget);
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('닫기'));
+          await tester.pumpAndSettle();
+        }
+        expect(router.routeInformationProvider.value.uri.path, '/ai');
+        expect(find.byType(AiTabHeader), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  for (final legacy in ['/ai/monthly-record', '/calendar/monthly/record']) {
+    testWidgets('legacy $legacy preserves the record date', (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+        retrospective: _retrospective,
+      );
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go('$legacy?date=2026-05-30');
+      await tester.pumpAndSettle();
+      final record = tester.widget<CalendarScreen>(find.byType(CalendarScreen));
+      expect(record.initialDate, DateTime(2026, 5, 30));
+      expect(
+        GoRouterState.of(tester.element(find.byType(CalendarScreen))).uri.path,
+        '/monthly/record',
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthlyRetrospectiveScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  for (final source in ['/ai', '/calendar?date=2026-05-30']) {
+    testWidgets('independent retrospective returns to $source', (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+        retrospective: _retrospective,
+      );
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go(source);
+      await tester.pumpAndSettle();
+      if (source == '/ai') {
+        expect(find.text('AI 질문'), findsNothing);
+        await tester.tap(find.byKey(const Key('ai-monthly-retrospective')));
+      } else {
+        router.push('/monthly');
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthlyRetrospectiveScreen), findsOneWidget);
+      expect(find.byType(AiTabHeader), findsNothing);
+      expect(
+        _tabs(tester).where((tab) => tab.isSelected).map((tab) => tab.label),
+        ['AI'],
+      );
+      expect(tester.getRect(find.byType(AppPageHeader)).top, 56);
+      expect(tester.getCenter(find.byTooltip('뒤로가기')), const Offset(44, 84));
+      await tester.tap(find.byTooltip('뒤로가기'));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.toString(), source);
+      expect(find.byType(MonthlyRetrospectiveScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'independent retrospective guards bottom navigation and system back',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+        retrospective: _retrospective,
+      );
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go('/ai');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('ai-monthly-retrospective')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('monthly-reflection')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CupertinoTextField), '함께 남긴 초안');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ShellTab).first);
+      await tester.pumpAndSettle();
+      expect(find.text('작성 중인 답변이 있어요'), findsOneWidget);
+      await tester.tap(find.text('계속 작성'));
+      await tester.pumpAndSettle();
+      expect(
+        GoRouterState.of(
+          tester.element(find.byType(MonthlyRetrospectiveScreen)),
+        ).uri.path,
+        '/monthly',
+      );
+      expect(
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller!
+            .text,
+        '함께 남긴 초안',
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('닫기'));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/ai');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'record detail returns to the same retrospective page and draft',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+        retrospective: _retrospective,
+      );
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go('/ai');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('ai-monthly-retrospective')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('monthly-reflection')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CupertinoTextField), '보존할 초안');
+      await tester.ensureVisible(find.text('그날의 기록 보기'));
+      await tester.pumpAndSettle();
+      final recapScroll = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(SingleChildScrollView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      final recapOffset = recapScroll.pixels;
+      await tester.tap(find.text('그날의 기록 보기'));
+      await tester.pumpAndSettle();
+      expect(
+        GoRouterState.of(tester.element(find.byType(CalendarScreen))).uri.path,
+        '/monthly/record',
+      );
+      expect(find.byType(CalendarScreen), findsOneWidget);
+      expect(
+        _tabs(tester).where((tab) => tab.isSelected).map((tab) => tab.label),
+        ['AI'],
+      );
+      for (var index = 0; index < 3; index++) {
+        await tester.tap(find.byType(ShellTab).at(index));
+        await tester.pumpAndSettle();
+        expect(find.text('작성 중인 답변이 있어요'), findsOneWidget);
+        await tester.tap(find.text('계속 작성'));
+        await tester.pumpAndSettle();
+        expect(
+          GoRouterState.of(
+            tester.element(find.byType(CalendarScreen)),
+          ).uri.path,
+          '/monthly/record',
+        );
+      }
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(
+        GoRouterState.of(
+          tester.element(find.byType(MonthlyRetrospectiveScreen)),
+        ).uri.path,
+        '/monthly',
+      );
+      expect(find.text('그날의 기록 보기').hitTestable(), findsOneWidget);
+      expect(recapScroll.pixels, closeTo(recapOffset, 0.01));
+      await tester.ensureVisible(find.byKey(const Key('monthly-reflection')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller!
+            .text,
+        '보존할 초안',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'discarding a draft from record detail allows leaving the retrospective',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+        retrospective: _retrospective,
+      );
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go('/ai');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('ai-monthly-retrospective')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('monthly-reflection')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CupertinoTextField), '닫을 초안');
+      await tester.ensureVisible(find.text('그날의 기록 보기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('그날의 기록 보기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ShellTab).first);
+      await tester.pumpAndSettle();
+      expect(find.text('작성 중인 답변이 있어요'), findsOneWidget);
+      await tester.tap(find.text('닫기'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(MonthlyRetrospectiveScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('direct retrospective entry closes to AI', (tester) async {
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+      retrospective: _retrospective,
+    );
+    final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+    router.go('/monthly');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('뒤로가기'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/ai');
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('shell tab and system back respect the monthly draft guard', (
     tester,
   ) async {
@@ -94,7 +364,7 @@ void main() {
     expect(find.byType(CalendarScreen), findsOneWidget);
     expect(
       GoRouterState.of(tester.element(find.byType(CalendarScreen))).uri.path,
-      '/ai/monthly-record',
+      '/monthly/record',
     );
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -539,6 +809,111 @@ void main() {
     expect(find.byType(CalendarScreen), findsOneWidget);
   });
 
+  for (final delay in [0, 16, 100, 300]) {
+    testWidgets(
+      'calendar survives month change followed by AI after ${delay}ms',
+      (tester) async {
+        await _usePhoneSurface(tester);
+        await _pumpApp(
+          tester,
+          question: _dailyQuestion,
+          todayAnswerState: pendingAnswerState,
+        );
+        final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+        await tester.tap(find.byType(ShellTab).at(1));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('calendar-next-month')));
+        await tester.pump(Duration(milliseconds: delay));
+        await tester.tap(find.byType(ShellTab).at(2));
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.path, '/ai');
+        await tester.tap(find.byType(ShellTab).at(1));
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.path, '/calendar');
+        expect(find.byType(CalendarScreen), findsOneWidget);
+        expect(_selectedCalendarDate(tester), DateTime(2026, 6, 30));
+      },
+    );
+  }
+
+  testWidgets('late calendar month callback cannot replace the AI branch', (
+    tester,
+  ) async {
+    await _usePhoneSurface(tester);
+    await _pumpApp(
+      tester,
+      question: _dailyQuestion,
+      todayAnswerState: pendingAnswerState,
+    );
+    final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+    final monthAction = find.descendant(
+      of: find.byKey(const Key('calendar-next-month')),
+      matching: find.byType(InkWell),
+    );
+    final onMonthPressed = tester.widget<InkWell>(monthAction).onTap!;
+    await tester.tap(find.byType(ShellTab).at(2));
+    await tester.pumpAndSettle();
+    onMonthPressed();
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/ai');
+    await tester.tap(find.byType(ShellTab).at(1));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/calendar');
+  });
+
+  testWidgets(
+    'record month navigation preserves its recap draft and calendar origin',
+    (tester) async {
+      await _usePhoneSurface(tester);
+      await _pumpApp(
+        tester,
+        question: _dailyQuestion,
+        todayAnswerState: pendingAnswerState,
+        retrospective: _retrospective,
+      );
+      final router = GoRouter.of(tester.element(find.byType(AppHeader)));
+      router.go('/calendar?date=2026-05-30');
+      await tester.pumpAndSettle();
+      router.push('/monthly');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('monthly-reflection')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CupertinoTextField), '돌아와서 이어 쓸 초안');
+      router.push('/monthly/record?date=2026-05-30&source=recap');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('calendar-next-month')));
+      await tester.pumpAndSettle();
+      final recordContext = tester.element(find.byType(CalendarScreen));
+      expect(GoRouterState.of(recordContext).uri.path, '/monthly/record');
+      expect(
+        GoRouterState.of(recordContext).uri.queryParameters['date'],
+        '2026-06-30',
+      );
+      expect(
+        GoRouterState.of(recordContext).uri.queryParameters['source'],
+        'recap',
+      );
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthlyRetrospectiveScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller
+            ?.text,
+        '돌아와서 이어 쓸 초안',
+      );
+      await tester.tap(find.byTooltip('뒤로가기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('닫기'));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/calendar');
+      expect(_selectedCalendarDate(tester), DateTime(2026, 5, 30));
+    },
+  );
+
   testWidgets('root tabs preserve their local view state', (tester) async {
     await _pumpApp(
       tester,
@@ -789,7 +1164,7 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(CupertinoTextField), findsNothing);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -865,7 +1240,7 @@ void main() {
       expect(find.byType(AppHeader), findsNothing);
       expect(find.byType(AppBottomBar), findsNothing);
       expect(find.byType(TodayQuestionAnswerEditScreen), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(CupertinoTextField), findsOneWidget);
     },
   );
 
@@ -885,7 +1260,7 @@ void main() {
       expect(find.byType(AppHeader), findsNothing);
       expect(find.byType(AppBottomBar), findsOneWidget);
       expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(_tabs(tester).first.isSelected, isTrue);
       expect(
         _scrollBottomPadding(tester, find.byType(TodayQuestionAnswerScreen)),
@@ -917,7 +1292,7 @@ void main() {
       expect(find.byType(AppHeader), findsNothing);
       expect(find.byType(AppBottomBar), findsOneWidget);
       expect(find.byType(TodayQuestionAnswerScreen), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CupertinoTextField), findsNothing);
       expect(_tabs(tester).first.isSelected, isTrue);
     },
   );
@@ -971,12 +1346,37 @@ Future<void> _usePhoneSurface(WidgetTester tester) async {
   addTearDown(() => tester.binding.setSurfaceSize(null));
 }
 
+final _retrospective = MonthlyRetrospective.fromJson({
+  'couple_id': 'couple-id',
+  'month': '2026-05-01',
+  'available_until': '2026-07-01T00:00:00Z',
+  'recorded_days': 2,
+  'card_count': 0,
+  'card_count_complete': true,
+  'completed_questions': 0,
+  'has_records': true,
+  'ai_enabled': false,
+  'title': '우리의 5월',
+  'content_status': 'basic',
+  'moments': [
+    {'date': '2026-05-30', 'question': '다시 함께하고 싶은 일은?', 'cards': []},
+  ],
+  'reflection': {
+    'id': 'r',
+    'question': '다음 달 함께하고 싶은 일은?',
+    'source': 'basic',
+    'partner_answer_exists': false,
+    'version': 0,
+  },
+});
+
 Future<void> _pumpApp(
   WidgetTester tester, {
   required DailyQuestion question,
   required DailyQuestionAnswerState todayAnswerState,
   bool stubRecordingOverview = false,
   CoupleRecordingOverview? recordingOverview,
+  MonthlyRetrospective? retrospective,
 }) async {
   final storyLoopRepository = FakeStoryLoopReadRepository(
     todaySummary: sampleTodaySummary(
@@ -1013,6 +1413,10 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        if (retrospective != null)
+          monthlyRetrospectiveControllerProvider.overrideWithBuild(
+            (ref, notifier) async => retrospective,
+          ),
         authControllerProvider.overrideWithBuild(
           (ref, notifier) => AuthStatus.authenticated,
         ),

@@ -3,6 +3,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_horizontal_page_transition.dart';
 
 void main() {
+  testWidgets(
+    'keeps outgoing content at its previous height when the next page is shorter',
+    (tester) async {
+      Widget page(int number, double height) => MaterialApp(
+        home: SingleChildScrollView(
+          child: SizedBox(
+            width: 320,
+            child: AppHorizontalPageTransition(
+              transitionKey: number,
+              direction: AppHorizontalPageDirection.next,
+              child: Column(
+                key: ValueKey('page-$number'),
+                children: [SizedBox(height: height)],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(page(1, 600));
+      await tester.pumpWidget(page(2, 80));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.getSize(find.byKey(const ValueKey('page-1'))).height, 600);
+      expect(tester.getSize(find.byKey(const ValueKey('page-2'))).height, 80);
+      expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle();
+    },
+  );
+
   testWidgets('slides the current page left when the next page enters', (
     tester,
   ) async {

@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:vinscent/features/ai/application/ai_memory_attention_controller.dart';
 import 'package:vinscent/features/ai/application/ai_learning_controller.dart';
 import 'package:vinscent/features/ai/application/ai_direct_question_controller.dart';
@@ -15,6 +17,48 @@ import 'package:vinscent/core/presentation/widgets/word_boundary_text.dart';
 import 'package:vinscent/core/theme/app_colors.dart';
 
 void main() {
+  for (final ready in [false, true]) {
+    testWidgets(
+      'retrospective entry remains reachable at narrow width, ready: $ready',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await _pump(
+          tester,
+          _dashboard(
+            completedCount: ready ? 24 : 8,
+            personalizationStatus: ready
+                ? AiPersonalizationStatus.ready
+                : AiPersonalizationStatus.collecting,
+          ),
+          textScaleFactor: 1.6,
+        );
+        expect(find.text('AI 질문'), findsNothing);
+        expect(find.text('월간 회고'), findsNothing);
+        expect(find.byTooltip('월간 회고'), findsOneWidget);
+        expect(find.byIcon(LucideIcons.bookHeart), findsOneWidget);
+        expect(
+          tester.getSize(find.byKey(const Key('ai-monthly-retrospective'))),
+          const Size(44, 44),
+        );
+        expect(
+          find.byKey(const Key('ai-monthly-retrospective')).hitTestable(),
+          findsOneWidget,
+        );
+        if (ready) {
+          expect(
+            find.byKey(const Key('ai-tab-history-action')).hitTestable(),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('ai-tab-memory-action')).hitTestable(),
+            findsOneWidget,
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   testWidgets('shows consent entry before the current member opts in', (
     tester,
   ) async {
@@ -380,7 +424,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-direct-question-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     await tester.tap(input);
     await tester.pump();

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -70,6 +71,14 @@ void main() {
         expect(
           find.byKey(const Key('calendar-monthly-retrospective')),
           findsOneWidget,
+        );
+        expect(find.byIcon(LucideIcons.bookHeart), findsOneWidget);
+        expect(find.byTooltip('월간 회고'), findsOneWidget);
+        expect(
+          tester.getSize(
+            find.byKey(const Key('calendar-monthly-retrospective')),
+          ),
+          const Size(44, 44),
         );
         expect(
           tester.getCenter(find.text('2026년 09월')).dx,
@@ -165,8 +174,8 @@ void main() {
       await tester.tap(find.byKey(const Key('calendar-monthly-retrospective')));
       await tester.pumpAndSettle();
       expect(router.canPop(), isTrue);
-      expect(find.text('2026년 9월').hitTestable(), findsOneWidget);
-      await tester.tap(find.byTooltip('캘린더로 돌아가기'));
+      expect(find.text('2026년 09월').hitTestable(), findsOneWidget);
+      await tester.tap(find.byTooltip('뒤로가기'));
       await tester.pumpAndSettle();
       expect(find.text('2026년 09월'), findsOneWidget);
       expect(find.text('9월 7일'), findsOneWidget);
@@ -187,17 +196,20 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('calendar-monthly-retrospective')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('monthly-page-indicator-2')));
+      await tester.ensureVisible(find.byKey(const Key('monthly-reflection')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '작성 중인 한마디');
+      await tester.enterText(find.byType(CupertinoTextField), '작성 중인 한마디');
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('캘린더로 돌아가기'));
+      await tester.tap(find.byTooltip('뒤로가기'));
       await tester.pumpAndSettle();
       expect(find.text('작성 중인 답변이 있어요'), findsOneWidget);
       await tester.tap(find.text('계속 작성'));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        tester
+            .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+            .controller!
+            .text,
         '작성 중인 한마디',
       );
       await tester.binding.handlePopRoute();
@@ -222,7 +234,7 @@ void main() {
     final back = tester.widget<IconButton>(
       find
           .ancestor(
-            of: find.byTooltip('캘린더로 돌아가기'),
+            of: find.byTooltip('뒤로가기'),
             matching: find.byType(IconButton),
           )
           .first,

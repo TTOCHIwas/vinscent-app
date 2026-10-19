@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoTextField;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,7 +63,7 @@ void main() {
     final characterCount = find.byKey(const Key('ai-focused-character-count'));
     final answerField = find.descendant(
       of: input,
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     final characterCountText = find.descendant(
       of: characterCount,
@@ -112,7 +113,7 @@ void main() {
 
     final input = find.descendant(
       of: find.byKey(const Key('ai-focused-answer-input')),
-      matching: find.byType(TextField),
+      matching: find.byType(CupertinoTextField),
     );
     final editableText = find.descendant(
       of: input,

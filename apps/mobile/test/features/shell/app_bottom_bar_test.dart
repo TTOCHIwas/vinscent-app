@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/shell/presentation/widgets/app_bottom_bar.dart';
+import 'package:vinscent/features/shell/presentation/widgets/shell_tab.dart';
 
 void main() {
+  for (final location in ['/monthly', '/monthly/record']) {
+    testWidgets('selects AI for the retrospective location $location', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: AppBottomBar(
+              height: 90,
+              currentLocation: location,
+              onHomePressed: () {},
+              onCalendarPressed: () {},
+              onAiPressed: () {},
+            ),
+          ),
+        ),
+      );
+      final tabs = tester.widgetList<ShellTab>(find.byType(ShellTab)).toList();
+      expect(tabs.where((tab) => tab.isSelected).map((tab) => tab.label), [
+        'AI',
+      ]);
+    });
+  }
   testWidgets('preserves the Android dock gap above the system inset', (
     tester,
   ) async {

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/core/presentation/widgets/app_action_button.dart';
@@ -69,8 +70,8 @@ void main() {
     );
     expect(
       tester
-          .widget<CircularProgressIndicator>(
-            find.byType(CircularProgressIndicator),
+          .widget<CupertinoActivityIndicator>(
+            find.byType(CupertinoActivityIndicator),
           )
           .color,
       AppColors.textMuted,
