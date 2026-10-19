@@ -1,17 +1,21 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../theme/app_colors.dart';
 
 class AppLoadingIndicator extends StatelessWidget {
-  const AppLoadingIndicator({super.key, this.strokeWidth = 4});
+  const AppLoadingIndicator({super.key, this.radius = 10});
 
-  final double strokeWidth;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
-    return CircularProgressIndicator(
-      color: AppColors.textMuted,
-      strokeWidth: strokeWidth,
+    return Center(
+      widthFactor: 1,
+      heightFactor: 1,
+      child: CupertinoActivityIndicator(
+        color: AppColors.textMuted,
+        radius: radius,
+      ),
     );
   }
 }

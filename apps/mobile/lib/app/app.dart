@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/date/today_controller.dart';
+import '../core/storage/image_bytes_cache.dart';
 import '../core/presentation/widgets/app_keyboard_dismiss_scope.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/application/auth_controller.dart';
@@ -291,6 +292,16 @@ class _VinscentAppState extends ConsumerState<VinscentApp>
     ref.watch(userSafetyRealtimeControllerProvider);
     ref.watch(storyLoopRealtimeControllerProvider);
     ref.watch(coupleCalendarEventRealtimeControllerProvider);
+    ref.listen(authControllerProvider, (_, next) {
+      if (next != AuthStatus.authenticated) ImageBytesCache.shared.clear();
+    });
+    ref.listen(coupleControllerProvider, (previous, next) {
+      if (next is AsyncData &&
+          (previous?.value?.id != next.value?.id ||
+              next.value?.canReadSharedData != true)) {
+        ImageBytesCache.shared.clear();
+      }
+    });
     if (_supportsHomeWidgets) {
       ref.listen(authControllerProvider, (_, next) {
         if (next == AuthStatus.authenticated) {

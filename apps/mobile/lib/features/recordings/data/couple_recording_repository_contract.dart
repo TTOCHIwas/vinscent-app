@@ -2,6 +2,10 @@ import 'dart:typed_data';
 
 import 'couple_recording.dart';
 
+abstract interface class CurrentCoupleRecordingReader {
+  Future<CurrentCoupleRecording?> fetchCurrentRecording();
+}
+
 abstract interface class CoupleRecordingRepository {
   Future<CoupleRecordingOverview> fetchOverview();
 

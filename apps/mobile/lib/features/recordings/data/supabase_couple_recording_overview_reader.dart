@@ -7,10 +7,11 @@ import 'couple_recording.dart';
 import 'couple_recording_data_gateways.dart';
 import 'couple_recording_failure.dart';
 import 'couple_recording_read_mapper.dart';
+import 'couple_recording_repository_contract.dart';
 import 'supabase_couple_recording_gateway_support.dart';
 
 class SupabaseCoupleRecordingOverviewReader
-    implements CoupleRecordingOverviewReader {
+    implements CoupleRecordingOverviewReader, CurrentCoupleRecordingReader {
   const SupabaseCoupleRecordingOverviewReader({
     SupabaseCoupleRecordingGatewaySupport support =
         const SupabaseCoupleRecordingGatewaySupport(),
@@ -20,6 +21,34 @@ class SupabaseCoupleRecordingOverviewReader
 
   final SupabaseCoupleRecordingGatewaySupport _support;
   final CoupleRecordingReadMapper _readMapper;
+
+  @override
+  Future<CurrentCoupleRecording?> fetchCurrentRecording() async {
+    _support.ensureConfigured();
+    try {
+      final data = await _support.client
+          .rpc('get_current_couple_recording')
+          .timeout(AppConfig.supabaseRpcTimeout);
+      final row = _support.asSingleRow(data);
+      if (row == null) {
+        throw const CoupleRecordingRepositoryException(
+          CoupleRecordingFailureReason.unknown,
+        );
+      }
+      return await _readMapper.mapCurrentRecording(
+        row,
+        resolveAudioUrl: _support.createRecordingSignedUrl,
+      );
+    } on TimeoutException {
+      throw const CoupleRecordingRepositoryException(
+        CoupleRecordingFailureReason.requestTimeout,
+      );
+    } on PostgrestException catch (error) {
+      throw _support.mapPostgrestError(error);
+    } on StorageException catch (error) {
+      throw _support.mapStorageError(error);
+    }
+  }
 
   @override
   Future<CoupleRecordingOverview> fetchOverview() async {

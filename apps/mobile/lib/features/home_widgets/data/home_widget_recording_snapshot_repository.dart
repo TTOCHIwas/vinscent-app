@@ -65,8 +65,12 @@ class HomeWidgetRecordingAssetLoader {
 
   Future<HomeWidgetAssetUpdate> fetch({required String coupleId}) async {
     try {
-      final recording =
-          (await _recordingRepository.fetchOverview()).currentRecording;
+      final repository = _recordingRepository;
+      final recording = switch (repository) {
+        CurrentCoupleRecordingReader reader =>
+          await reader.fetchCurrentRecording(),
+        _ => (await repository.fetchOverview()).currentRecording,
+      };
       if (recording == null) {
         return const HomeWidgetAssetUpdate.remove();
       }

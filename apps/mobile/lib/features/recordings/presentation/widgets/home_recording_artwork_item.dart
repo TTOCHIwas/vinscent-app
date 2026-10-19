@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/presentation/widgets/app_attention_indicator.dart';
+import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../data/couple_recording.dart';
 import 'recording_pulse.dart';
 
@@ -75,15 +76,16 @@ class HomeRecordingArtworkItem extends StatelessWidget {
                 offset: const Offset(-2, 2),
                 child: Opacity(
                   opacity: isBusy ? 0.55 : 1,
-                  child: Image.network(
-                    artwork.previewUrl,
-                    width: size,
-                    height: size,
-                    fit: BoxFit.contain,
-                    gaplessPlayback: true,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.broken_image_outlined,
-                      color: AppColors.textMuted,
+                  child: SizedBox.square(
+                    dimension: size,
+                    child: AppSizedNetworkImage(
+                      url: artwork.previewUrl,
+                      logicalSize: Size.square(size),
+                      gaplessPlayback: true,
+                      fallbackBuilder: (context) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
                 ),

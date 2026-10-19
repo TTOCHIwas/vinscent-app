@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/widgets/app_sized_network_image.dart';
+import '../../../../core/presentation/widgets/app_media_reveal.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/story_card_scene.dart';
 import '../../data/story_card_type.dart';
@@ -18,6 +19,7 @@ class StoryCardPreviewSurface extends StatelessWidget {
     this.cornerRadius = 1,
     this.showShadow = true,
     this.aspectRatioOverride,
+    this.isLoading = false,
   });
 
   final String? previewUrl;
@@ -30,6 +32,11 @@ class StoryCardPreviewSurface extends StatelessWidget {
   final double cornerRadius;
   final bool showShadow;
   final double? aspectRatioOverride;
+  final bool isLoading;
+
+  static const shadows = [
+    BoxShadow(color: Color(0x12000000), blurRadius: 8, offset: Offset(0, 4)),
+  ];
 
   static double widthInFourByFiveSlot(
     double slotWidth,
@@ -61,31 +68,26 @@ class StoryCardPreviewSurface extends StatelessWidget {
             width: width,
             child: AspectRatio(
               aspectRatio: aspectRatio,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: borderRadius,
-                  border: Border.all(color: AppColors.wireframeBorder),
-                  boxShadow: showShadow
-                      ? const [
-                          BoxShadow(
-                            color: Color(0x12000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: ClipRRect(
-                  borderRadius: borderRadius,
-                  child: AppSizedNetworkImage(
-                    url: previewUrl,
-                    logicalSize: Size(width, height),
-                    fallbackBuilder: (_) =>
-                        const _StoryCardPreviewPlaceholder(),
-                  ),
-                ),
-              ),
+              child: isLoading
+                  ? const AppMediaReveal(ready: false, child: SizedBox.shrink())
+                  : AppSizedNetworkImage(
+                      url: previewUrl,
+                      logicalSize: Size(width, height),
+                      fallbackBuilder: (_) =>
+                          const _StoryCardPreviewPlaceholder(),
+                      surfaceBuilder: (context, image) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: borderRadius,
+                          border: Border.all(color: AppColors.wireframeBorder),
+                          boxShadow: showShadow ? shadows : null,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: borderRadius,
+                          child: image,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ),

@@ -9,7 +9,8 @@ import 'supabase_couple_recording_slot_placement_store.dart';
 import 'supabase_couple_recording_slot_writer.dart';
 import 'supabase_current_couple_recording_writer.dart';
 
-class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
+class SupabaseCoupleRecordingRepository
+    implements CoupleRecordingRepository, CurrentCoupleRecordingReader {
   const SupabaseCoupleRecordingRepository({
     CoupleRecordingOverviewReader overviewReader =
         const SupabaseCoupleRecordingOverviewReader(),
@@ -32,6 +33,15 @@ class SupabaseCoupleRecordingRepository implements CoupleRecordingRepository {
   final CoupleRecordingSlotWriter _slotWriter;
   final CoupleRecordingSlotArtworkStore _artworkStore;
   final CoupleRecordingSlotPlacementStore _placementStore;
+
+  @override
+  Future<CurrentCoupleRecording?> fetchCurrentRecording() async {
+    final reader = _overviewReader;
+    if (reader case CurrentCoupleRecordingReader currentReader) {
+      return currentReader.fetchCurrentRecording();
+    }
+    return (await reader.fetchOverview()).currentRecording;
+  }
 
   @override
   Future<CoupleRecordingOverview> fetchOverview() {
