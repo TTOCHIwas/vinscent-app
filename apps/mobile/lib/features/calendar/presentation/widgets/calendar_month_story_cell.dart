@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/date/app_date_policy.dart';
+import '../../../../core/presentation/widgets/app_media_loading_group.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -11,6 +12,7 @@ import '../../../story_loops/data/story_loop_month_summary_day.dart';
 import '../../data/couple_calendar_event.dart';
 import '../calendar_expanded_cell_layout.dart';
 import '../calendar_motion.dart';
+import 'calendar_important_date_underline.dart';
 import 'calendar_month_card_preview.dart';
 import 'calendar_month_event_indicator.dart';
 
@@ -45,6 +47,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDateMarkerFilled = isToday || isSelected;
+    final hasDefaultEvent = defaultEventLabel?.trim().isNotEmpty ?? false;
     final visibleCards = _visibleCards(summary);
     final previewCacheExtent = math.max(
       1.0,
@@ -75,115 +78,143 @@ class CalendarMonthStoryCell extends StatelessWidget {
           ),
         );
 
-        return Padding(
-          key: ValueKey(
-            'calendar-month-story-cell-$displayMode-${formatCalendarDate(date)}',
-          ),
-          padding: _cellPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: _headerHeight,
-                child: Row(
-                  children: [
-                    SizedBox.square(
-                      key: isToday
-                          ? ValueKey(
-                              'calendar-today-indicator-${formatCalendarDate(date)}',
-                            )
-                          : null,
-                      dimension: _dateMarkerSize,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: isToday
-                              ? AppColors.brandAccent
-                              : isSelected
-                              ? AppColors.actionPrimary
-                              : Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
+        return AppMediaLoadingGroup(
+          indicatorPadding: const EdgeInsets.only(top: _headerHeight + 2),
+          child: Padding(
+            key: ValueKey(
+              'calendar-month-story-cell-$displayMode-${formatCalendarDate(date)}',
+            ),
+            padding: _cellPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: _headerHeight,
+                  child: Row(
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          SizedBox.square(
+                            key: isToday
+                                ? ValueKey(
+                                    'calendar-today-indicator-${formatCalendarDate(date)}',
+                                  )
+                                : null,
+                            dimension: _dateMarkerSize,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: isToday
+                                    ? AppColors.brandAccent
+                                    : isSelected
+                                    ? AppColors.actionPrimary
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${date.day}',
+                                  style: AppTypography.applyToStyle(
+                                    AppTextStyles.homeCharacterLabel.copyWith(
+                                      color: isDateMarkerFilled
+                                          ? AppColors.textInverse
+                                          : textColor,
+                                      fontSize: 12,
+                                      fontWeight: isDateMarkerFilled
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (hasDefaultEvent)
+                            Positioned(
+                              left:
+                                  (_dateMarkerSize -
+                                      CalendarImportantDateUnderline
+                                          .size
+                                          .width) /
+                                  2,
+                              top: _dateMarkerSize + 1,
+                              width: CalendarImportantDateUnderline.size.width,
+                              height:
+                                  CalendarImportantDateUnderline.size.height,
+                              child: CalendarImportantDateUnderline(
+                                key: ValueKey(
+                                  'calendar-important-date-${formatCalendarDate(date)}',
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (defaultEventLabel case final label?) ...[
+                        const SizedBox(width: 2),
+                        Expanded(
                           child: Text(
-                            '${date.day}',
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            softWrap: false,
                             style: AppTypography.applyToStyle(
                               AppTextStyles.homeCharacterLabel.copyWith(
-                                color: isDateMarkerFilled
-                                    ? AppColors.textInverse
-                                    : textColor,
-                                fontSize: 12,
-                                fontWeight: isDateMarkerFilled
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
+                                color: textColor,
+                                fontSize: 10,
                                 height: 1,
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                    if (defaultEventLabel case final label?) ...[
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          softWrap: false,
-                          style: AppTypography.applyToStyle(
-                            AppTextStyles.homeCharacterLabel.copyWith(
-                              color: textColor,
-                              fontSize: 10,
-                              height: 1,
-                            ),
+                      ] else ...[
+                        const SizedBox(width: _eventHeaderGap),
+                        Expanded(
+                          child: _CalendarCellContentReveal(
+                            transitionKey:
+                                visibleCards.isNotEmpty && events.isNotEmpty
+                                ? contentIdentity
+                                : 'empty',
+                            child: visibleCards.isEmpty || events.isEmpty
+                                ? const SizedBox.shrink()
+                                : hasEventArtwork &&
+                                      resolvedExpandedProgress >= 1
+                                ? const SizedBox.shrink()
+                                : Opacity(
+                                    opacity: hasEventArtwork
+                                        ? 1 - resolvedExpandedProgress
+                                        : 1,
+                                    child: CalendarMonthEventIndicator(
+                                      date: date,
+                                      events: events,
+                                      artworkSize: eventArtworkSize,
+                                      previewCacheExtent: previewCacheExtent,
+                                    ),
+                                  ),
                           ),
                         ),
-                      ),
-                    ] else ...[
-                      const SizedBox(width: _eventHeaderGap),
-                      Expanded(
-                        child: _CalendarCellContentReveal(
-                          transitionKey:
-                              visibleCards.isNotEmpty && events.isNotEmpty
-                              ? contentIdentity
-                              : 'empty',
-                          child: visibleCards.isEmpty || events.isEmpty
-                              ? const SizedBox.shrink()
-                              : hasEventArtwork && resolvedExpandedProgress >= 1
-                              ? const SizedBox.shrink()
-                              : Opacity(
-                                  opacity: hasEventArtwork
-                                      ? 1 - resolvedExpandedProgress
-                                      : 1,
-                                  child: CalendarMonthEventIndicator(
-                                    date: date,
-                                    events: events,
-                                    artworkSize: eventArtworkSize,
-                                    previewCacheExtent: previewCacheExtent,
-                                  ),
-                                ),
-                        ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              Expanded(
-                child: _CalendarCellContentReveal(
-                  key: ValueKey(
-                    'calendar-cell-content-transition-${formatCalendarDate(date)}',
-                  ),
-                  transitionKey: contentIdentity,
-                  child: _CalendarCellContent(
-                    date: date,
-                    events: events,
-                    expandedContentProgress: resolvedExpandedProgress,
-                    cards: visibleCards,
-                    previewCacheExtent: previewCacheExtent,
                   ),
                 ),
-              ),
-            ],
+                if (hasDefaultEvent) const SizedBox(height: 6),
+                Expanded(
+                  child: _CalendarCellContentReveal(
+                    key: ValueKey(
+                      'calendar-cell-content-transition-${formatCalendarDate(date)}',
+                    ),
+                    transitionKey: contentIdentity,
+                    child: _CalendarCellContent(
+                      date: date,
+                      events: events,
+                      expandedContentProgress: resolvedExpandedProgress,
+                      cards: visibleCards,
+                      previewCacheExtent: previewCacheExtent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

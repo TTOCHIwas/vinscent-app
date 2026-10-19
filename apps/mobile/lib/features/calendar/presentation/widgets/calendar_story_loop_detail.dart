@@ -9,8 +9,6 @@ import '../../../questions/data/daily_question_answer_state.dart';
 import '../../../questions/presentation/question_route_context.dart';
 import '../../../questions/presentation/widgets/question_answer_sections.dart';
 import '../../../questions/presentation/widgets/question_detail_title.dart';
-import '../../../safety/data/safety_report.dart';
-import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../../story_loops/data/story_loop_detail.dart';
 import '../../../story_loops/data/story_loop_detail_state.dart';
 import 'calendar_detail_date_header.dart';
@@ -90,26 +88,17 @@ class _LoadedDetailSection extends StatelessWidget {
                     currentUserId == null || card.authorUserId == currentUserId,
               ),
             ),
+            const SizedBox(height: 32),
           ],
-          if (question == null) ...[
-            const SizedBox(height: 32),
-            _CardOnlyMessage(detail: detail),
-          ] else ...[
-            const SizedBox(height: 32),
+          if (question == null)
+            _CardOnlyMessage(detail: detail)
+          else ...[
             QuestionDetailTitle(
               questionText: question.question.questionText,
               textAlign: TextAlign.start,
-              showGeneratedIndicator:
-                  question.question.questionSource == QuestionSource.ai,
-              onGeneratedIndicatorPressed:
+              semanticsLabel:
                   question.question.questionSource == QuestionSource.ai
-                  ? () => showSafetyReportSheet(
-                      context: context,
-                      target: SafetyReportTarget(
-                        type: SafetyReportTargetType.aiQuestion,
-                        id: question.question.dailyQuestionId,
-                      ),
-                    )
+                  ? 'AI 생성 질문: ${question.question.questionText}'
                   : null,
             ),
             const SizedBox(height: 20),

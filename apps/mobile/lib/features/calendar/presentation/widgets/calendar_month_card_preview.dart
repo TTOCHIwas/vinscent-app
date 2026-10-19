@@ -148,30 +148,31 @@ class _MonthStorySurface extends StatelessWidget {
     return Transform.rotate(
       angle: angle,
       child: SizedBox(
+        key: ValueKey('calendar-month-story-card-${card.id}'),
         width: width,
         child: AspectRatio(
           aspectRatio: aspectRatio,
-          child: DecoratedBox(
-            key: ValueKey('calendar-month-story-card-${card.id}'),
-            decoration: const BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.zero,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x28000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1.5),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2.4),
-              child: AppSizedNetworkImage(
-                url: card.previewUrl,
-                logicalSize: Size(width, height),
-                cacheLogicalSize: Size(cacheWidth, cacheWidth / aspectRatio),
-                gaplessPlayback: true,
-                fallbackBuilder: (_) => _MonthStoryPlaceholder(card: card),
+          child: AppSizedNetworkImage(
+            url: card.previewUrl,
+            logicalSize: Size(width, height),
+            cacheLogicalSize: Size(cacheWidth, cacheWidth / aspectRatio),
+            gaplessPlayback: true,
+            fallbackBuilder: (_) => _MonthStoryPlaceholder(card: card),
+            surfaceBuilder: (context, image) => DecoratedBox(
+              decoration: const BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.zero,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x28000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1.5),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2.4),
+                child: image,
               ),
             ),
           ),

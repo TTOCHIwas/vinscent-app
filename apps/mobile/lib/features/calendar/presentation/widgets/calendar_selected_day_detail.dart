@@ -9,10 +9,13 @@ import '../../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../ai/presentation/widgets/ai_generated_content_indicator.dart';
 import '../../../profile/application/profile_controller.dart';
+import '../../../questions/data/daily_question.dart';
 import '../../../safety/data/safety_report.dart';
 import '../../../safety/presentation/safety_report_sheet.dart';
 import '../../../story_loops/application/story_loop_detail_provider.dart';
+import '../../../story_loops/data/story_loop_detail_state.dart';
 import '../../application/couple_calendar_event_provider.dart';
 import '../../application/couple_calendar_event_deletion_service.dart';
 import '../../application/couple_calendar_event_realtime_controller.dart';
@@ -98,10 +101,9 @@ class _CalendarSelectedDayDetailState
             const _FutureDateMessage(),
           ],
         ] else ...[
-          _CalendarDetailSection(
+          _StoryDetail(
             key: const Key('calendar-story-section'),
-            title: '우리 기록',
-            child: _StoryDetail(selectedDate: selectedDate),
+            selectedDate: selectedDate,
           ),
         ],
       ],
@@ -180,12 +182,14 @@ class _CalendarDetailSection extends StatelessWidget {
     super.key,
     required this.title,
     required this.child,
+    this.trailing,
   });
 
   static const _maximumContentWidth = 520.0;
 
   final String title;
   final Widget child;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -198,9 +202,20 @@ class _CalendarDetailSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Semantics(
-                header: true,
-                child: Text(title, style: AppTextStyles.sectionTitle),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Semantics(
+                      header: true,
+                      child: Text(title, style: AppTextStyles.sectionTitle),
+                    ),
+                  ),
+                  if (trailing case final trailing?) ...[
+                    const SizedBox(width: 8),
+                    trailing,
+                  ],
+                ],
               ),
               const SizedBox(height: 18),
               child,
@@ -213,7 +228,7 @@ class _CalendarDetailSection extends StatelessWidget {
 }
 
 class _StoryDetail extends ConsumerWidget {
-  const _StoryDetail({required this.selectedDate});
+  const _StoryDetail({super.key, required this.selectedDate});
 
   final DateTime selectedDate;
 
@@ -225,23 +240,43 @@ class _StoryDetail extends ConsumerWidget {
       ),
     );
     final detail = ref.watch(storyLoopDetailProvider(selectedDate));
-    return detail.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(
-          child: SizedBox.square(
-            dimension: 24,
-            child: AppLoadingIndicator(strokeWidth: 2),
+    final storyState = detail.asData?.value;
+    final question =
+        storyState is LoadedStoryLoopDetailState && !detail.hasError
+        ? storyState.detail.question?.question
+        : null;
+    return _CalendarDetailSection(
+      title: '우리 기록',
+      trailing: question != null && question.questionSource == QuestionSource.ai
+          ? AiGeneratedContentIndicator(
+              iconAlignment: AlignmentDirectional.centerStart,
+              onReportPressed: () => showSafetyReportSheet(
+                context: context,
+                target: SafetyReportTarget(
+                  type: SafetyReportTargetType.aiQuestion,
+                  id: question.dailyQuestionId,
+                ),
+              ),
+            )
+          : null,
+      child: detail.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Center(
+            child: SizedBox.square(
+              dimension: 24,
+              child: AppLoadingIndicator(radius: 8),
+            ),
           ),
         ),
-      ),
-      error: (error, stackTrace) => _StoryDetailLoadFailure(
-        onRetry: () => ref.invalidate(storyLoopDetailProvider(selectedDate)),
-      ),
-      data: (storyLoopState) => CalendarStoryLoopDetail(
-        storyLoopState: storyLoopState,
-        currentUserId: profile?.id,
-        showDateHeader: false,
+        error: (error, stackTrace) => _StoryDetailLoadFailure(
+          onRetry: () => ref.invalidate(storyLoopDetailProvider(selectedDate)),
+        ),
+        data: (storyLoopState) => CalendarStoryLoopDetail(
+          storyLoopState: storyLoopState,
+          currentUserId: profile?.id,
+          showDateHeader: false,
+        ),
       ),
     );
   }

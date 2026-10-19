@@ -17,6 +17,7 @@ import '../../couple/application/couple_current_date_provider.dart';
 import '../../couple/data/couple.dart';
 import '../../monthly_retrospective/application/monthly_retrospective_controller.dart';
 import '../../monthly_retrospective/application/monthly_retrospective_availability_provider.dart';
+import '../../monthly_retrospective/presentation/widgets/monthly_retrospective_action.dart';
 import '../../shell/presentation/widgets/shell_bottom_bar_visibility_notification.dart';
 import '../application/calendar_cell_preview_mode_controller.dart';
 import '../application/couple_default_calendar_event_resolver.dart';
@@ -215,7 +216,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     )
                   : null,
               onRetrospectivePressed: showRetrospective
-                  ? () => context.push('/calendar/monthly')
+                  ? () => context.push('/monthly')
                   : null,
               onPreviewModeSelected: previewMode == null
                   ? null
@@ -369,6 +370,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   void _handleDatePressed(DateTime date) {
+    if (!_isCurrentRoute) return;
     final selectedDate = calendarDateOnly(date);
     setState(() {
       _selectedDate = selectedDate;
@@ -498,6 +500,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     required bool animateCalendar,
     required bool animateDetail,
   }) {
+    if (!_isCurrentRoute) return;
     setState(() {
       if (animateCalendar) {
         _calendarPageRevision += 1;
@@ -515,13 +518,28 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   void _replaceCalendarRoute(DateTime date) {
     final formattedDate = formatCalendarDate(date);
+    final router = GoRouter.of(context);
     final currentUri = GoRouterState.of(context).uri;
-    if (currentUri.path == '/calendar' &&
-        currentUri.queryParameters['date'] == formattedDate) {
+    if (currentUri.queryParameters['date'] == formattedDate) {
       return;
     }
-    context.replace('/calendar?date=$formattedDate');
+    router.replace(
+      currentUri
+          .replace(
+            queryParameters: {
+              ...currentUri.queryParameters,
+              'date': formattedDate,
+            },
+          )
+          .toString(),
+    );
   }
+
+  bool get _isCurrentRoute =>
+      GoRouter.of(
+        context,
+      ).routerDelegate.currentConfiguration.lastOrNull?.matchedLocation ==
+      GoRouterState.of(context).matchedLocation;
 
   void _addEvent({
     required DateTime relationshipStartDate,
@@ -799,7 +817,10 @@ class _CalendarMonthHeader extends StatelessWidget {
           final edgePadding = constraints.maxWidth < 380 ? 8.0 : 12.0;
           final sideWidth = math.max(
             40.0,
-            buttonSize * (onRetrospectivePressed == null ? 1 : 2),
+            buttonSize +
+                (onRetrospectivePressed == null
+                    ? 0
+                    : MonthlyRetrospectiveAction.dimension),
           );
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: edgePadding),
@@ -852,12 +873,9 @@ class _CalendarMonthHeader extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (onRetrospectivePressed != null)
-                        _MonthIconButton(
+                        MonthlyRetrospectiveAction(
                           key: const Key('calendar-monthly-retrospective'),
-                          icon: Icons.auto_awesome_outlined,
-                          semanticLabel: '지난달 월간 회고',
                           onPressed: onRetrospectivePressed,
-                          dimension: buttonSize,
                         ),
                       _MonthIconButton(
                         key: const Key('calendar-add-event'),
@@ -956,7 +974,7 @@ class _CenteredLoader extends StatelessWidget {
     return const Center(
       child: SizedBox.square(
         dimension: 24,
-        child: AppLoadingIndicator(strokeWidth: 2),
+        child: AppLoadingIndicator(radius: 8),
       ),
     );
   }

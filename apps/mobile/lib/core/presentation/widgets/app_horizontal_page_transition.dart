@@ -31,6 +31,9 @@ class _AppHorizontalPageTransitionState
   late Widget _currentChild;
   Widget? _outgoingChild;
   Object? _outgoingKey;
+  GlobalKey _currentPageKey = GlobalKey();
+  GlobalKey? _outgoingPageKey;
+  double? _outgoingHeight;
   late AppHorizontalPageDirection _direction;
 
   @override
@@ -58,6 +61,12 @@ class _AppHorizontalPageTransitionState
       return;
     }
 
+    final currentRenderBox = _currentPageKey.currentContext?.findRenderObject();
+    _outgoingHeight = currentRenderBox is RenderBox && currentRenderBox.hasSize
+        ? currentRenderBox.size.height
+        : null;
+    _outgoingPageKey = _currentPageKey;
+    _currentPageKey = GlobalKey();
     _outgoingKey = _currentKey;
     _outgoingChild = _currentChild;
     _currentKey = widget.transitionKey;
@@ -69,6 +78,8 @@ class _AppHorizontalPageTransitionState
     if (animationsDisabled || widget.duration == Duration.zero) {
       _outgoingKey = null;
       _outgoingChild = null;
+      _outgoingPageKey = null;
+      _outgoingHeight = null;
       _controller.value = 1;
       return;
     }
@@ -89,6 +100,7 @@ class _AppHorizontalPageTransitionState
     final outgoingKey = _outgoingKey;
     if (outgoingChild == null || outgoingKey == null) {
       return RepaintBoundary(
+        key: _currentPageKey,
         child: KeyedSubtree(key: ValueKey(_currentKey), child: _currentChild),
       );
     }
@@ -110,12 +122,18 @@ class _AppHorizontalPageTransitionState
       child: Stack(
         fit: StackFit.passthrough,
         children: [
-          Positioned.fill(
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: _outgoingHeight == null ? 0 : null,
+            height: _outgoingHeight,
             child: ExcludeSemantics(
               child: IgnorePointer(
                 child: SlideTransition(
                   position: outgoingAnimation,
                   child: RepaintBoundary(
+                    key: _outgoingPageKey,
                     child: KeyedSubtree(
                       key: ValueKey(outgoingKey),
                       child: outgoingChild,
@@ -129,6 +147,7 @@ class _AppHorizontalPageTransitionState
             child: SlideTransition(
               position: incomingAnimation,
               child: RepaintBoundary(
+                key: _currentPageKey,
                 child: KeyedSubtree(
                   key: ValueKey(_currentKey),
                   child: _currentChild,
@@ -148,6 +167,8 @@ class _AppHorizontalPageTransitionState
     setState(() {
       _outgoingKey = null;
       _outgoingChild = null;
+      _outgoingPageKey = null;
+      _outgoingHeight = null;
     });
   }
 }

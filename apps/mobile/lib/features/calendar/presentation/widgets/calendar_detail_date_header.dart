@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/presentation/widgets/record_date_label.dart';
 import '../../application/couple_default_calendar_event_resolver.dart';
 import '../../data/public_holiday.dart';
 
@@ -20,21 +21,12 @@ class CalendarDetailDateHeader extends StatelessWidget {
   static const baseExtent = 76.0;
   static const _horizontalPadding = 20.0;
   static const _verticalPadding = 10.0;
-  static const _dateLineGap = 4.0;
+  static const _dateLineGap = RecordDateLabel.lineGap;
   static const _textMetricsTolerance = 2.0;
   static const _sectionGap = 8.0;
   static const _defaultEventRunSpacing = 4.0;
   static const _defaultEventIconSize = 22.0;
   static const _stackedLayoutWidth = 220.0;
-  static const _weekdayLabels = [
-    '월요일',
-    '화요일',
-    '수요일',
-    '목요일',
-    '금요일',
-    '토요일',
-    '일요일',
-  ];
 
   final DateTime date;
   final List<CoupleDefaultCalendarEventOccurrence> defaultEvents;
@@ -143,19 +135,7 @@ class _DateBlock extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${date.month}월 ${date.day}일',
-          style: AppTextStyles.calendarDetailDate,
-        ),
-        const SizedBox(height: CalendarDetailDateHeader._dateLineGap),
-        Text(
-          '${date.year} · '
-          '${CalendarDetailDateHeader._weekdayLabels[date.weekday - 1]}',
-          style: AppTextStyles.homeCharacterLabel.copyWith(
-            color: AppColors.textMuted,
-            fontSize: 14,
-          ),
-        ),
+        RecordDateLabel(date: date),
         if (publicHoliday case final holiday?) ...[
           const SizedBox(height: CalendarDetailDateHeader._dateLineGap),
           Text(
