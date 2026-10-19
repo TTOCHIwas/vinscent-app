@@ -77,7 +77,7 @@ class _AiFocusedQuestionScreenState
         context.go('/ai');
       },
       child: flow.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (error, stackTrace) => _FocusedQuestionError(
           message: aiLearningErrorMessage(error),
           onRetry: () => ref.invalidate(aiFocusedQuestionControllerProvider),
@@ -314,7 +314,7 @@ class _FocusedQuestionHistory extends StatelessWidget {
         child: Center(
           child: SizedBox.square(
             dimension: 20,
-            child: AppLoadingIndicator(strokeWidth: 2),
+            child: AppLoadingIndicator(radius: 8),
           ),
         ),
       ),

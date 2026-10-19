@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../data/ai_learning_dashboard.dart';
+import 'ai_generated_content_indicator.dart';
 import 'ai_memory_generated_indicator.dart';
 
 typedef AiMemoryDecisionCallback =
@@ -102,43 +103,35 @@ class _MemoryRowState extends State<_MemoryRow> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _memorySubjectLabel(memory),
-                            style: AppTextStyles.homeCharacterLabel.copyWith(
-                              color: AppColors.textMuted,
-                            ),
+                child: AiGeneratedContent(
+                  indicator: AiMemoryGeneratedIndicator(
+                    key: ValueKey('ai-memory-generated-indicator-${memory.id}'),
+                    memoryId: memory.id,
+                  ),
+                  heading: Text(
+                    _memorySubjectLabel(memory),
+                    style: AppTextStyles.homeCharacterLabel.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      WordBoundaryText(
+                        memory.statement,
+                        style: AppTextStyles.homeBody,
+                      ),
+                      if (!memory.canConfirm) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _memoryStateLabel(memory),
+                          style: AppTextStyles.homeCharacterLabel.copyWith(
+                            color: AppColors.textMuted,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        AiMemoryGeneratedIndicator(
-                          key: ValueKey(
-                            'ai-memory-generated-indicator-${memory.id}',
-                          ),
-                          memoryId: memory.id,
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 6),
-                    WordBoundaryText(
-                      memory.statement,
-                      style: AppTextStyles.homeBody,
-                    ),
-                    if (!memory.canConfirm) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _memoryStateLabel(memory),
-                        style: AppTextStyles.homeCharacterLabel.copyWith(
-                          color: AppColors.textMuted,
-                        ),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],

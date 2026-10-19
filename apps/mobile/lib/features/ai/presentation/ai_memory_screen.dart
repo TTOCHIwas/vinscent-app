@@ -17,6 +17,7 @@ import '../data/ai_memory_attention.dart';
 import 'widgets/ai_learning_error_message.dart';
 import 'widgets/ai_learning_stop_button.dart';
 import 'widgets/ai_memory_generated_indicator.dart';
+import 'widgets/ai_generated_content_indicator.dart';
 import 'widgets/ai_memory_section.dart';
 
 class AiMemoryScreen extends ConsumerStatefulWidget {
@@ -44,7 +45,7 @@ class _AiMemoryScreenState extends ConsumerState<AiMemoryScreen> {
         context.go('/ai');
       },
       child: dashboard.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (error, stackTrace) => _MemoryLoadError(
           message: aiLearningErrorMessage(error),
           onRetry: () => ref.invalidate(aiLearningControllerProvider),
@@ -238,23 +239,17 @@ class _MemoryGroup extends StatelessWidget {
         for (var index = 0; index < memories.length; index++) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: WordBoundaryText(
-                    memories[index].statement,
-                    style: AppTextStyles.homeBody,
-                  ),
+            child: AiGeneratedContent(
+              indicator: AiMemoryGeneratedIndicator(
+                key: ValueKey(
+                  'ai-memory-generated-indicator-${memories[index].id}',
                 ),
-                const SizedBox(width: 8),
-                AiMemoryGeneratedIndicator(
-                  key: ValueKey(
-                    'ai-memory-generated-indicator-${memories[index].id}',
-                  ),
-                  memoryId: memories[index].id,
-                ),
-              ],
+                memoryId: memories[index].id,
+              ),
+              child: WordBoundaryText(
+                memories[index].statement,
+                style: AppTextStyles.homeBody,
+              ),
             ),
           ),
           if (index < memories.length - 1)

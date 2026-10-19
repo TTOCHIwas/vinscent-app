@@ -62,6 +62,7 @@ class CharacterSpeechMessage extends StatelessWidget {
                   textAlign: textAlign,
                   style: textStyle,
                   trailing: trailing,
+                  textWidthBasis: TextWidthBasis.longestLine,
                 )
               : Semantics(
                   label: semanticLabel,

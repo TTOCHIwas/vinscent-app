@@ -208,7 +208,7 @@ class _CoupleStatus extends ConsumerWidget {
           alignment: Alignment.centerRight,
           child: SizedBox.square(
             dimension: 20,
-            child: AppLoadingIndicator(strokeWidth: 2),
+            child: AppLoadingIndicator(radius: 8),
           ),
         ),
       ),
@@ -302,7 +302,7 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
       return const Center(
         child: SizedBox.square(
           dimension: 24,
-          child: AppLoadingIndicator(strokeWidth: 2),
+          child: AppLoadingIndicator(radius: 8),
         ),
       );
     }
@@ -322,7 +322,7 @@ class _HomeStoryLoopPreview extends ConsumerWidget {
       return const Center(
         child: SizedBox.square(
           dimension: 24,
-          child: AppLoadingIndicator(strokeWidth: 2),
+          child: AppLoadingIndicator(radius: 8),
         ),
       );
     }
@@ -964,24 +964,28 @@ class _HomeQuestionMessage extends StatelessWidget {
         key: actionKey,
         onTap: onTap,
         borderRadius: BorderRadius.circular(4),
-        child: CharacterSpeechMessage(
+        child: ConstrainedBox(
           key: messageKey,
-          speechText: questionText,
-          maxWidth: 320,
-          textStyle: AppTextStyles.homeQuestionBubble,
-          trailing: !isAiGenerated
-              ? null
-              : Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 2),
-                  child: AiGeneratedContentIndicator(
-                    onReportPressed: reportTarget == null
-                        ? null
-                        : () => showSafetyReportSheet(
-                            context: context,
-                            target: reportTarget!,
-                          ),
-                  ),
-                ),
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Align(
+            alignment: Alignment.center,
+            heightFactor: 1,
+            child: AiGeneratedContent(
+              bodyAlignment: Alignment.topCenter,
+              showIndicator: isAiGenerated,
+              onReportPressed: reportTarget == null
+                  ? null
+                  : () => showSafetyReportSheet(
+                      context: context,
+                      target: reportTarget!,
+                    ),
+              child: CharacterSpeechMessage(
+                speechText: questionText,
+                maxWidth: 320,
+                textStyle: AppTextStyles.homeQuestionBubble,
+              ),
+            ),
+          ),
         ),
       ),
     );

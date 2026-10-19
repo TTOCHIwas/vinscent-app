@@ -40,7 +40,7 @@ class _CoupleSettingsScreenState extends ConsumerState<CoupleSettingsScreen> {
       title: '커플 설정',
       onBackPressed: () => context.pop(),
       child: couple.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (error, stackTrace) => _CoupleSettingsMessage(
           title: '커플 정보를 불러오지 못했어요.',
           message: '잠시 후 다시 시도해 주세요.',

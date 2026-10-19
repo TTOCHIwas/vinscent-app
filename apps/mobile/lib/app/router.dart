@@ -244,16 +244,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'monthly',
                     name: 'calendarMonthlyRetrospective',
-                    builder: (context, state) =>
-                        const MonthlyRetrospectiveRoute(),
+                    redirect: (context, state) =>
+                        state.uri.path == '/calendar/monthly'
+                        ? '/monthly'
+                        : null,
                     routes: [
                       GoRoute(
                         path: 'record',
-                        builder: (context, state) => CalendarScreen(
-                          initialDate: parseCalendarDate(
-                            state.uri.queryParameters['date'],
-                          ),
-                        ),
+                        redirect: (context, state) => Uri(
+                          path: '/monthly/record',
+                          queryParameters: state.uri.queryParameters,
+                        ).toString(),
                       ),
                     ],
                   ),
@@ -301,11 +302,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'monthly-record',
                     name: 'monthlyRetrospectiveRecord',
-                    builder: (context, state) => CalendarScreen(
-                      initialDate: parseCalendarDate(
-                        state.uri.queryParameters['date'],
-                      ),
-                    ),
+                    redirect: (context, state) => Uri(
+                      path: '/monthly/record',
+                      queryParameters: state.uri.queryParameters,
+                    ).toString(),
                   ),
                   GoRoute(
                     path: 'ask',
@@ -328,11 +328,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: AppShell(
             location: state.uri.path,
+            rootBackHandledByChild: state.uri.path == '/monthly',
             observeAttention: true,
             child: child,
           ),
         ),
         routes: [
+          GoRoute(
+            path: '/monthly',
+            name: 'monthlyRetrospective',
+            builder: (context, state) => const MonthlyRetrospectiveRoute(),
+            routes: [
+              GoRoute(
+                path: 'record',
+                builder: (context, state) => CalendarScreen(
+                  initialDate: parseCalendarDate(
+                    state.uri.queryParameters['date'],
+                  ),
+                ),
+              ),
+            ],
+          ),
           GoRoute(
             path: '/settings',
             name: 'settings',

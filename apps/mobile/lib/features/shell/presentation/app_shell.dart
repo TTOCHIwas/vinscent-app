@@ -20,6 +20,7 @@ class AppShell extends ConsumerStatefulWidget {
     this.showCalendarAttention = false,
     this.showAiAttention = false,
     this.observeAttention = false,
+    this.rootBackHandledByChild = false,
   });
 
   static const topMinHeight = 56.0;
@@ -35,6 +36,7 @@ class AppShell extends ConsumerStatefulWidget {
   final bool showCalendarAttention;
   final bool showAiAttention;
   final bool observeAttention;
+  final bool rootBackHandledByChild;
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
@@ -103,7 +105,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     return PopScope(
       canPop: canPop || widget.location == '/home',
       onPopInvokedWithResult: (didPop, result) async {
-        if (!didPop && !canPop && widget.location != '/home') {
+        if (!didPop &&
+            !canPop &&
+            widget.location != '/home' &&
+            !widget.rootBackHandledByChild) {
           if (await ref
                   .read(shellNavigationGuardProvider)
                   .allows(widget.location) &&

@@ -12,35 +12,47 @@ class QuestionDetailTitle extends StatelessWidget {
     this.textAlign = TextAlign.center,
     this.showGeneratedIndicator = false,
     this.onGeneratedIndicatorPressed,
+    this.semanticsLabel,
   });
 
   final String questionText;
   final TextAlign textAlign;
   final bool showGeneratedIndicator;
   final VoidCallback? onGeneratedIndicatorPressed;
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: Semantics(
-        header: true,
-        child: WordBoundaryText(
-          questionText,
-          key: const Key('question-detail-title'),
-          semanticsLabel: showGeneratedIndicator
-              ? 'AI 생성 질문: $questionText'
-              : questionText,
-          textAlign: textAlign,
-          style: AppTypography.withFontSize(AppTextStyles.homeBodyMedium, 18),
-          trailing: showGeneratedIndicator
-              ? Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 2),
-                  child: AiGeneratedContentIndicator(
-                    onReportPressed: onGeneratedIndicatorPressed,
-                  ),
-                )
-              : null,
+      child: Align(
+        alignment: textAlign == TextAlign.center
+            ? Alignment.center
+            : AlignmentDirectional.centerStart,
+        heightFactor: 1,
+        child: AiGeneratedContent(
+          bodyAlignment: textAlign == TextAlign.center
+              ? Alignment.topCenter
+              : AlignmentDirectional.topStart,
+          showIndicator: showGeneratedIndicator,
+          onReportPressed: onGeneratedIndicatorPressed,
+          child: Semantics(
+            header: true,
+            child: WordBoundaryText(
+              questionText,
+              key: const Key('question-detail-title'),
+              semanticsLabel:
+                  semanticsLabel ??
+                  (showGeneratedIndicator
+                      ? 'AI 생성 질문: $questionText'
+                      : questionText),
+              textAlign: textAlign,
+              style: AppTypography.withFontSize(
+                AppTextStyles.homeBodyMedium,
+                18,
+              ),
+            ),
+          ),
         ),
       ),
     );

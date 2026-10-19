@@ -123,7 +123,10 @@ class AppBottomBar extends StatelessWidget {
                         child: ShellTab(
                           label: 'AI',
                           icon: Icons.auto_awesome_rounded,
-                          isSelected: currentLocation.startsWith('/ai'),
+                          isSelected:
+                              currentLocation.startsWith('/ai') ||
+                              currentLocation == '/monthly' ||
+                              currentLocation.startsWith('/monthly/'),
                           showAttentionIndicator: showAiAttention,
                           attentionIndicatorKey: const Key(
                             'shell-tab-ai-attention',

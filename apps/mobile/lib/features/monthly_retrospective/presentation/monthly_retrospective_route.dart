@@ -26,8 +26,9 @@ class _MonthlyRetrospectiveRouteState
     _guard = ref.read(shellNavigationGuardProvider);
     _guard.register(
       this,
-      '/calendar/monthly',
+      '/monthly',
       () => _screenKey.currentState?.confirmLeave() ?? Future.value(true),
+      includeDescendants: true,
     );
   }
 
@@ -41,10 +42,16 @@ class _MonthlyRetrospectiveRouteState
     if (_closing) return;
     _closing = true;
     try {
-      if (await _guard.allows('/calendar/monthly') && mounted) {
+      if (await _guard.allows('/monthly') && mounted) {
         setState(() => _dirty = false);
         await WidgetsBinding.instance.endOfFrame;
-        if (mounted) context.pop();
+        if (mounted) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/ai');
+          }
+        }
       }
     } finally {
       _closing = false;
@@ -59,7 +66,7 @@ class _MonthlyRetrospectiveRouteState
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !_dirty,
+    canPop: !_dirty && context.canPop(),
     onPopInvokedWithResult: (didPop, result) {
       if (!didPop) _close();
     },
@@ -67,7 +74,7 @@ class _MonthlyRetrospectiveRouteState
       key: _screenKey,
       onBack: _close,
       onDirtyChanged: _dirtyChanged,
-      recordLocation: '/calendar/monthly/record',
+      recordLocation: '/monthly/record',
     ),
   );
 }

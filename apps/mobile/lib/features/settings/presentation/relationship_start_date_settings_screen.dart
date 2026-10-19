@@ -40,7 +40,7 @@ class RelationshipStartDateSettingsScreen extends ConsumerWidget {
         orElse: () => null,
       ),
       child: editor.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (error, stackTrace) => _LoadFailure(
           onRetry: () =>
               ref.invalidate(relationshipStartDateEditorControllerProvider),

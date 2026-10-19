@@ -123,7 +123,7 @@ class _ReconnectableArchiveRow extends StatelessWidget {
                 if (isLoading)
                   const SizedBox.square(
                     dimension: 20,
-                    child: AppLoadingIndicator(strokeWidth: 2),
+                    child: AppLoadingIndicator(radius: 8),
                   )
                 else
                   const Icon(

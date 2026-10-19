@@ -30,7 +30,7 @@ class AiDirectQuestionScreen extends ConsumerWidget {
         context.go('/ai');
       },
       child: history.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (error, stackTrace) => _QuestionHistoryError(
           message: aiLearningErrorMessage(error),
           onRetry: () => ref.invalidate(aiDirectQuestionControllerProvider),

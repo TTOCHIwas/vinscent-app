@@ -141,6 +141,14 @@ abstract final class AppTextStyles {
     letterSpacing: _tracking20,
   );
 
+  static const contentTitle = TextStyle(
+    color: AppColors.textPrimary,
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    height: 32 / 24,
+    letterSpacing: _tracking24,
+  );
+
   static const compactError = TextStyle(
     color: Colors.redAccent,
     fontSize: 13,

@@ -31,7 +31,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
       title: '차단한 사용자',
       onBackPressed: _goBack,
       child: blockedUsers.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (_, _) => _BlockedUsersMessage(
           title: '차단 목록을 불러오지 못했어요',
           message: '잠시 후 다시 시도해 주세요',

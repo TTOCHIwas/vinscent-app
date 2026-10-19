@@ -14,6 +14,7 @@ class WordBoundaryText extends StatelessWidget {
     this.semanticsLabel,
     this.textAlign,
     this.trailing,
+    this.textWidthBasis = TextWidthBasis.parent,
   });
 
   final String text;
@@ -23,6 +24,7 @@ class WordBoundaryText extends StatelessWidget {
   final String? semanticsLabel;
   final TextAlign? textAlign;
   final Widget? trailing;
+  final TextWidthBasis textWidthBasis;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,7 @@ class WordBoundaryText extends StatelessWidget {
             semanticsLabel: semanticsLabel ?? text,
             textAlign: textAlign,
             style: style,
+            textWidthBasis: textWidthBasis,
           );
         }
 
@@ -67,6 +70,7 @@ class WordBoundaryText extends StatelessWidget {
           semanticsLabel: semanticsLabel ?? text,
           textAlign: textAlign,
           style: style,
+          textWidthBasis: textWidthBasis,
         );
       },
     );

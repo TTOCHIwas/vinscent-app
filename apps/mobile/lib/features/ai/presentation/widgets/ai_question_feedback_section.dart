@@ -103,27 +103,19 @@ class _LabeledFeedback extends StatelessWidget {
         children: [
           const Divider(height: 1, color: AppColors.settingsDivider),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Text(
-                'AI의 한마디',
-                style: AppTextStyles.homeCharacterLabel.copyWith(
-                  color: AppColors.textMuted,
-                ),
+          AiGeneratedContent(
+            onReportPressed: () =>
+                _showFeedbackReport(context, dailyQuestionId: dailyQuestionId),
+            heading: Text(
+              'AI의 한마디',
+              style: AppTextStyles.homeCharacterLabel.copyWith(
+                color: AppColors.textMuted,
               ),
-              const SizedBox(width: 4),
-              AiGeneratedContentIndicator(
-                onReportPressed: () => _showFeedbackReport(
-                  context,
-                  dailyQuestionId: dailyQuestionId,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          WordBoundaryText(
-            feedback.feedbackText,
-            style: AppTextStyles.homeBodyMedium,
+            ),
+            child: WordBoundaryText(
+              feedback.feedbackText,
+              style: AppTextStyles.homeBodyMedium,
+            ),
           ),
         ],
       ),

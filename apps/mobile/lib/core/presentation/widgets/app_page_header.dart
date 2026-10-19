@@ -11,12 +11,14 @@ class AppPageHeader extends StatelessWidget {
     this.onBackPressed,
     this.leading,
     this.action,
+    this.titleStyle = AppTextStyles.shellTitle,
   }) : assert(onBackPressed == null || leading == null);
 
   final String title;
   final VoidCallback? onBackPressed;
   final Widget? leading;
   final Widget? action;
+  final TextStyle titleStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +41,15 @@ class AppPageHeader extends StatelessWidget {
           children: [
             if (leadingWidget != null)
               Align(alignment: Alignment.centerLeft, child: leadingWidget),
-            Text(title, style: AppTextStyles.shellTitle),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: leadingWidget != null || action != null ? 48 : 0,
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(title, style: titleStyle, maxLines: 1),
+              ),
+            ),
             if (action case final action?)
               Align(alignment: Alignment.centerRight, child: action),
           ],

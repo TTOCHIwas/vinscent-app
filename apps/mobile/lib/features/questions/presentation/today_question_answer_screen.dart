@@ -780,7 +780,7 @@ class _CenteredLoader extends StatelessWidget {
     return const Center(
       child: SizedBox.square(
         dimension: 24,
-        child: AppLoadingIndicator(strokeWidth: 2),
+        child: AppLoadingIndicator(radius: 8),
       ),
     );
   }

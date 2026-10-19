@@ -58,7 +58,7 @@ class _NotificationSettingsScreenState
       title: '알림 설정',
       onBackPressed: () => context.pop(),
       child: preferences.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (error, stackTrace) => _SettingsLoadError(
           onRetry: () => ref
               .read(notificationPreferencesControllerProvider.notifier)

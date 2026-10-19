@@ -25,14 +25,17 @@ class QuestionAnswerPromptRow extends StatelessWidget {
     const characterSize = 96.0;
 
     return CharacterSpeechRow(
+      messageLeadingExtent: showGeneratedIndicator
+          ? AiGeneratedContent.leadingExtent
+          : 0,
       character: const CoupleCharacterAvatar(
         key: Key('question-answer-character'),
         size: characterSize,
       ),
-      message: AiGeneratedContentBadgeOverlay(
+      message: AiGeneratedContent(
+        bodyAlignment: Alignment.topCenter,
         showIndicator: showGeneratedIndicator,
         onReportPressed: onGeneratedIndicatorPressed,
-        reserveIndicatorSpace: true,
         child: Semantics(
           label: showGeneratedIndicator
               ? 'AI 생성 질문: $questionText'

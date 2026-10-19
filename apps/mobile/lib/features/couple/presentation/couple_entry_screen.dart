@@ -8,6 +8,7 @@ import '../../../core/presentation/widgets/app_action_tone.dart';
 import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_setup_page.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_input_style.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../safety/application/user_block_providers.dart';
 import '../../safety/application/user_block_service.dart';
@@ -258,30 +259,12 @@ class _EnterCodeContent extends StatelessWidget {
             LengthLimitingTextInputFormatter(6),
             _UpperCaseTextFormatter(),
           ],
-          style: AppTextStyles.onboardingInput.copyWith(letterSpacing: 6),
-          decoration: InputDecoration(
+          style: AppInputStyle.textStyle.copyWith(letterSpacing: 6),
+          decoration: AppInputStyle.decoration(
             hintText: 'ABC234',
-            hintStyle: AppTextStyles.onboardingInput.copyWith(
-              color: AppColors.textPlaceholder,
+            hintStyle: AppInputStyle.textStyle.copyWith(
+              color: AppColors.textMuted,
               letterSpacing: 6,
-            ),
-            filled: true,
-            fillColor: AppColors.formSurface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.textPrimary),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
             ),
           ),
           onChanged: onChanged,

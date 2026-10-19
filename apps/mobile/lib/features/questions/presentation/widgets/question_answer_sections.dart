@@ -225,11 +225,7 @@ class _BoxedAnswerDisplaySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _AnswerSectionTitle(
-          title: title,
-          style: AppTextStyles.homeBodyMedium,
-          onReportPressed: onReportPressed,
-        ),
+        Text(title, style: AppTextStyles.homeBodyMedium),
         const SizedBox(height: 10),
         Container(
           width: double.infinity,
@@ -238,7 +234,10 @@ class _BoxedAnswerDisplaySection extends StatelessWidget {
             border: Border.all(color: AppColors.wireframeBorder),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text(body, style: _boxedBodyStyle(isMuted)),
+          child: _AnswerBodyWithReport(
+            onReportPressed: onReportPressed,
+            child: Text(body, style: _boxedBodyStyle(isMuted)),
+          ),
         ),
       ],
     );
@@ -265,19 +264,21 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _AnswerSectionTitle(
-            title: title,
+          Text(
+            title,
             style: AppTextStyles.homeCharacterLabel.copyWith(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w500,
             ),
-            onReportPressed: onReportPressed,
           ),
           const SizedBox(height: 8),
-          WordBoundaryText(
-            body,
-            style: AppTextStyles.homeBody.copyWith(
-              color: isMuted ? AppColors.textMuted : AppColors.textPrimary,
+          _AnswerBodyWithReport(
+            onReportPressed: onReportPressed,
+            child: WordBoundaryText(
+              body,
+              style: AppTextStyles.homeBody.copyWith(
+                color: isMuted ? AppColors.textMuted : AppColors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -286,34 +287,41 @@ class _PlainAnswerDisplaySection extends StatelessWidget {
   }
 }
 
-class _AnswerSectionTitle extends StatelessWidget {
-  const _AnswerSectionTitle({
-    required this.title,
-    required this.style,
+class _AnswerBodyWithReport extends StatelessWidget {
+  const _AnswerBodyWithReport({
+    required this.child,
     required this.onReportPressed,
   });
 
-  final String title;
-  final TextStyle style;
+  final Widget child;
   final VoidCallback? onReportPressed;
 
   @override
   Widget build(BuildContext context) {
     final onReportPressed = this.onReportPressed;
+    if (onReportPressed == null) {
+      return child;
+    }
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: Text(title, style: style)),
-        if (onReportPressed != null)
-          IconButton(
-            key: const Key('partner-answer-report'),
-            onPressed: onReportPressed,
-            tooltip: _partnerAnswerReportTooltip,
-            style: IconButton.styleFrom(
-              fixedSize: const Size.square(40),
-              foregroundColor: AppColors.textMuted,
-            ),
-            icon: const Icon(Icons.flag_outlined, size: 20),
+        Expanded(child: child),
+        const SizedBox(width: 8),
+        IconButton(
+          key: const Key('partner-answer-report'),
+          onPressed: onReportPressed,
+          tooltip: _partnerAnswerReportTooltip,
+          constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.standard,
+          style: IconButton.styleFrom(
+            fixedSize: const Size.square(48),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: AppColors.textMuted,
           ),
+          icon: const Icon(Icons.flag_outlined, size: 20),
+        ),
       ],
     );
   }

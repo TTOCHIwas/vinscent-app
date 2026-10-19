@@ -4,6 +4,7 @@ import '../../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../monthly_retrospective/presentation/widgets/monthly_retrospective_action.dart';
 
 class AiTabHeader extends StatelessWidget {
   const AiTabHeader({
@@ -12,6 +13,7 @@ class AiTabHeader extends StatelessWidget {
     this.remainingQuestionCount,
     this.onHistoryPressed,
     this.onMemoryPressed,
+    this.onRetrospectivePressed,
     this.showMemoryAttention = false,
   }) : assert(
          !isQuestionReady ||
@@ -24,6 +26,7 @@ class AiTabHeader extends StatelessWidget {
   final int? remainingQuestionCount;
   final VoidCallback? onHistoryPressed;
   final VoidCallback? onMemoryPressed;
+  final VoidCallback? onRetrospectivePressed;
   final bool showMemoryAttention;
 
   @override
@@ -32,11 +35,18 @@ class AiTabHeader extends StatelessWidget {
       return ConstrainedBox(
         key: const Key('ai-tab-header'),
         constraints: const BoxConstraints(minHeight: AiTabHeader.minHeight),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: WordBoundaryText('서로 알아가기', style: AppTextStyles.pageTitle),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+          child: Row(
+            children: [
+              const Expanded(
+                child: WordBoundaryText(
+                  '서로 알아가기',
+                  style: AppTextStyles.pageTitle,
+                ),
+              ),
+              if (onRetrospectivePressed != null) _retrospectiveAction(),
+            ],
           ),
         ),
       );
@@ -84,11 +94,17 @@ class AiTabHeader extends StatelessWidget {
               onPressed: onMemoryPressed!,
               showAttention: showMemoryAttention,
             ),
+            if (onRetrospectivePressed != null) _retrospectiveAction(),
           ],
         ),
       ),
     );
   }
+
+  Widget _retrospectiveAction() => MonthlyRetrospectiveAction(
+    key: const Key('ai-monthly-retrospective'),
+    onPressed: onRetrospectivePressed,
+  );
 }
 
 class _HeaderAction extends StatelessWidget {

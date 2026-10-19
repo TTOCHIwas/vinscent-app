@@ -69,47 +69,21 @@ class AiCharacterSpeechRow extends StatelessWidget {
             maxWidth: double.infinity,
             child: _content,
           );
-    final presentedMessage = _AiCharacterSpeechContent(
-      message: Semantics(label: label, excludeSemantics: true, child: message),
-      showGeneratedIndicator: showGeneratedIndicator,
-      onGeneratedIndicatorPressed: onGeneratedIndicatorPressed,
+    final presentedMessage = AiGeneratedContent(
+      bodyAlignment: Alignment.topCenter,
+      showIndicator: showGeneratedIndicator,
+      onReportPressed: onGeneratedIndicatorPressed,
+      child: Semantics(label: label, excludeSemantics: true, child: message),
     );
 
     return CharacterSpeechRow(
       maximumContentWidth: maximumContentWidth,
+      expandMessage: true,
+      messageLeadingExtent: showGeneratedIndicator
+          ? AiGeneratedContent.leadingExtent
+          : 0,
       character: CoupleCharacterAvatar(key: characterKey, size: characterSize),
       message: presentedMessage,
-    );
-  }
-}
-
-class _AiCharacterSpeechContent extends StatelessWidget {
-  const _AiCharacterSpeechContent({
-    required this.message,
-    required this.showGeneratedIndicator,
-    required this.onGeneratedIndicatorPressed,
-  });
-
-  final Widget message;
-  final bool showGeneratedIndicator;
-  final VoidCallback? onGeneratedIndicatorPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!showGeneratedIndicator) {
-      return message;
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        message,
-        const SizedBox(height: 2),
-        AiGeneratedContentIndicator(
-          onReportPressed: onGeneratedIndicatorPressed,
-        ),
-      ],
     );
   }
 }
