@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_input_style.dart';
 import 'app_typography.dart';
 
 class AppTheme {
@@ -59,6 +60,12 @@ class AppTheme {
       typography: _typographyFor(_lightColorScheme),
       fontFamily: AppTypography.fontFamily,
       scaffoldBackgroundColor: AppColors.background,
+      inputDecorationTheme: AppInputStyle.theme,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppInputStyle.focusColor,
+        selectionColor: AppInputStyle.selectionColor,
+        selectionHandleColor: AppInputStyle.focusColor,
+      ),
       appBarTheme: const AppBarTheme(centerTitle: false),
       cardTheme: CardThemeData(
         elevation: 0,

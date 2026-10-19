@@ -13,6 +13,7 @@ import '../../../core/presentation/widgets/app_page_header.dart';
 import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_input_style.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../application/couple_recording_overview_controller.dart';
@@ -403,18 +404,10 @@ class _RecordingSlotArtworkEditorScreenState
                   autofocus: true,
                   maxLength: 20,
                   textInputAction: TextInputAction.done,
-                  style: AppTextStyles.homeBody,
-                  decoration: const InputDecoration(
+                  style: AppInputStyle.textStyle,
+                  decoration: AppInputStyle.decoration(
                     hintText: '슬롯 제목',
-                    hintStyle: TextStyle(color: AppColors.textMuted),
                     counterText: '',
-                    filled: false,
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.settingsDivider),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.settingsDivider),
-                    ),
                   ),
                 ),
               ),
@@ -477,7 +470,7 @@ class _RecordingSlotArtworkEditorScreenState
 
   Widget _buildCanvas(bool isReadOnly) {
     if (_isLoading) {
-      return const Center(child: AppLoadingIndicator(strokeWidth: 2));
+      return const Center(child: AppLoadingIndicator(radius: 8));
     }
     if (_loadFailed) {
       return Center(

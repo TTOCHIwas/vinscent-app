@@ -42,6 +42,7 @@ class AiDirectQuestionInputDock extends ConsumerWidget {
             children: [
               Expanded(
                 child: AppAnswerInput(
+                  presentation: AppAnswerInputPresentation.composer,
                   key: const Key('ai-direct-question-input'),
                   controller: controller.questionController,
                   focusNode: controller.focusNode,

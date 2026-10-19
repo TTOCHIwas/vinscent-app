@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../core/presentation/widgets/app_sized_network_image.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../core/presentation/widgets/app_confirmation_dialog.dart';
 import '../../../core/presentation/widgets/app_loading_indicator.dart';
 import '../../../core/presentation/widgets/app_attention_indicator.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_input_style.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../couple/application/couple_controller.dart';
 import '../../couple/data/couple.dart';
@@ -97,11 +100,10 @@ class _RecordingLibraryScreenState
         context.go('/home');
       },
       child: coupleAsync.when(
-        loading: () => const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
         error: (_, _) => const _LibraryMessage(title: '녹음 보관함을 불러오지 못했어요.'),
         data: (couple) => overviewAsync.when(
-          loading: () =>
-              const Center(child: AppLoadingIndicator(strokeWidth: 2)),
+          loading: () => const Center(child: AppLoadingIndicator(radius: 8)),
           error: (_, _) => _LibraryMessage(
             title: '녹음 정보를 불러오지 못했어요.',
             actionLabel: '다시 시도',
@@ -502,7 +504,8 @@ class _RecordingLibraryScreenState
               controller: controller,
               autofocus: true,
               maxLength: 20,
-              decoration: const InputDecoration(hintText: '제목을 입력해 주세요.'),
+              style: AppInputStyle.textStyle,
+              decoration: AppInputStyle.decoration(hintText: '제목을 입력해 주세요.'),
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.isEmpty) {
@@ -889,11 +892,11 @@ class _SlotArtworkThumbnail extends StatelessWidget {
               color: AppColors.textMuted,
               size: 28,
             )
-          : Image.network(
-              artwork.previewUrl,
-              fit: BoxFit.contain,
+          : AppSizedNetworkImage(
+              url: artwork.previewUrl,
+              logicalSize: const Size.square(56),
               gaplessPlayback: true,
-              errorBuilder: (context, error, stackTrace) => const Icon(
+              fallbackBuilder: (context) => const Icon(
                 Icons.broken_image_outlined,
                 color: AppColors.textMuted,
               ),

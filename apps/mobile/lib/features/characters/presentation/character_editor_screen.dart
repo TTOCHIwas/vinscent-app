@@ -514,9 +514,7 @@ class _CharacterEditorScreenState extends ConsumerState<CharacterEditorScreen> {
                     child: ColoredBox(
                       color: AppColors.formSurface,
                       child: _isLoadingDrawing
-                          ? const Center(
-                              child: AppLoadingIndicator(strokeWidth: 2),
-                            )
+                          ? const Center(child: AppLoadingIndicator(radius: 8))
                           : _loadFailed
                           ? _CharacterLoadFailure(
                               onRetry: _retryLoadExistingDrawing,

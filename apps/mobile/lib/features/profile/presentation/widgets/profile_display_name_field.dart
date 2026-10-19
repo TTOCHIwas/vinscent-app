@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Icons, Tooltip;
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_input_style.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../application/profile_display_name_policy.dart';
 
@@ -65,49 +67,38 @@ class _ProfileDisplayNameFieldState extends State<ProfileDisplayNameField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
+        CupertinoTextField(
           key: const Key('profile-display-name-field'),
           controller: _controller,
           autofocus: widget.autofocus,
-          cursorColor: AppColors.textPrimary,
           keyboardType: TextInputType.name,
           textInputAction: widget.textInputAction,
           inputFormatters: [
             LengthLimitingTextInputFormatter(profileDisplayNameMaxLength),
           ],
-          style: AppTextStyles.onboardingInput,
-          decoration: InputDecoration(
-            hintText: '닉네임',
-            hintStyle: AppTextStyles.onboardingInput.copyWith(
-              color: AppColors.textPlaceholder,
-            ),
-            suffixIcon: widget.value.isEmpty
-                ? null
-                : IconButton(
-                    onPressed: widget.onClear,
-                    icon: const Icon(Icons.close),
-                    color: AppColors.textMuted,
-                    tooltip: '입력 지우기',
-                  ),
-            filled: true,
-            fillColor: AppColors.formSurface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: AppColors.textPrimary),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
+          style: AppInputStyle.textStyle,
+          placeholder: '닉네임',
+          placeholderStyle: AppInputStyle.textStyle.copyWith(
+            color: CupertinoColors.placeholderText,
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          cursorColor: AppInputStyle.focusColor,
+          keyboardAppearance: Brightness.light,
+          suffix: widget.value.isEmpty
+              ? null
+              : Tooltip(
+                  message: '입력 지우기',
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size.square(44),
+                    onPressed: widget.onClear,
+                    child: const Icon(
+                      CupertinoIcons.clear_thick_circled,
+                      size: 18,
+                      color: CupertinoColors.tertiaryLabel,
+                    ),
+                  ),
+                ),
           onChanged: widget.onChanged,
           onSubmitted: (_) {
             if (widget.isValid) {

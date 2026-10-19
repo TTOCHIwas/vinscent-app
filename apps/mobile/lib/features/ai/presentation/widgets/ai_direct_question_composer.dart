@@ -29,7 +29,7 @@ class AiDirectQuestionComposer extends ConsumerWidget {
     return history.when(
       loading: () => const SizedBox(
         height: 180,
-        child: Center(child: AppLoadingIndicator(strokeWidth: 2)),
+        child: Center(child: AppLoadingIndicator(radius: 8)),
       ),
       error: (error, stackTrace) => _ComposerError(
         message: aiLearningErrorMessage(error),

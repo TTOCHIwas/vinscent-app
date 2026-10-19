@@ -257,7 +257,7 @@ class _CoupleCalendarEventEditorScreenState
                 ),
               ),
         child: _isLoading
-            ? const Center(child: AppLoadingIndicator(strokeWidth: 2))
+            ? const Center(child: AppLoadingIndicator(radius: 8))
             : _loadFailed
             ? _LoadFailure(onRetry: _loadEvent)
             : AnimatedSwitcher(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_input_style.dart';
+
 import '../../../../core/drawing/app_drawing.dart';
 import '../../../../core/drawing/app_drawing_controller.dart';
 import '../../../../core/drawing/widgets/app_drawing_canvas.dart';
@@ -114,6 +116,7 @@ class CoupleCalendarEventExtrasForm extends StatelessWidget {
                       maxLines: null,
                       maxLength: _memoMaxLength,
                       textAlignVertical: TextAlignVertical.top,
+                      style: AppInputStyle.textStyle,
                       decoration: CalendarEventFormStyle.inputDecoration(
                         '함께 기억할 내용을 남겨도 좋아요',
                       ),

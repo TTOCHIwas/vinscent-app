@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/drawing/widgets/app_color_palette.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_input_style.dart';
 
 class StoryCardTextInputOverlay extends StatefulWidget {
   const StoryCardTextInputOverlay({
@@ -49,6 +49,7 @@ class _StoryCardTextInputOverlayState extends State<StoryCardTextInputOverlay> {
   @override
   Widget build(BuildContext context) {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final inputBrightness = AppInputStyle.contrastingBrightness(_selectedColor);
     return GestureDetector(
       key: const ValueKey('story-card-text-input-overlay'),
       behavior: HitTestBehavior.opaque,
@@ -75,17 +76,16 @@ class _StoryCardTextInputOverlayState extends State<StoryCardTextInputOverlay> {
                       maxLines: null,
                       textAlign: TextAlign.center,
                       textInputAction: TextInputAction.done,
-                      keyboardAppearance: Brightness.dark,
-                      style: AppTextStyles.homeBodyMedium.copyWith(
+                      keyboardAppearance: Brightness.light,
+                      style: AppInputStyle.textStyle.copyWith(
                         color: _selectedColor,
                       ),
-                      cursorColor: _selectedColor,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
+                      cursorColor: inputBrightness == Brightness.dark
+                          ? Colors.white
+                          : AppInputStyle.focusColor,
+                      decoration: AppInputStyle.decoration(
+                        brightness: inputBrightness,
                         counterText: '',
-                        contentPadding: EdgeInsets.zero,
                       ),
                       onSubmitted: (_) => _submit(),
                     ),

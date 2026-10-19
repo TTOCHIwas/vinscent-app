@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_input_style.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../data/couple_calendar_event.dart';
 import 'calendar_event_form_style.dart';
@@ -57,7 +58,7 @@ class CoupleCalendarEventBasicForm extends StatelessWidget {
           controller: titleController,
           enabled: _isEnabled,
           maxLength: _titleMaxLength,
-          style: AppTextStyles.homeBody,
+          style: AppInputStyle.textStyle,
           textInputAction: TextInputAction.next,
           decoration: CalendarEventFormStyle.titleInputDecoration('일정 제목'),
         ),

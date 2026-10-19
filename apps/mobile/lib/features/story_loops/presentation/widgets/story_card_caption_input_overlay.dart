@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_input_style.dart';
 import '../../data/story_card_scene.dart';
 
 class StoryCardCaptionInputOverlay extends StatefulWidget {
@@ -76,7 +76,7 @@ class _StoryCardCaptionInputOverlayState
                       maxLines: storyCardMaxCaptionLines,
                       textAlign: TextAlign.center,
                       textInputAction: TextInputAction.newline,
-                      keyboardAppearance: Brightness.dark,
+                      keyboardAppearance: Brightness.light,
                       inputFormatters: [
                         LengthLimitingTextInputFormatter(
                           storyCardMaxCaptionCharacters,
@@ -85,16 +85,13 @@ class _StoryCardCaptionInputOverlayState
                           storyCardMaxCaptionLines,
                         ),
                       ],
-                      style: AppTextStyles.homeBodyMedium.copyWith(
+                      style: AppInputStyle.textStyle.copyWith(
                         color: Colors.white,
                       ),
                       cursorColor: Colors.white,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
+                      decoration: AppInputStyle.decoration(
+                        brightness: Brightness.dark,
                         counterText: '',
-                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                   ),

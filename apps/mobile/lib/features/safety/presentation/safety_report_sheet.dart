@@ -5,6 +5,7 @@ import '../../../core/presentation/widgets/app_action_button.dart';
 import '../../../core/presentation/widgets/app_action_tone.dart';
 import '../../../core/presentation/widgets/word_boundary_text.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_input_style.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/safety_report.dart';
 import '../data/safety_report_failure.dart';
@@ -139,28 +140,10 @@ class _SafetyReportSheetState extends ConsumerState<SafetyReportSheet> {
                 maxLines: 3,
                 maxLength: 1000,
                 textInputAction: TextInputAction.newline,
-                style: AppTextStyles.homeBody,
-                decoration: InputDecoration(
+                style: AppInputStyle.textStyle,
+                decoration: AppInputStyle.decoration(
                   hintText: '자세히 알려줘 (선택)',
-                  hintStyle: AppTextStyles.homeBody.copyWith(
-                    color: AppColors.textPlaceholder,
-                  ),
                   counterText: '',
-                  filled: true,
-                  fillColor: AppColors.formSurface,
-                  contentPadding: const EdgeInsets.all(14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
                 ),
               ),
               if (_errorMessage case final message?) ...[
