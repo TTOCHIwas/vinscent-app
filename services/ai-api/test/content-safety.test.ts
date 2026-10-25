@@ -112,3 +112,17 @@ test('provider payload contains no owner, couple, claim token, or storage URL', 
   await f.checker.execute('owner', 'submission');
   assert.deepEqual(payload, text);
 });
+
+test('even a provider ignoring cancellation cannot keep the check open', async () => {
+  const f = fixture([text]);
+  f.provider.check = async () => new Promise(() => {});
+  const checker = new CheckSharedContent({ gateway: f.gateway, provider: f.provider, timeoutMs: 10 });
+  assert.equal(await checker.execute('owner', 'submission'), 'unavailable');
+});
+
+test('ownership lookup failures do not reach the provider', async () => {
+  const f = fixture();
+  f.gateway.prepare = async () => { throw new Error('private owner information'); };
+  assert.equal(await f.checker.execute('owner', 'submission'), 'unavailable');
+  assert.deepEqual(f.calls, []);
+});

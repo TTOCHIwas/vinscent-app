@@ -5,7 +5,11 @@ import { CloudflareContentSafetyProvider } from '../src/infrastructure/cloudflar
 
 const text = { id: 'text', kind: 'text' as const, text: '너와 함께라서 행복해.' };
 const signal = () => new AbortController().signal;
-const categories = { sexual: false, violence: false, hate: false };
+const categories = {
+  harassment: false, 'harassment/threatening': false, hate: false, 'hate/threatening': false,
+  illicit: false, 'illicit/violent': false, 'self-harm': false, 'self-harm/intent': false,
+  'self-harm/instructions': false, sexual: false, 'sexual/minors': false, violence: false, 'violence/graphic': false,
+};
 const openAiResult = (flagged = false) => ({ id: 'modr-test', model: 'omni-moderation-latest', results: [{ flagged, categories: { ...categories, violence: flagged } }] });
 
 test('OpenAI sends Korean text to the fixed moderation endpoint without identifiers', async () => {
@@ -85,4 +89,25 @@ test('a provider error envelope is not a successful Cloudflare classification', 
 test('empty credentials and malformed Cloudflare account IDs fail before any request', () => {
   assert.throws(() => new OpenAiContentSafetyProvider({ apiKey: ' ' }));
   assert.throws(() => new CloudflareContentSafetyProvider({ accountId: '../other', apiToken: 'test' }));
+});
+
+test('OpenAI does not allow a truncated category map', async () => {
+  const provider = new OpenAiContentSafetyProvider({ apiKey: 'test', fetcher: async () => Response.json({
+    results: [{ flagged: false, categories: { violence: false } }],
+  }) });
+  await assert.rejects(provider.check(text, signal()), /content_safety_invalid_response/);
+});
+
+test('OpenAI rejects oversized responses without returning submitted text', async () => {
+  const provider = new OpenAiContentSafetyProvider({ apiKey: 'test', fetcher: async () => new Response('x'.repeat(65_537)) });
+  await assert.rejects(provider.check(text, signal()), { message: 'content_safety_provider_unavailable' });
+});
+
+test('Cloudflare refuses media before invoking the text guard', async () => {
+  let requested = false;
+  const provider = new CloudflareContentSafetyProvider({ accountId: 'a'.repeat(32), apiToken: 'test', fetcher: async () => {
+    requested = true; throw new Error('unexpected call');
+  } });
+  await assert.rejects(provider.check({ id: 'image', kind: 'image', mimeType: 'image/png', bytes: new Uint8Array([1]) }, signal()), /unsupported_kind/);
+  assert.equal(requested, false);
 });
