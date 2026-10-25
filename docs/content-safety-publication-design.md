@@ -2,6 +2,8 @@
 
 기준일: 2026-10-25. 분석 기준: `d3010e95`.
 
+Windows에서 이어갈 때는 [Windows 인계 절차](release/content-safety-windows-handoff.md)를 따른다.
+
 ## 현재 상태와 이번 변경
 
 Apple 정식 출시 준비의 첫 작업이다. 사용자는 기존 공급자 유지보다 검사 품질과
