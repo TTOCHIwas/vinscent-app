@@ -61,3 +61,11 @@ npm run eval:prompts
 
 See [AI candidate model evaluation](../../docs/release/ai-candidate-model-evaluation.md)
 for credentials, pacing, commands, and acceptance rules.
+
+## Content safety evaluation
+
+`npm run eval:content-safety` prints an offline plan. Explicit `--live` runs
+compare synthetic Korean text through candidate moderation adapters. The new
+modules are not connected to publication or deployed Edge Functions.
+See [publication boundaries and evaluation setup](../../docs/content-safety-publication-design.md)
+for the required server gates, credentials, remaining media coverage, and rollout conditions.
