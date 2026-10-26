@@ -35,6 +35,7 @@ export async function evaluateMediaSafety(
         return { actual: visual, reason: 'completed' };
       }
       if (extraction.status !== 'complete' || extraction.language !== 'ko'
+        || (sample.kind === 'audio' && extraction.speechDetected !== true)
         || typeof extraction.text !== 'string' || !extraction.text.trim()
         || extraction.text.length > 20_000) {
         return { actual: 'unavailable', reason: 'extraction_incomplete' };
