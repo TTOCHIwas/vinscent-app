@@ -69,3 +69,11 @@ compare synthetic Korean text through candidate moderation adapters. The new
 modules are not connected to publication or deployed Edge Functions.
 See [publication boundaries and evaluation setup](../../docs/content-safety-publication-design.md)
 for the required server gates, credentials, remaining media coverage, and rollout conditions.
+
+`npm run eval:content-safety-media` prints a network-free preparation plan;
+`npm run eval:content-safety-media -- --validate-assets` checks committed synthetic
+asset hashes and reports pending Korean speech assets. Live media calls are not
+implemented and `--live` is rejected. The evaluation-only composition accepts
+injected image, extraction, and text ports and never grants publication rights.
+See [media evaluation preparation](../../docs/release/content-safety-media-evaluation-plan.md)
+and [the Windows/Mac handoff](../../docs/release/content-safety-windows-handoff.md).
