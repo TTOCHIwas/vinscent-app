@@ -4,7 +4,7 @@ import { evaluateMediaSafety, summarizeMediaEvaluation, characterErrorRate } fro
 
 const image = { id: 'image-test', kind: 'image' as const, mimeType: 'image/png', bytes: new Uint8Array([1]) };
 const audio = { ...image, id: 'audio-test', kind: 'audio' as const, mimeType: 'audio/wav' };
-const complete = { status: 'complete', text: '내일 같이 걷자.', language: 'ko' };
+const complete = { status: 'complete', text: '내일 같이 걷자.', language: 'ko', speechDetected: true };
 const ports = () => ({
   checkImage: async () => ({ decision: 'allow' }),
   extractText: async () => complete,
@@ -54,6 +54,21 @@ test('a confirmed image without text still requires image classification', async
     extractText: async () => ({ status: 'no_text', text: '' }),
   })).actual, 'allow');
   assert.equal((await evaluateMediaSafety(image, { extractText: ports().extractText, checkText: ports().checkText })).actual, 'unavailable');
+});
+
+for (const speechDetected of [false, undefined, 'true']) {
+  test('a nonempty transcript without positive speech detection cannot approve silence', async () => {
+    assert.equal((await evaluateMediaSafety(audio, { ...ports(),
+      extractText: async () => ({ ...complete, speechDetected }),
+    })).actual, 'unavailable');
+  });
+}
+
+test('summary rejects invalid and empty evaluation rows', () => {
+  assert.throws(() => summarizeMediaEvaluation([]), /invalid_media_evaluation_rows/);
+  assert.throws(() => summarizeMediaEvaluation([
+    { id: 'invalid', expected: 'allow', actual: 'allow', latencyMs: -1 },
+  ]), /invalid_media_evaluation_rows/);
 });
 
 for (const decision of [null, {}, { decision: 'safe' }, { decision: true }]) {

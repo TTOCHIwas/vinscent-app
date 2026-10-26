@@ -35,6 +35,7 @@ test('asset inventory validates committed hashes without treating missing speech
   assert.equal(inventory.pendingAssets, 8);
   assert.equal(inventory.qualityEvaluated, false);
   const manifest = JSON.parse(readFileSync('eval/fixtures/content-safety-media-ko.json', 'utf8'));
+  assert.equal(manifest.cases.find((c: { id: string }) => c.id === 'image-normal-ko').referenceText, '내일 같이 산책하자.');
   for (const entry of manifest.cases.filter((c: { asset: string | null }) => c.asset !== null)) {
     const data = readFileSync(`eval/fixtures/${entry.asset}`);
     assert.equal(createHash('sha256').update(data).digest('hex'), entry.sha256);
