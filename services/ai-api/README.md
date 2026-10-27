@@ -72,8 +72,19 @@ for the required server gates, credentials, remaining media coverage, and rollou
 
 `npm run eval:content-safety-media` prints a network-free preparation plan;
 `npm run eval:content-safety-media -- --validate-assets` checks committed synthetic
-asset hashes and reports pending Korean speech assets. Live media calls are not
-implemented and `--live` is rejected. The evaluation-only composition accepts
+asset hashes. This preparation command still rejects `--live`. The evaluation-only composition accepts
 injected image, extraction, and text ports and never grants publication rights.
 See [media evaluation preparation](../../docs/release/content-safety-media-evaluation-plan.md)
 and [the Windows/Mac handoff](../../docs/release/content-safety-windows-handoff.md).
+
+2026-10-27: 현재 발화 8개를 모두 커밋했고
+별도 실제 평가 도구 `npm run eval:media`를 연결했다. 기본 실행은 외부 요청 없는 계획 출력이다.
+`--provider=openai|cloudflare --asr=openai|local`로 모델과 자료·수량·비용을 확인한다.
+비용 확인과 승인 이후에만 `--live --approved-plan=<현재 fingerprint>`를 지정한다.
+env 파일은 자동으로 읽지 않으며 만료되지 않은 키를 해당 프로세스에만 설정한다.
+
+`npm run eval:media-local`은 Windows OCR·Silero VAD·Vosk로 실제 합성 파일을 검증한다.
+Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이므로 품질 미통과 종료 코드 1을 반환한다.
+기술 디코딩 통과·자동 품질·사람 청취를 구분한다. 사람 청취는 아직 0/8이다.
+설치·실행·모델 해시·예산은 [실제 평가 준비](../../docs/release/content-safety-media-live-readiness.md),
+파일별 청취는 [검토표](../../docs/release/content-safety-speech-review.md)를 따른다.

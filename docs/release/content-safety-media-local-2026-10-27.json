@@ -1,0 +1,373 @@
+{
+  "generatedAt": "2026-10-27T10:08:04.696Z",
+  "mode": "local_automatic_verification",
+  "networkRequests": 0,
+  "technicalVerificationPassed": true,
+  "automaticQualityPassed": false,
+  "humanListeningPerformed": false,
+  "safetyQualityEvaluated": false,
+  "providerSelected": false,
+  "tools": {
+    "codec": "PyAV 16.0.1 / Pillow 12.0.0",
+    "ocr": "Windows.Media.Ocr ko",
+    "vad": "Silero v6.2",
+    "asr": "Vosk small-ko-0.22 (no grammar/prompt/reference input)"
+  },
+  "results": [
+    {
+      "id": "image-scene-proxy",
+      "mimeType": "image/png",
+      "sha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-drawing",
+      "mimeType": "image/png",
+      "sha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-normal-ko",
+      "mimeType": "image/jpeg",
+      "sha256": "eb0e8ef6e8f13dac1fea1855e62ec6baf581ffb43cf1b5fc10723dfb4e4294df",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-idiom-ko",
+      "mimeType": "image/png",
+      "sha256": "86bb1e5ed227f64536525c85eaa34d78c4263e0f367312c0ba6a3ac93c1dbf44",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-negation-ko",
+      "mimeType": "image/png",
+      "sha256": "139062263d3c3c3eea30d969c8fbace046acf3c7316ca3b4d1e7855ca8dca15c",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-threat-ko",
+      "mimeType": "image/webp",
+      "sha256": "a5c6666e9062539e6807f83277077b6d8b033d7ca627044b5df87a7ade79510a",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-coercion-ko",
+      "mimeType": "image/png",
+      "sha256": "bdbe47e8e8ea096cd21103bd68a8a6ad6f888009e09064a85cde833aa249ee29",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-small-ko",
+      "mimeType": "image/png",
+      "sha256": "29684f53bc91d0b56271ce13bd17f996686c99a34b5ea766a471f9ac44c87f1f",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0.1,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-rotated-ko",
+      "mimeType": "image/png",
+      "sha256": "c8377e74406cce0255f4148dfce79621c1b011e51f3941b2f952fd3dd177b784",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-original-ko",
+      "mimeType": "image/png",
+      "sha256": "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "ocrCompared": true,
+      "characterErrorRate": 0,
+      "exactTextMatch": true
+    },
+    {
+      "id": "image-corrupt",
+      "mimeType": "image/png",
+      "sha256": "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    },
+    {
+      "id": "image-unsupported",
+      "mimeType": "image/svg+xml",
+      "sha256": "b983506ec03173e11b4c8da38c40b58f93155134686bbb36a3ef08438ac6cf0c",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    },
+    {
+      "id": "audio-normal-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "eac4723c7ac0d3af1db2f50c7b133be4af60a99a979d13943f71c37db48aea7b",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 2539,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 1664,
+        "maximumProbability": 0.9999995827674866,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.300004,
+      "characterErrorRate": 0.8888888888888888,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-romance-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "1330a2bb601c4dad29995d74ad248eeddf0846c4e3c06dbbad28782ba50ce843",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 4329,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 2624,
+        "maximumProbability": 0.9999996423721313,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.442994,
+      "characterErrorRate": 0.6666666666666666,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-idiom-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "6fc4bcc5502bc9498f08cbdde6e3730684d9be42b7ff31bf3feeb3df3ab1ddb3",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 4019,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 2240,
+        "maximumProbability": 0.9999984502792358,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.601085,
+      "characterErrorRate": 0.15384615384615385,
+      "exactTextMatch": true
+    },
+    {
+      "id": "audio-boundary-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "738595bb03e86a150be89c640de17f7bff24d20e9c44523c00fcbe5a803a0d7f",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 4549,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 2912,
+        "maximumProbability": 0.9999995231628418,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.594155,
+      "characterErrorRate": 0.16666666666666666,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-negation-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "47c109e3abc55e8d783f02a196b20855e94378ab026e1b0b7a0f1c22b9e92fcd",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 2774,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 1728,
+        "maximumProbability": 0.9999988079071045,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.304036,
+      "characterErrorRate": 0.2727272727272727,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-threat-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "54ec08034bf9bc296832570bdfe07808b8012ac705fee963996569e4271427e6",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 2514,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 1568,
+        "maximumProbability": 0.999998927116394,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.481649,
+      "characterErrorRate": 0.7,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-coercion-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "b9ce5babd0bd99e0049f50fa2e5eb30c793673fb7673704b03705655ce34258a",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 3509,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 2592,
+        "maximumProbability": 0.9999992847442627,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.839866,
+      "characterErrorRate": 0.1875,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-noisy-threat-ko",
+      "mimeType": "audio/mp4",
+      "sha256": "35ed9428cc33cdc09110efadda0c22dcf97a8422237bbe7e5b321e9d6e47b770",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 2024,
+      "vad": {
+        "speechDetected": true,
+        "speechMs": 1280,
+        "maximumProbability": 0.9999924898147583,
+        "model": "silero-vad-v6.2"
+      },
+      "asrCompared": true,
+      "minimumWordConfidence": 0.246165,
+      "characterErrorRate": 1,
+      "exactTextMatch": false
+    },
+    {
+      "id": "audio-silence",
+      "mimeType": "audio/wav",
+      "sha256": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 2000,
+      "vad": {
+        "speechDetected": false,
+        "speechMs": 0,
+        "maximumProbability": 0.008910685777664185,
+        "model": "silero-vad-v6.2"
+      }
+    },
+    {
+      "id": "audio-noise",
+      "mimeType": "audio/wav",
+      "sha256": "fd590def8079b531c2a7b19c79f5712ef933dfd9fcea1c0d2e611d46c65b08b6",
+      "decode": "passed",
+      "expectedDecodeFailure": false,
+      "humanReviewed": false,
+      "durationMs": 2000,
+      "vad": {
+        "speechDetected": false,
+        "speechMs": 0,
+        "maximumProbability": 0.24926921725273132,
+        "model": "silero-vad-v6.2"
+      }
+    },
+    {
+      "id": "audio-corrupt",
+      "mimeType": "audio/wav",
+      "sha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    },
+    {
+      "id": "audio-unsupported",
+      "mimeType": "audio/unknown",
+      "sha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    },
+    {
+      "id": "codec-corrupt-m4a",
+      "mimeType": "audio/mp4",
+      "sha256": "211e59eab09b6137f8f400580d9365c6ddeea7b6311a069e9d6abe396def70f0",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    },
+    {
+      "id": "codec-corrupt-jpeg",
+      "mimeType": "image/jpeg",
+      "sha256": "c89ed7a0653d653850c5ec587edc650c2d2c4c497f0bb4712e0146c61d914fb5",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    },
+    {
+      "id": "codec-corrupt-webp",
+      "mimeType": "image/webp",
+      "sha256": "18d9b8f0977a6dbd23c57b4aa2b1c9344c85580e3f09582ed326610ae71de0e2",
+      "decode": "failed",
+      "expectedDecodeFailure": true,
+      "humanReviewed": false,
+      "failure": "decode_or_extraction_unavailable"
+    }
+  ]
+}

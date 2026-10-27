@@ -1,15 +1,21 @@
 # 합성 미디어 fixture
 
+2026-10-27 현재: 한국어 OneCore Heami 발화 8개를 WAV/M4A로 생성했다.
+manifest schema 2는 기준 24사례, 원본 변형 10개, 손상 코덱 대조군 3개를 포함한다.
+앱 형식의 정상 JPEG/WebP/M4A와 손상본을 실제 디코딩했다.
+로컬 ASR 대본 일치 1/8, 사람 청취 0/8이다.
+[현재 설치/실행 계획](../../../../../docs/release/content-safety-media-live-readiness.md)과
+[사람 청취표](../../../../../docs/release/content-safety-speech-review.md)를 먼저 확인한다.
+초안 generator를 다시 실행하면 현재 manifest를 덮어쓰므로 실행하지 않는다.
+
 `../content-safety-media-ko.json`은 이미지 12개와 음성 12개 사례의 초안 manifest다.
-PNG 10개, 손상/미지원 이미지 2개, PCM WAV 2개, 손상/미지원 음성 2개를 로컬 생성했다.
+이미지 PNG/JPEG/WebP, M4A 발화 8개, PCM WAV 무음/잡음 2개와 손상/미지원 대조군을 로컬 생성했다.
 실제 사진·실제 사용자 음성·개인정보는 사용하지 않았다. PNG의 한글은 Malgun Gothic으로
 렌더링했다. 이는 손글씨나 사진 품질 자료가 아니며 두 글 없는 기하 이미지도 독립적인
 사진 표본으로 세지 않는다. 위험 시각물을 생성하지 않았다.
 
-한국어 음성 8개는 referenceText에 합성 대본만 있다. Windows의 설치된 음성이 영어뿐이라
-파일을 만들지 않고 `asset: null`로 표시했다. 15초 이하의 로컬 한국어 TTS를 준비한 뒤
-실제 발화·부정어·잡음 유무를 청취하고 asset/hash/duration/humanReviewed를 갱신해야 한다.
-외부 TTS가 필요하면 호출 수·가격을 먼저 제시한다. 목소리 복제나 사용자 녹음은 사용하지 않는다.
+한국어 음성 8개의 referenceText는 합성 입력 대본이다. 실제 발화·부정어·잡음 유무를 사람이 청취한 뒤에만
+humanReviewed를 갱신한다. 목소리 복제나 사용자 녹음은 사용하지 않는다.
 
 `humanReviewed: false`인 기대 판정은 검토용 초안이다. 손상/미지원 fixture는 decoder/adapter가
 실패해야 하는 대조군이며 온라인 API에 보내지 않는다. hash 검증은 bytes의 무결성만 확인하며
