@@ -138,3 +138,11 @@ test('summary separates classification mistakes, unavailable and extraction qual
   assert.equal(report.latencyP95Ms, 30);
   assert.equal(JSON.stringify(report).includes('안 돼'), false);
 });
+
+test('summary preserves precomputed CER without requiring recognition text in reports', () => {
+  const report = summarizeMediaEvaluation([
+    { id: 'recognized', expected: 'allow', actual: 'allow', latencyMs: 1, characterErrorRate: 0.25 },
+  ]);
+  assert.equal(report.extractionCompared, 1);
+  assert.equal(report.results[0].characterErrorRate, 0.25);
+});

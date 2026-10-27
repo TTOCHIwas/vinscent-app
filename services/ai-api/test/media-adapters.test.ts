@@ -27,7 +27,8 @@ test('media extraction uses decoded bytes, actual OCR and ASR, without a referen
 });
 
 for (const vad of [null, {}, { speechDetected: false, speechMs: 0, maximumProbability: 0.01 },
-  { speechDetected: true, speechMs: 0, maximumProbability: 0.1 }]) {
+  { speechDetected: true, speechMs: 0, maximumProbability: 0.1 },
+  { speechDetected: true, speechMs: NaN, maximumProbability: NaN }]) {
   test('silence and missing VAD evidence never reach paid transcription', async () => {
     let calls = 0;
     const adapter = new MediaExtractionAdapter({ ...dependencies(), detectSpeech: async () => vad,
@@ -99,4 +100,14 @@ test('native runner errors and invalid JSON are sanitized', async () => {
   const runtime = new NativeMediaRuntime({ python: 'python', vadModel: 'model', asrModel: 'asr',
     run: async () => { throw new Error('private absolute path token'); } });
   await assert.rejects(runtime.decodeAudio(audio, signal()), { message: 'media_native_unavailable' });
+});
+
+test('OCR preserves the original and uses enhancement only when original extraction has no text', async () => {
+  const used: string[] = [];
+  const runtime = new NativeMediaRuntime({ python: 'unused', vadModel: '', asrModel: '', run: async (_exe, _args, request: any) => {
+    used.push(request.pngBase64);
+    return { text: '회색 배경의 실제 글', words: 4 };
+  } });
+  assert.equal((await runtime.ocr({ pngBase64: 'original', ocrPngBase64: 'enhanced' }, signal()) as any).text, '회색 배경의 실제 글');
+  assert.deepEqual(used, ['original']);
 });
