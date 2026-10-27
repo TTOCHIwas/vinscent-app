@@ -15,7 +15,7 @@ test('media plan is offline, includes pending speech and never reports model qua
   assert.equal(plan.mode, 'plan');
   assert.equal(plan.imageCases, 12);
   assert.equal(plan.audioCases, 12);
-  assert.equal(plan.pendingSpeechAssets, 8);
+  assert.equal(plan.pendingSpeechAssets, 0);
   assert.equal(plan.providerSelected, false);
 });
 
@@ -31,8 +31,8 @@ test('asset inventory validates committed hashes without treating missing speech
   const result = run('--validate-assets');
   assert.equal(result.status, 0);
   const inventory = JSON.parse(result.stdout);
-  assert.equal(inventory.validatedAssets, 16);
-  assert.equal(inventory.pendingAssets, 8);
+  assert.equal(inventory.validatedAssets, 24);
+  assert.equal(inventory.pendingAssets, 0);
   assert.equal(inventory.qualityEvaluated, false);
   const manifest = JSON.parse(readFileSync('eval/fixtures/content-safety-media-ko.json', 'utf8'));
   assert.equal(manifest.cases.find((c: { id: string }) => c.id === 'image-normal-ko').referenceText, '내일 같이 산책하자.');
