@@ -17,7 +17,7 @@ if (args.length > 1 || (args.length === 1 && args[0] !== '--validate-assets')) {
       if (!['image', 'audio'].includes(sample.kind) || !['allow', 'block', 'unavailable'].includes(sample.expected)
         || !/^[a-z0-9-]+$/.test(sample.id)) throw new Error();
       if (sample.asset === null) { pendingAssets++; continue; }
-      if (!/^media-ko\/[a-z0-9-]+\.(png|wav|bin|svg)$/.test(sample.asset)) throw new Error();
+      if (!/^media-ko\/[a-z0-9-]+\.(png|jpg|webp|m4a|wav|bin|svg)$/.test(sample.asset)) throw new Error();
       if (args[0] === '--validate-assets') {
         const bytes = readFileSync(new URL(sample.asset, root));
         if (createHash('sha256').update(bytes).digest('hex') !== sample.sha256) throw new Error();
@@ -29,8 +29,8 @@ if (args.length > 1 || (args.length === 1 && args[0] !== '--validate-assets')) {
       audioCases: manifest.cases.filter((c: { kind: string }) => c.kind === 'audio').length,
       pendingSpeechAssets: pendingAssets, validatedAssets, pendingAssets,
       qualityEvaluated: false, providerSelected: false,
-      nextLiveRunMaximum: { imageChecks: 10, ocrExtractions: 10, transcriptions: 10,
-        textChecksPerCandidate: 20, audioMinutesPerCandidate: 2.5 },
+      nextLiveRunMaximum: { imageChecks: 10, ocrExtractions: 10, transcriptions: 8,
+        textChecksPerCandidate: 16, audioMinutesPerCandidate: 2 },
       liveExecutionAvailable: false }, null, 2));
   } catch {
     console.error(JSON.stringify({ error: 'invalid_media_fixture_inventory' }));

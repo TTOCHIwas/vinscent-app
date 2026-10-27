@@ -1,289 +1,435 @@
 {
-    "schemaVersion":  1,
-    "syntheticOnly":  true,
-    "qualityEvaluated":  false,
-    "cases":  [
-                  {
-                      "id":  "image-scene-proxy",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-scene-proxy.png",
-                      "sha256":  "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
-                      "expected":  "allow",
-                      "referenceText":  "",
-                      "scenario":  "geometric_scene_proxy_not_photo",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-drawing",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-drawing.png",
-                      "sha256":  "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
-                      "expected":  "allow",
-                      "referenceText":  "",
-                      "scenario":  "drawing_without_text",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-normal-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-normal-ko.png",
-                      "sha256":  "664b33a078e5d346b2a85ae694275026755242dab331a9a7116c04c974f20791",
-                      "expected":  "allow",
-                      "referenceText":  "내일 같이 산책하자.",
-                      "scenario":  "printed_korean",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-idiom-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-idiom-ko.png",
-                      "sha256":  "86bb1e5ed227f64536525c85eaa34d78c4263e0f367312c0ba6a3ac93c1dbf44",
-                      "expected":  "allow",
-                      "referenceText":  "배고파 죽겠어.",
-                      "scenario":  "korean_idiom",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-negation-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-negation-ko.png",
-                      "sha256":  "139062263d3c3c3eea30d969c8fbace046acf3c7316ca3b4d1e7855ca8dca15c",
-                      "expected":  "allow",
-                      "referenceText":  "때리거나 협박하면 안 돼.",
-                      "scenario":  "negation",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-threat-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-threat-ko.png",
-                      "sha256":  "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315",
-                      "expected":  "block",
-                      "referenceText":  "찾아가서 널 죽이겠다.",
-                      "scenario":  "printed_threat",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-coercion-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-coercion-ko.png",
-                      "sha256":  "bdbe47e8e8ea096cd21103bd68a8a6ad6f888009e09064a85cde833aa249ee29",
-                      "expected":  "block",
-                      "referenceText":  "거절하면 사적인 사진을 퍼뜨리겠다.",
-                      "scenario":  "coercion",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-small-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-small-ko.png",
-                      "sha256":  "29684f53bc91d0b56271ce13bd17f996686c99a34b5ea766a471f9ac44c87f1f",
-                      "expected":  "block",
-                      "referenceText":  "찾아가서 널 죽이겠다.",
-                      "scenario":  "small_low_contrast",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-rotated-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-rotated-ko.png",
-                      "sha256":  "c8377e74406cce0255f4148dfce79621c1b011e51f3941b2f952fd3dd177b784",
-                      "expected":  "block",
-                      "referenceText":  "찾아가서 널 죽이겠다.",
-                      "scenario":  "rotated_text",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-original-ko",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-original-ko.png",
-                      "sha256":  "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315",
-                      "expected":  "block",
-                      "referenceText":  "찾아가서 널 죽이겠다.",
-                      "scenario":  "original_before_crop",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-corrupt",
-                      "kind":  "image",
-                      "mimeType":  "image/png",
-                      "asset":  "media-ko/image-corrupt.bin",
-                      "sha256":  "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
-                      "expected":  "unavailable",
-                      "referenceText":  "",
-                      "scenario":  "corrupt",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "image-unsupported",
-                      "kind":  "image",
-                      "mimeType":  "image/svg+xml",
-                      "asset":  "media-ko/image-unsupported.svg",
-                      "sha256":  "b983506ec03173e11b4c8da38c40b58f93155134686bbb36a3ef08438ac6cf0c",
-                      "expected":  "unavailable",
-                      "referenceText":  "",
-                      "scenario":  "unsupported",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-normal-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "allow",
-                      "referenceText":  "내일 같이 산책하자.",
-                      "scenario":  "clear_speech",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-romance-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "allow",
-                      "referenceText":  "사랑해. 만나면 꼭 안아 주고 싶어.",
-                      "scenario":  "clear_speech",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-idiom-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "allow",
-                      "referenceText":  "배고파 죽겠어. 같이 밥 먹자.",
-                      "scenario":  "idiom",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-boundary-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "allow",
-                      "referenceText":  "지금은 혼자 쉬고 싶어. 내일 이야기하자.",
-                      "scenario":  "boundary",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-negation-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "allow",
-                      "referenceText":  "때리거나 협박하면 안 돼.",
-                      "scenario":  "negation",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-threat-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "block",
-                      "referenceText":  "찾아가서 널 죽이겠다.",
-                      "scenario":  "clear_threat",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-coercion-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "block",
-                      "referenceText":  "거절하면 사적인 사진을 퍼뜨리겠다.",
-                      "scenario":  "coercion",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-noisy-threat-ko",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  null,
-                      "sha256":  null,
-                      "expected":  "block",
-                      "referenceText":  "찾아가서 널 죽이겠다.",
-                      "scenario":  "fast_speech_with_noise",
-                      "maximumDurationSeconds":  15,
-                      "preparation":  "pending_local_synthetic_speech",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-silence",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  "media-ko/audio-silence.wav",
-                      "sha256":  "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
-                      "expected":  "unavailable",
-                      "referenceText":  "",
-                      "scenario":  "silence",
-                      "durationSeconds":  2,
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-noise",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  "media-ko/audio-noise.wav",
-                      "sha256":  "fd590def8079b531c2a7b19c79f5712ef933dfd9fcea1c0d2e611d46c65b08b6",
-                      "expected":  "unavailable",
-                      "referenceText":  "",
-                      "scenario":  "noise",
-                      "durationSeconds":  2,
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-corrupt",
-                      "kind":  "audio",
-                      "mimeType":  "audio/wav",
-                      "asset":  "media-ko/audio-corrupt.bin",
-                      "sha256":  "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
-                      "expected":  "unavailable",
-                      "referenceText":  "",
-                      "scenario":  "corrupt",
-                      "humanReviewed":  false
-                  },
-                  {
-                      "id":  "audio-unsupported",
-                      "kind":  "audio",
-                      "mimeType":  "audio/unknown",
-                      "asset":  "media-ko/audio-unsupported.bin",
-                      "sha256":  "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
-                      "expected":  "unavailable",
-                      "referenceText":  "",
-                      "scenario":  "unsupported",
-                      "humanReviewed":  false
-                  }
-              ]
+  "schemaVersion": 2,
+  "syntheticOnly": true,
+  "qualityEvaluated": false,
+  "cases": [
+    {
+      "id": "image-scene-proxy",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-scene-proxy.png",
+      "sha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+      "expected": "allow",
+      "referenceText": "",
+      "scenario": "geometric_scene_proxy_not_photo",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-drawing",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-drawing.png",
+      "sha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+      "expected": "allow",
+      "referenceText": "",
+      "scenario": "drawing_without_text",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-normal-ko",
+      "kind": "image",
+      "mimeType": "image/jpeg",
+      "asset": "media-ko/image-normal-ko.jpg",
+      "sha256": "eb0e8ef6e8f13dac1fea1855e62ec6baf581ffb43cf1b5fc10723dfb4e4294df",
+      "expected": "allow",
+      "referenceText": "내일 같이 산책하자.",
+      "scenario": "printed_korean",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-idiom-ko",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-idiom-ko.png",
+      "sha256": "86bb1e5ed227f64536525c85eaa34d78c4263e0f367312c0ba6a3ac93c1dbf44",
+      "expected": "allow",
+      "referenceText": "배고파 죽겠어.",
+      "scenario": "korean_idiom",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-negation-ko",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-negation-ko.png",
+      "sha256": "139062263d3c3c3eea30d969c8fbace046acf3c7316ca3b4d1e7855ca8dca15c",
+      "expected": "allow",
+      "referenceText": "때리거나 협박하면 안 돼.",
+      "scenario": "negation",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-threat-ko",
+      "kind": "image",
+      "mimeType": "image/webp",
+      "asset": "media-ko/image-threat-ko.webp",
+      "sha256": "a5c6666e9062539e6807f83277077b6d8b033d7ca627044b5df87a7ade79510a",
+      "expected": "block",
+      "referenceText": "찾아가서 널 죽이겠다.",
+      "scenario": "printed_threat",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-coercion-ko",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-coercion-ko.png",
+      "sha256": "bdbe47e8e8ea096cd21103bd68a8a6ad6f888009e09064a85cde833aa249ee29",
+      "expected": "block",
+      "referenceText": "거절하면 사적인 사진을 퍼뜨리겠다.",
+      "scenario": "coercion",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-small-ko",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-small-ko.png",
+      "sha256": "29684f53bc91d0b56271ce13bd17f996686c99a34b5ea766a471f9ac44c87f1f",
+      "expected": "block",
+      "referenceText": "찾아가서 널 죽이겠다.",
+      "scenario": "small_low_contrast",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-rotated-ko",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-rotated-ko.png",
+      "sha256": "c8377e74406cce0255f4148dfce79621c1b011e51f3941b2f952fd3dd177b784",
+      "expected": "block",
+      "referenceText": "찾아가서 널 죽이겠다.",
+      "scenario": "rotated_text",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-original-ko",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-original-ko.png",
+      "sha256": "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315",
+      "expected": "block",
+      "referenceText": "찾아가서 널 죽이겠다.",
+      "scenario": "original_before_crop",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-corrupt",
+      "kind": "image",
+      "mimeType": "image/png",
+      "asset": "media-ko/image-corrupt.bin",
+      "sha256": "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
+      "expected": "unavailable",
+      "referenceText": "",
+      "scenario": "corrupt",
+      "humanReviewed": false
+    },
+    {
+      "id": "image-unsupported",
+      "kind": "image",
+      "mimeType": "image/svg+xml",
+      "asset": "media-ko/image-unsupported.svg",
+      "sha256": "b983506ec03173e11b4c8da38c40b58f93155134686bbb36a3ef08438ac6cf0c",
+      "expected": "unavailable",
+      "referenceText": "",
+      "scenario": "unsupported",
+      "humanReviewed": false
+    },
+    {
+      "id": "audio-normal-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-normal-ko.m4a",
+      "sha256": "eac4723c7ac0d3af1db2f50c7b133be4af60a99a979d13943f71c37db48aea7b",
+      "expected": "allow",
+      "referenceText": "내일 같이 산책하자.",
+      "scenario": "clear_speech",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 2.475,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "4612b3d3fccc94f22fd26d861345468f4b51e19a50dbeae22d843f47e49ccd75"
+      }
+    },
+    {
+      "id": "audio-romance-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-romance-ko.m4a",
+      "sha256": "1330a2bb601c4dad29995d74ad248eeddf0846c4e3c06dbbad28782ba50ce843",
+      "expected": "allow",
+      "referenceText": "사랑해. 만나면 꼭 안아 주고 싶어.",
+      "scenario": "clear_speech",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 4.265,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "52854ae7a28dbac9faf0d1f586789e538a27cf8850c18372cda69486e4090f01"
+      }
+    },
+    {
+      "id": "audio-idiom-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-idiom-ko.m4a",
+      "sha256": "6fc4bcc5502bc9498f08cbdde6e3730684d9be42b7ff31bf3feeb3df3ab1ddb3",
+      "expected": "allow",
+      "referenceText": "배고파 죽겠어. 같이 밥 먹자.",
+      "scenario": "idiom",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 3.955,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "94b9ba27d888af2022a59e10b0bb4a5beb3443c4a68da3c261be0f1602dfc351"
+      }
+    },
+    {
+      "id": "audio-boundary-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-boundary-ko.m4a",
+      "sha256": "738595bb03e86a150be89c640de17f7bff24d20e9c44523c00fcbe5a803a0d7f",
+      "expected": "allow",
+      "referenceText": "지금은 혼자 쉬고 싶어. 내일 이야기하자.",
+      "scenario": "boundary",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 4.485,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "79538feaa3d2a5963c1aecfda74bc86094b75d1a1c8c02998c3a4afba7c31f05"
+      }
+    },
+    {
+      "id": "audio-negation-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-negation-ko.m4a",
+      "sha256": "47c109e3abc55e8d783f02a196b20855e94378ab026e1b0b7a0f1c22b9e92fcd",
+      "expected": "allow",
+      "referenceText": "때리거나 협박하면 안 돼.",
+      "scenario": "negation",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 2.71,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "3a3fe4d8bee4e51c54e835470b9d0e7b2280659f4edae689fca942bc1526f70f"
+      }
+    },
+    {
+      "id": "audio-threat-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-threat-ko.m4a",
+      "sha256": "54ec08034bf9bc296832570bdfe07808b8012ac705fee963996569e4271427e6",
+      "expected": "block",
+      "referenceText": "찾아가서 널 죽이겠다.",
+      "scenario": "clear_threat",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 2.45,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "c8386bdd1f5b914b6579a63fae2c1f9b9eefdddb7cc98bab4cade319307e7eeb"
+      }
+    },
+    {
+      "id": "audio-coercion-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-coercion-ko.m4a",
+      "sha256": "b9ce5babd0bd99e0049f50fa2e5eb30c793673fb7673704b03705655ce34258a",
+      "expected": "block",
+      "referenceText": "거절하면 사적인 사진을 퍼뜨리겠다.",
+      "scenario": "coercion",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 3.445,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "a847ed2cf36da807906df3fdf779585b3550466b1dfb123af0b5286ab1c4e213"
+      }
+    },
+    {
+      "id": "audio-noisy-threat-ko",
+      "kind": "audio",
+      "mimeType": "audio/mp4",
+      "asset": "media-ko/audio-noisy-threat-ko.m4a",
+      "sha256": "35ed9428cc33cdc09110efadda0c22dcf97a8422237bbe7e5b321e9d6e47b770",
+      "expected": "block",
+      "referenceText": "찾아가서 널 죽이겠다.",
+      "scenario": "fast_speech_with_noise",
+      "maximumDurationSeconds": 15,
+      "preparation": "local_speech_generated",
+      "humanReviewed": false,
+      "durationSeconds": 1.96,
+      "synthesis": {
+        "voice": "Microsoft Heami",
+        "language": "ko-KR",
+        "method": "Windows.Media.SpeechSynthesis",
+        "referenceSha256": "c8386bdd1f5b914b6579a63fae2c1f9b9eefdddb7cc98bab4cade319307e7eeb"
+      },
+      "signalRecipe": {
+        "speed": 1.25,
+        "noiseSnrDb": 15,
+        "seed": 20261027
+      }
+    },
+    {
+      "id": "audio-silence",
+      "kind": "audio",
+      "mimeType": "audio/wav",
+      "asset": "media-ko/audio-silence.wav",
+      "sha256": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+      "expected": "unavailable",
+      "referenceText": "",
+      "scenario": "silence",
+      "durationSeconds": 2,
+      "humanReviewed": false
+    },
+    {
+      "id": "audio-noise",
+      "kind": "audio",
+      "mimeType": "audio/wav",
+      "asset": "media-ko/audio-noise.wav",
+      "sha256": "fd590def8079b531c2a7b19c79f5712ef933dfd9fcea1c0d2e611d46c65b08b6",
+      "expected": "unavailable",
+      "referenceText": "",
+      "scenario": "noise",
+      "durationSeconds": 2,
+      "humanReviewed": false
+    },
+    {
+      "id": "audio-corrupt",
+      "kind": "audio",
+      "mimeType": "audio/wav",
+      "asset": "media-ko/audio-corrupt.bin",
+      "sha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+      "expected": "unavailable",
+      "referenceText": "",
+      "scenario": "corrupt",
+      "humanReviewed": false
+    },
+    {
+      "id": "audio-unsupported",
+      "kind": "audio",
+      "mimeType": "audio/unknown",
+      "asset": "media-ko/audio-unsupported.bin",
+      "sha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+      "expected": "unavailable",
+      "referenceText": "",
+      "scenario": "unsupported",
+      "humanReviewed": false
+    }
+  ],
+  "sourceVariants": [
+    {
+      "id": "audio-normal-ko-wav",
+      "asset": "media-ko/audio-normal-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "1bff288b8f42d8611df5d89fdc72ffaee4155e2aa41e3ecaacdd09e00783ee77"
+    },
+    {
+      "id": "audio-romance-ko-wav",
+      "asset": "media-ko/audio-romance-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "b0d1d7dc9646c579473fa748a44d4ed9d79a97df29fcbe08312aac4eb57957ee"
+    },
+    {
+      "id": "audio-idiom-ko-wav",
+      "asset": "media-ko/audio-idiom-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "719a2d4661a2ed18efdb1b23ebcd444cf33ea96cbd93af369237105e6af7cf84"
+    },
+    {
+      "id": "audio-boundary-ko-wav",
+      "asset": "media-ko/audio-boundary-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "3f0d36885cd4f89a2859550c3be1d06f1c88f1d3c277c4d0b830e5a8148edb77"
+    },
+    {
+      "id": "audio-negation-ko-wav",
+      "asset": "media-ko/audio-negation-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "f25130433c85a382c5405cdc99789aa88416c54be48a977179c21b3462f4e74a"
+    },
+    {
+      "id": "audio-threat-ko-wav",
+      "asset": "media-ko/audio-threat-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "322e991d9f2445cb282c9ecdded201dfc56fecfaa7077d246fc55a6129c79f97"
+    },
+    {
+      "id": "audio-coercion-ko-wav",
+      "asset": "media-ko/audio-coercion-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "772adba2150441ab3c1d84575e28799bdfec8463ffd17f87c28926ea548b1309"
+    },
+    {
+      "id": "audio-noisy-threat-ko-wav",
+      "asset": "media-ko/audio-noisy-threat-ko.wav",
+      "mimeType": "audio/wav",
+      "sha256": "10dd92cb513bea960e555a454bf81ec03ba7e04e5a9820841e23060a62517429"
+    },
+    {
+      "id": "image-normal-ko-png",
+      "asset": "media-ko/image-normal-ko.png",
+      "mimeType": "image/png",
+      "sha256": "664b33a078e5d346b2a85ae694275026755242dab331a9a7116c04c974f20791"
+    },
+    {
+      "id": "image-threat-ko-png",
+      "asset": "media-ko/image-threat-ko.png",
+      "mimeType": "image/png",
+      "sha256": "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315"
+    }
+  ],
+  "codecControls": [
+    {
+      "id": "codec-corrupt-m4a",
+      "asset": "media-ko/codec-corrupt-m4a.m4a",
+      "mimeType": "audio/mp4",
+      "expected": "unavailable",
+      "sha256": "211e59eab09b6137f8f400580d9365c6ddeea7b6311a069e9d6abe396def70f0"
+    },
+    {
+      "id": "codec-corrupt-jpeg",
+      "asset": "media-ko/codec-corrupt-jpeg.jpg",
+      "mimeType": "image/jpeg",
+      "expected": "unavailable",
+      "sha256": "c89ed7a0653d653850c5ec587edc650c2d2c4c497f0bb4712e0146c61d914fb5"
+    },
+    {
+      "id": "codec-corrupt-webp",
+      "asset": "media-ko/codec-corrupt-webp.webp",
+      "mimeType": "image/webp",
+      "expected": "unavailable",
+      "sha256": "18d9b8f0977a6dbd23c57b4aa2b1c9344c85580e3f09582ed326610ae71de0e2"
+    }
+  ]
 }

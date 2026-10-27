@@ -92,19 +92,22 @@ export function characterErrorRate(reference: string, observed: string): number 
 export function summarizeMediaEvaluation(rows: readonly {
   id: string; expected: Decision; actual: Decision; latencyMs: number;
   referenceText?: string; extractedText?: string;
+  characterErrorRate?: number | null;
 }[]) {
   if (!rows.length || new Set(rows.map(r => r.id)).size !== rows.length
     || rows.some(r => !/^[a-z0-9-]{1,80}$/.test(r.id)
       || !['allow', 'block', 'unavailable'].includes(r.expected)
       || !['allow', 'block', 'unavailable'].includes(r.actual)
       || !Number.isFinite(r.latencyMs) || r.latencyMs < 0
+      || (r.characterErrorRate !== undefined && r.characterErrorRate !== null
+        && (!Number.isFinite(r.characterErrorRate) || r.characterErrorRate < 0))
       || (r.referenceText !== undefined && r.referenceText.length > 2_000)
       || (r.extractedText !== undefined && r.extractedText.length > 2_000))) {
     throw new TypeError('invalid_media_evaluation_rows');
   }
   const results = rows.map(r => ({ id: r.id, expected: r.expected, actual: r.actual, latencyMs: r.latencyMs,
-    characterErrorRate: r.referenceText !== undefined && r.extractedText !== undefined
-      ? characterErrorRate(r.referenceText, r.extractedText) : null }));
+    characterErrorRate: r.characterErrorRate ?? (r.referenceText !== undefined && r.extractedText !== undefined
+      ? characterErrorRate(r.referenceText, r.extractedText) : null) }));
   const latencies = rows.map(r => r.latencyMs).sort((a, b) => a - b);
   return { total: rows.length, correct: rows.filter(r => r.expected === r.actual).length,
     falseAllows: rows.filter(r => r.expected === 'block' && r.actual === 'allow').length,

@@ -10,6 +10,8 @@
     "eval:cloudflare": "node --experimental-strip-types eval/cloudflare-model-eval.ts",
     "eval:content-safety": "node --experimental-strip-types eval/content-safety-eval.ts",
     "eval:content-safety-media": "node --experimental-strip-types eval/content-safety-media-eval.ts",
+    "eval:media": "node --experimental-strip-types eval/run-media-evaluation.ts",
+    "eval:media-local": "node --experimental-strip-types eval/verify-media-local.ts",
     "eval:models": "node --experimental-strip-types eval/model-comparison-eval.ts",
     "eval:prompts": "node --experimental-strip-types eval/prompt-strategy-eval.ts",
     "eval:question-similarity": "node --experimental-strip-types eval/question-similarity-eval.ts",
