@@ -17,6 +17,9 @@ test('media plan is offline, includes pending speech and never reports model qua
   assert.equal(plan.audioCases, 12);
   assert.equal(plan.pendingSpeechAssets, 0);
   assert.equal(plan.providerSelected, false);
+  assert.equal(plan.nextLiveRunMaximum.transcriptions, 8);
+  assert.equal(plan.nextLiveRunMaximum.textChecksPerCandidate, 16);
+  assert.equal(plan.nextLiveRunMaximum.audioMinutesPerCandidate, 2);
 });
 
 test('media preparation refuses live mode and unknown arguments before any API call', () => {
