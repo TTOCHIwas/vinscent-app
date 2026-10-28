@@ -1,5 +1,10 @@
 # 실제 미디어 평가 도구와 호출 전 확인
 
+2026-10-29 후속: 사용자가 승인한 OpenAI 계획 A를 1회 실행했다. 34회 모두 HTTP 200,
+기대 판정 20/24 일치, 오허용 2·오차단 2, 자동 ASR 8/8 CER 0이다.
+[실측 결과와 한계](content-safety-media-evaluation-2026-10-29/README.md)를 먼저 확인한다.
+아래 본문은 2026-10-27 준비 시점 기록이며 사람 청취와 Cloudflare 계획 B는 여전히 미완료/미실행이다.
+
 확인일: 2026-10-27. 브랜치 `codex/content-safety-foundation`.
 제품 저장 caller, 운영 DB/Storage, Edge Function과 앱 배포는 변경하지 않았다.
 이번 실제 미디어 API 요청은 0건이다. 공개 모델·패키지 다운로드와 로컬 추론만 실행했다.

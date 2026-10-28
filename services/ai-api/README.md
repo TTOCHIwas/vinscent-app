@@ -88,3 +88,7 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 기술 디코딩 통과·자동 품질·사람 청취를 구분한다. 사람 청취는 아직 0/8이다.
 설치·실행·모델 해시·예산은 [실제 평가 준비](../../docs/release/content-safety-media-live-readiness.md),
 파일별 청취는 [검토표](../../docs/release/content-safety-speech-review.md)를 따른다.
+
+2026-10-29 승인된 OpenAI 미디어 실측은 34회 모두 HTTP 200, 자동 ASR 8/8 CER 0이었다.
+안전 분류는 강요 오허용·금지 맥락 오차단 각 2건으로 품질 미통과다.
+[실측 보고서](../../docs/release/content-safety-media-evaluation-2026-10-29/README.md)에 결과와 한계를 보존했다.

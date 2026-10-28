@@ -1,6 +1,6 @@
 # Windows/Mac 인계: 콘텐츠 검사 평가 준비
 
-갱신일: 2026-10-27.
+갱신일: 2026-10-29.
 
 ## 브랜치와 승인 범위
 
@@ -15,7 +15,8 @@
 - 실제 인계 checkout은 위 커밋들이 포함된 원격 브랜치 최신 HEAD를 사용한다.
 - 이번 승인 범위: 실제 발화 8개·OCR/ASR/VAD 평가 도구·앱 코덱 검증, 결과 문서 보존,
   테스트·구현·문서 커밋 분리와 기존 브랜치 push.
-- 새 유료 API 평가 호출은 수량·예상 비용을 먼저 제시한다. 이번 미디어 준비의 호출은 0건이다.
+- 새 유료 API 평가 호출은 수량·예상 비용을 먼저 제시한다. 사용자가 승인한 OpenAI 계획 A만
+  2026-10-29 1회 실행했다. 실제 요청 34회이며 Cloudflare 계획 B는 실행하지 않았다.
 - 운영 DB/Storage 변경, Edge Function 배포, 앱 배포·TestFlight는 이번 범위에 포함하지 않는다.
 
 ## 먼저 읽을 문서
@@ -25,7 +26,8 @@
 3. [텍스트 실측 결과](content-safety-evaluation-2026-10-25/README.md)
 4. [미디어 설계·비용·DB 차단 검증 계획](content-safety-media-evaluation-plan.md)
 5. [현재 실제 미디어 평가 준비](content-safety-media-live-readiness.md), [사람 청취표](content-safety-speech-review.md)
-6. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
+6. [OpenAI 미디어 실측 결과](content-safety-media-evaluation-2026-10-29/README.md)
+7. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
 
 책임 경계를 보존한다. 이번 미디어 도구는 eval에만 있고 기존 `CheckSharedContent`와 저장 caller의
 운영 동작을 바꾸지 않았다. 실패 테스트를 먼저 실행했고 별도 테스트·구현 커밋을 남겼다.
@@ -51,7 +53,10 @@ SAPI 외 Windows OneCore를 확인해 Heami 한국어 발화 WAV/M4A 8개를 생
 음성 감지·완전한 한국어 전사·텍스트 판정을 요구한다. 빈/부분/실패 전사·미지원·timeout·
 잘못된 판정은 unavailable이다. 음성의 allow도 전사된 말의 검사이며 원음 전체 승인이 아니다.
 실제 Windows OCR·Silero VAD·로컬 Vosk/OpenAI ASR 어댑터는 eval 도구에만 연결했다.
-production VAD·저장/공개 gateway는 연결하지 않았다. 유료 미디어 호출은 실행하지 않았다.
+2026-10-29 OpenAI ASR은 같은 발화 8개에서 CER 0을 확인했지만 사람 청취는 미완료다.
+미디어 안전 판정은 전체 20/24, 대조군을 뺀 14/18 기대 일치다. 강요 오허용 2·금지 맥락 오차단 2다.
+네 오류 모두 추출 CER 0이며 텍스트 moderation에서 기대와 다른 판정을 확인했다.
+production VAD·저장/공개 gateway는 연결하지 않았다. 정책을 바꾸거나 추가 유료 재시도를 하지 않았다.
 
 **게시 전 필터링 전체는 미완료다.** 실제 DB 승인·Storage RLS·앱/위젯 공개 경계가 없다.
 멤버십/경로 기반 Storage 읽기, 직접 테이블 조회, signed URL·캐시·알림·Realtime까지
@@ -93,7 +98,8 @@ Windows 언어팩과 별도 Python 환경이 필요하며 설치·모델 해시�
 `CONTENT_SAFETY_CLOUDFLARE_ACCOUNT_ID`, `CONTENT_SAFETY_CLOUDFLARE_API_TOKEN`이다.
 미디어 도구는 env 파일을 자동으로 읽지 않는다. 로컬 검증에는 키가 필요 없다.
 OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정이었다면 만료 뒤 갱신한다.
-이번에는 키 원문·유효성·계정 잔여량을 조회하지 않았다.
+2026-10-29에는 새 키를 평가 프로세스에만 로드했고 승인된 34회가 모두 HTTP 200이었다.
+키 값·인증 파일은 출력/커밋하지 않았다. 계정의 잔여량과 실제 청구액은 조회하지 않았다.
 
 ## 이번 검증과 다음 단계
 
@@ -101,15 +107,20 @@ OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정�
 - 준비 자산 24개 SHA-256·pending 0, 별도 실제 파일 27개 디코딩/OCR/VAD/ASR 자동 검증.
 - 원본 변형·손상 코덱 대조군을 포함한 37개 파일 SHA-256 확인. 키 파일·모델·가상 환경은 제외.
 - 어댑터 오류·부분/혼합언어 전사·VAD NaN·시간 초과·호출 상한·HTTP 실패 중단·자식 프로세스 키 배제 테스트.
-- 외부 미디어 평가·사람 청취, Flutter/iOS 빌드와 운영 DB/RLS 검증은
-  하지 않았다. 별도 TypeScript compiler/build/lint 스크립트는 서비스에 없다.
+- 외부 미디어 평가: 계획 A 34/34 HTTP 200, 24사례 완료. 품질 불일치 4건으로 CLI exit 1.
+  무음·잡음·손상/미지원 6건은 모두 unavailable, 자동 허용 0건이다.
+- 전체 사례 p50/p95 1,720/2,744 ms, 정상 안전 판정 대상 18개만 1,938/3,685 ms.
+  사전 준비 시간은 제외했으며 원문 전사·model snapshot·개별 단계 지연은 저장하지 않았다.
+- 사람 청취, Flutter/iOS 빌드와 운영 DB/RLS 검증은 하지 않았다.
+  별도 TypeScript compiler/build/lint 스크립트는 서비스에 없다.
 - 원문·키 미포함, 변경 파일·diff와 기존 main/로컬 상태를 확인한 뒤 push한다.
 
-다음은 사람의 8개 청취 검토와 승인된 실제 외부 평가다. 현재 계획 A는 OpenAI ASR+검사
-최대 34회·$0.009 추정, B는 OpenAI ASR+Cloudflare 텍스트 비교 최대 24회·$0.01680544 추정이다.
-두 계획 별도 실행 시 최대 58회·$0.02580544이며 비용 가정·전송 자료·보관 조건은 현재 준비 문서에 있다.
+다음은 사람의 8개 청취와 강요·금지 맥락 라벨/제품 기준 검토다. 계획 A는 34회로 완료됐으며,
+전송 음성 26.257초 × 공식 단가 기준 약 $0.00197 추정이다. 실제 청구액은 확인하지 않았다.
+추가 Cloudflare 계획 B의 최초 예산은 최대 24회·$0.01680544 추정이고 실행은 별도 확인 후 진행한다.
+비용 가정·전송 자료·보관 조건은 준비 문서, 실제 결과와 해석은 새 실측 보고서에 있다.
 Cloudflare 이미지 자체 판정은 지원하지 않아 전체 이미지 결과는 unavailable이다.
-계정 접근·유효한 키·잔여량을 승인 후 확인한다. 로컬 ASR 1/8만으로 운영 공급자를 정하지 않는다.
+계정 잔여량은 미확인이다. 로컬 ASR 1/8이나 이번 OpenAI 자동 전사 8/8만으로 운영 공급자를 정하지 않는다.
 이후 로컬 SQL RED 테스트부터 DB/Storage
 원자적 승인·공개 경계, 모바일·위젯 실패 UX를 구현하고 Mac/Xcode·실기기로 검증한다.
 운영 반영과 앱 배포는 별도 승인 후 진행한다.

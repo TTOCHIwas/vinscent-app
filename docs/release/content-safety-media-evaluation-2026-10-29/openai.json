@@ -1,0 +1,647 @@
+{
+  "generatedAt": "2026-10-28T16:07:19.484Z",
+  "plan": {
+    "schemaVersion": 1,
+    "manifestSha256": "cbe894e09e2112d424966bfc8f831a0d1cf96da6867f72ea267f79c95e687590",
+    "provider": "openai",
+    "asr": "openai",
+    "models": {
+      "ocr": "Windows.Media.Ocr:ko",
+      "vad": "silero-vad-v6.2",
+      "transcription": "gpt-transcribe",
+      "classification": "omni-moderation-latest"
+    },
+    "inputs": {
+      "syntheticCases": 24,
+      "imagesSentExternally": 10,
+      "maximumTranscriptions": 8,
+      "maximumAudioMinutes": 2,
+      "maximumTextChecks": 16,
+      "sourceAudioFormat": "M4A/AAC",
+      "transmittedAudioFormat": "PCM16 WAV mono 16kHz"
+    },
+    "limits": {
+      "maximumRequests": 34,
+      "retries": 0,
+      "perCaseTimeoutMs": 30000,
+      "maximumInputBytes": 20971520,
+      "maximumAudioDurationMs": 15000
+    },
+    "estimatedUsd": 0.009,
+    "estimateAssumptions": "ASR <= 2 minutes at $0.0045/min; Cloudflare <=16 calls assumed 1000 input/128 output tokens each; taxes and account credits excluded; estimate is not a hard billing cap",
+    "humanListeningPerformed": false,
+    "productionPublicationConnected": false,
+    "approvalFingerprint": "4647dd3081de7964e824bb1afcb86653bfb5795ce6e9522fecbe11ea03dbc355"
+  },
+  "actualRequests": 34,
+  "circuitStopped": false,
+  "diagnostics": [
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    },
+    {
+      "status": 200,
+      "failure": null
+    }
+  ],
+  "completedCases": 24,
+  "originalAudioCovered": false,
+  "humanListeningPerformed": false,
+  "providerSelected": false,
+  "summary": {
+    "total": 24,
+    "correct": 20,
+    "falseAllows": 2,
+    "falseBlocks": 2,
+    "unavailable": 6,
+    "unexpectedApprovals": 0,
+    "extractionCompared": 18,
+    "latencyP50Ms": 1720,
+    "latencyP95Ms": 2744,
+    "results": [
+      {
+        "id": "image-scene-proxy",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 2256,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-drawing",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 1238,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-normal-ko",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 3685,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-idiom-ko",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 1910,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-negation-ko",
+        "expected": "allow",
+        "actual": "block",
+        "latencyMs": 1647,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-threat-ko",
+        "expected": "block",
+        "actual": "block",
+        "latencyMs": 2138,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-coercion-ko",
+        "expected": "block",
+        "actual": "allow",
+        "latencyMs": 1534,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-small-ko",
+        "expected": "block",
+        "actual": "block",
+        "latencyMs": 2744,
+        "characterErrorRate": 0.1
+      },
+      {
+        "id": "image-rotated-ko",
+        "expected": "block",
+        "actual": "block",
+        "latencyMs": 1591,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-original-ko",
+        "expected": "block",
+        "actual": "block",
+        "latencyMs": 1762,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "image-corrupt",
+        "expected": "unavailable",
+        "actual": "unavailable",
+        "latencyMs": 0,
+        "characterErrorRate": null
+      },
+      {
+        "id": "image-unsupported",
+        "expected": "unavailable",
+        "actual": "unavailable",
+        "latencyMs": 0,
+        "characterErrorRate": null
+      },
+      {
+        "id": "audio-normal-ko",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 1700,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-romance-ko",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 2028,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-idiom-ko",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 1938,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-boundary-ko",
+        "expected": "allow",
+        "actual": "allow",
+        "latencyMs": 2540,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-negation-ko",
+        "expected": "allow",
+        "actual": "block",
+        "latencyMs": 1982,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-threat-ko",
+        "expected": "block",
+        "actual": "block",
+        "latencyMs": 1720,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-coercion-ko",
+        "expected": "block",
+        "actual": "allow",
+        "latencyMs": 2074,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-noisy-threat-ko",
+        "expected": "block",
+        "actual": "block",
+        "latencyMs": 2122,
+        "characterErrorRate": 0
+      },
+      {
+        "id": "audio-silence",
+        "expected": "unavailable",
+        "actual": "unavailable",
+        "latencyMs": 555,
+        "characterErrorRate": null
+      },
+      {
+        "id": "audio-noise",
+        "expected": "unavailable",
+        "actual": "unavailable",
+        "latencyMs": 551,
+        "characterErrorRate": null
+      },
+      {
+        "id": "audio-corrupt",
+        "expected": "unavailable",
+        "actual": "unavailable",
+        "latencyMs": 0,
+        "characterErrorRate": null
+      },
+      {
+        "id": "audio-unsupported",
+        "expected": "unavailable",
+        "actual": "unavailable",
+        "latencyMs": 0,
+        "characterErrorRate": null
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "image-scene-proxy",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 2256,
+      "textActual": null,
+      "sourceSha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-drawing",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 1238,
+      "textActual": null,
+      "sourceSha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-normal-ko",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 3685,
+      "textActual": "allow",
+      "sourceSha256": "eb0e8ef6e8f13dac1fea1855e62ec6baf581ffb43cf1b5fc10723dfb4e4294df",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-idiom-ko",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 1910,
+      "textActual": "allow",
+      "sourceSha256": "86bb1e5ed227f64536525c85eaa34d78c4263e0f367312c0ba6a3ac93c1dbf44",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-negation-ko",
+      "expected": "allow",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 1647,
+      "textActual": "block",
+      "sourceSha256": "139062263d3c3c3eea30d969c8fbace046acf3c7316ca3b4d1e7855ca8dca15c",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-threat-ko",
+      "expected": "block",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 2138,
+      "textActual": "block",
+      "sourceSha256": "a5c6666e9062539e6807f83277077b6d8b033d7ca627044b5df87a7ade79510a",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-coercion-ko",
+      "expected": "block",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 1534,
+      "textActual": "allow",
+      "sourceSha256": "bdbe47e8e8ea096cd21103bd68a8a6ad6f888009e09064a85cde833aa249ee29",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-small-ko",
+      "expected": "block",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 2744,
+      "textActual": "block",
+      "sourceSha256": "29684f53bc91d0b56271ce13bd17f996686c99a34b5ea766a471f9ac44c87f1f",
+      "characterErrorRate": 0.1
+    },
+    {
+      "id": "image-rotated-ko",
+      "expected": "block",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 1591,
+      "textActual": "block",
+      "sourceSha256": "c8377e74406cce0255f4148dfce79621c1b011e51f3941b2f952fd3dd177b784",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-original-ko",
+      "expected": "block",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "image_and_extracted_text",
+      "originalAudioCovered": false,
+      "latencyMs": 1762,
+      "textActual": "block",
+      "sourceSha256": "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "image-corrupt",
+      "expected": "unavailable",
+      "actual": "unavailable",
+      "reason": "decode_failed",
+      "scope": "not_evaluated",
+      "textActual": null,
+      "sourceSha256": "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
+      "latencyMs": 0,
+      "characterErrorRate": null
+    },
+    {
+      "id": "image-unsupported",
+      "expected": "unavailable",
+      "actual": "unavailable",
+      "reason": "decode_failed",
+      "scope": "not_evaluated",
+      "textActual": null,
+      "sourceSha256": "b983506ec03173e11b4c8da38c40b58f93155134686bbb36a3ef08438ac6cf0c",
+      "latencyMs": 0,
+      "characterErrorRate": null
+    },
+    {
+      "id": "audio-normal-ko",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 1700,
+      "textActual": "allow",
+      "sourceSha256": "eac4723c7ac0d3af1db2f50c7b133be4af60a99a979d13943f71c37db48aea7b",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-romance-ko",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 2028,
+      "textActual": "allow",
+      "sourceSha256": "1330a2bb601c4dad29995d74ad248eeddf0846c4e3c06dbbad28782ba50ce843",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-idiom-ko",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 1938,
+      "textActual": "allow",
+      "sourceSha256": "6fc4bcc5502bc9498f08cbdde6e3730684d9be42b7ff31bf3feeb3df3ab1ddb3",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-boundary-ko",
+      "expected": "allow",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 2540,
+      "textActual": "allow",
+      "sourceSha256": "738595bb03e86a150be89c640de17f7bff24d20e9c44523c00fcbe5a803a0d7f",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-negation-ko",
+      "expected": "allow",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 1982,
+      "textActual": "block",
+      "sourceSha256": "47c109e3abc55e8d783f02a196b20855e94378ab026e1b0b7a0f1c22b9e92fcd",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-threat-ko",
+      "expected": "block",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 1720,
+      "textActual": "block",
+      "sourceSha256": "54ec08034bf9bc296832570bdfe07808b8012ac705fee963996569e4271427e6",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-coercion-ko",
+      "expected": "block",
+      "actual": "allow",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 2074,
+      "textActual": "allow",
+      "sourceSha256": "b9ce5babd0bd99e0049f50fa2e5eb30c793673fb7673704b03705655ce34258a",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-noisy-threat-ko",
+      "expected": "block",
+      "actual": "block",
+      "reason": "completed",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 2122,
+      "textActual": "block",
+      "sourceSha256": "35ed9428cc33cdc09110efadda0c22dcf97a8422237bbe7e5b321e9d6e47b770",
+      "characterErrorRate": 0
+    },
+    {
+      "id": "audio-silence",
+      "expected": "unavailable",
+      "actual": "unavailable",
+      "reason": "extraction_incomplete",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 555,
+      "textActual": null,
+      "sourceSha256": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+      "characterErrorRate": null
+    },
+    {
+      "id": "audio-noise",
+      "expected": "unavailable",
+      "actual": "unavailable",
+      "reason": "extraction_incomplete",
+      "scope": "transcribed_speech_only",
+      "originalAudioCovered": false,
+      "latencyMs": 551,
+      "textActual": null,
+      "sourceSha256": "fd590def8079b531c2a7b19c79f5712ef933dfd9fcea1c0d2e611d46c65b08b6",
+      "characterErrorRate": null
+    },
+    {
+      "id": "audio-corrupt",
+      "expected": "unavailable",
+      "actual": "unavailable",
+      "reason": "decode_failed",
+      "scope": "not_evaluated",
+      "textActual": null,
+      "sourceSha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+      "latencyMs": 0,
+      "characterErrorRate": null
+    },
+    {
+      "id": "audio-unsupported",
+      "expected": "unavailable",
+      "actual": "unavailable",
+      "reason": "decode_failed",
+      "scope": "not_evaluated",
+      "textActual": null,
+      "sourceSha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+      "latencyMs": 0,
+      "characterErrorRate": null
+    }
+  ]
+}
