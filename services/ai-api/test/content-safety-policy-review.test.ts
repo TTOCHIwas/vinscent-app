@@ -13,7 +13,7 @@ const simulatedReviews = () => {
   const evidence = createSpeechReviewTemplate(manifestBytes);
   for (const review of evidence.reviews) {
     Object.assign(review, { listenedM4a: true, listenedWav: true, reviewerId: 'unit-test-only',
-      reviewedAt: '2026-10-29T00:00:00.000Z', heardText: manifest.cases.find((c: { id: string }) => c.id === review.id).referenceText });
+      reviewedAt: '2026-10-28T00:00:00.000Z', heardText: manifest.cases.find((c: { id: string }) => c.id === review.id).referenceText });
   }
   return evidence;
 };
@@ -41,6 +41,8 @@ for (const mutate of [
   (r: any) => { r.results[6].sourceSha256 = '0'.repeat(64); },
   (r: any) => { r.diagnostics.pop(); },
   (r: any) => { r.results[0].characterErrorRate = NaN; },
+  (r: any) => { r.results[0].actual = ['allow']; },
+  (r: any) => { r.results[0].actual = { decision: 'allow' }; },
 ]) {
   test('incomplete, relabelled or stale recorded evidence cannot pass review', () => {
     const report = structuredClone(recorded); mutate(report);
@@ -113,6 +115,8 @@ for (const mutate of [
   (e: any) => { e.reviews.push(e.reviews[0]); },
   (e: any) => { e.reviews[0].id = 'unknown-audio'; },
   (e: any) => { e.reviews[0].reviewedAt = 'not-a-date'; },
+  (e: any) => { e.reviews[0].reviewedAt = '2026-02-30T00:00:00.000Z'; },
+  (e: any) => { e.reviews[0].reviewedAt = '2999-01-01T00:00:00.000Z'; },
 ]) {
   test('stale, duplicated, unknown or invalid human records are rejected', () => {
     const evidence = simulatedReviews(); mutate(evidence);
@@ -129,6 +133,13 @@ test('even simulated matching labels and complete human records grant no publica
   assert.equal(result.ready, false);
   assert(result.blockers.includes('draft_policy'));
   assert.equal(result.productionPublicationAuthorized, false);
+});
+
+test('manifest decision and media kind require strings, not arrays coercible to strings', () => {
+  for (const field of ['expected', 'kind']) {
+    const invalid = structuredClone(manifest); invalid.cases[0][field] = [invalid.cases[0][field]];
+    assert.throws(() => createSpeechReviewTemplate(Buffer.from(JSON.stringify(invalid))));
+  }
 });
 
 test('context corpus keeps existing failure labels and leaves unresolved quotation/reporting cases unavailable', () => {

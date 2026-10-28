@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const run = (...args: string[]) => spawnSync(process.execPath,
   ['--experimental-strip-types', 'eval/review-content-safety-policy.ts', ...args], { encoding: 'utf8' });
@@ -33,4 +36,17 @@ test('live requests and unreadable review files are rejected with sanitized erro
     assert.equal(JSON.parse(result.stderr).error, 'policy_review_unavailable');
     assert.equal(result.stderr.includes('missing-private-review'), false);
   }
+});
+
+test('an explicit speech evidence file is read without changing pending records', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'vinscent-speech-review-'));
+  const path = join(directory, 'pending.json');
+  try {
+    writeFileSync(path, run('--speech-template').stdout);
+    const result = run(`--speech-review=${path}`);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, '');
+    assert.equal(JSON.parse(result.stdout).speech.pending, 8);
+    assert.equal(JSON.parse(result.stdout).networkRequests, 0);
+  } finally { unlinkSync(path); rmdirSync(directory); }
 });
