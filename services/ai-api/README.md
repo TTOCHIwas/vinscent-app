@@ -98,3 +98,9 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 `--speech-template`은 기대 대본을 채우지 않은 M4A/WAV 해시 기반 청취 서식을 출력한다.
 새 합성 문맥 대조문 12개는 모두 초안이며 실제 모델 호출·제품 분류 정책에는 연결하지 않았다.
 [문맥 기준과 자동 검토](../../docs/release/content-safety-context-policy-review-2026-10-29/README.md)를 따른다.
+
+`npm run eval:context`는 Luna/Terra 문맥 분류 후보의 네트워크 없는 계획을 출력한다.
+`--candidate=luna|terra|both`로 선택하고 실제 실행에는 별도 승인과 현재 계획 지문이 필요하다.
+평가 전용 Responses adapter는 실제 입력 텍스트만 전송하고 schema·근거·실패·요청 한도를 검증한다.
+12개 중 초안 10개와 미정 2개를 분리하며 제품 moderation 정책이나 저장 흐름은 변경하지 않는다.
+[후보 구현·전송 미리보기·호출 비용](../../docs/release/content-safety-context-candidate-readiness-2026-10-29/README.md)을 따른다.

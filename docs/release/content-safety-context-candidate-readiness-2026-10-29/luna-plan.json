@@ -1,0 +1,115 @@
+{
+  "mode": "plan",
+  "networkRequests": 0,
+  "schemaVersion": 1,
+  "scope": "synthetic_context_text_only",
+  "policyVersion": "ko-context-candidate-v1",
+  "policyStatus": "draft",
+  "corpusSha256": "785b7c99771678b64c9608696f34faa9cf97ec39f3b027c1652a5294861c91bc",
+  "policySha256": "16f1f06a0c19effc987922c3a6e5caace2817b72ca13f59a25ac569732abec5f",
+  "schemaSha256": "795c94dc6a61c7f2438023ce0a4ef04781b315cb933b7b6551eb09d98827c99e",
+  "requestConfigurationSha256": "2a96b5b5fd9a10018ccf477cd087269b8779d35b76c40a44766ee67240a9eb85",
+  "protocolRevision": 1,
+  "models": [
+    {
+      "id": "luna",
+      "model": "gpt-6-luna",
+      "inputUsdPerMillion": 0.1,
+      "cacheWriteUsdPerMillion": 0.125,
+      "outputUsdPerMillion": 0.5
+    }
+  ],
+  "executionOrder": "case_major_candidate_order",
+  "inputs": {
+    "syntheticTextCases": 12,
+    "scoredCasesPerCandidate": 10,
+    "unresolvedCasesPerCandidate": 2,
+    "imagesSent": 0,
+    "audioSent": 0,
+    "inventory": [
+      {
+        "id": "coercion-direct",
+        "inputSha256": "f9e217ba1c37e1dad0b8971c63ea6ec0d8a997ac729775e1900c9d136749a9c4",
+        "scored": true
+      },
+      {
+        "id": "coercion-prevention",
+        "inputSha256": "13e584d8cb5374c418e5ad15c061824ce1d5f3ff3334ef534db7863f6074f69b",
+        "scored": true
+      },
+      {
+        "id": "violence-prevention",
+        "inputSha256": "1b1cdfaa178709a624b5da8074eef8b9422e82016e50dd1be870a050df717013",
+        "scored": true
+      },
+      {
+        "id": "violence-intent",
+        "inputSha256": "5af22ec132d4c275ed56661b3ff322bc63f0bad1996ea34a2bf180696c4a64f6",
+        "scored": true
+      },
+      {
+        "id": "mixed-negation-coercion",
+        "inputSha256": "b7a66807470dde93e6f4d32adb69eb8fb9fb3442c9cc8e2dbdc813a968d4dbad",
+        "scored": true
+      },
+      {
+        "id": "mixed-negation-threat",
+        "inputSha256": "4857fbd64ee1e169557a32cac5ed991fb7fb4ea321125430808f0c87ab01e3f3",
+        "scored": true
+      },
+      {
+        "id": "idiom-hunger",
+        "inputSha256": "13bb39126b079cf69a3c1b69f051c0925266e3029934bca2e8ed88aa40bea52e",
+        "scored": true
+      },
+      {
+        "id": "literal-threat",
+        "inputSha256": "167cdae796c203ec7bd797ab0a18713f9088ed9ff82886b6f79843bd157bc4d1",
+        "scored": true
+      },
+      {
+        "id": "boundary-respected",
+        "inputSha256": "6f256f80ee4b9a8549aa3d8fb7a53bbfce195ca08f130b43a3eefbe0cd8e240f",
+        "scored": true
+      },
+      {
+        "id": "boundary-threat",
+        "inputSha256": "ab7a7813850b6160c7c9d283f51bef70704ef2b3734b4518eb3aa5d57b3b0fce",
+        "scored": true
+      },
+      {
+        "id": "victim-report",
+        "inputSha256": "1f2845c19ac8fe4d7b009a2558f3a26dabcc5d16d79570f20f3c45b5918a0a12",
+        "scored": false
+      },
+      {
+        "id": "quoted-threat",
+        "inputSha256": "8a52e0b5d445d2b4f185794f98932600b37153eab7bce28b7ddf79d608f1383e",
+        "scored": false
+      }
+    ]
+  },
+  "limits": {
+    "maximumRequests": 12,
+    "retries": 0,
+    "perCaseTimeoutMs": 20000,
+    "maxTextBytes": 1200,
+    "maxRequestBytes": 8192,
+    "maxOutputTokens": 512,
+    "observedInputTokensLimit": 10000
+  },
+  "requestSettings": {
+    "endpoint": "https://api.openai.com/v1/responses",
+    "store": false,
+    "reasoningEffort": "none",
+    "serviceTier": "default",
+    "tools": []
+  },
+  "estimatedUsd": 0.006072,
+  "conservativeEstimatedUsd": 0.018072,
+  "estimateAssumptions": "12 calls/model; 2000 input tokens/call, conservative 10000; 512 output tokens/call; input charged at 1.25x as cache-write allowance; excludes taxes; not a hard billing cap",
+  "ready": false,
+  "productionPublicationAuthorized": false,
+  "humanListeningPerformed": false,
+  "approvalFingerprint": "a09d3176efd18fbab9653e14311058c06086f915aa2dec93925cc0c80fc9ab77"
+}
