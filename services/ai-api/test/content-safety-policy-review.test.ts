@@ -43,6 +43,7 @@ for (const mutate of [
   (r: any) => { r.results[0].characterErrorRate = NaN; },
   (r: any) => { r.results[0].actual = ['allow']; },
   (r: any) => { r.results[0].actual = { decision: 'allow' }; },
+  (r: any) => { r.plan.manifestSha256 = [r.plan.manifestSha256]; },
 ]) {
   test('incomplete, relabelled or stale recorded evidence cannot pass review', () => {
     const report = structuredClone(recorded); mutate(report);
