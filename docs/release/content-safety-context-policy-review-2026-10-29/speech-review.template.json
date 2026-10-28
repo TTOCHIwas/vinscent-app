@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "reviewMethod": "human_listening",
+  "reviews": [
+    {
+      "id": "audio-normal-ko",
+      "m4aSha256": "eac4723c7ac0d3af1db2f50c7b133be4af60a99a979d13943f71c37db48aea7b",
+      "wavSha256": "1bff288b8f42d8611df5d89fdc72ffaee4155e2aa41e3ecaacdd09e00783ee77",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-romance-ko",
+      "m4aSha256": "1330a2bb601c4dad29995d74ad248eeddf0846c4e3c06dbbad28782ba50ce843",
+      "wavSha256": "b0d1d7dc9646c579473fa748a44d4ed9d79a97df29fcbe08312aac4eb57957ee",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-idiom-ko",
+      "m4aSha256": "6fc4bcc5502bc9498f08cbdde6e3730684d9be42b7ff31bf3feeb3df3ab1ddb3",
+      "wavSha256": "719a2d4661a2ed18efdb1b23ebcd444cf33ea96cbd93af369237105e6af7cf84",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-boundary-ko",
+      "m4aSha256": "738595bb03e86a150be89c640de17f7bff24d20e9c44523c00fcbe5a803a0d7f",
+      "wavSha256": "3f0d36885cd4f89a2859550c3be1d06f1c88f1d3c277c4d0b830e5a8148edb77",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-negation-ko",
+      "m4aSha256": "47c109e3abc55e8d783f02a196b20855e94378ab026e1b0b7a0f1c22b9e92fcd",
+      "wavSha256": "f25130433c85a382c5405cdc99789aa88416c54be48a977179c21b3462f4e74a",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-threat-ko",
+      "m4aSha256": "54ec08034bf9bc296832570bdfe07808b8012ac705fee963996569e4271427e6",
+      "wavSha256": "322e991d9f2445cb282c9ecdded201dfc56fecfaa7077d246fc55a6129c79f97",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-coercion-ko",
+      "m4aSha256": "b9ce5babd0bd99e0049f50fa2e5eb30c793673fb7673704b03705655ce34258a",
+      "wavSha256": "772adba2150441ab3c1d84575e28799bdfec8463ffd17f87c28926ea548b1309",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "audio-noisy-threat-ko",
+      "m4aSha256": "35ed9428cc33cdc09110efadda0c22dcf97a8422237bbe7e5b321e9d6e47b770",
+      "wavSha256": "10dd92cb513bea960e555a454bf81ec03ba7e04e5a9820841e23060a62517429",
+      "listenedM4a": false,
+      "listenedWav": false,
+      "heardText": null,
+      "reviewerId": null,
+      "reviewedAt": null
+    }
+  ]
+}

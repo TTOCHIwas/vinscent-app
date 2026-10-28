@@ -4,6 +4,11 @@
 
 Windows에서 이어갈 때는 [Windows 인계 절차](release/content-safety-windows-handoff.md)를 따른다.
 
+2026-10-29 후속: [OpenAI 미디어 실측](release/content-safety-media-evaluation-2026-10-29/README.md)에서
+전사 8/8 CER 0과 별개로 강요 오허용 2·금지 맥락 오차단 2를 확인했다.
+[문맥 기준·자동 검토 도구](release/content-safety-context-policy-review-2026-10-29/README.md)를 추가했다.
+아래는 최초 설계 기록이며 현재도 운영 공급자 선정·DB/Storage 게시 경계 연결은 미완료다.
+
 2026-10-26 갱신: [합성 한국어 텍스트 실측](release/content-safety-evaluation-2026-10-25/README.md)을
 보존했고 [이미지·음성 설계와 평가 준비](release/content-safety-media-evaluation-plan.md)를 추가했다.
 아래 초기 구현 기록 이후 텍스트 18개는 두 후보 모두 일치했지만 미디어 실측과 운영 공급자

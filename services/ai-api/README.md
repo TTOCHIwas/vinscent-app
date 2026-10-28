@@ -92,3 +92,9 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 2026-10-29 승인된 OpenAI 미디어 실측은 34회 모두 HTTP 200, 자동 ASR 8/8 CER 0이었다.
 안전 분류는 강요 오허용·금지 맥락 오차단 각 2건으로 품질 미통과다.
 [실측 보고서](../../docs/release/content-safety-media-evaluation-2026-10-29/README.md)에 결과와 한계를 보존했다.
+
+`npm run eval:policy-review`는 기존 미디어 실측을 네트워크 없이 재검토한다.
+현재 오허용 2·오차단 2, 두 대본의 문맥 문제, 사람 청취 8개 대기를 출력하고 종료 코드 1을 반환한다.
+`--speech-template`은 기대 대본을 채우지 않은 M4A/WAV 해시 기반 청취 서식을 출력한다.
+새 합성 문맥 대조문 12개는 모두 초안이며 실제 모델 호출·제품 분류 정책에는 연결하지 않았다.
+[문맥 기준과 자동 검토](../../docs/release/content-safety-context-policy-review-2026-10-29/README.md)를 따른다.

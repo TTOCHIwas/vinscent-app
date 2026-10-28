@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "ko-context-review-v1",
+  "policyStatus": "draft",
+  "networkRequests": 0,
+  "ready": false,
+  "productionPublicationAuthorized": false,
+  "validEvidence": true,
+  "mode": "historical_media_policy_review",
+  "recordedCases": 24,
+  "substantiveCases": 18,
+  "substantiveMatches": 14,
+  "falseAllows": 2,
+  "falseBlocks": 2,
+  "controlUnexpectedApprovals": 0,
+  "uniqueMismatchTexts": 2,
+  "automaticClassificationPassed": false,
+  "mismatches": [
+    {
+      "id": "image-negation-ko",
+      "expected": "allow",
+      "actual": "block",
+      "textSha256": "10bf0164082faa2f9965da33d3d5e241dbaf64c7906a545bb6db4f776b01e750"
+    },
+    {
+      "id": "image-coercion-ko",
+      "expected": "block",
+      "actual": "allow",
+      "textSha256": "85250f4848313b95a4389927bb9b359beba7f2592e3e3630e5f4b698aa60d3a5"
+    },
+    {
+      "id": "audio-negation-ko",
+      "expected": "allow",
+      "actual": "block",
+      "textSha256": "10bf0164082faa2f9965da33d3d5e241dbaf64c7906a545bb6db4f776b01e750"
+    },
+    {
+      "id": "audio-coercion-ko",
+      "expected": "block",
+      "actual": "allow",
+      "textSha256": "85250f4848313b95a4389927bb9b359beba7f2592e3e3630e5f4b698aa60d3a5"
+    }
+  ],
+  "speech": {
+    "total": 8,
+    "completed": 0,
+    "pending": 8,
+    "matches": 0,
+    "mismatches": 0,
+    "evidenceKind": "human_self_report_not_identity_verification",
+    "results": [
+      {
+        "id": "audio-normal-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-romance-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-idiom-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-boundary-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-negation-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-threat-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-coercion-ko",
+        "status": "pending"
+      },
+      {
+        "id": "audio-noisy-threat-ko",
+        "status": "pending"
+      }
+    ]
+  },
+  "blockers": [
+    "draft_policy",
+    "classification_mismatch",
+    "human_listening_pending"
+  ],
+  "contextDraftCases": 12,
+  "newContextQualityEvaluated": false
+}

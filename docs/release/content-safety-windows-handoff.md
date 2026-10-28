@@ -12,6 +12,7 @@
 - 무음 환각 전사의 추가 RED: `3c43d2af`, 음성 감지 확인 GREEN: `6b9512bf`
 - 실제 미디어 RED/회귀 테스트: `487c090b`, `f7a8b371`, `61601d8b`, `8498b406`, `9237b405`, `a5cc0129`.
 - 실제 어댑터·코덱·합성 발화 구현: `1ac8163b`. 문서는 별도 후속 docs 커밋이다.
+- 문맥·청취 증거 검토 RED: `986f978b`, `0ba62f25`, `e32dfd75`; GREEN: `b7381b3b`.
 - 실제 인계 checkout은 위 커밋들이 포함된 원격 브랜치 최신 HEAD를 사용한다.
 - 이번 승인 범위: 실제 발화 8개·OCR/ASR/VAD 평가 도구·앱 코덱 검증, 결과 문서 보존,
   테스트·구현·문서 커밋 분리와 기존 브랜치 push.
@@ -27,7 +28,8 @@
 4. [미디어 설계·비용·DB 차단 검증 계획](content-safety-media-evaluation-plan.md)
 5. [현재 실제 미디어 평가 준비](content-safety-media-live-readiness.md), [사람 청취표](content-safety-speech-review.md)
 6. [OpenAI 미디어 실측 결과](content-safety-media-evaluation-2026-10-29/README.md)
-7. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
+7. [강요·금지 맥락 자동 검토](content-safety-context-policy-review-2026-10-29/README.md)
+8. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
 
 책임 경계를 보존한다. 이번 미디어 도구는 eval에만 있고 기존 `CheckSharedContent`와 저장 caller의
 운영 동작을 바꾸지 않았다. 실패 테스트를 먼저 실행했고 별도 테스트·구현 커밋을 남겼다.
@@ -79,6 +81,7 @@ npm.cmd test
 npm.cmd run --silent eval:content-safety-media
 npm.cmd run --silent eval:content-safety-media -- --validate-assets
 npm.cmd run --silent eval:media -- --provider=openai --asr=openai
+npm.cmd run --silent eval:policy-review
 ```
 
 Mac에서는 `npm.cmd` 대신 `npm`을 사용한다. 기존 Node >=22.6.0 환경을 사용한다.
@@ -86,6 +89,7 @@ Mac에서는 `npm.cmd` 대신 `npm`을 사용한다. 기존 Node >=22.6.0 환경
 승인된 fingerprint와 --live를 모두 지정해야 외부 호출한다. Windows OCR/TTS 실행에는
 Windows 언어팩과 별도 Python 환경이 필요하며 설치·모델 해시는 현재 준비 문서를 따른다.
 기존 텍스트 실측을 재실행할 필요는 없다. 검증 명령을 라이브 품질 평가로 보고하지 않는다.
+`eval:policy-review`는 외부 요청 없이 기존 실측의 품질 불일치와 청취 대기를 재현하며 현재 종료 코드는 1이다.
 
 ## 비밀값
 
@@ -103,7 +107,8 @@ OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정�
 
 ## 이번 검증과 다음 단계
 
-- AI API 회귀: 413개 통과(이전 366 + 신규 47), 실패/건너뜀 0. Python 실제 코덱 테스트 8개 통과.
+- AI API 회귀: 443개 통과(미디어 실측 당시 413 + 새 검토 30), 실패/건너뜀 0.
+  Python 코덱 8개 통과는 이전 미디어 실측 준비 기록이며 이번에는 해당 구현을 변경하지 않았다.
 - 준비 자산 24개 SHA-256·pending 0, 별도 실제 파일 27개 디코딩/OCR/VAD/ASR 자동 검증.
 - 원본 변형·손상 코덱 대조군을 포함한 37개 파일 SHA-256 확인. 키 파일·모델·가상 환경은 제외.
 - 어댑터 오류·부분/혼합언어 전사·VAD NaN·시간 초과·호출 상한·HTTP 실패 중단·자식 프로세스 키 배제 테스트.
@@ -115,7 +120,11 @@ OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정�
   별도 TypeScript compiler/build/lint 스크립트는 서비스에 없다.
 - 원문·키 미포함, 변경 파일·diff와 기존 main/로컬 상태를 확인한 뒤 push한다.
 
-다음은 사람의 8개 청취와 강요·금지 맥락 라벨/제품 기준 검토다. 계획 A는 34회로 완료됐으며,
+사용자 지정에 따라 사람의 8개 청취는 미완료로 유지하고 자동 검토부터 수행했다.
+강요 차단·위해 금지 허용의 기존 기준을 보존하고 12개 문맥 대조문을 모두 초안으로 준비했다.
+피해 진술·인용 2개는 기존 제품 기준이 없어 미정으로 남겼다. 새 유료 요청은 0건이다.
+새 오프라인 도구는 기존 오허용 2·오차단 2를 두 대본의 문제로 재현하며 게시 권한을 부여하지 않는다.
+계획 A는 34회로 완료됐으며,
 전송 음성 26.257초 × 공식 단가 기준 약 $0.00197 추정이다. 실제 청구액은 확인하지 않았다.
 추가 Cloudflare 계획 B의 최초 예산은 최대 24회·$0.01680544 추정이고 실행은 별도 확인 후 진행한다.
 비용 가정·전송 자료·보관 조건은 준비 문서, 실제 결과와 해석은 새 실측 보고서에 있다.
