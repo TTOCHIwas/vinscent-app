@@ -74,3 +74,13 @@ test('empty or duplicate cases and candidates are rejected before model calls', 
   await assert.rejects(evaluateContextCandidates({ cases: [...contentSafetyContextCases, contentSafetyContextCases[0]], candidates: [candidate] }));
   await assert.rejects(evaluateContextCandidates({ cases: contentSafetyContextCases, candidates: [candidate, candidate] }));
 });
+
+for (const field of ['case', 'candidate']) {
+  test(`array ${field} IDs cannot be coerced into approved identifiers`, async () => {
+    const cases: any = structuredClone(contentSafetyContextCases);
+    const candidate: any = { id: 'luna', model: 'gpt-6-luna', port: { classify: async () => { throw new Error('unexpected'); } } };
+    if (field === 'case') cases[0].id = [cases[0].id];
+    else candidate.id = [candidate.id];
+    await assert.rejects(evaluateContextCandidates({ cases, candidates: [candidate] }));
+  });
+}

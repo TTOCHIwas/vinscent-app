@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createHash } from 'node:crypto';
+import { createContextEvaluationPlan } from '../eval/context/context-evaluation-plan.ts';
 import { OpenAiContextSafetyCandidate } from '../eval/context/openai-context-safety-candidate.ts';
 import { contextPolicyVersion, contextInstructions, parseContextClassification } from '../eval/context/context-policy.ts';
 
@@ -24,6 +26,10 @@ test('context candidate sends only actual text and generic policy, without fixtu
     assert.equal(body.text.format.strict, true);
     assert.equal(JSON.stringify(body).includes('violence-prevention'), false);
     assert.equal(JSON.stringify(body).includes('expected'), false);
+    const actualConfiguration = { ...body };
+    delete actualConfiguration.model; delete actualConfiguration.instructions; delete actualConfiguration.input;
+    assert.equal(createContextEvaluationPlan('luna').requestConfigurationSha256,
+      createHash('sha256').update(JSON.stringify(actualConfiguration)).digest('hex'));
     return Response.json(envelope());
   } });
   const result = await candidate.classify(text, signal());
@@ -60,6 +66,7 @@ test('refusal, tool output and duplicate assistant messages are not classifier a
   for (const output of [
     [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'refusal', refusal: 'synthetic-private-refusal' }] }],
     [{ type: 'function_call', name: 'fake' }], [...envelope().output, ...envelope().output],
+    [...envelope().output, { type: ['reasoning'] }],
   ]) {
     const candidate = new OpenAiContextSafetyCandidate({ apiKey: 'unit-test-only', model: 'gpt-6-luna', fetcher: async () => Response.json({ ...envelope(), output }) });
     await assert.rejects(candidate.classify(text, signal()), { message: 'context_candidate_unavailable' });
