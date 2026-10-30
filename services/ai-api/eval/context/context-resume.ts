@@ -17,8 +17,9 @@ type Source = Evaluation & { plan: ReturnType<typeof createExpansionEvaluationPl
 export function createContextResumeSession(value?: unknown) {
   try {
     const raw: unknown = value === undefined ? JSON.parse(readFileSync(new URL('../../../../docs/release/content-safety-context-v2-evaluation-2026-10-30/openai.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')) : value;
-    if (hash(raw) !== sourceReportCanonicalSha256) throw new Error();
-    const source = JSON.parse(JSON.stringify(raw)) as Source;
+    const serialized = JSON.stringify(raw);
+    if (typeof serialized !== 'string' || createHash('sha256').update(serialized).digest('hex') !== sourceReportCanonicalSha256) throw new Error();
+    const source = JSON.parse(serialized) as Source;
     const experiment = createContextExpansionExperiment(); const originalPlan = createExpansionEvaluationPlan('both', experiment);
     if (hash(source.plan) !== hash(originalPlan) || source.packSha256 !== experiment.packSha256) throw new Error();
     const requests = experiment.cases.flatMap(c => originalPlan.models.map(m => ({ id: c.id, candidate: m.id })))
