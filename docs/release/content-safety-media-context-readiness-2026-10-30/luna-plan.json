@@ -1,0 +1,182 @@
+{
+  "mode": "plan",
+  "networkRequests": 0,
+  "schemaVersion": 1,
+  "protocolRevision": 1,
+  "scope": "synthetic_media_context_only",
+  "mediaManifestSha256": "7f9898220c0c700e397b83156cb175eb48c426ac0814309cdd9ec48338bab311",
+  "policyVersion": "ko-context-proposal-v2",
+  "policySha256": "1d816221fdf2d22dc9b8758c845b2b67c29fb3182a62caf303a0b41314949b34",
+  "contextSchemaSha256": "6da3a3c4f1e55bf19c003387f9a92a716ae8ceaa6e72e099c535e356cc538088",
+  "contextRequestConfigurationSha256": "40732d8fb20446c2456c1e3e3c82c4f8e912d80c3feb106b56ed5ca6c7cb7acf",
+  "models": {
+    "visual": "omni-moderation-latest",
+    "transcription": "gpt-transcribe",
+    "context": [
+      {
+        "id": "luna",
+        "model": "gpt-6-luna",
+        "inputUsdPerMillion": 0.1,
+        "cacheWriteUsdPerMillion": 0.125,
+        "outputUsdPerMillion": 0.5
+      }
+    ],
+    "ocr": "Windows.Media.Ocr:ko",
+    "vad": "silero-vad-v6.2",
+    "localProbeAsr": "vosk-model-small-ko-0.22"
+  },
+  "inputs": {
+    "syntheticCases": 24,
+    "verifiedFiles": 37,
+    "imagesSentAtMost": 10,
+    "audioSentAtMost": 8,
+    "maximumAudioMinutes": 2,
+    "inventory": [
+      {
+        "id": "image-scene-proxy",
+        "sourceSha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+        "externalEligible": true
+      },
+      {
+        "id": "image-drawing",
+        "sourceSha256": "a304e06c144d89b52b2497c0cfdcecc27f1403c20621733ba2cfb7e9c7818a4b",
+        "externalEligible": true
+      },
+      {
+        "id": "image-normal-ko",
+        "sourceSha256": "eb0e8ef6e8f13dac1fea1855e62ec6baf581ffb43cf1b5fc10723dfb4e4294df",
+        "externalEligible": true
+      },
+      {
+        "id": "image-idiom-ko",
+        "sourceSha256": "86bb1e5ed227f64536525c85eaa34d78c4263e0f367312c0ba6a3ac93c1dbf44",
+        "externalEligible": true
+      },
+      {
+        "id": "image-negation-ko",
+        "sourceSha256": "139062263d3c3c3eea30d969c8fbace046acf3c7316ca3b4d1e7855ca8dca15c",
+        "externalEligible": true
+      },
+      {
+        "id": "image-threat-ko",
+        "sourceSha256": "a5c6666e9062539e6807f83277077b6d8b033d7ca627044b5df87a7ade79510a",
+        "externalEligible": true
+      },
+      {
+        "id": "image-coercion-ko",
+        "sourceSha256": "bdbe47e8e8ea096cd21103bd68a8a6ad6f888009e09064a85cde833aa249ee29",
+        "externalEligible": true
+      },
+      {
+        "id": "image-small-ko",
+        "sourceSha256": "29684f53bc91d0b56271ce13bd17f996686c99a34b5ea766a471f9ac44c87f1f",
+        "externalEligible": true
+      },
+      {
+        "id": "image-rotated-ko",
+        "sourceSha256": "c8377e74406cce0255f4148dfce79621c1b011e51f3941b2f952fd3dd177b784",
+        "externalEligible": true
+      },
+      {
+        "id": "image-original-ko",
+        "sourceSha256": "6fca3ca2dc9c19959dca0ad96d5361e0adf8d696ef74b520a1a023eef4c70315",
+        "externalEligible": true
+      },
+      {
+        "id": "image-corrupt",
+        "sourceSha256": "0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543",
+        "externalEligible": false
+      },
+      {
+        "id": "image-unsupported",
+        "sourceSha256": "b983506ec03173e11b4c8da38c40b58f93155134686bbb36a3ef08438ac6cf0c",
+        "externalEligible": false
+      },
+      {
+        "id": "audio-normal-ko",
+        "sourceSha256": "eac4723c7ac0d3af1db2f50c7b133be4af60a99a979d13943f71c37db48aea7b",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-romance-ko",
+        "sourceSha256": "1330a2bb601c4dad29995d74ad248eeddf0846c4e3c06dbbad28782ba50ce843",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-idiom-ko",
+        "sourceSha256": "6fc4bcc5502bc9498f08cbdde6e3730684d9be42b7ff31bf3feeb3df3ab1ddb3",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-boundary-ko",
+        "sourceSha256": "738595bb03e86a150be89c640de17f7bff24d20e9c44523c00fcbe5a803a0d7f",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-negation-ko",
+        "sourceSha256": "47c109e3abc55e8d783f02a196b20855e94378ab026e1b0b7a0f1c22b9e92fcd",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-threat-ko",
+        "sourceSha256": "54ec08034bf9bc296832570bdfe07808b8012ac705fee963996569e4271427e6",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-coercion-ko",
+        "sourceSha256": "b9ce5babd0bd99e0049f50fa2e5eb30c793673fb7673704b03705655ce34258a",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-noisy-threat-ko",
+        "sourceSha256": "35ed9428cc33cdc09110efadda0c22dcf97a8422237bbe7e5b321e9d6e47b770",
+        "externalEligible": true
+      },
+      {
+        "id": "audio-silence",
+        "sourceSha256": "20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa",
+        "externalEligible": false
+      },
+      {
+        "id": "audio-noise",
+        "sourceSha256": "fd590def8079b531c2a7b19c79f5712ef933dfd9fcea1c0d2e611d46c65b08b6",
+        "externalEligible": false
+      },
+      {
+        "id": "audio-corrupt",
+        "sourceSha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+        "externalEligible": false
+      },
+      {
+        "id": "audio-unsupported",
+        "sourceSha256": "a40ff3d5900fb7698b8c865041347cb49eccedc8f93945f89629ad104aaecce4",
+        "externalEligible": false
+      }
+    ]
+  },
+  "stageLimits": {
+    "visualRequests": 10,
+    "transcriptionRequests": 8,
+    "contextRequestsPerModel": 18
+  },
+  "limits": {
+    "maximumRequests": 36,
+    "retries": 0,
+    "extractionTimeoutMs": 30000,
+    "perCandidateTimeoutMs": 20000,
+    "maxInputBytes": 20971520,
+    "maximumAudioDurationMs": 15000,
+    "maxOutputTokens": 512
+  },
+  "noTextPolicy": "unavailable_without_independent_text_absence_evidence",
+  "sharedExtractionAcrossCandidates": true,
+  "estimatedUsd": 0.018108,
+  "conservativeEstimatedUsd": 0.036108,
+  "estimateAssumptions": "18 context calls/model; 2000 input tokens/call, conservative 10000; 512 output; input cache-write allowance 1.25x; ASR <=2min at $0.0045/min; visual moderation free; not a hard billing cap; excludes taxes",
+  "generalTextSafetyCovered": false,
+  "ready": false,
+  "productionPublicationAuthorized": false,
+  "humanListeningPerformed": false,
+  "originalAudioCovered": false,
+  "approvalFingerprint": "f58f020cdc03f6df44dbf11b7b93eb3f07b5632146a0a8f5521bf01daf122099"
+}

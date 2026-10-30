@@ -39,7 +39,8 @@
 12. [v2 부분 실측과 HTTP 500 중단](content-safety-context-v2-evaluation-2026-10-30/README.md)
 13. [부분 평가 재개 도구와 새 계획](content-safety-context-resume-readiness-2026-10-30/README.md)
 14. [재개 실측과 통합 관측](content-safety-context-resume-evaluation-2026-10-30/README.md)
-15. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
+15. [실제 미디어 추출과 문맥 연결](content-safety-media-context-readiness-2026-10-30/README.md)
+16. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
 
 책임 경계를 보존한다. 이번 미디어 도구는 eval에만 있고 기존 `CheckSharedContent`와 저장 caller의
 운영 동작을 바꾸지 않았다. 실패 테스트를 먼저 실행했고 별도 테스트·구현 커밋을 남겼다.
@@ -96,6 +97,7 @@ npm.cmd run --silent eval:context
 npm.cmd run --silent eval:context-expansion
 npm.cmd run --silent eval:context-expansion-live
 npm.cmd run --silent eval:context-resume
+npm.cmd run --silent eval:media-context
 ```
 
 Mac에서는 `npm.cmd` 대신 `npm`을 사용한다. 기존 Node >=22.6.0 환경을 사용한다.
@@ -124,7 +126,7 @@ OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정�
 
 ## 이번 검증과 다음 단계
 
-- AI API 회귀: 543개 통과(v2 평가까지 525 + 재개 18), 실패/건너뜀 0.
+- AI API 회귀: 566개 통과(재개까지 543 + 미디어 문맥 23), 실패/건너뜀 0.
   Python 코덱 8개 통과는 이전 미디어 실측 준비 기록이며 이번에는 해당 구현을 변경하지 않았다.
 - 준비 자산 24개 SHA-256·pending 0, 별도 실제 파일 27개 디코딩/OCR/VAD/ASR 자동 검증.
 - 원본 변형·손상 코덱 대조군을 포함한 37개 파일 SHA-256 확인. 키 파일·모델·가상 환경은 제외.
@@ -216,3 +218,19 @@ JSON의 Luna completedCases=15는 실패 행 포함 기록 수이며 정상 완�
 이전 실패 usage·실제 총 청구액은 미확인이다. 독립 라벨 검토 0/28, 사람 음성 청취 0/8과 게시 권한 없음은 유지했다.
 재개 실측 보고서와 openai.json을 따른다. 이번 승인은 사용 완료했으며 같은 지문으로 반복 호출하지 않는다.
 다음은 실제 OCR/ASR 관측문과 문맥 후보를 평가 전용 조합에 연결하는 실패 테스트/검증 준비다.
+
+후속으로 `eval:media-context`를 연결했다. 기본은 계획, --verify-local은 실제 로컬 추출만 실행한다.
+새 조합에서 no_text는 글자 부재의 증명이 아니므로 자동 허용하지 않고 일반 시각 block은 문맥 allow로 덮지 않는다.
+추출의 명시적 partial/실패 상태와 전사 API의 미완료 status가 정상으로 바뀌지 않도록 보완했다.
+SHA-256·유형·외부 대상 입력을 I/O 전에 확인하고 같은 추출/시각 관측을 후보 간 공유한다.
+Node 566개·실제 Python 코덱 8개 통과. RED `668aaa91`/`cd153329`/`f9a9ec26`/`e720566f`,
+GREEN `52589ade`/`c75ce61a`/`5a46e13a`. 제품 저장 흐름과 운영 DB/배포는 보존했다.
+2026-10-30 19:01:31 KST 로컬 실제 24개 추출: OCR complete 8(7개 CER 0, 작은 글 1개 CER 0.1),
+발화 complete 1(CER 0.1875)·partial 7, no_text 2, no_speech 2, 손상/미지원 failed 4다.
+9개 실제 관측으로 후보별 총 18개 요청 본문 해시만 준비했다. 외부 요청·키 파일 읽기는 0회다.
+자동 텍스트 품질 미통과/exit 1이며 문맥 품질 평가는 미실행이다. 사람 청취 0/8과 원음/일반 유해 텍스트 미검증을 유지했다.
+새 유료 평가 최대 both 54회(시각 10+ASR 8+문맥 후보별 18), 예상 $0.109188·보수적 추정 $0.307188이다.
+Luna만은 최대 36회/$0.018108·$0.036108, Terra만은 최대 36회/$0.100080·$0.280080이다.
+both 지문 `16cba13f2c9b3e5e483b248ba1dc3f89d61d0f030cfad0b1a38e2367524504ca`.
+새 ASR은 실제 gpt-transcribe 관측을 사용하며 기존 대본·관측을 대체 입력으로 보내지 않는다.
+이번 새 계획의 실제 유료 실행은 승인 대기다. 같은 승인으로 이전 재개 명령을 반복하지 않는다.

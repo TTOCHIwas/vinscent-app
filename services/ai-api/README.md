@@ -136,3 +136,9 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 Luna/Terra 각각 초안 24/24 일치·정답 미정 4개 모두 보류다. 누적은 정상 56회와 이전 HTTP 500 1회다.
 [재개 실측과 통합 관측](../../docs/release/content-safety-context-resume-evaluation-2026-10-30/README.md)에 출처·비용·한계를 보존했다.
 같은 지문으로 재개 명령을 반복하지 않는다. 운영 공급자·게시 권한·이미지/음성 전체 품질 확정은 아니다.
+
+`npm run eval:media-context`는 실제 OCR/VAD/ASR 관측을 문맥 후보에 전달하는 별도 평가 경로다.
+기본은 계획 출력, `--verify-local`은 외부 호출 없이 실제 추출과 요청 본문 해시만 준비한다.
+새 `--live`에는 최대 54회/새 비용 계획 확인과 지문이 필요하며 기존 승인을 재사용하지 않는다.
+no_text 이미지·부분 인식은 자동 허용하지 않고 일반 시각 block을 문맥 allow로 덮어쓰지 않는다.
+[실제 로컬 관측·범위·새 호출 계획](../../docs/release/content-safety-media-context-readiness-2026-10-30/README.md)을 따른다.
