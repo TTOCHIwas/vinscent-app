@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import { evaluateMediaContext, evaluateMediaContextBatch } from '../eval/media/media-context-evaluation.ts';
 const image = { id: 'image-observed', kind: 'image' as const, mimeType: 'image/jpeg', bytes: new Uint8Array([1]) };
 const audio = { ...image, id: 'audio-observed', kind: 'audio' as const, mimeType: 'audio/mp4' };
@@ -50,7 +51,8 @@ test('image without visual checker and coercible MIME cannot approve', async () 
   assert.equal((await evaluateMediaContext(image, withoutVisual)).actual, 'unavailable');
   assert.equal((await evaluateMediaContext({ ...image, mimeType: ['image/jpeg'] }, p)).actual, 'unavailable');
 });
-const rows = () => [{ part: audio, sourceSha256: 'a'.repeat(64), expected: 'block' as const, referenceText: '정답 대본을 보내면 안 됨', externalEligible: true }];
+const rows = () => [{ part: audio, sourceSha256: createHash('sha256').update(audio.bytes).digest('hex'), expected: 'block' as const,
+  referenceText: '정답 대본을 보내면 안 됨', externalEligible: true }];
 const candidates = () => ['luna', 'terra'].map(id => ({ id, model: id === 'luna' ? 'gpt-6-luna' : 'gpt-6.1-terra',
   port: { classify: async (actual: string) => { assert.equal(actual, text); return observation(id === 'luna' ? 'gpt-6-luna' : 'gpt-6.1-terra'); } } }));
 test('batch shares one real extraction and visual observation across both candidates; labels never supply recognition', async () => {
@@ -74,4 +76,16 @@ test('operational failure stops both candidates and all remaining cases', async 
   const cs = candidates(); cs[0].port.classify = async () => { called++; throw new Error('private'); };
   const r = await evaluateMediaContextBatch(rows(), { extractText: async () => extraction(), checkImage: ports().checkImage, candidates: cs });
   assert.equal(called, 1); assert.equal(r.stoppedOnOperationalFailure, true); assert.equal(r.results.length, 1);
+});
+
+test('invalid provenance, coercible flags and unsupported external media are rejected before I/O', async () => {
+  let calls = 0;
+  for (const mutate of [(r: any) => { r.sourceSha256 = '0'.repeat(64); }, (r: any) => { r.externalEligible = 'false'; },
+    (r: any) => { r.expected = ['block']; }, (r: any) => { r.part.mimeType = 'audio/unknown'; },
+    (r: any) => { r.referenceText = null; }]) {
+    const input = structuredClone(rows()); mutate(input[0]);
+    await assert.rejects(evaluateMediaContextBatch(input, { extractText: async () => { calls++; return extraction(); },
+      checkImage: ports().checkImage, candidates: candidates() }));
+  }
+  assert.equal(calls, 0);
 });
