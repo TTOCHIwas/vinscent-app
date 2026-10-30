@@ -3,7 +3,9 @@ import { contextLimits, contextModels, contextRecord, parseContextUsage, parseRe
 import { parseExpansionClassification, requireExpansionExperiment, type ContextExpansionExperiment } from './context-expansion-experiment.ts';
 
 type Candidate = { id: string; model: string; port: { classify(text: string, signal: AbortSignal): Promise<unknown> } };
-export async function evaluateContextExpansion(options: { experiment: ContextExpansionExperiment; candidates: readonly Candidate[]; timeoutMs?: number }) {
+export type ContextExpansionRequest = { id: string; candidate: string };
+export async function evaluateContextExpansion(options: { experiment: ContextExpansionExperiment; candidates: readonly Candidate[];
+  timeoutMs?: number; requests?: readonly ContextExpansionRequest[] }) {
   requireExpansionExperiment(options.experiment);
   const timeoutMs = options.timeoutMs ?? contextLimits.timeoutMs;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > contextLimits.timeoutMs
@@ -14,11 +16,22 @@ export async function evaluateContextExpansion(options: { experiment: ContextExp
       || candidate.model !== contextModels[candidate.id as keyof typeof contextModels]
       || typeof candidate.port?.classify !== 'function') throw new Error('invalid_context_expansion_candidates');
   }
+  const allRequests = options.experiment.cases.flatMap(sample => options.candidates.map(candidate => ({ sample, candidate })));
+  const requested = options.requests === undefined ? allRequests.map(q => ({ id: q.sample.id, candidate: q.candidate.id })) : options.requests;
+  if (!Array.isArray(requested) || requested.length < 1 || requested.length > allRequests.length) throw new Error('invalid_context_expansion_requests');
+  let previousIndex = -1;
+  const queue = requested.map(q => {
+    if (!contextRecord(q) || Object.keys(q).length !== 2 || typeof q.id !== 'string' || typeof q.candidate !== 'string') throw new Error('invalid_context_expansion_requests');
+    const index = allRequests.findIndex(r => r.sample.id === q.id && r.candidate.id === q.candidate);
+    if (index <= previousIndex) throw new Error('invalid_context_expansion_requests');
+    previousIndex = index;
+    return allRequests[index];
+  });
   const results: { id: string; candidate: string; expected: 'allow' | 'block' | null; actual: string; intent: string | null;
     operationalStatus: string; errorCode: string | null; latencyMs: number; evidenceSha256: string[]; resolvedModel: string | null;
     usage: { inputTokens: number | null; outputTokens: number | null } }[] = [];
   let stoppedOnOperationalFailure = false;
-  run: for (const sample of options.experiment.cases) for (const candidate of options.candidates) {
+  for (const { sample, candidate } of queue) {
     const controller = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
     const started = performance.now();
     let row: typeof results[number] = { id: sample.id, candidate: candidate.id, expected: sample.expected, actual: 'unavailable', intent: null,
@@ -35,13 +48,15 @@ export async function evaluateContextExpansion(options: { experiment: ContextExp
     } catch { stoppedOnOperationalFailure = true; row.errorCode = controller.signal.aborted ? 'timeout' : 'candidate_failure'; }
     finally { clearTimeout(timer); controller.abort(); }
     row.latencyMs = Math.round(performance.now() - started); results.push(row);
-    if (stoppedOnOperationalFailure) break run;
+    if (stoppedOnOperationalFailure) break;
   }
   const models = options.candidates.map(candidate => {
     const rows = results.filter(r => r.candidate === candidate.id); const scored = rows.filter(r => r.expected !== null);
     const unresolved = rows.filter(r => r.expected === null); const times = rows.map(r => r.latencyMs).sort((a, b) => a - b);
-    const complete = rows.length === 28 && rows.every(r => r.operationalStatus === 'completed');
-    return { id: candidate.id, model: candidate.model, completedCases: rows.length, complete, plannedScoredCases: 24,
+    const planned = queue.filter(q => q.candidate.id === candidate.id);
+    const complete = planned.length > 0 && rows.length === planned.length && rows.every(r => r.operationalStatus === 'completed');
+    return { id: candidate.id, model: candidate.model, completedCases: rows.length, complete,
+      plannedScoredCases: planned.filter(q => q.sample.expected !== null).length,
       scoredCases: scored.length, correct: scored.filter(r => r.actual === r.expected).length,
       falseAllows: scored.filter(r => r.expected === 'block' && r.actual === 'allow').length,
       falseBlocks: scored.filter(r => r.expected === 'allow' && r.actual === 'block').length,
