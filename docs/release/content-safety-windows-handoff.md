@@ -37,7 +37,8 @@
 10. [피해 진술·인용 제안과 확장 표본](content-safety-context-expansion-2026-10-30/README.md)
 11. [v2 어댑터와 호출 전 계획](content-safety-context-v2-readiness-2026-10-30/README.md)
 12. [v2 부분 실측과 HTTP 500 중단](content-safety-context-v2-evaluation-2026-10-30/README.md)
-13. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
+13. [부분 평가 재개 도구와 새 계획](content-safety-context-resume-readiness-2026-10-30/README.md)
+14. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
 
 책임 경계를 보존한다. 이번 미디어 도구는 eval에만 있고 기존 `CheckSharedContent`와 저장 caller의
 운영 동작을 바꾸지 않았다. 실패 테스트를 먼저 실행했고 별도 테스트·구현 커밋을 남겼다.
@@ -93,6 +94,7 @@ npm.cmd run --silent eval:policy-review
 npm.cmd run --silent eval:context
 npm.cmd run --silent eval:context-expansion
 npm.cmd run --silent eval:context-expansion-live
+npm.cmd run --silent eval:context-resume
 ```
 
 Mac에서는 `npm.cmd` 대신 `npm`을 사용한다. 기존 Node >=22.6.0 환경을 사용한다.
@@ -121,7 +123,7 @@ OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정�
 
 ## 이번 검증과 다음 단계
 
-- AI API 회귀: 525개 통과(확장 검토까지 497 + v2 평가 28), 실패/건너뜀 0.
+- AI API 회귀: 543개 통과(v2 평가까지 525 + 재개 18), 실패/건너뜀 0.
   Python 코덱 8개 통과는 이전 미디어 실측 준비 기록이며 이번에는 해당 구현을 변경하지 않았다.
 - 준비 자산 24개 SHA-256·pending 0, 별도 실제 파일 27개 디코딩/OCR/VAD/ASR 자동 검증.
 - 원본 변형·손상 코덱 대조군을 포함한 37개 파일 SHA-256 확인. 키 파일·모델·가상 환경은 제외.
@@ -192,3 +194,13 @@ JSON의 Luna completedCases=15는 실패 행 포함 기록 수이며 정상 완�
 현재 CLI에는 재개 기능이 없어 그대로 재실행하면 전체를 다시 호출한다.
 다음은 원본 부분 보고서 검증과 실패/미실행만 선택하는 재개 도구·새 승인 지문 준비다.
 기존 525개 회귀는 실행 전 통과했고 이번에는 구현 변경 없이 결과 문서만 저장한다.
+
+후속으로 `eval:context-resume`를 구현했다. 고정 원본 JSON 지문과 현재 정책/자료/계획이 일치해야
+실패 1·미실행 27만 선택한다. 완료한 28회는 재호출하지 않는다. 기본은 요청 0건인 새 계획 출력이다.
+새 지문 `63c0dce29e634c7b269328d64579133246b06c18f88175a6d438a2027874847d`.
+최대 추가 28회(Luna/Terra 각 14), 누적 최대 57회, 예상 $0.077924·보수적 추정 $0.231924다.
+기존 실패 1회만 새 관측을 요구하며 새 실행 중 자동 재시도는 0회, 첫 오류에서 전체 중단한다.
+원본 검증은 한 번 만든 스냅샷만 사용하고 관측·시각·모델·정책 등 원본 내용 변경은 거부한다.
+추가 관측과 통합 범위를 분리하고 source=prior/resume를 남기며 원래 HTTP 실패도 보존한다.
+재개 준비 RED `2a377c78`/GREEN `282890a5`, 단일 스냅샷 RED `33234e1c`/GREEN `45295118`.
+전체 회귀 543개 통과. 이번 준비의 실제 API 호출·키 파일 읽기는 0회이며 새 계획의 실제 실행은 승인 대기다.

@@ -1,0 +1,276 @@
+{
+  "mode": "plan",
+  "networkRequests": 0,
+  "schemaVersion": 1,
+  "protocolRevision": 1,
+  "scope": "synthetic_context_resume_text_only",
+  "sourceReportCanonicalSha256": "f66d09d26fa3e3c30a8701d34ee2ced69dc8f8e113bc7d4a1b75f6effe1a6894",
+  "sourcePlanFingerprint": "e1d605fa44cca0845fb5fc9aa749736a903ea816d4c99986847c007d37d65ef4",
+  "policyVersion": "ko-context-proposal-v2",
+  "packSha256": "0f734acf0f4559a7153267c4a4ffcbb1dc79bc94c74172819dc6646dfc054958",
+  "policySha256": "1d816221fdf2d22dc9b8758c845b2b67c29fb3182a62caf303a0b41314949b34",
+  "schemaSha256": "6da3a3c4f1e55bf19c003387f9a92a716ae8ceaa6e72e099c535e356cc538088",
+  "requestConfigurationSha256": "40732d8fb20446c2456c1e3e3c82c4f8e912d80c3feb106b56ed5ca6c7cb7acf",
+  "requestSubsetSha256": "6a609a5622efbe877df83342505642bf17f281e06a2cd13dc23a542cd8f11f57",
+  "executionOrder": "original_case_major_subset",
+  "models": [
+    {
+      "id": "luna",
+      "model": "gpt-6-luna",
+      "inputUsdPerMillion": 0.1,
+      "cacheWriteUsdPerMillion": 0.125,
+      "outputUsdPerMillion": 0.5,
+      "additionalRequests": 14
+    },
+    {
+      "id": "terra",
+      "model": "gpt-6.1-terra",
+      "inputUsdPerMillion": 1,
+      "cacheWriteUsdPerMillion": 1.25,
+      "outputUsdPerMillion": 5,
+      "additionalRequests": 14
+    }
+  ],
+  "remaining": [
+    {
+      "id": "expand-benign-03",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "e37716ef1f58f297a6accdd2a3a094e4eaa6d5a1e5d2e312ffd1eda92ff902b8",
+      "status": "retry_failed_request"
+    },
+    {
+      "id": "expand-benign-03",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "e37716ef1f58f297a6accdd2a3a094e4eaa6d5a1e5d2e312ffd1eda92ff902b8",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-benign-04",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "952fbd00cbf69b23407cd0284621f40705ef6a60155a4ed0d7d56bf414252043",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-benign-04",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "952fbd00cbf69b23407cd0284621f40705ef6a60155a4ed0d7d56bf414252043",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-report-01",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "7933239ac9038dba4bbf343be0d1f3e4fdd1644cf888587f90964d723429a7f2",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-report-01",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "7933239ac9038dba4bbf343be0d1f3e4fdd1644cf888587f90964d723429a7f2",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-report-02",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "d621d584f4f33d9d7741f1e9dcc1db6d2ec4a9d3fd56bd477d5a5c5a3fb9e3e9",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-report-02",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "d621d584f4f33d9d7741f1e9dcc1db6d2ec4a9d3fd56bd477d5a5c5a3fb9e3e9",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-quote-01",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "890d003cf60f9d66c7a8f37c79d2b09f87c9ce53d7d21030cc0c5b777579a533",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-quote-01",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "890d003cf60f9d66c7a8f37c79d2b09f87c9ce53d7d21030cc0c5b777579a533",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-quote-02",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "61339b047700d6ba7a0390e7bd9a2759be6ea893df6bbcdd0e4e9e781f7c1e14",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-quote-02",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "61339b047700d6ba7a0390e7bd9a2759be6ea893df6bbcdd0e4e9e781f7c1e14",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-01",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "9f6e25ea81c14211abf742662e974d5ddf7b5e8df3341845209071a968c17b0d",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-01",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "9f6e25ea81c14211abf742662e974d5ddf7b5e8df3341845209071a968c17b0d",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-02",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "ad872cf906d90bb54f69ac7837deb675a6bce52d5210f985f09388a2b451e33b",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-02",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "ad872cf906d90bb54f69ac7837deb675a6bce52d5210f985f09388a2b451e33b",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-03",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "5f3cd9b45e04fc9045e475326ca4e1e83da33da9011406cdb8e9e852ad55c868",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-03",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "5f3cd9b45e04fc9045e475326ca4e1e83da33da9011406cdb8e9e852ad55c868",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-04",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "657e684c34b1d2ec6c5b5b347a2a77aef3047cf8dc86631a9252c1c399a10165",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-uncertain-04",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "657e684c34b1d2ec6c5b5b347a2a77aef3047cf8dc86631a9252c1c399a10165",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-01",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "754b9eafebc4fe97b17ff55e3d1c6c09b1556828bc3d919658c452a7d56d2d35",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-01",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "754b9eafebc4fe97b17ff55e3d1c6c09b1556828bc3d919658c452a7d56d2d35",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-02",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "660e64c9cb87a8b4c02cbbf46e8e8791912593e430c81aef7f4dc422b7d2789e",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-02",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "660e64c9cb87a8b4c02cbbf46e8e8791912593e430c81aef7f4dc422b7d2789e",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-03",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "7fdfa9fd159f7ea1038fe23a0552507ffc177e66a9d9f6bdec40036ffffe5f46",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-03",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "7fdfa9fd159f7ea1038fe23a0552507ffc177e66a9d9f6bdec40036ffffe5f46",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-04",
+      "candidate": "luna",
+      "model": "gpt-6-luna",
+      "inputSha256": "2ef6549a7bc41b26506db3e169f0a214080964b413c84f3bcb82e4afa4497a40",
+      "status": "not_attempted"
+    },
+    {
+      "id": "expand-instruction-04",
+      "candidate": "terra",
+      "model": "gpt-6.1-terra",
+      "inputSha256": "2ef6549a7bc41b26506db3e169f0a214080964b413c84f3bcb82e4afa4497a40",
+      "status": "not_attempted"
+    }
+  ],
+  "priorActualRequests": 29,
+  "priorSuccessfulRequests": 28,
+  "unattemptedRequests": 27,
+  "maximumCumulativeRequests": 57,
+  "retryPolicy": {
+    "priorFailedRequestsToRetry": 1,
+    "automaticRetries": 0,
+    "repeatCompletedRequests": false,
+    "stopOnFirstOperationalFailure": true
+  },
+  "limits": {
+    "maximumRequests": 28,
+    "retries": 0,
+    "perCaseTimeoutMs": 20000,
+    "maxTextBytes": 1200,
+    "maxRequestBytes": 8192,
+    "maxOutputTokens": 512,
+    "observedInputTokensLimit": 10000
+  },
+  "inputs": {
+    "syntheticTextCases": 14,
+    "scoredRequests": 20,
+    "unresolvedRequests": 8,
+    "imagesSent": 0,
+    "audioSent": 0
+  },
+  "maximumSerializedRequestBytes": 3098,
+  "requestSettings": {
+    "endpoint": "https://api.openai.com/v1/responses",
+    "store": false,
+    "reasoningEffort": "none",
+    "serviceTier": "default",
+    "tools": []
+  },
+  "estimatedUsd": 0.077924,
+  "conservativeEstimatedUsd": 0.231924,
+  "estimateAssumptions": "14 calls/model; 2000 input tokens/call, conservative 10000; 512 output tokens/call; input charged at 1.25x cache-write allowance; excludes taxes; not a hard billing cap",
+  "humanLabelReviewsCompleted": 0,
+  "independentlyValidated": false,
+  "ready": false,
+  "productionPublicationAuthorized": false,
+  "humanListeningPerformed": false,
+  "originalAudioCovered": false,
+  "approvalFingerprint": "63c0dce29e634c7b269328d64579133246b06c18f88175a6d438a2027874847d"
+}

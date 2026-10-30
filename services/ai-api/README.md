@@ -126,3 +126,8 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 피해 진술·인용의 별도 그룹과 정답 미정 그룹은 미실행이다. 재시도·추가 호출은 하지 않았다.
 [부분 실측과 남은 요청 목록](../../docs/release/content-safety-context-v2-evaluation-2026-10-30/README.md)을 따른다.
 현재 명령은 전체 실행 전용이므로 재개 목적으로 그대로 재실행하지 않는다.
+
+`npm run eval:context-resume`는 고정된 HTTP 500 부분 보고서를 검증하고 실패 1회·미실행 27회만 선택한다.
+기본은 키·네트워크 없이 새 계획을 출력한다. 실제 실행에는 별도 확인과 `--live --approved-plan=<재개 지문>`이 필요하다.
+원본 정상 관측은 재호출하지 않으며 추가 관측/통합 범위를 분리하고 과거 실패도 보존한다.
+[재개 범위·전송 자료·비용과 검증](../../docs/release/content-safety-context-resume-readiness-2026-10-30/README.md)을 따른다.
