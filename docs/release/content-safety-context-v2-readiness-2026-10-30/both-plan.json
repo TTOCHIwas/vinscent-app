@@ -1,0 +1,206 @@
+{
+  "mode": "plan",
+  "networkRequests": 0,
+  "schemaVersion": 1,
+  "protocolRevision": 1,
+  "scope": "synthetic_context_expansion_text_only",
+  "policyVersion": "ko-context-proposal-v2",
+  "policyStatus": "proposal",
+  "packSha256": "0f734acf0f4559a7153267c4a4ffcbb1dc79bc94c74172819dc6646dfc054958",
+  "policySha256": "1d816221fdf2d22dc9b8758c845b2b67c29fb3182a62caf303a0b41314949b34",
+  "schemaSha256": "6da3a3c4f1e55bf19c003387f9a92a716ae8ceaa6e72e099c535e356cc538088",
+  "requestConfigurationSha256": "40732d8fb20446c2456c1e3e3c82c4f8e912d80c3feb106b56ed5ca6c7cb7acf",
+  "models": [
+    {
+      "id": "luna",
+      "model": "gpt-6-luna",
+      "inputUsdPerMillion": 0.1,
+      "cacheWriteUsdPerMillion": 0.125,
+      "outputUsdPerMillion": 0.5
+    },
+    {
+      "id": "terra",
+      "model": "gpt-6.1-terra",
+      "inputUsdPerMillion": 1,
+      "cacheWriteUsdPerMillion": 1.25,
+      "outputUsdPerMillion": 5
+    }
+  ],
+  "executionOrder": "case_major_candidate_order",
+  "inputs": {
+    "syntheticTextCases": 28,
+    "scoredCasesPerCandidate": 24,
+    "unresolvedCasesPerCandidate": 4,
+    "imagesSent": 0,
+    "audioSent": 0,
+    "inventory": [
+      {
+        "id": "expand-threat-01",
+        "inputSha256": "faf4cbbe3313704dcdb6b7f4757875c0844e3c6609ff888b8343ab2a2c328505",
+        "scored": true
+      },
+      {
+        "id": "expand-threat-02",
+        "inputSha256": "ac3bfe034e4c59123763329bb29ede0b14ae0876bc8aed3fddc0310a52e310a0",
+        "scored": true
+      },
+      {
+        "id": "expand-threat-03",
+        "inputSha256": "68482221385b07dfb5d5b2c62fd932c9fc3f9a1dbfc0c455d9a0549f82f77d41",
+        "scored": true
+      },
+      {
+        "id": "expand-threat-04",
+        "inputSha256": "d0608dc0da792388200f19f4f81f417fcbfbe1e814f5c4cbf471f32e1cbb2641",
+        "scored": true
+      },
+      {
+        "id": "expand-coercion-01",
+        "inputSha256": "075789ffaa52fc59e077a0ad9df1f21cbd5c94564b4f4df88f1897fb8c341e25",
+        "scored": true
+      },
+      {
+        "id": "expand-coercion-02",
+        "inputSha256": "8aaf93403b1955bc59da1e3e206265f585c635703494579d982c5f915cdfe75e",
+        "scored": true
+      },
+      {
+        "id": "expand-coercion-03",
+        "inputSha256": "06eb58cf6bd3551673128c54fa39cd6ca0fbecd79cfd839d1463bfcadffcd76b",
+        "scored": true
+      },
+      {
+        "id": "expand-coercion-04",
+        "inputSha256": "0c97387a2b297d76450e1de3fd69a83c644a9b5c6e20d518bcf954a3e999e168",
+        "scored": true
+      },
+      {
+        "id": "expand-mixed-01",
+        "inputSha256": "25e693d8ad04c095139642a7025f8f34ed9d0143c890ff17f2974e4dac0bd0ff",
+        "scored": true
+      },
+      {
+        "id": "expand-mixed-02",
+        "inputSha256": "97374dcd766f6548db8092f9d1f3144740cc7a6c4020e88788da85df5c2a3e0f",
+        "scored": true
+      },
+      {
+        "id": "expand-mixed-03",
+        "inputSha256": "9ebb8a3e79228878a811c7558b7ca575b64bae24dd9ba3b73571b991d2467aae",
+        "scored": true
+      },
+      {
+        "id": "expand-mixed-04",
+        "inputSha256": "fbe9cc304fc109a4d853f857d3f1a89a40509a1288e1b3d2daf2e147e706bce7",
+        "scored": true
+      },
+      {
+        "id": "expand-benign-01",
+        "inputSha256": "209b1207317128a90c45059ff34c0be36378ee70f5cd670c5f351f8084d3d2e6",
+        "scored": true
+      },
+      {
+        "id": "expand-benign-02",
+        "inputSha256": "0028e47f0b18ffaf72e79c95934b25999eee2fb606028d93ede8291c7d265047",
+        "scored": true
+      },
+      {
+        "id": "expand-benign-03",
+        "inputSha256": "e37716ef1f58f297a6accdd2a3a094e4eaa6d5a1e5d2e312ffd1eda92ff902b8",
+        "scored": true
+      },
+      {
+        "id": "expand-benign-04",
+        "inputSha256": "952fbd00cbf69b23407cd0284621f40705ef6a60155a4ed0d7d56bf414252043",
+        "scored": true
+      },
+      {
+        "id": "expand-report-01",
+        "inputSha256": "7933239ac9038dba4bbf343be0d1f3e4fdd1644cf888587f90964d723429a7f2",
+        "scored": true
+      },
+      {
+        "id": "expand-report-02",
+        "inputSha256": "d621d584f4f33d9d7741f1e9dcc1db6d2ec4a9d3fd56bd477d5a5c5a3fb9e3e9",
+        "scored": true
+      },
+      {
+        "id": "expand-quote-01",
+        "inputSha256": "890d003cf60f9d66c7a8f37c79d2b09f87c9ce53d7d21030cc0c5b777579a533",
+        "scored": true
+      },
+      {
+        "id": "expand-quote-02",
+        "inputSha256": "61339b047700d6ba7a0390e7bd9a2759be6ea893df6bbcdd0e4e9e781f7c1e14",
+        "scored": true
+      },
+      {
+        "id": "expand-uncertain-01",
+        "inputSha256": "9f6e25ea81c14211abf742662e974d5ddf7b5e8df3341845209071a968c17b0d",
+        "scored": false
+      },
+      {
+        "id": "expand-uncertain-02",
+        "inputSha256": "ad872cf906d90bb54f69ac7837deb675a6bce52d5210f985f09388a2b451e33b",
+        "scored": false
+      },
+      {
+        "id": "expand-uncertain-03",
+        "inputSha256": "5f3cd9b45e04fc9045e475326ca4e1e83da33da9011406cdb8e9e852ad55c868",
+        "scored": false
+      },
+      {
+        "id": "expand-uncertain-04",
+        "inputSha256": "657e684c34b1d2ec6c5b5b347a2a77aef3047cf8dc86631a9252c1c399a10165",
+        "scored": false
+      },
+      {
+        "id": "expand-instruction-01",
+        "inputSha256": "754b9eafebc4fe97b17ff55e3d1c6c09b1556828bc3d919658c452a7d56d2d35",
+        "scored": true
+      },
+      {
+        "id": "expand-instruction-02",
+        "inputSha256": "660e64c9cb87a8b4c02cbbf46e8e8791912593e430c81aef7f4dc422b7d2789e",
+        "scored": true
+      },
+      {
+        "id": "expand-instruction-03",
+        "inputSha256": "7fdfa9fd159f7ea1038fe23a0552507ffc177e66a9d9f6bdec40036ffffe5f46",
+        "scored": true
+      },
+      {
+        "id": "expand-instruction-04",
+        "inputSha256": "2ef6549a7bc41b26506db3e169f0a214080964b413c84f3bcb82e4afa4497a40",
+        "scored": true
+      }
+    ]
+  },
+  "limits": {
+    "maximumRequests": 56,
+    "retries": 0,
+    "perCaseTimeoutMs": 20000,
+    "maxTextBytes": 1200,
+    "maxRequestBytes": 8192,
+    "maxOutputTokens": 512,
+    "observedInputTokensLimit": 10000
+  },
+  "maximumSerializedRequestBytes": 3098,
+  "requestSettings": {
+    "endpoint": "https://api.openai.com/v1/responses",
+    "store": false,
+    "reasoningEffort": "none",
+    "serviceTier": "default",
+    "tools": []
+  },
+  "estimatedUsd": 0.155848,
+  "conservativeEstimatedUsd": 0.463848,
+  "estimateAssumptions": "28 calls/model; 2000 input tokens/call, conservative 10000; 512 output tokens/call; input charged at 1.25x cache-write allowance; excludes taxes; not a hard billing cap",
+  "humanLabelReviewsCompleted": 0,
+  "independentlyValidated": false,
+  "ready": false,
+  "productionPublicationAuthorized": false,
+  "humanListeningPerformed": false,
+  "originalAudioCovered": false,
+  "approvalFingerprint": "e1d605fa44cca0845fb5fc9aa749736a903ea816d4c99986847c007d37d65ef4"
+}

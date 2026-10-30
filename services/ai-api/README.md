@@ -115,3 +115,9 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 사람 검토·독립성·모델 품질·게시 권한은 별개이며 기본 출력 성공을 운영 준비 완료로 취급하지 않는다.
 `--live`와 키 로드는 지원하지 않고 기존 v1 실측/승인 계획도 보존한다.
 [공개 사례 근거·새 표본·검토 절차](../../docs/release/content-safety-context-expansion-2026-10-30/README.md)를 따른다.
+
+`npm run eval:context-expansion-live`는 v2/28문장용 어댑터와 별도 호출 계획을 연결한다.
+기본은 네트워크 0건인 계획 출력이다. `--candidate=luna|terra|both`별 최대 28/56회이며,
+실제 비용·자료 확인 뒤에만 `--live --approved-plan=<새 지문>`을 사용한다. 기존 v1 승인으로 실행할 수 없다.
+초안 라벨 24개와 정답 미정 4개를 분리하며 오류 시 재시도 없이 전체를 중단한다.
+[모델·전송 미리보기·비용·보관 조건](../../docs/release/content-safety-context-v2-readiness-2026-10-30/README.md)을 따른다.
