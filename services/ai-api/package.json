@@ -17,6 +17,7 @@
     "eval:context-expansion": "node --experimental-strip-types eval/review-context-expansion.ts",
     "eval:context-expansion-live": "node --experimental-strip-types eval/run-context-expansion.ts",
     "eval:context-resume": "node --experimental-strip-types eval/run-context-resume.ts",
+    "eval:media-context": "node --experimental-strip-types eval/run-media-context.ts",
     "eval:models": "node --experimental-strip-types eval/model-comparison-eval.ts",
     "eval:prompts": "node --experimental-strip-types eval/prompt-strategy-eval.ts",
     "eval:question-similarity": "node --experimental-strip-types eval/question-similarity-eval.ts",
