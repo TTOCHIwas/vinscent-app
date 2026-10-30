@@ -55,6 +55,16 @@ export async function evaluateMediaContextBatch(cases: readonly MediaContextCase
 }, timeoutMs = 20_000) {
   if (!cases.length || cases.length > 24 || new Set(cases.map(c => c.part.id)).size !== cases.length
     || !ports.candidates.length || ports.candidates.length > 2 || new Set(ports.candidates.map(c => c.id)).size !== ports.candidates.length) throw new Error('invalid_media_context_batch');
+  for (const row of cases) {
+    const part = row.part;
+    if (typeof row.externalEligible !== 'boolean' || typeof row.expected !== 'string' || !['allow', 'block', 'unavailable'].includes(row.expected)
+      || typeof row.referenceText !== 'string' || row.referenceText.length > 2000 || typeof row.sourceSha256 !== 'string'
+      || !(part.bytes instanceof Uint8Array) || !part.bytes.length || part.bytes.length > 20 * 1024 * 1024
+      || typeof part.id !== 'string' || !/^[a-z0-9-]{1,80}$/.test(part.id) || typeof part.mimeType !== 'string'
+      || !['image', 'audio'].includes(part.kind) || createHash('sha256').update(part.bytes).digest('hex') !== row.sourceSha256
+      || (row.externalEligible && !(part.kind === 'image' ? ['image/png', 'image/jpeg', 'image/webp'] : ['audio/wav', 'audio/mp4', 'audio/mpeg']).includes(part.mimeType)))
+      throw new Error('invalid_media_context_batch');
+  }
   for (const c of ports.candidates) if (typeof c.id !== 'string' || !Object.hasOwn(contextModels, c.id)
     || c.model !== contextModels[c.id as keyof typeof contextModels] || typeof c.port?.classify !== 'function') throw new Error('invalid_media_context_batch');
   const results: ({ id: string; candidate: string; expected: MediaContextCase['expected']; sourceSha256: string; characterErrorRate: number | null;
