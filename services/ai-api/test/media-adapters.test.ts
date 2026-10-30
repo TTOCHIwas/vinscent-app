@@ -16,6 +16,15 @@ const dependencies = () => ({
   transcribe: async () => ({ text: '내일 같이 걷자.', language: 'ko', confidence: 0.95 }),
 });
 
+test('explicit partial OCR and ASR status cannot be upgraded to complete extraction', async () => {
+  for (const status of ['partial', 'failed', 'timeout', ['complete']]) {
+    const ocr = new MediaExtractionAdapter({ ...dependencies(), ocr: async () => ({ text: '일부만 인식', words: 2, status }) });
+    const asr = new MediaExtractionAdapter({ ...dependencies(), transcribe: async () => ({ text: '일부만 인식', language: 'ko', status }) });
+    assert.notEqual((await ocr.extract(image, signal())).status, 'complete');
+    assert.notEqual((await asr.extract(audio, signal())).status, 'complete');
+  }
+});
+
 test('media extraction uses decoded bytes, actual OCR and ASR, without a reference script', async () => {
   const used: string[] = [];
   const adapter = new MediaExtractionAdapter({ ...dependencies(), transcribe: async (wav) => {
