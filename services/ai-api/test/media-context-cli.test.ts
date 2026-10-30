@@ -36,3 +36,22 @@ return Response.json({status:'completed',model:b.model,usage:{input_tokens:100,o
   assert.equal(report.diagnostics.filter(x => x.stage === 'transcription').length, 8);
   assert.equal(report.generalTextSafetyCovered, false);
 });
+
+test('local verification prepares request hashes from observed recognition without fake classifier outputs or network', () => {
+  const runtimeUrl = new URL('../eval/media/native-media-runtime.ts', import.meta.url).href;
+  const script = `import {NativeMediaRuntime} from ${JSON.stringify(runtimeUrl)};
+NativeMediaRuntime.prototype.decodeImage=async p=>{if(p.id.includes('corrupt')||p.id.includes('unsupported'))throw new Error();return {id:p.id,pngBase64:'AQ=='};};
+NativeMediaRuntime.prototype.ocr=async p=>({text:p.id.includes('drawing')||p.id.includes('scene-proxy')?'':'실제 관측 대체 모의값',words:p.id.includes('drawing')||p.id.includes('scene-proxy')?0:3});
+NativeMediaRuntime.prototype.decodeAudio=async p=>{if(p.id.includes('corrupt')||p.id.includes('unsupported'))throw new Error();return {wavBase64:Buffer.from(p.id).toString('base64'),durationMs:1000,sampleRate:16000,samples:16000};};
+NativeMediaRuntime.prototype.detectSpeech=async p=>({speechDetected:!Buffer.from(p.wavBase64,'base64').toString().match(/silence|noise$/),speechMs:1000,maximumProbability:.9});
+NativeMediaRuntime.prototype.transcribe=async()=>({text:'실제 관측 대체 모의값',language:'ko',confidence:.99});
+globalThis.fetch=async()=>{throw new Error('network-must-not-run');};`;
+  const result = spawnSync(process.execPath, ['--experimental-strip-types', '--import', `data:text/javascript,${encodeURIComponent(script)}`,
+    'eval/run-media-context.ts', '--verify-local'], { encoding: 'utf8', env: { ...process.env,
+      CONTENT_SAFETY_PYTHON: 'mock', CONTENT_SAFETY_VAD_MODEL: 'mock', CONTENT_SAFETY_ASR_MODEL: 'mock' } });
+  assert.equal(result.status, 1); const report = JSON.parse(result.stdout);
+  assert.equal(report.networkRequests, 0); assert.equal(report.contextQualityEvaluated, false);
+  assert.equal(report.contextRequestsPrepared, 32);
+  assert(report.results.filter(r => r.requestBodySha256ByModel.length).every(r => r.extractionStatus === 'complete' && r.externalEligible));
+  assert(!result.stdout.includes('실제 관측 대체 모의값'));
+});
