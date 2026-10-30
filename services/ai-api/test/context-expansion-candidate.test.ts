@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createContextExpansionExperiment, parseExpansionClassification } from '../eval/context/context-expansion-experiment.ts';
 import { OpenAiContextExpansionCandidate } from '../eval/context/openai-context-expansion-candidate.ts';
 import { createExpansionEvaluationPlan } from '../eval/context/context-expansion-plan.ts';
@@ -75,4 +76,17 @@ test('v2 rejects nontext, oversized and pre-aborted inputs before API; absent us
   for (const input of ['', '가'.repeat(401), { kind: 'image' }]) await assert.rejects(c.classify(input as string, new AbortController().signal));
   const a = new AbortController(); a.abort(); await assert.rejects(c.classify(text, a.signal)); assert.equal(calls, 0);
   assert.deepEqual((await c.classify(text, new AbortController().signal)).usage, { inputTokens: null, outputTokens: null });
+});
+
+test('v2 rejects invalid credentials, models, fabricated experiments and oversized policies before requests', () => {
+  assert.throws(() => new OpenAiContextExpansionCandidate({ apiKey: '', model: 'gpt-6-luna', experiment }));
+  assert.throws(() => new OpenAiContextExpansionCandidate({ apiKey: 'unit-test-only', model: 'other', experiment }));
+  assert.throws(() => new OpenAiContextExpansionCandidate({ apiKey: 'unit-test-only', model: 'gpt-6-luna', experiment: structuredClone(experiment) }));
+  const pack = JSON.parse(readFileSync('eval/fixtures/content-safety-context-expansion-ko.json', 'utf8'));
+  const original = createExpansionEvaluationPlan('both', experiment);
+  pack.policyText += '\n정책 검토 문구';
+  const changed = createContextExpansionExperiment(pack);
+  assert.notEqual(createExpansionEvaluationPlan('both', changed).approvalFingerprint, original.approvalFingerprint);
+  pack.policyText = '가'.repeat(5000);
+  assert.throws(() => createExpansionEvaluationPlan('both', createContextExpansionExperiment(pack)));
 });

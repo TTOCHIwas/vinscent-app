@@ -59,6 +59,27 @@ test('invalid or duplicate candidates cannot issue requests', async () => {
   }
 });
 
+test('v2 independently rejects invalid observed model/usage and counts proposal mismatches', async () => {
+  for (const field of ['resolvedModel', 'usage']) {
+    const good = mock(); const bad = { ...good, port: { classify: async (text: string) => ({ ...(await good.port.classify(text)),
+      [field]: field === 'resolvedModel' ? 'unapproved-model' : { inputTokens: -1, outputTokens: 30 } }) } };
+    const r = await evaluateContextExpansion({ experiment, candidates: [bad] });
+    assert.equal(r.stoppedOnOperationalFailure, true); assert.equal(r.results[0].actual, 'unavailable');
+    assert.equal(r.results[0].operationalStatus, 'failed');
+  }
+  for (const decision of ['allow', 'block']) {
+    const fixed = { ...mock(), port: { classify: async (text: string) => ({ classification: { policy_version: experiment.policyVersion,
+      decision, intent: decision === 'allow' ? 'benign' : 'direct_threat', evidence: [text] }, resolvedModel: 'gpt-6-luna',
+      usage: { inputTokens: null, outputTokens: null } }) } };
+    const r = await evaluateContextExpansion({ experiment, candidates: [fixed] });
+    assert.equal(r.models[0].falseAllows, decision === 'allow' ? 9 : 0);
+    assert.equal(r.models[0].falseBlocks, decision === 'block' ? 15 : 0);
+    assert.equal(r.models[0].inputTokens, null); assert.equal(r.models[0].usageComplete, false);
+    assert.equal(r.allScoredProposalsMatched, false);
+  }
+  await assert.rejects(evaluateContextExpansion({ experiment, candidates: [mock()], timeoutMs: 0 }));
+});
+
 test('v2 request budget stops at 28/56 and on HTTP or transport failure while legacy cap stays separate', async () => {
   for (const limit of [28, 56]) {
     let calls = 0; const budget = createExpansionRequestBudget(limit, async () => { calls++; return Response.json({}); });

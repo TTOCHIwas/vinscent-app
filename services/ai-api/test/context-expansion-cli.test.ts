@@ -25,3 +25,30 @@ test('v2 rejects old or missing approval before key access and rejects unknown/d
   const missing = run('--live', `--approved-plan=${plan.approvalFingerprint}`);
   assert.equal(JSON.parse(missing.stderr).error, 'context_expansion_credential_missing');
 });
+
+test('simulated CLI runs 56 bounded requests or stops after the first failed response without network', () => {
+  const plan = JSON.parse(run().stdout);
+  for (const mode of ['success', 'http_failure', 'schema_failure']) {
+    const script = `import fs from 'node:fs';
+const cases=JSON.parse(fs.readFileSync('eval/fixtures/content-safety-context-expansion-ko.json','utf8')).cases;
+globalThis.fetch=async (_url,init)=>{
+  if(${JSON.stringify(mode)}==='http_failure')return new Response('unit-private-error',{status:500});
+  const b=JSON.parse(init.body);const text=JSON.parse(b.input[0].content[0].text).text;
+  const decision=cases.find(c=>c.text===text).proposedDecision??'unavailable';
+  const answer={policy_version:${JSON.stringify(mode)}==='schema_failure'?'wrong-version':'ko-context-proposal-v2',decision,
+    intent:decision==='block'?'coercion':decision==='allow'?'benign':'unresolved_context',evidence:[text]};
+  return Response.json({status:'completed',model:b.model,usage:{input_tokens:100,output_tokens:30},
+    output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify(answer)}]}]});
+};`;
+    const result = spawnSync(process.execPath, ['--experimental-strip-types', '--import', `data:text/javascript,${encodeURIComponent(script)}`,
+      'eval/run-context-expansion.ts', '--live', `--approved-plan=${plan.approvalFingerprint}`],
+    { encoding: 'utf8', env: { ...process.env, CONTENT_SAFETY_OPENAI_API_KEY: 'unit-test-only' } });
+    assert.equal(result.status, mode === 'success' ? 0 : 1);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.actualRequests, mode === 'success' ? 56 : 1);
+    assert.equal(report.stoppedOnOperationalFailure, mode !== 'success');
+    assert.equal(report.ready, false); assert.equal(report.productionPublicationAuthorized, false);
+    assert.equal(report.independentlyValidated, false);
+    assert(!result.stdout.includes('unit-private-error')); assert(!result.stdout.includes('unit-test-only'));
+  }
+});
