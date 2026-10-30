@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createContextExpansionReviewTemplate, reviewContextExpansion } from '../eval/context/context-expansion-review.ts';
+import { createContextEvaluationPlan } from '../eval/context/context-evaluation-plan.ts';
+import { contentSafetyContextCases } from '../eval/fixtures/content-safety-context-ko.ts';
 
 const packPath = 'eval/fixtures/content-safety-context-expansion-ko.json';
 const load = () => JSON.parse(readFileSync(packPath, 'utf8'));
@@ -34,6 +38,16 @@ test('review template binds corpus and individual text hashes without copying pr
     assert.equal(row.reviewedAt, null);
     assert.match(row.textSha256, /^[a-f0-9]{64}$/);
   }
+});
+
+test('changed policy wording invalidates earlier label reviews while historical candidate plans remain unchanged', () => {
+  const pack = load(); const review = createContextExpansionReviewTemplate(pack);
+  assert.equal(typeof pack.policyText, 'string');
+  pack.policyText += '\n추가 검토 지시';
+  assert.notEqual(createContextExpansionReviewTemplate(pack).packSha256, review.packSha256);
+  assert.equal(inspect(pack, review).validEvidence, false);
+  assert.equal(createContextEvaluationPlan('both').approvalFingerprint, 'fc1301ef9114cda9d935b704d3fb3979da9887e22425970985fbc4ed35849272');
+  assert.equal(contentSafetyContextCases.filter(c => c.expected === 'unavailable').length, 2);
 });
 
 for (const [name, mutate] of [
@@ -113,4 +127,22 @@ test('offline CLI rejects live and unknown arguments; default prints no source t
     const rejected = run(...args); assert.equal(rejected.status, 1);
     assert.deepEqual(JSON.parse(rejected.stderr), { error: 'context_expansion_review_unavailable' });
   }
+});
+
+test('CLI accepts a hash-bound review file and sanitizes stale, missing, malformed and oversized inputs', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'context-expansion-test-'));
+  const file = join(directory, 'review.json');
+  const run = (name: string) => spawnSync(process.execPath, ['--experimental-strip-types', 'eval/review-context-expansion.ts', `--review=${name}`], { encoding: 'utf8' });
+  try {
+    writeFileSync(file, JSON.stringify(createContextExpansionReviewTemplate(load())));
+    const good = run(file); assert.equal(good.status, 0); assert.equal(JSON.parse(good.stdout).pendingReviews, 28);
+    const stale = createContextExpansionReviewTemplate(load()); stale.packSha256 = '0'.repeat(64);
+    for (const value of [JSON.stringify(stale), '{invalid-json-secret-marker', 'x'.repeat(131_073)]) {
+      writeFileSync(file, value);
+      const failed = run(file); assert.equal(failed.status, 1);
+      assert.deepEqual(JSON.parse(failed.stderr), { error: 'context_expansion_review_unavailable' });
+      assert.equal(failed.stderr.includes('secret-marker'), false);
+    }
+    assert.equal(run(join(directory, 'missing.json')).status, 1);
+  } finally { unlinkSync(file); rmdirSync(directory); }
 });
