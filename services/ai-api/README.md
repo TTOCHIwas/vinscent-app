@@ -109,3 +109,9 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 미정 2개 unavailable이며 제품 게시 권한은 부여하지 않는다. 이번에는 합성 텍스트만 전송했다.
 [실측 결과와 한계](../../docs/release/content-safety-context-evaluation-2026-10-30/README.md)에
 기존 오류 비교·관측 토큰·비용 추정과 후속 범위를 기록했다. 추가 호출은 별도 승인 대상이다.
+
+`npm run eval:context-expansion`은 피해 진술·인용 처리 제안 v2와 추가 합성 문장 28개를 오프라인으로 검토한다.
+`--review-template`은 답변 없는 해시 기반 라벨 검토 서식, `--review=파일`은 사람의 검토 기록을 읽는다.
+사람 검토·독립성·모델 품질·게시 권한은 별개이며 기본 출력 성공을 운영 준비 완료로 취급하지 않는다.
+`--live`와 키 로드는 지원하지 않고 기존 v1 실측/승인 계획도 보존한다.
+[공개 사례 근거·새 표본·검토 절차](../../docs/release/content-safety-context-expansion-2026-10-30/README.md)를 따른다.

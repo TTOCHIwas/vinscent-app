@@ -34,7 +34,8 @@
 7. [강요·금지 맥락 자동 검토](content-safety-context-policy-review-2026-10-29/README.md)
 8. [문맥 분류 후보와 호출 전 계획](content-safety-context-candidate-readiness-2026-10-29/README.md)
 9. [문맥 후보 실제 평가](content-safety-context-evaluation-2026-10-30/README.md)
-10. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
+10. [피해 진술·인용 제안과 확장 표본](content-safety-context-expansion-2026-10-30/README.md)
+11. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
 
 책임 경계를 보존한다. 이번 미디어 도구는 eval에만 있고 기존 `CheckSharedContent`와 저장 caller의
 운영 동작을 바꾸지 않았다. 실패 테스트를 먼저 실행했고 별도 테스트·구현 커밋을 남겼다.
@@ -88,6 +89,7 @@ npm.cmd run --silent eval:content-safety-media -- --validate-assets
 npm.cmd run --silent eval:media -- --provider=openai --asr=openai
 npm.cmd run --silent eval:policy-review
 npm.cmd run --silent eval:context
+npm.cmd run --silent eval:context-expansion
 ```
 
 Mac에서는 `npm.cmd` 대신 `npm`을 사용한다. 기존 Node >=22.6.0 환경을 사용한다.
@@ -116,7 +118,7 @@ OpenAI 실제 평가에는 유효한 키가 필요하다. 하루 만료 설정�
 
 ## 이번 검증과 다음 단계
 
-- AI API 회귀: 471개 통과(기존 검토까지 443 + 문맥 후보 28), 실패/건너뜀 0.
+- AI API 회귀: 497개 통과(기존 문맥 후보까지 471 + 확장 검토 26), 실패/건너뜀 0.
   Python 코덱 8개 통과는 이전 미디어 실측 준비 기록이며 이번에는 해당 구현을 변경하지 않았다.
 - 준비 자산 24개 SHA-256·pending 0, 별도 실제 파일 27개 디코딩/OCR/VAD/ASR 자동 검증.
 - 원본 변형·손상 코덱 대조군을 포함한 37개 파일 SHA-256 확인. 키 파일·모델·가상 환경은 제외.
@@ -156,3 +158,12 @@ Cloudflare 이미지 자체 판정은 지원하지 않아 전체 이미지 결�
 2026-10-30에는 문맥 both 계획 평가와 문서 보존을 승인받아 진행했다.
 다음은 피해 진술·인용의 제품 기준과 독립 확장 표본 검토, 평가 전용 OCR/ASR 관측문 조합 검증이다.
 사람 청취는 사용자 지정대로 0/8 미완료이며 운영 공급자·공개 정책은 미확정이다.
+
+2026-10-30 후속으로 사용자가 공개 자료를 참고한 처리 기준 판단을 위임했다.
+피해 진술·도움 요청과 명확한 허구 인용은 문맥상 허용, 직접 위협·강요는 차단, 불충분한 문맥은 보류하는
+`ko-context-proposal-v2`를 추가 자료에 기록했다. 제품 정책이나 기존 v1 지시문/실측 라벨은 바꾸지 않았다.
+새 합성 28개는 제안 allow 15·block 9·미정 null 4이며 기존 자료의 정규화 문장 중복은 0개다.
+같은 에이전트가 작성했으므로 독립 검증 완료 자료가 아니다. 사람 라벨 검토 0/28, 새 모델 평가 0회다.
+정책·자료 지문과 문장 해시가 묶인 빈 서식과 오프라인 검토 CLI를 구현했다.
+`eval:context-expansion`은 --live를 거부하며 키 파일을 읽지 않는다. 테스트 RED `afaf4185`, `6b50e62c`, GREEN `111587d9`다.
+다음은 독립 라벨 검토와 별도 v2 평가 어댑터/호출 계획 준비다. 기존 최대 24회 승인을 재사용하지 않는다.
