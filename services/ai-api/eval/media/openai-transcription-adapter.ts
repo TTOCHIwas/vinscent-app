@@ -33,7 +33,8 @@ export class OpenAiTranscriptionAdapter {
         }
       } finally { reader.releaseLock(); }
       const data: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-      if (!record(data) || typeof data.text !== 'string' || !data.text.trim() || data.text.length > 20_000
+      if (!record(data) || (data.status !== undefined && data.status !== 'completed')
+        || typeof data.text !== 'string' || !data.text.trim() || data.text.length > 20_000
         || !Array.isArray(data.languages) || data.languages.length !== 1
         || !record(data.languages[0]) || data.languages[0].code !== 'ko') throw new Error();
       return { text: data.text, language: 'ko' };

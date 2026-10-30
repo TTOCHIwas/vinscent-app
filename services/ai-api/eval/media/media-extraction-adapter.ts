@@ -23,7 +23,8 @@ export class MediaExtractionAdapter {
         signal.throwIfAborted();
         const ocr = await this.#ports.ocr(image, signal);
         signal.throwIfAborted();
-        if (!record(ocr) || typeof ocr.text !== 'string' || !Number.isSafeInteger(ocr.words)
+        if (!record(ocr) || (ocr.status !== undefined && ocr.status !== 'complete')
+          || typeof ocr.text !== 'string' || !Number.isSafeInteger(ocr.words)
           || Number(ocr.words) < 0 || ocr.text.length > 20_000) throw new Error();
         if (ocr.words === 0 && ocr.text === '') return { status: 'no_text', text: '', language: 'ko' };
         if (!ocr.text.trim() || Number(ocr.words) === 0) throw new Error();
@@ -46,7 +47,8 @@ export class MediaExtractionAdapter {
         || vad.maximumProbability > 1) return { status: 'no_speech', speechDetected: false };
       const transcript = await this.#ports.transcribe(audio, signal);
       signal.throwIfAborted();
-      if (!record(transcript) || typeof transcript.text !== 'string' || !transcript.text.trim()
+      if (!record(transcript) || (transcript.status !== undefined && transcript.status !== 'complete')
+        || typeof transcript.text !== 'string' || !transcript.text.trim()
         || transcript.text.length > 20_000 || transcript.language !== 'ko'
         || (transcript.confidence !== undefined && (typeof transcript.confidence !== 'number'
           || !Number.isFinite(transcript.confidence) || transcript.confidence < 0.8 || transcript.confidence > 1))) {
