@@ -35,6 +35,19 @@ test('resume plan selects one prior failure and 27 unattempted requests, exclude
   assert.throws(() => createContextResumePlan(structuredClone(session)));
 });
 
+test('resume source is serialized once so verified and consumed snapshots cannot diverge', () => {
+  let serializations = 0;
+  const input = { toJSON: () => {
+    serializations++;
+    const value = structuredClone(original);
+    if (serializations > 1) value.actualRequests = 0;
+    return value;
+  } };
+  const snapshot = createContextResumeSession(input);
+  assert.equal(snapshot.source.actualRequests, 29);
+  assert.equal(serializations, 1);
+});
+
 for (const [name, mutate] of [
   ['changed label', (r: any) => { r.results[0].expected = 'allow'; }],
   ['changed result', (r: any) => { r.results[0].actual = 'allow'; }],
