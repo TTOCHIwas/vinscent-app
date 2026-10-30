@@ -86,6 +86,14 @@ test('OpenAI transcription sends the normalized file without expected text or pr
   assert.equal((await adapter.transcribe(decodedAudio, signal())).text, '관측 문장');
 });
 
+test('explicit incomplete ASR API response is rejected before it can lose its status', async () => {
+  for (const status of ['partial', 'failed', 'incomplete', ['completed']]) {
+    const adapter = new OpenAiTranscriptionAdapter({ apiKey: 'unit-test-only', fetcher: async () =>
+      Response.json({ status, text: '일부만 인식된 실제 응답', languages: [{ code: 'ko' }] }) });
+    await assert.rejects(adapter.transcribe(decodedAudio, signal()), /media_transcription_unavailable/);
+  }
+});
+
 for (const body of [{}, { text: '', languages: [{ code: 'ko' }] }, { text: '환각', languages: [] },
   { text: 'hello', languages: [{ code: 'en' }] }, { text: 'mixed', languages: [{ code: 'ko' }, { code: 'en' }] }]) {
   test('invalid ASR responses cannot become complete Korean speech', async () => {

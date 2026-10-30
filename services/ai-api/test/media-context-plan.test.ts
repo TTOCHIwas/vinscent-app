@@ -26,3 +26,14 @@ test('stage budgets reject wrong endpoints and stop after stage quota, HTTP erro
     await assert.rejects(budget.fetcher('https://api.openai.com/v1/responses', init));
   }
 });
+
+test('all stage caps sum to 54 for both; audio and visual quotas cannot be borrowed by context calls', async () => {
+  let called = 0; const budget = createMediaContextBudget('both', async () => { called++; return Response.json({}); });
+  for (let i = 0; i < 10; i++) await budget.fetcher('https://api.openai.com/v1/moderations', { body: JSON.stringify({ model: 'omni-moderation-latest' }) });
+  for (let i = 0; i < 8; i++) { const body = new FormData(); body.set('model', 'gpt-transcribe'); await budget.fetcher('https://api.openai.com/v1/audio/transcriptions', { body }); }
+  for (const model of ['gpt-6-luna', 'gpt-6.1-terra']) for (let i = 0; i < 18; i++)
+    await budget.fetcher('https://api.openai.com/v1/responses', { body: JSON.stringify({ model }) });
+  assert.equal(called, 54); assert.equal(budget.diagnostics.length, 54);
+  await assert.rejects(budget.fetcher('https://api.openai.com/v1/moderations', { body: JSON.stringify({ model: 'omni-moderation-latest' }) }));
+  assert.equal(called, 54);
+});
