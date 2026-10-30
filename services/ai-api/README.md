@@ -104,3 +104,8 @@ Python 모델 환경은 별도 설정하며 현재 ASR 대본 일치가 1/8이�
 평가 전용 Responses adapter는 실제 입력 텍스트만 전송하고 schema·근거·실패·요청 한도를 검증한다.
 12개 중 초안 10개와 미정 2개를 분리하며 제품 moderation 정책이나 저장 흐름은 변경하지 않는다.
 [후보 구현·전송 미리보기·호출 비용](../../docs/release/content-safety-context-candidate-readiness-2026-10-29/README.md)을 따른다.
+
+2026-10-30 승인된 문맥 후보 평가 24회는 모두 HTTP 200이었다. Luna/Terra 각각 초안 10/10 일치,
+미정 2개 unavailable이며 제품 게시 권한은 부여하지 않는다. 이번에는 합성 텍스트만 전송했다.
+[실측 결과와 한계](../../docs/release/content-safety-context-evaluation-2026-10-30/README.md)에
+기존 오류 비교·관측 토큰·비용 추정과 후속 범위를 기록했다. 추가 호출은 별도 승인 대상이다.
