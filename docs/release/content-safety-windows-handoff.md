@@ -38,7 +38,8 @@
 11. [v2 어댑터와 호출 전 계획](content-safety-context-v2-readiness-2026-10-30/README.md)
 12. [v2 부분 실측과 HTTP 500 중단](content-safety-context-v2-evaluation-2026-10-30/README.md)
 13. [부분 평가 재개 도구와 새 계획](content-safety-context-resume-readiness-2026-10-30/README.md)
-14. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
+14. [재개 실측과 통합 관측](content-safety-context-resume-evaluation-2026-10-30/README.md)
+15. `services/ai-api/README.md`, `eval/fixtures/media-ko/README.md`, 적용되는 AGENTS 지침
 
 책임 경계를 보존한다. 이번 미디어 도구는 eval에만 있고 기존 `CheckSharedContent`와 저장 caller의
 운영 동작을 바꾸지 않았다. 실패 테스트를 먼저 실행했고 별도 테스트·구현 커밋을 남겼다.
@@ -204,3 +205,14 @@ JSON의 Luna completedCases=15는 실패 행 포함 기록 수이며 정상 완�
 추가 관측과 통합 범위를 분리하고 source=prior/resume를 남기며 원래 HTTP 실패도 보존한다.
 재개 준비 RED `2a377c78`/GREEN `282890a5`, 단일 스냅샷 RED `33234e1c`/GREEN `45295118`.
 전체 회귀 543개 통과. 이번 준비의 실제 API 호출·키 파일 읽기는 0회이며 새 계획의 실제 실행은 승인 대기다.
+
+이후 사용자가 추가 28회·예상 약 $0.078·보수적 추정 약 $0.232 안내에 계속 진행을 승인했고,
+2026-10-30 18:20:55 KST 재개를 완료했다. 실행 기준 `1a615cbc`, 새 요청 28/28 HTTP 200이다.
+정상 완료 28회는 재호출하지 않았다. 추가 결과와 원래 정상 관측을 합치면 후보별 28개 관측이 채워졌고,
+각 후보 초안 24/24 일치·정답 미정 4개 모두 unavailable이다. 피해 진술 2개/허구 인용 2개는 모두 allow였다.
+누적 API 요청은 57회(정상 56 + 이전 HTTP 500 1)이며 원래 부분 JSON과 실패 이력을 보존했다.
+추가 관측/통합 결과의 source=prior/resume를 구분한다. 서로 다른 시각의 alias 관측이며 단일 성공 실행이 아니다.
+새 28회의 관측 토큰 기반 cache write 여유 추정은 $0.016860250, 정상 누적 56회는 $0.033615625다.
+이전 실패 usage·실제 총 청구액은 미확인이다. 독립 라벨 검토 0/28, 사람 음성 청취 0/8과 게시 권한 없음은 유지했다.
+재개 실측 보고서와 openai.json을 따른다. 이번 승인은 사용 완료했으며 같은 지문으로 반복 호출하지 않는다.
+다음은 실제 OCR/ASR 관측문과 문맥 후보를 평가 전용 조합에 연결하는 실패 테스트/검증 준비다.

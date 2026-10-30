@@ -97,7 +97,9 @@ Luna 전체 합계가 JSON에서 null인 것도 실패 usage가 없기 때문이
 다음 구현은 원본 결과를 검증해 미실행/실패 요청만 선택하는 평가 전용 재개 도구와 새 승인 지문이다.
 새 도구·자료 목록·실패 시 중단·호출 수/비용을 검증한 뒤 추가 유료 실행을 별도로 확인받는다.
 후속으로 [재개 도구와 새 계획](../content-safety-context-resume-readiness-2026-10-30/README.md)을 준비했다.
-위 원본 결과와 당시의 실행 불가능 상태였던 remaining-work.json은 그대로 보존했다. 실제 재개 호출은 아직 0회다.
+위 원본 결과와 당시의 실행 불가능 상태였던 remaining-work.json은 그대로 보존했다.
+이후 [추가 28회 재개 결과](../content-safety-context-resume-evaluation-2026-10-30/README.md)를 별도 저장했다.
+이번 부분 결과의 29회와 HTTP 500 이력은 바꾸지 않았다.
 
 ## 검증과 보존 범위
 
