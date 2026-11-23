@@ -7,6 +7,14 @@ on:
         description: Full main commit SHA to build
         required: true
         type: string
+      backend_target:
+        description: Supabase backend for this release candidate
+        required: true
+        default: managed
+        type: choice
+        options:
+          - managed
+          - x240
       build_number:
         description: Unique positive Android version code
         required: true
@@ -33,6 +41,7 @@ env:
   CI: true
   FLUTTER_SUPPRESS_ANALYTICS: true
   BUILD_NUMBER: ${{ inputs.build_number }}
+  DANJJAN_BACKEND_TARGET: ${{ inputs.backend_target }}
 
 jobs:
   build:
@@ -84,8 +93,8 @@ jobs:
           DANJJAN_UPLOAD_STORE_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_STORE_PASSWORD }}
           DANJJAN_UPLOAD_KEY_ALIAS: ${{ secrets.DANJJAN_UPLOAD_KEY_ALIAS }}
           DANJJAN_UPLOAD_KEY_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_KEY_PASSWORD }}
-          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
-          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_SUPABASE_URL: ${{ inputs.backend_target == 'x240' && 'https://danjjan-api.vinscentlab.com' || secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets[inputs.backend_target == 'x240' && 'DANJJAN_X240_SUPABASE_ANON_KEY' || 'DANJJAN_SUPABASE_ANON_KEY'] }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
           DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
           DANJJAN_PLAY_UPLOAD_CERT_SHA256: ${{ vars.DANJJAN_PLAY_UPLOAD_CERT_SHA256 }}
@@ -113,6 +122,7 @@ jobs:
               exit 1
             fi
           done
+          python3 ../../scripts/verify_release_backend.py
 
           if [[ "$PUBLISH_INTERNAL" == "true" && -z "$DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
             echo "Missing android-release secret: DANJJAN_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" >&2
@@ -173,8 +183,8 @@ jobs:
           DANJJAN_UPLOAD_STORE_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_STORE_PASSWORD }}
           DANJJAN_UPLOAD_KEY_ALIAS: ${{ secrets.DANJJAN_UPLOAD_KEY_ALIAS }}
           DANJJAN_UPLOAD_KEY_PASSWORD: ${{ secrets.DANJJAN_UPLOAD_KEY_PASSWORD }}
-          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
-          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_SUPABASE_URL: ${{ inputs.backend_target == 'x240' && 'https://danjjan-api.vinscentlab.com' || secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets[inputs.backend_target == 'x240' && 'DANJJAN_X240_SUPABASE_ANON_KEY' || 'DANJJAN_SUPABASE_ANON_KEY'] }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
           DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
         run: |

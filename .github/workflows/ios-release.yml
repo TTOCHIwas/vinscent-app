@@ -7,6 +7,14 @@ on:
         description: Full main commit SHA to build
         required: true
         type: string
+      backend_target:
+        description: Supabase backend for this release candidate
+        required: true
+        default: managed
+        type: choice
+        options:
+          - managed
+          - x240
       build_number:
         description: Unique positive iOS build number
         required: true
@@ -28,6 +36,7 @@ env:
   CI: true
   FLUTTER_SUPPRESS_ANALYTICS: true
   BUILD_NUMBER: ${{ inputs.build_number }}
+  DANJJAN_BACKEND_TARGET: ${{ inputs.backend_target }}
 
 jobs:
   release:
@@ -78,8 +87,8 @@ jobs:
           DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.DANJJAN_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
           DANJJAN_IOS_RUNNER_PROFILE_BASE64: ${{ secrets.DANJJAN_IOS_RUNNER_PROFILE_BASE64 }}
           DANJJAN_IOS_WIDGET_PROFILE_BASE64: ${{ secrets.DANJJAN_IOS_WIDGET_PROFILE_BASE64 }}
-          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
-          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_SUPABASE_URL: ${{ inputs.backend_target == 'x240' && 'https://danjjan-api.vinscentlab.com' || secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets[inputs.backend_target == 'x240' && 'DANJJAN_X240_SUPABASE_ANON_KEY' || 'DANJJAN_SUPABASE_ANON_KEY'] }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
           DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
           DANJJAN_APPLE_TEAM_ID: ${{ vars.DANJJAN_APPLE_TEAM_ID }}
@@ -111,6 +120,7 @@ jobs:
               exit 1
             fi
           done
+          python3 scripts/verify_release_backend.py
 
           if [[ ! "$DANJJAN_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
             echo "DANJJAN_APPLE_TEAM_ID must be a 10-character Team ID." >&2
@@ -148,8 +158,8 @@ jobs:
         run: scripts/install_ios_signing_assets.sh
       - name: Build and verify signed iOS release candidate
         env:
-          DANJJAN_SUPABASE_URL: ${{ secrets.DANJJAN_SUPABASE_URL }}
-          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets.DANJJAN_SUPABASE_ANON_KEY }}
+          DANJJAN_SUPABASE_URL: ${{ inputs.backend_target == 'x240' && 'https://danjjan-api.vinscentlab.com' || secrets.DANJJAN_SUPABASE_URL }}
+          DANJJAN_SUPABASE_ANON_KEY: ${{ secrets[inputs.backend_target == 'x240' && 'DANJJAN_X240_SUPABASE_ANON_KEY' || 'DANJJAN_SUPABASE_ANON_KEY'] }}
           DANJJAN_KAKAO_NATIVE_APP_KEY: ${{ secrets.DANJJAN_KAKAO_NATIVE_APP_KEY }}
           DANJJAN_POLICY_BASE_URL: ${{ vars.DANJJAN_POLICY_BASE_URL }}
           DANJJAN_APPLE_TEAM_ID: ${{ vars.DANJJAN_APPLE_TEAM_ID }}
