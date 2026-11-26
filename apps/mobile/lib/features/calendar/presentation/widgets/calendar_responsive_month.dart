@@ -252,10 +252,14 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableWidth =
-            constraints.maxWidth - (values.horizontalPadding * 2);
-        final cellWidth =
-            (availableWidth - (_columnGap * 6)) / DateTime.daysPerWeek;
+        final cellWidth = _cellWidth(
+          constraints.maxWidth,
+          values.horizontalPadding,
+        );
+        final previewCacheExtent = _cellWidth(
+          constraints.maxWidth,
+          metrics.resolve(0).horizontalPadding,
+        );
         final gridTop = _topPadding + _weekdayHeight + _weekdayGridGap;
 
         return ClipRect(
@@ -331,6 +335,7 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
                                   publicHolidays[calendarDateOnly(days[index])],
                               expandedContentProgress:
                                   values.expandedContentProgress,
+                              previewCacheExtent: previewCacheExtent,
                               onPressed: () => onDatePressed(days[index]),
                             ),
                           ),
@@ -344,6 +349,12 @@ class _CalendarMonthDelegate extends SliverPersistentHeaderDelegate {
         );
       },
     );
+  }
+
+  double _cellWidth(double width, double horizontalPadding) {
+    const columns = DateTime.daysPerWeek;
+    return (width - horizontalPadding * 2 - _columnGap * (columns - 1)) /
+        columns;
   }
 
   int _selectedRow(List<DateTime> days) {
@@ -464,6 +475,7 @@ class _DateCell extends StatelessWidget {
     required this.defaultEventLabel,
     required this.publicHoliday,
     required this.expandedContentProgress,
+    required this.previewCacheExtent,
     required this.onPressed,
   });
 
@@ -477,6 +489,7 @@ class _DateCell extends StatelessWidget {
   final String? defaultEventLabel;
   final PublicHoliday? publicHoliday;
   final double expandedContentProgress;
+  final double previewCacheExtent;
   final VoidCallback onPressed;
 
   @override
@@ -505,6 +518,7 @@ class _DateCell extends StatelessWidget {
           events: isCurrentMonth ? events : const [],
           defaultEventLabel: isCurrentMonth ? defaultEventLabel : null,
           expandedContentProgress: expandedContentProgress,
+          previewCacheExtent: previewCacheExtent,
         ),
       ),
     );

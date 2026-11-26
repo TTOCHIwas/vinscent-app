@@ -27,6 +27,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
     this.events = const [],
     this.defaultEventLabel,
     this.expandedContentProgress = 0,
+    this.previewCacheExtent,
   });
 
   final DateTime date;
@@ -37,6 +38,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
   final List<CoupleCalendarEvent> events;
   final String? defaultEventLabel;
   final double expandedContentProgress;
+  final double? previewCacheExtent;
 
   static const _cellPadding = EdgeInsets.fromLTRB(3, 2, 3, 4);
   static const _maximumCompactEventArtworkSize = 18.0;
@@ -49,10 +51,6 @@ class CalendarMonthStoryCell extends StatelessWidget {
     final isDateMarkerFilled = isToday || isSelected;
     final hasDefaultEvent = defaultEventLabel?.trim().isNotEmpty ?? false;
     final visibleCards = _visibleCards(summary);
-    final previewCacheExtent = math.max(
-      1.0,
-      MediaQuery.sizeOf(context).width / DateTime.daysPerWeek,
-    );
     final resolvedExpandedProgress = math.min(
       1.0,
       math.max(0.0, expandedContentProgress),
@@ -67,6 +65,11 @@ class CalendarMonthStoryCell extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final cacheExtent = math.max(
+          1.0,
+          (previewCacheExtent ?? constraints.maxWidth) -
+              _cellPadding.horizontal,
+        );
         final eventArtworkSize = math.max(
           0.0,
           math.min(
@@ -80,6 +83,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
 
         return AppMediaLoadingGroup(
           indicatorPadding: const EdgeInsets.only(top: _headerHeight + 2),
+          revealIdentity: contentIdentity,
           child: Padding(
             key: ValueKey(
               'calendar-month-story-cell-$displayMode-${formatCalendarDate(date)}',
@@ -188,7 +192,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                                       date: date,
                                       events: events,
                                       artworkSize: eventArtworkSize,
-                                      previewCacheExtent: previewCacheExtent,
+                                      previewCacheExtent: cacheExtent,
                                     ),
                                   ),
                           ),
@@ -209,7 +213,7 @@ class CalendarMonthStoryCell extends StatelessWidget {
                       events: events,
                       expandedContentProgress: resolvedExpandedProgress,
                       cards: visibleCards,
-                      previewCacheExtent: previewCacheExtent,
+                      previewCacheExtent: cacheExtent,
                     ),
                   ),
                 ),
@@ -310,19 +314,14 @@ class _CalendarCellContent extends StatelessWidget {
           artworkCount: artworkEvents.length,
         );
 
-        if (progress <= 0 || (artworkEvents.isEmpty && cards.isEmpty)) {
-          return _buildCompactContent(
-            cellSize: cellSize,
-            expandedLayout: expandedLayout,
-          );
-        }
-
         return Stack(
           fit: StackFit.expand,
           children: [
-            if (cards.isEmpty && progress < 1)
+            if (cards.isEmpty &&
+                events.isNotEmpty &&
+                (artworkEvents.isEmpty || progress < 1))
               Opacity(
-                opacity: 1 - progress,
+                opacity: artworkEvents.isEmpty ? 1 : 1 - progress,
                 child: CalendarMonthEventIndicator(
                   date: date,
                   events: events,
@@ -330,7 +329,7 @@ class _CalendarCellContent extends StatelessWidget {
                   previewCacheExtent: previewCacheExtent,
                 ),
               ),
-            if (artworkEvents.isNotEmpty)
+            if (artworkEvents.isNotEmpty && progress > 0)
               Opacity(
                 opacity: progress,
                 child: CalendarExpandedEventArtworkLayer(
@@ -343,6 +342,7 @@ class _CalendarCellContent extends StatelessWidget {
               ),
             if (cards.isNotEmpty)
               CalendarMonthCardPreview(
+                key: const ValueKey('month-cell-cards'),
                 cards: cards,
                 cellSize: cellSize,
                 expandedLayout: expandedLayout,
@@ -352,31 +352,6 @@ class _CalendarCellContent extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildCompactContent({
-    required Size cellSize,
-    required CalendarExpandedCellLayout expandedLayout,
-  }) {
-    if (cards.isEmpty) {
-      if (events.isEmpty) {
-        return const SizedBox.expand();
-      }
-
-      return CalendarMonthEventIndicator(
-        date: date,
-        events: events,
-        artworkSize: calendarMonthCompactPreviewSize,
-        previewCacheExtent: previewCacheExtent,
-      );
-    }
-
-    return CalendarMonthCardPreview(
-      cards: cards,
-      cellSize: cellSize,
-      expandedLayout: expandedLayout,
-      previewCacheExtent: previewCacheExtent,
     );
   }
 }
