@@ -7,6 +7,9 @@ class AppConfig {
     'KAKAO_NATIVE_APP_KEY',
   );
   static const policyBaseUrl = String.fromEnvironment('POLICY_BASE_URL');
+  static const calendarStorageImageTransforms = bool.fromEnvironment(
+    'CALENDAR_STORAGE_IMAGE_TRANSFORMS',
+  );
   static const supabaseRpcTimeout = Duration(seconds: 15);
 
   static bool get isSupabaseConfigured =>

@@ -8,6 +8,7 @@ import '../../../story_loops/data/story_loop_card_preview.dart';
 import '../../../story_loops/data/story_card_scene.dart';
 import '../../../story_loops/presentation/widgets/story_card_preview_surface.dart';
 import '../calendar_expanded_cell_layout.dart';
+import 'calendar_card_network_image.dart';
 
 class CalendarMonthCardPreview extends StatelessWidget {
   const CalendarMonthCardPreview({
@@ -144,6 +145,7 @@ class _MonthStorySurface extends StatelessWidget {
       card.cardType,
       layoutVersion: card.layoutVersion,
     );
+    final cacheLogicalSize = Size(cacheWidth, cacheWidth / aspectRatio);
 
     return Transform.rotate(
       angle: angle,
@@ -154,8 +156,13 @@ class _MonthStorySurface extends StatelessWidget {
           aspectRatio: aspectRatio,
           child: AppSizedNetworkImage(
             url: card.previewUrl,
+            imageProvider: calendarCardNetworkImage(
+              card: card,
+              maximumLogicalSize: cacheLogicalSize,
+              pixelRatio: MediaQuery.devicePixelRatioOf(context),
+            ),
             logicalSize: Size(width, height),
-            cacheLogicalSize: Size(cacheWidth, cacheWidth / aspectRatio),
+            cacheLogicalSize: cacheLogicalSize,
             gaplessPlayback: true,
             fallbackBuilder: (_) => _MonthStoryPlaceholder(card: card),
             surfaceBuilder: (context, image) => DecoratedBox(

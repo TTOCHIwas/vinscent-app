@@ -115,6 +115,9 @@ class SupabaseStoryLoopReadRepository implements StoryLoopReadRepository {
       final summaries = rows
           .map(_mapper.mapMonthSummaryDay)
           .toList(growable: false);
+      if (AppConfig.calendarStorageImageTransforms) {
+        return summaries;
+      }
       final previewUrlsByPath = await _createPreviewUrlsByPath(
         summaries.expand(
           (summary) => summary.cards.map((card) => card.previewPath),
