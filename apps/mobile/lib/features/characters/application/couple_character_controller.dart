@@ -24,7 +24,7 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
     try {
       return await ref
           .watch(coupleCharacterRepositoryProvider)
-          .fetchCurrentCharacter();
+          .fetchCurrentCharacter(includeImageUrl: false);
     } on CoupleCharacterRepositoryException catch (error) {
       if (error.reason != CoupleCharacterFailureReason.configMissing) {
         debugCharacterLog(
@@ -82,7 +82,9 @@ class CoupleCharacterController extends AsyncNotifier<CoupleCharacter?> {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-      () => ref.read(coupleCharacterRepositoryProvider).fetchCurrentCharacter(),
+      () => ref
+          .read(coupleCharacterRepositoryProvider)
+          .fetchCurrentCharacter(includeImageUrl: false),
     );
   }
 }

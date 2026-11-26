@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/widgets/character_placeholder.dart';
+import '../../../../core/presentation/widgets/app_network_image.dart';
 import '../../../../core/presentation/widgets/app_sized_network_image.dart';
 import '../../../../core/presentation/widgets/app_media_reveal.dart';
+import '../../../profile/application/profile_controller.dart';
 import '../../application/couple_character_controller.dart';
+import '../../data/couple_character.dart';
+import '../../data/couple_character_repository.dart';
 
 export '../../../../core/presentation/widgets/character_placeholder.dart';
 
@@ -24,7 +28,6 @@ class CoupleCharacterAvatar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final characterAsync = ref.watch(coupleCharacterControllerProvider);
     final character = characterAsync.value;
-    final imageUrl = character?.imageUrl;
     final child =
         characterAsync.isLoading &&
             !characterAsync.hasValue &&
@@ -33,14 +36,9 @@ class CoupleCharacterAvatar extends ConsumerWidget {
             dimension: size,
             child: const AppMediaReveal(ready: false, child: SizedBox.shrink()),
           )
-        : imageUrl == null
+        : character == null
         ? CharacterPlaceholder(label: label, size: size)
-        : _CharacterImage(
-            imageUrl: imageUrl,
-            label: label,
-            size: size,
-            cacheKey: character?.updatedAt.toIso8601String(),
-          );
+        : _CharacterImage(character: character, label: label, size: size);
 
     if (onTap == null) {
       return child;
@@ -57,27 +55,43 @@ class CoupleCharacterAvatar extends ConsumerWidget {
   }
 }
 
-class _CharacterImage extends StatelessWidget {
+class _CharacterImage extends ConsumerWidget {
   const _CharacterImage({
-    required this.imageUrl,
+    required this.character,
     required this.label,
     required this.size,
-    this.cacheKey,
   });
 
-  final String imageUrl;
+  final CoupleCharacter character;
   final String label;
   final double size;
-  final String? cacheKey;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final imageUrl = character.imageUrl;
+    final userId = imageUrl == null
+        ? ref.watch(
+            profileControllerProvider.select(
+              (state) => state.asData?.value?.id,
+            ),
+          )
+        : null;
+    final revision = character.updatedAt.microsecondsSinceEpoch;
+    final repository = ref.watch(coupleCharacterRepositoryProvider);
+    final imageProvider = userId == null || character.imagePath.isEmpty
+        ? null
+        : AppNetworkImage.withLoader(
+            'character/$userId/$revision/${character.imagePath}',
+            () => repository.fetchImageBytes(character),
+          );
+
     return SizedBox(
       width: size,
       height: size,
       child: AppSizedNetworkImage(
         url: imageUrl,
-        key: ValueKey('$imageUrl:$cacheKey'),
+        imageProvider: imageProvider,
+        key: ValueKey((imageUrl, imageProvider, revision)),
         logicalSize: Size.square(size),
         fallbackBuilder: (context) {
           return CharacterPlaceholder(label: label, size: size);
