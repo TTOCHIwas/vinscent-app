@@ -18,8 +18,7 @@ class CalendarCardPreviewLoader {
         if (bytes.isNotEmpty) return bytes;
       } on StorageException catch (error) {
         final status = int.tryParse(error.statusCode ?? '');
-        if (status == null ||
-            (status != 400 && status != 404 && status < 500)) {
+        if (status != 400 && status != 404) {
           rethrow;
         }
       }
