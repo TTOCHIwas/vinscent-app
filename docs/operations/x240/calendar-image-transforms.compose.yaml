@@ -3,6 +3,10 @@ services:
     environment:
       ENABLE_IMAGE_TRANSFORMATION: "true"
       IMGPROXY_URL: http://calendar-imgproxy:5001
+    networks:
+      isolated:
+        aliases:
+          - storage-transform
     depends_on:
       calendar-imgproxy:
         condition: service_healthy
@@ -20,7 +24,8 @@ services:
       IMGPROXY_BIND: ":5001"
       IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
       IMGPROXY_ALLOWED_SOURCES: local:////var/lib/storage/
-      IMGPROXY_CONCURRENCY: "2"
+      IMGPROXY_WORKERS: "2"
+      IMGPROXY_REQUESTS_QUEUE_SIZE: "2"
       IMGPROXY_MAX_SRC_FILE_SIZE: "8388608"
       IMGPROXY_MAX_SRC_RESOLUTION: "8"
     healthcheck:
