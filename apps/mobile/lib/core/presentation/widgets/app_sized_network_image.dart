@@ -14,6 +14,7 @@ class AppSizedNetworkImage extends StatefulWidget {
     required this.url,
     required this.logicalSize,
     required this.fallbackBuilder,
+    this.imageProvider,
     this.cacheLogicalSize,
     this.gaplessPlayback = false,
     this.fit = BoxFit.contain,
@@ -21,6 +22,7 @@ class AppSizedNetworkImage extends StatefulWidget {
   });
 
   final String? url;
+  final ImageProvider? imageProvider;
   final Size logicalSize;
   final AppNetworkImageFallbackBuilder fallbackBuilder;
   final Size? cacheLogicalSize;
@@ -55,7 +57,9 @@ class _AppSizedNetworkImageState extends State<AppSizedNetworkImage> {
   @override
   void didUpdateWidget(AppSizedNetworkImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url && !widget.gaplessPlayback) {
+    if (!widget.gaplessPlayback &&
+        (oldWidget.url != widget.url ||
+            oldWidget.imageProvider != widget.imageProvider)) {
       _hasFrame = false;
       _loadingGroup?.update(this, loading: false);
     }
@@ -63,14 +67,10 @@ class _AppSizedNetworkImageState extends State<AppSizedNetworkImage> {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedUrl = widget.url;
-    final uri = resolvedUrl == null ? null : Uri.tryParse(resolvedUrl);
+    final imageProvider = widget.imageProvider ?? _networkImage(widget.url);
     final logicalSize = widget.logicalSize;
     final resolvedCacheLogicalSize = widget.cacheLogicalSize ?? logicalSize;
-    if (resolvedUrl == null ||
-        uri == null ||
-        !uri.hasScheme ||
-        (uri.scheme != 'http' && uri.scheme != 'https') ||
+    if (imageProvider == null ||
         !_isUsableSize(logicalSize) ||
         !_isUsableSize(resolvedCacheLogicalSize)) {
       _hasFrame = false;
@@ -99,7 +99,7 @@ class _AppSizedNetworkImageState extends State<AppSizedNetworkImage> {
         image: ResizeImage.resizeIfNeeded(
           cacheWidth,
           cacheHeight,
-          AppNetworkImage(resolvedUrl),
+          imageProvider,
         ),
         width: logicalSize.width,
         height: logicalSize.height,
@@ -156,6 +156,15 @@ class _AppSizedNetworkImageState extends State<AppSizedNetworkImage> {
       },
     );
   }
+}
+
+ImageProvider? _networkImage(String? url) {
+  if (url == null) return null;
+  final uri = Uri.tryParse(url);
+  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    return null;
+  }
+  return AppNetworkImage(url);
 }
 
 bool _isUsableSize(Size size) {
