@@ -1,0 +1,25 @@
+(calendar_image_transforms) {
+	@calendar_image_transform path /storage/v1/render/image /storage/v1/render/image/*
+	handle @calendar_image_transform {
+		uri strip_prefix /storage/v1
+		reverse_proxy {$CALENDAR_IMAGE_STORAGE_UPSTREAM:storage-transform:5000} {
+			unhealthy_request_count {$CALENDAR_IMAGE_PENDING_LIMIT:64}
+			transport http {
+				versions 1.1
+				max_conns_per_host {$CALENDAR_IMAGE_ACTIVE_LIMIT:2}
+			}
+		}
+	}
+}
+
+(calendar_image_transform_errors) {
+	handle_errors 503 {
+		@calendar_image_limit path /storage/v1/render/image /storage/v1/render/image/* /render/image /render/image/*
+		handle @calendar_image_limit {
+			header Content-Type application/json
+			header Cache-Control no-store
+			respond `{"statusCode":"429","error":"TooManyRequests","message":"Image preview temporarily unavailable"}` 429
+		}
+		respond {http.error.status_text} 503
+	}
+}
