@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinscent/features/characters/application/couple_character_controller.dart';
 import 'package:vinscent/features/characters/data/couple_character.dart';
 import 'package:vinscent/features/characters/data/couple_character_repository.dart';
+import 'package:vinscent/features/characters/presentation/widgets/couple_character_avatar.dart';
 import 'package:vinscent/features/couple/application/couple_controller.dart';
 import 'package:vinscent/features/couple/data/couple.dart';
 import 'package:vinscent/features/couple/data/couple_repository.dart';
+import 'package:vinscent/features/profile/application/profile_controller.dart';
+import 'package:vinscent/features/profile/data/user_profile.dart';
 
 import '../../../support/couple_fixtures.dart';
 
@@ -27,6 +33,7 @@ void main() {
 
     expect(result, same(character));
     expect(repository.fetchCount, 1);
+    expect(repository.includeImageUrls, [false]);
   });
 
   test('대기 중인 커플은 캐릭터를 조회하지 않는다', () async {
@@ -94,6 +101,78 @@ void main() {
     expect(result, [4, 5, 6]);
     expect(repository.imageFetchCount, 1);
   });
+
+  testWidgets('서명 URL 없이 저장소의 캐릭터 이미지를 표시한다', (tester) async {
+    final date = DateTime.utc(2026);
+    final repository = _FakeCoupleCharacterRepository(
+      _character(includeUrl: false),
+    )..imageBytes = (await tester.runAsync(_png))!;
+
+    final container = ProviderContainer(
+      overrides: [
+        profileControllerProvider.overrideWithBuild(
+          (ref, notifier) async => UserProfile(
+            id: 'direct-character-test',
+            displayName: '테스트',
+            birthDate: DateTime(1990),
+            onboardingCompletedAt: date,
+            createdAt: date,
+            updatedAt: date,
+          ),
+        ),
+        coupleControllerProvider.overrideWithBuild(
+          (ref, notifier) async => activeCouple(),
+        ),
+        coupleCharacterRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(profileControllerProvider.future);
+    await container.read(coupleCharacterControllerProvider.future);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: CoupleCharacterAvatar()),
+      ),
+    );
+    await tester.pump();
+    final image = tester.widget<Image>(find.byType(Image));
+    await tester.runAsync(() async {
+      final result = Completer<void>();
+      final stream = image.image.resolve(const ImageConfiguration());
+      final listener = ImageStreamListener(
+        (image, _) {
+          image.dispose();
+          if (!result.isCompleted) result.complete();
+        },
+        onError: (error, stack) {
+          if (!result.isCompleted) result.completeError(error, stack);
+        },
+      );
+      stream.addListener(listener);
+      try {
+        await result.future.timeout(const Duration(seconds: 5));
+      } finally {
+        stream.removeListener(listener);
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RawImage), findsOneWidget);
+    expect(repository.includeImageUrls, [false]);
+    expect(repository.imageFetchCount, 1);
+  });
+}
+
+Future<Uint8List> _png() async {
+  final recorder = ui.PictureRecorder();
+  Canvas(recorder).drawColor(Colors.black, BlendMode.src);
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(2, 2);
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  image.dispose();
+  picture.dispose();
+  return bytes!.buffer.asUint8List();
 }
 
 ProviderContainer _container({
@@ -113,7 +192,7 @@ ProviderContainer _container({
   );
 }
 
-CoupleCharacter _character() {
+CoupleCharacter _character({bool includeUrl = true}) {
   return CoupleCharacter(
     coupleId: 'couple-id',
     imagePath: CoupleCharacterStoragePaths.imagePathFor('couple-id'),
@@ -123,7 +202,7 @@ CoupleCharacter _character() {
     updatedBy: 'user-id',
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
-    imageUrl: 'https://example.com/current.png',
+    imageUrl: includeUrl ? 'https://example.com/current.png' : null,
   );
 }
 
@@ -132,6 +211,7 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
 
   CoupleCharacter? character;
   int fetchCount = 0;
+  final includeImageUrls = <bool>[];
   int saveCount = 0;
   int imageFetchCount = 0;
   Uint8List imageBytes = Uint8List(0);
@@ -141,6 +221,7 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
     bool includeImageUrl = true,
   }) async {
     fetchCount += 1;
+    includeImageUrls.add(includeImageUrl);
     return character;
   }
 
