@@ -144,12 +144,16 @@ class _AppSizedNetworkImageState extends State<AppSizedNetworkImage> {
     }
     return AnimatedBuilder(
       animation: group,
-      builder: (context, _) => AppMediaReveal(
-        ready: ready && group.canReveal,
-        synchronous: synchronous,
-        loadingBuilder: (_) => const SizedBox.expand(),
-        child: surface,
-      ),
+      builder: (context, _) {
+        final canReveal = ready && group.canReveal;
+        if (canReveal && _hasFrame) group.imagePresented();
+        return AppMediaReveal(
+          ready: canReveal,
+          synchronous: synchronous,
+          loadingBuilder: (_) => const SizedBox.expand(),
+          child: surface,
+        );
+      },
     );
   }
 }

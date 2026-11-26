@@ -7,10 +7,12 @@ class AppMediaLoadingGroup extends StatefulWidget {
     super.key,
     required this.child,
     this.indicatorPadding = EdgeInsets.zero,
+    this.revealIdentity,
   });
 
   final Widget child;
   final EdgeInsets indicatorPadding;
+  final Object? revealIdentity;
 
   static AppMediaLoadingTracker? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_LoadingScope>()?.tracker;
@@ -25,7 +27,14 @@ class _AppMediaLoadingGroupState extends State<AppMediaLoadingGroup> {
   @override
   void initState() {
     super.initState();
+    _tracker._setRevealIdentity(widget.revealIdentity);
     _tracker.settleAfterFrame();
+  }
+
+  @override
+  void didUpdateWidget(AppMediaLoadingGroup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _tracker._setRevealIdentity(widget.revealIdentity);
   }
 
   @override
@@ -65,11 +74,25 @@ class AppMediaLoadingTracker extends ChangeNotifier {
   final _pending = <Object>{};
   var _notificationScheduled = false;
   var _disposed = false;
+  Object? _revealIdentity;
+  var _hasPresentedImage = false;
 
   var _loading = false;
   bool get isLoading => _loading;
   var _canReveal = false;
   bool get canReveal => _canReveal;
+
+  void _setRevealIdentity(Object? identity) {
+    if (_revealIdentity == identity) return;
+    _revealIdentity = identity;
+    _hasPresentedImage = false;
+    _canReveal = false;
+    settleAfterFrame();
+  }
+
+  void imagePresented() {
+    if (_revealIdentity != null) _hasPresentedImage = true;
+  }
 
   void update(Object owner, {required bool loading}) {
     if (_disposed) return;
@@ -85,7 +108,7 @@ class AppMediaLoadingTracker extends ChangeNotifier {
       _notificationScheduled = false;
       if (!_disposed) {
         _loading = _pending.isNotEmpty;
-        _canReveal = !_loading;
+        _canReveal = !_loading || _hasPresentedImage;
         notifyListeners();
       }
     });
