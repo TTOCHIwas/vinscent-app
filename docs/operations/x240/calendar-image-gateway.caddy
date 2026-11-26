@@ -4,6 +4,7 @@
 		uri strip_prefix /storage/v1
 		reverse_proxy {$CALENDAR_IMAGE_STORAGE_UPSTREAM:storage-transform:5000} {
 			unhealthy_request_count {$CALENDAR_IMAGE_PENDING_LIMIT:64}
+			header_down +Via "1.1 danjjan-media"
 			transport http {
 				versions 1.1
 				max_conns_per_host {$CALENDAR_IMAGE_ACTIVE_LIMIT:2}
