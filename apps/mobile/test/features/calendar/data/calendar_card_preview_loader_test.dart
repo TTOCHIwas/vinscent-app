@@ -45,6 +45,20 @@ void main() {
     expect(storage.requests, [(path, transform)]);
   });
 
+  for (final status in ['408', '429', '500', '502', '503', '504']) {
+    test('propagates temporary failure $status without an original', () async {
+      final error = StorageException('Temporary failure', statusCode: status);
+      final storage = _Storage(originalBytes, error);
+      final loader = CalendarCardPreviewLoader(storage);
+
+      await expectLater(
+        loader.download(path, transform: transform),
+        throwsA(error),
+      );
+      expect(storage.requests, [(path, transform)]);
+    });
+  }
+
   test('uses the original directly when no smaller size is required', () async {
     final storage = _Storage(originalBytes, optimizedBytes);
     final loader = CalendarCardPreviewLoader(storage);
