@@ -232,6 +232,174 @@ void main() {
     );
   }
 
+  for (final (viewport, pixelRatio) in [
+    (const Size(360, 800), 3.0),
+    (const Size(1024, 1366), 2.0),
+    (const Size(1366, 1024), 2.0),
+  ]) {
+    testWidgets('keeps the same calendar downloads while resizing $viewport', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = pixelRatio;
+      tester.view.physicalSize = viewport * pixelRatio;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(() => debugNetworkImageHttpClientProvider = null);
+      final bytes = (await tester.runAsync(_png))!;
+      final expandedArtworkResponse = Completer<HttpClientResponse>();
+      final client = _Client(
+        bytes,
+        responses: {'/expanded-event.webp': expandedArtworkResponse.future},
+      );
+      debugNetworkImageHttpClientProvider = () => client;
+      final date = DateTime(2026, 5, 5);
+      final card = samplePreviewCard(
+        id: 'resized-card',
+        submittedAt: date,
+      ).copyWith(previewUrl: 'https://audit.invalid/resized-card.png');
+      final repository = FakeStoryLoopReadRepository(
+        monthSummaries: {
+          DateTime(2026, 5): [
+            sampleMonthSummaryDay(
+              coupleDate: date,
+              cardCount: 1,
+              cards: [card],
+            ),
+          ],
+        },
+      );
+      final event = calendarEvent(
+        id: 'resized-event',
+        title: '그림 일정 1',
+        date: date,
+        artwork: const CoupleCalendarEventArtwork(
+          previewPath: 'resized-event.webp',
+          drawingDataPath: 'resized-event.json.gz',
+          previewUrl: 'https://audit.invalid/resized-event.webp',
+        ),
+      );
+      final expandedEvent = calendarEvent(
+        id: 'expanded-event',
+        title: '그림 일정 2',
+        date: date,
+        artwork: const CoupleCalendarEventArtwork(
+          previewPath: 'expanded-event.webp',
+          drawingDataPath: 'expanded-event.json.gz',
+          previewUrl: 'https://audit.invalid/expanded-event.webp',
+        ),
+      );
+      await pumpCalendar(
+        tester,
+        repository: repository,
+        calendarEvents: [event, expandedEvent],
+        settle: false,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final cardSurface = find.byKey(
+        const ValueKey('calendar-month-story-card-resized-card'),
+      );
+      final artworkSurface = find.byKey(
+        const ValueKey('calendar-event-indicator-resized-event'),
+      );
+      Finder imageIn(Finder surface) =>
+          find.descendant(of: surface, matching: find.byType(Image));
+      final cardImage = imageIn(cardSurface);
+      final artworkImage = imageIn(artworkSurface);
+      final initialCardElement = tester.element(cardImage);
+      final cardProvider = tester.widget<Image>(cardImage).image as ResizeImage;
+      final artworkProvider =
+          tester.widget<Image>(artworkImage).image as ResizeImage;
+      final cardKey = await cardProvider.obtainKey(const ImageConfiguration());
+      final artworkKey = await artworkProvider.obtainKey(
+        const ImageConfiguration(),
+      );
+      final initialCardSize = tester.getSize(cardSurface);
+      final initialArtworkSize = tester.getSize(artworkSurface);
+      await tester.runAsync(() async {
+        await Future.wait([
+          _ready(tester.widget<Image>(cardImage)),
+          _ready(tester.widget<Image>(artworkImage)),
+        ]);
+      });
+      await tester.pumpAndSettle();
+
+      final scrollView = find.byKey(const Key('calendar-scroll-view'));
+      await tester.drag(scrollView, const Offset(0, 1000));
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      final expandedArtwork = find.byKey(
+        const ValueKey('calendar-event-indicator-expanded-event'),
+      );
+      for (final surface in [cardSurface, artworkSurface]) {
+        expect(
+          find.descendant(of: surface, matching: find.byType(RawImage)),
+          findsOneWidget,
+        );
+      }
+      expect(
+        find.descendant(of: expandedArtwork, matching: find.byType(RawImage)),
+        findsNothing,
+      );
+      await tester.runAsync(() async {
+        final ready = _ready(tester.widget<Image>(imageIn(expandedArtwork)));
+        expandedArtworkResponse.complete(_Response(bytes));
+        await ready;
+      });
+
+      for (final state in [true, false, true]) {
+        await tester.pumpAndSettle();
+        expect(tester.element(cardImage), same(initialCardElement));
+        expect(
+          await tester
+              .widget<Image>(cardImage)
+              .image
+              .obtainKey(const ImageConfiguration()),
+          cardKey,
+        );
+        expect(
+          await tester
+              .widget<Image>(artworkImage)
+              .image
+              .obtainKey(const ImageConfiguration()),
+          artworkKey,
+        );
+        if (state) {
+          final cardSize = tester.getSize(cardSurface);
+          final artworkSize = tester.getSize(artworkSurface);
+          expect(cardSize.width, greaterThan(initialCardSize.width));
+          expect(artworkSize.width, greaterThan(initialArtworkSize.width));
+          expect(
+            cardProvider.width,
+            greaterThanOrEqualTo((cardSize.width * pixelRatio).round()),
+          );
+          expect(
+            cardProvider.height,
+            greaterThanOrEqualTo((cardSize.height * pixelRatio).round()),
+          );
+          expect(
+            artworkProvider.width,
+            greaterThanOrEqualTo((artworkSize.width * pixelRatio).round()),
+          );
+        }
+        await tester.drag(scrollView, Offset(0, state ? -1000 : 1000));
+      }
+      await tester.pumpAndSettle();
+      expect(
+        client.requests.map((request) => request.path),
+        unorderedEquals([
+          '/resized-card.png',
+          '/resized-event.webp',
+          '/expanded-event.webp',
+        ]),
+      );
+      debugNetworkImageHttpClientProvider = null;
+    });
+  }
+
   testWidgets('waits for decoded image before revealing the whole card once', (
     tester,
   ) async {

@@ -87,6 +87,7 @@ Future<GoRouter> pumpCalendar(
   List<StoryCardStackItem>? storyCardStackItems,
   double textScaleFactor = 1,
   MonthlyRetrospective? retrospective,
+  bool settle = true,
 }) async {
   final calendarEventRepository = _FakeCalendarEventRepository(
     events: calendarEvents,
@@ -221,7 +222,7 @@ Future<GoRouter> pumpCalendar(
     ),
   );
 
-  await tester.pumpAndSettle();
+  if (settle) await tester.pumpAndSettle();
   return router;
 }
 
