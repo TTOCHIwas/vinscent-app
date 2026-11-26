@@ -119,7 +119,9 @@ class _CharacterRepository extends Fake implements CoupleCharacterRepository {
   final CoupleCharacter? character;
 
   @override
-  Future<CoupleCharacter?> fetchCurrentCharacter() async => character;
+  Future<CoupleCharacter?> fetchCurrentCharacter({
+    bool includeImageUrl = true,
+  }) async => character;
 
   @override
   Future<Uint8List> fetchImageBytes(CoupleCharacter character) async {

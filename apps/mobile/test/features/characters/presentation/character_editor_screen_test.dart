@@ -629,7 +629,9 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   String? savedDrawingDataJson;
 
   @override
-  Future<CoupleCharacter?> fetchCurrentCharacter() async {
+  Future<CoupleCharacter?> fetchCurrentCharacter({
+    bool includeImageUrl = true,
+  }) async {
     return currentCharacter;
   }
 

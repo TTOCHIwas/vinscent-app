@@ -18,7 +18,7 @@ final coupleCharacterRepositoryProvider = Provider<CoupleCharacterRepository>((
 });
 
 abstract interface class CoupleCharacterRepository {
-  Future<CoupleCharacter?> fetchCurrentCharacter();
+  Future<CoupleCharacter?> fetchCurrentCharacter({bool includeImageUrl = true});
 
   Future<Uint8List> fetchImageBytes(CoupleCharacter character);
 
@@ -37,7 +37,9 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
   static const _signedUrlExpiresInSeconds = 60 * 60;
 
   @override
-  Future<CoupleCharacter?> fetchCurrentCharacter() async {
+  Future<CoupleCharacter?> fetchCurrentCharacter({
+    bool includeImageUrl = true,
+  }) async {
     if (!AppConfig.isSupabaseConfigured) {
       throw const CoupleCharacterRepositoryException(
         CoupleCharacterFailureReason.configMissing,
@@ -54,7 +56,9 @@ class SupabaseCoupleCharacterRepository implements CoupleCharacterRepository {
         return null;
       }
 
-      final imageUrl = await _createSignedUrl(row['image_path'] as String);
+      final imageUrl = includeImageUrl
+          ? await _createSignedUrl(row['image_path'] as String)
+          : null;
       return CoupleCharacter.fromJson(row, imageUrl: imageUrl);
     } on TimeoutException {
       throw const CoupleCharacterRepositoryException(

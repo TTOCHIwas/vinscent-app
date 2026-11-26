@@ -137,7 +137,9 @@ class _FakeCoupleCharacterRepository implements CoupleCharacterRepository {
   Uint8List imageBytes = Uint8List(0);
 
   @override
-  Future<CoupleCharacter?> fetchCurrentCharacter() async {
+  Future<CoupleCharacter?> fetchCurrentCharacter({
+    bool includeImageUrl = true,
+  }) async {
     fetchCount += 1;
     return character;
   }
