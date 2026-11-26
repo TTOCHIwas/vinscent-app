@@ -1,0 +1,30 @@
+services:
+  storage:
+    environment:
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://calendar-imgproxy:5001
+    depends_on:
+      calendar-imgproxy:
+        condition: service_healthy
+
+  calendar-imgproxy:
+    image: ghcr.io/imgproxy/imgproxy:v4.0.24@sha256:5f3546e097bde5d2c568bf5110c4e3fb4af9bbe2cc5da6390067fda034a88db3
+    restart: unless-stopped
+    cpus: 1
+    mem_limit: 256m
+    networks:
+      - isolated
+    volumes:
+      - storage-data:/var/lib/storage:ro
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_ALLOWED_SOURCES: local:////var/lib/storage/
+      IMGPROXY_CONCURRENCY: "2"
+      IMGPROXY_MAX_SRC_FILE_SIZE: "8388608"
+      IMGPROXY_MAX_SRC_RESOLUTION: "8"
+    healthcheck:
+      test: ["CMD", "imgproxy", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
