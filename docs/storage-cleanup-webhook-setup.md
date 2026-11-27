@@ -154,6 +154,10 @@ order by available_at, created_at;
 Storage에서 보존된다. 같은 경로가 나중에 실제 고아가 되면 새 요청을 만들 수
 있다.
 
+매일 03:17(한국 시간)에 기존 운영 기록 정리 작업이 `status = 'completed'`이고
+`processed_at` 기준으로 90일이 지난 요청 이력을 오래된 순서로 최대 5,000건 삭제한다.
+대상은 `public.storage_cleanup_requests` 행이며, 파일의 삭제 여부는 앞선 워커 실행에서 결정된다.
+
 ## 기존 누적 데이터
 
 이 마이그레이션과 함수를 배포한 뒤 예약 배치를 호출하면 기존의 pending 요청도
