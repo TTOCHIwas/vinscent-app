@@ -1,0 +1,37 @@
+--- a/__main__.py
++++ b/__main__.py
+@@ -385,6 +385,16 @@
+             process.communicate(timeout=5)
+
+
++def production_runtime_files(runtime):
++    files = private_files(runtime)
++    name = 'local-runtime/calendar-image-transforms.compose.yaml'
++    overlay = runtime / name
++    require(overlay.is_file() and overlay.resolve() == overlay,
++            'required_calendar_image_overlay_missing')
++    files[name] = file_digest(overlay)
++    return files
++
++
+ def take_backup():
+     hdd = backup_hdd()
+     directory = production_directory(private_json(ROOT / 'active.json'))
+@@ -408,7 +418,7 @@
+     status('capturing_production_database_and_files')
+     files = {name: tree_files(path) for name, path in paths.items()}
+     attributes = read_storage_attributes(paths['storage-data'], files['storage-data'])
+-    configs = private_files(runtime)
++    configs = production_runtime_files(runtime)
+     with tarfile.open(work / 'runtime-config.tar', 'x') as archive:
+         for path in sorted(configs):
+             archive.add(runtime / path, arcname=path, recursive=False)
+@@ -422,7 +432,7 @@
+     for table in ('buckets', 'objects'):
+         require(table_digest(lambda q: sql(db['Id'], 'BEGIN READ ONLY; ' + q + ' COMMIT;'), 'storage', table)
+                 == reference['tables']['storage.' + table], 'backup_storage_metadata_changed')
+-    require(private_files(runtime) == configs and all(tree_files(paths[k]) == v for k, v in files.items()),
++    require(production_runtime_files(runtime) == configs and all(tree_files(paths[k]) == v for k, v in files.items()),
+             'backup_files_changed_during_capture')
+     require(read_storage_attributes(paths['storage-data'], files['storage-data']) == attributes,
+             'backup_storage_attributes_changed')
