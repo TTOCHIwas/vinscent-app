@@ -106,6 +106,12 @@ Database Webhook과 Edge Function 예약 호출의 생성 자체는 아직 Dashb
 이는 한국 시간 03:17이다. 외부 네트워크 요청과 secret이 없고 함수 실행
 권한은 클라이언트 역할에서 제거돼 있다.
 
+같은 작업의 마지막 단계에서 `private.purge_expired_cron_runs()`가
+`cron.job_run_details`를 정리한다. 종료 시각 기준으로 성공한 실행은 7일,
+실패한 실행은 30일을 초과하면 삭제한다. 종료 시각이 없거나 상태가
+미확정인 기록은 보존한다. 한 번에 오래된 기록부터 최대 5,000건을
+처리하며, 남은 건은 다음 실행에서 처리한다.
+
 원격 리소스의 현재 상태는 Supabase SQL Editor에서
 `supabase/snippets/audit_edge_runtime_resources.sql`을 실행해 확인한다.
 이 쿼리는 웹훅 정의와 Cron 명령 원문을 반환하지 않으므로 저장된 비밀값을
